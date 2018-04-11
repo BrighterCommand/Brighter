@@ -17,13 +17,13 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Commands
 
     public class RunningConsumer
     {
-        public RunningConsumer(ConnectionName connectionName, ConsumerState state)
+        public RunningConsumer(ConsumerName consumerName, ConsumerState state)
         {
-            ConnectionName = connectionName;
+            ConsumerName = consumerName;
             State = state;
         }
 
-        public ConnectionName ConnectionName { get; private set; }
+        public ConsumerName ConsumerName { get; private set; }
         public ConsumerState State { get; private set; }
     }
 }

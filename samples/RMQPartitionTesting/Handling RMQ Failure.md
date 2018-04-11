@@ -44,6 +44,13 @@ blockade -h
 ### Usage
 Although blockade offers its own docker compose-like syntax for configuring services in a network, its easier to just create the network with docker-compose directly, and then use blockade add to add the containers from that network into the blockade. You are likely to use the command line, or a script anyway, to run blockade partition and blockade join to move nodes in and out of a partition.
 
+### Notes
+It may sound obvious, but you need to plan your testing. What are the scenarios? Most importantly: identify what do you expect to happen and what actually happens. Plan how you get the system into the starting condition (for example you might need to keep restarting clients until they connect to the correct node). Ad-hoc is tempting. 'What happens if I partition the system?' But the reality is this often proves confusing. Was what happened expected? If not, what is the expected behaviour?
+
+I spent a lot of time running a test, checking to see via the RMQ Management console what node I was connected to, and figuring out which scenario that would help with
+
+So plan. 
+
 ### Point of Failure
 The point of failure needs to be taken into account when determinig how our code should respond. Generally, we have four steps when we set up messaging with an RMQ broker
 
@@ -103,12 +110,22 @@ We have chosen a strategy of Pause Minority on a partition
 
     ###### Results
   
-3. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to A. I have chosen an Pause Minority strategy.
+3. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then B gets a partition and I cannot see A or C. I need to re-connect to A via A or C. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We will timeout on our connection
     * I need to stop talking to B and talk to A or C.
 
     ###### Results
+    * Consumer is Idle
+      * We get a System.Timeout exception that the socket has timed out.
+         * In this case from EnsureConsumer->EnsureChannelBind
+         * We should terminate the connection and try to create a new one.
+         * But we seem to pause - the Timeout should have become ChannelFailure, we should wait and retry!!
+         * Debugging reveals that we seem to 'freeze' when calling Dispose on the dead connection in ResetConnectionToBroker.
+         * We already have a TryRemoveConnection, that ought to have run when signalled that the connection has closed
+           * Why not just run this?
+           * In addition, if we close, we don't need to Dispose, so just Dipose if Open.
+           * Retest!
 
 4. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then C gets a partition and cannot be seen. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
@@ -116,8 +133,11 @@ We have chosen a strategy of Pause Minority on a partition
     ###### Results
     * Consumer is Idle
       * RMQ Mangement Console reports that queue only now has one mirror; connection remains live
+      * When partition ends, node rejoins as slave
     * Consumer is busy
-      * 
+      * RMQ Mangement Console reports that queue only now has one mirror; connection remains live; messages are processed
+      * When partition ends, node rejoins as slave but is unsychronized.
+        * RMQ advice is to prefer 'eventual synchronization' as messages are drained that node has not seen, see https://www.rabbitmq.com/ha.html
 
 
 

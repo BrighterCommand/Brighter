@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -64,9 +65,12 @@ namespace Paramore.Brighter.Tests.MessageDispatch
         [Fact]
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
+            //should_have_multiple_consumers
+            _dispatcher.Consumers.Count().Should().Be(3);
+
             Task.Delay(1000).Wait();
             _dispatcher.End().Wait();
-
+            
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);
             //_should_have_a_stopped_state

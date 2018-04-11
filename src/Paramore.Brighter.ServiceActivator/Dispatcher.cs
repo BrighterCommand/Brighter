@@ -191,7 +191,7 @@ namespace Paramore.Brighter.ServiceActivator
             if (State == DispatcherState.DS_RUNNING)
             {
                 _logger.Value.InfoFormat("Dispatcher: Stopping connection {0}", connection.Name);
-                var consumersForConnection = Consumers.Where(consumer => consumer.Name == connection.Name).ToArray();
+                var consumersForConnection = Consumers.Where(consumer => consumer.ConnectionName == connection.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
                 {
