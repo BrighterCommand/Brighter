@@ -56,8 +56,10 @@ namespace Paramore.Brighter.Tests.FeatureSwitch
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Is_Off_By_Fluent_Config()
         {
-            var fluentConfig = new FluentConfigRegistry()
-                                .StatusOf<MyFeatureSwitchedConfigHandler>(FeatureSwitchStatus.Off);
+            var fluentConfig = FluentConfigRegistryBuilder
+                                .With()
+                                .StatusOf<MyFeatureSwitchedConfigHandler>().Is(FeatureSwitchStatus.Off)
+                                .Build();
 
             _commandProcessor = new CommandProcessor(_registry, 
                                                      _handlerFactory, 

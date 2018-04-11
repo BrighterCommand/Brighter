@@ -27,22 +27,42 @@ using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.FeatureSwitch.Attributes
 {
+    /// <summary>
+    /// Class FeatureSwitchAttribute.
+    /// This attribute supports adding feature switches on a handler. It is intended to allow control over which handlers can be used at
+    /// run-time using <see cref="FeatureSwitchStatus.Config"/> or compile time using <see cref="FeatureSwitchStatus.On"/> and <see cref="FeatureSwitchStatus.Off"/>.
+    /// </summary>
     public class FeatureSwitchAttribute : RequestHandlerAttribute
     {
         private readonly Type _handler;
         private readonly FeatureSwitchStatus _status;
 
+        /// <summary>
+        /// Initialises a new instance of the <see cref="FeatureSwitchAttribute"/> class.
+        /// </summary>
+        /// <param name="handler">The handler to feature switch</param>
+        /// <param name="status">The status of the feature switch</param>
+        /// <param name="step">The step.</param>
+        /// <param name="timing">The timing.</param>
         public FeatureSwitchAttribute(Type handler, FeatureSwitchStatus status, int step, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
         {
             _handler = handler;
             _status = status;
         }
 
+        /// <summary>
+        /// Initialises the paramers
+        /// </summary>
+        /// <returns>System.Object[]</returns>
         public override object[] InitializerParams()
         {           
             return new object[] { _handler, _status };
         }
 
+        /// <summary>
+        /// Gets the type of the handler
+        /// </summary>
+        /// <returns></returns>
         public override Type GetHandlerType()
         {
             return typeof(FeatureSwitchHandler<>);

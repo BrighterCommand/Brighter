@@ -31,19 +31,12 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
     {
         public MissingConfigStrategy MissingConfigStrategy { get; set; } = MissingConfigStrategy.Exception;
 
-        private readonly IDictionary<Type, FeatureSwitchStatus> _switches;
+        private readonly IDictionary<Type, FeatureSwitchStatus> _switches;        
 
-        public FluentConfigRegistry()
+        public FluentConfigRegistry(IDictionary<Type, FeatureSwitchStatus> switches)
         {
-            _switches = new Dictionary<Type, FeatureSwitchStatus>();
-        }
-
-        public FluentConfigRegistry StatusOf<T>(FeatureSwitchStatus status)
-        {
-            _switches.Add(typeof(T), status);
-
-            return this;
-        }
+            _switches = switches;
+        }        
 
         public FeatureSwitchStatus StatusOf(Type handler)
         {
@@ -68,6 +61,65 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
             }
 
             return _switches[handler];
+        }        
+    }
+
+    public class FluentConfigRegistryBuilder : INeedAStatus, INeedAHandler
+    {
+        private readonly IDictionary<Type, FeatureSwitchStatus> _switches;
+
+        private Type _nextType;
+
+        private FluentConfigRegistryBuilder()
+        {
+            _switches = new Dictionary<Type, FeatureSwitchStatus>();
         }
+
+        public static INeedAHandler With()
+        {
+            return new FluentConfigRegistryBuilder();
+        }
+
+        public INeedAStatus StatusOf<T>()
+        {
+            _nextType = typeof(T);
+
+            if (_switches.ContainsKey(typeof(T)))
+            {
+                throw new ConfigurationException("This handler feature switch has already been configured!");
+            }
+
+            return this;
+        }
+
+        public INeedAHandler Is(FeatureSwitchStatus status)
+        {
+            if (_nextType is null)
+            {
+                throw new ConfigurationException("No handler has been configured for this feature switch.");
+            }
+
+            _switches.Add(_nextType, status);
+            _nextType = null;
+
+            return this;
+        }
+
+        public IAmAFeatureSwitchRegistry Build()
+        {
+            return new FluentConfigRegistry(_switches);
+        }
+    }
+
+    public interface INeedAStatus
+    {
+        INeedAHandler Is(FeatureSwitchStatus status);
+    }
+
+    public interface INeedAHandler
+    {
+        INeedAStatus StatusOf<T>();
+
+        IAmAFeatureSwitchRegistry Build();
     }
 }

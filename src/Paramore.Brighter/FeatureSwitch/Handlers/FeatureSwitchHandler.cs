@@ -47,6 +47,12 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
             _status = (FeatureSwitchStatus) initializerList[1];
         }
 
+        /// <summary>
+        /// Checks the status of the feature switch and either stops passes the command on to the next handler
+        /// or stops execution of the feature switched handler.
+        /// </summary>
+        /// <param name="command">The command.</param>
+        /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
             var featureEnabled = _status;
@@ -56,12 +62,9 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
                 featureEnabled = Context.FeatureSwitches.StatusOf(_handler);
             }
 
-            if (featureEnabled is FeatureSwitchStatus.Off)
-            {
-                return command;
-            }
-
-            return base.Handle(command);
+            return featureEnabled is FeatureSwitchStatus.Off 
+                        ? command 
+                        : base.Handle(command);
         }
     }
 }

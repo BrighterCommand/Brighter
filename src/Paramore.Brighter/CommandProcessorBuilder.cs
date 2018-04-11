@@ -66,7 +66,7 @@ namespace Paramore.Brighter
     ///     </item>
     /// </list> 
     /// </summary>
-    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, INeedFeatureSwitching, IAmACommandProcessorBuilder
+    public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAMessageStore<Message> _messageStore;
         private IAmAMessageStoreAsync<Message> _asyncMessageStore;
@@ -293,6 +293,13 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="featureSwitchRegistry"></param>
+        /// <returns></returns>
+        INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
     
     /// <summary>
@@ -305,19 +312,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>CommandProcessor.</returns>
         CommandProcessor Build();
-    }
-
-    /// <summary>
-    /// Interface INeedFeatureSwitching
-    /// </summary>
-    public interface INeedFeatureSwitching
-    {
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="featureSwitchRegistry"></param>
-        /// <returns></returns>
-        INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
     #endregion
 }
