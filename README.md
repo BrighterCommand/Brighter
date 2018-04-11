@@ -1,6 +1,7 @@
 # Paramore.Brighter.AspNetCore
 ASP.NET Core integration for [Brighter](https://github.com/BrighterCommand/Paramore.Brighter).
 
+[![Build status](https://ci.appveyor.com/api/projects/status/09ed8f3g2olmebna?svg=true)](https://ci.appveyor.com/project/dstockhammer/paramore-brighter-aspnetcore)
 [![NuGet](https://img.shields.io/nuget/v/Paramore.Brighter.AspNetCore.svg)](https://www.nuget.org/packages/Paramore.Brighter.AspNetCore)
 
 ## Usage
