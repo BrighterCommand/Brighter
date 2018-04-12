@@ -35,7 +35,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public class DispatchBuilder : INeedACommandProcessor, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
-        private CommandProcessor _commandProcessor;
+        private IAmACommandProcessor _commandProcessor;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmAChannelFactory _defaultChannelFactory;
         private IEnumerable<Connection> _connections;
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="theCommandProcessor">The command processor.</param>
         /// <returns>INeedAMessageMapper.</returns>
-        public INeedAMessageMapper CommandProcessor(CommandProcessor theCommandProcessor)
+        public INeedAMessageMapper CommandProcessor(IAmACommandProcessor theCommandProcessor)
         {
             _commandProcessor = theCommandProcessor;
             return this;
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="commandProcessor">The command processor.</param>
         /// <returns>INeedAMessageMapper.</returns>
-        INeedAMessageMapper CommandProcessor(CommandProcessor commandProcessor);
+        INeedAMessageMapper CommandProcessor(IAmACommandProcessor commandProcessor);
     }
 
     /// <summary>
