@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Bob Gregory 
 
@@ -29,7 +29,6 @@ using System.Text;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -64,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        public Message CreateMessage(BasicDeliverEventArgs fromQueue)
+        public Message CreateMessage(BasicGetResult fromQueue)
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<string>.Empty();
@@ -74,7 +73,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var delayedMilliseconds = HeaderResult<int>.Empty();
             var redelivered = HeaderResult<bool>.Empty();
             var deliveryTag = HeaderResult<ulong>.Empty();
-            // message.DeliveryTag = fromQueue.DeliveryTag;
 
             Message message;
             try
@@ -117,10 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 _logger.Value.WarnException("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
-
-
-
-
+            
             return message;
         }
 
@@ -197,7 +192,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             });
         }
 
-        private HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
+        private HeaderResult<string> ReadTopic(BasicGetResult fromQueue, IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
             {
@@ -235,5 +230,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var bytes = value as byte[];
             return bytes != null ? Encoding.UTF8.GetString(bytes) : value;
         }
+
     }
 }

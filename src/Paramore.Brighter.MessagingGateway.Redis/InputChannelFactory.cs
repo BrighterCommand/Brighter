@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     {
         private readonly RedisMessageConsumerFactory _messageConsumerFactory;
 
-        /// <summaryedisdids>
+        /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
@@ -47,12 +47,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="channelName">Name of the channel.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable">Does this queue definition persist, always with Redis </param>
-        /// <param name="preFetchSize">How many items to prefetch; no prefetch with Redis</param>
         /// <param name="highAvailability">Do we mirror queues across a cluster? Handled by Redis Cluster if desired</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = true, ushort preFetchSize = 0, bool highAvailability = false)
+        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = true, bool highAvailability = false)
         {
-            return new Channel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable, preFetchSize, highAvailability));
+            return new Channel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable, highAvailability));
         }
     }
 }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {

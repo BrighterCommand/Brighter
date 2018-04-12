@@ -30,22 +30,29 @@ namespace Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration
 {
     public class RmqMessagingGatewayConnection 
     {
-        /// <summary>
-        /// Sets Unique name for the connection
-        /// </summary>
-        public string Name { get; set; }
+      public RmqMessagingGatewayConnection()
+      {
+        Name = Environment.MachineName;
+      }
 
-        /// <summary>
-        /// Gets or sets the ampq URI.
-        /// </summary>
-        /// <value>The ampq URI.</value>
-        public AmqpUriSpecification AmpqUri { get; set; }
+      /// <summary>
+      /// Sets Unique name for the connection
+      /// </summary>
+      public string Name { get; set; }
+
+      /// <summary>
+      /// Gets or sets the ampq URI.
+      /// </summary>
+      /// <value>The ampq URI.</value>
+      public AmqpUriSpecification AmpqUri { get; set; }
 
         /// <summary>
         /// Gets or sets the exchange.
         /// </summary>
         /// <value>The exchange.</value>
         public Exchange Exchange { get; set; }
+
+
 
     }
 
