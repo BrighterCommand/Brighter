@@ -13,8 +13,8 @@
     <LangVersion>7.2</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="11.0.1" />
-    <PackageReference Include="Polly" Version="5.8.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="11.0.2" />
+    <PackageReference Include="Polly" Version="5.9.0" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='net461'">
     <Reference Include="Microsoft.CSharp" />

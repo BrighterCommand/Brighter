@@ -16,7 +16,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-     <PackageReference Include="AMQPNetLite" Version="2.1.1" />
+     <PackageReference Include="AMQPNetLite" Version="2.1.2" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
      <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
