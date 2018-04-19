@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             _connectionFactory = new ConnectionFactory
             {
-                Uri = Connection.AmpqUri.Uri.ToString(),
+                Uri = Connection.AmpqUri.Uri,
                 RequestedHeartbeat = 30
             };
 

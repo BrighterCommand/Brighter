@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         public TestRMQListener(RmqMessagingGatewayConnection connection, string channelName)
         {
             _channelName = channelName;
-            _connectionFactory = new ConnectionFactory {Uri = connection.AmpqUri.Uri.ToString()};
+            _connectionFactory = new ConnectionFactory {Uri = connection.AmpqUri.Uri};
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
             _channel.DeclareExchangeForConnection(connection);
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         public TestRMQListener(RmqMessagingGatewayConnection connection, string channelName, params string[] routingKeys)
         {
             _channelName = channelName;
-            _connectionFactory = new ConnectionFactory { Uri = connection.AmpqUri.Uri.ToString() };
+            _connectionFactory = new ConnectionFactory { Uri = connection.AmpqUri.Uri };
             _connection = _connectionFactory.CreateConnection();
             _channel = _connection.CreateModel();
             _channel.DeclareExchangeForConnection(connection);

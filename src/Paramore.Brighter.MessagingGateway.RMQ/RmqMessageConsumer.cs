@@ -215,7 +215,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 EnsureChannelBind();
 
-                var basicGetResult = Channel.BasicGet(_queueName, noAck: false);
+                var basicGetResult = Channel.BasicGet(_queueName, autoAck: false);
 
                 if (basicGetResult == null)
                 {
