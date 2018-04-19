@@ -332,11 +332,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
 
             _logger.Value.InfoFormat(
-              "RmqMessageConsumer: Created channel for queue {0} with routing key/s {1} via exchange {2} on connection {3}",
+              "RmqMessageConsumer: Created rabbitmq channel {4} for queue {0} with routing key/s {1} via exchange {2} on connection {3}",
               _queueName,
-              string.Join(",", _routingKeys),
+              _routingKeys,
               Connection.Exchange.Name,
-              Connection.AmpqUri.GetSanitizedUri()
+              Connection.AmpqUri.GetSanitizedUri(),
+              Channel.ChannelNumber
             );
           }
         }
