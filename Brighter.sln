@@ -120,6 +120,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.editorconfig = .editorconfig
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ha-proxy", "ha-proxy", "{73CB582F-E48C-49EE-A912-F5EE17A730E0}"
+ProjectSection(SolutionItems) = preProject
+	samples\containers\ha-proxy\Dockerfile = samples\containers\ha-proxy\Dockerfile
+	samples\containers\ha-proxy\haproxy.cfg = samples\containers\ha-proxy\haproxy.cfg
+EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rabbit-mq", "rabbit-mq", "{D81254B9-5BC5-4A08-ACE3-03E362B17FF8}"
+ProjectSection(SolutionItems) = preProject
+	samples\containers\rabbit-mq\Dockerfile = samples\containers\rabbit-mq\Dockerfile
+	samples\containers\rabbit-mq\rabbitmq.config = samples\containers\rabbit-mq\rabbitmq.config
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -606,6 +618,8 @@ Global
 		{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5} = {AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}
 		{51F5EB35-071A-417B-A4E8-2527A62EDA52} = {AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}
+		{73CB582F-E48C-49EE-A912-F5EE17A730E0} = {BC8C2D08-2713-4DDB-89A9-875943D87EF1}
+		{D81254B9-5BC5-4A08-ACE3-03E362B17FF8} = {BC8C2D08-2713-4DDB-89A9-875943D87EF1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
