@@ -11,7 +11,7 @@
     <PackageId>Paramore.Brighter.MessageStore.PostgreSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.MessageStore.PostgreSql</RepositoryUrl>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

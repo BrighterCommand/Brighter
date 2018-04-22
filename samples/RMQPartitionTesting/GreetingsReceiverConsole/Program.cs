@@ -83,7 +83,7 @@ namespace GreetingsReceiverConsole
             //create the gateway
             var rmqConnnection = new RmqMessagingGatewayConnection 
             {
-                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@192.168.99.100:5672/%2f")),
+                AmpqUri  = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
 

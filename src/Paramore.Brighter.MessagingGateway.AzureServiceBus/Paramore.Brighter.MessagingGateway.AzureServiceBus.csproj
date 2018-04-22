@@ -10,18 +10,18 @@
     <AssemblyName>Paramore.Brighter.MessagingGateway.AzureServiceBus</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.AzureServiceBus</PackageId>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-     <PackageReference Include="AMQPNetLite" Version="2.1.2" />
+    <PackageReference Include="AMQPNetLite" Version="2.1.2" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
-     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
-   </ItemGroup>
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+    <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
+  </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='net461'">
     <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Net.Http" />
