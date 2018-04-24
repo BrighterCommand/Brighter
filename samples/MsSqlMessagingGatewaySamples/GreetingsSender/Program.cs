@@ -9,7 +9,7 @@ namespace GreetingsSender
 {
     class Program
     {
-        static void Main(string[] args)
+        static void Main()
         {
             var container = new TinyIoCContainer();
 
@@ -29,7 +29,7 @@ namespace GreetingsSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>) messageStore, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();
