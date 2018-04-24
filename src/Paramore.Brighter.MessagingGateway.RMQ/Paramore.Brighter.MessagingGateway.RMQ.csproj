@@ -4,7 +4,7 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using RabbitMQ&lt;</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.RMQ</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
-    <TargetFrameworks>netstandard1.5;net461</TargetFrameworks>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.RMQ</AssemblyName>
@@ -19,7 +19,7 @@
     <PackageReference Include="Polly" Version="5.9.0" />
     <PackageReference Include="RabbitMQ.Client" Version="5.0.1" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net461'">
+  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 </Project>
