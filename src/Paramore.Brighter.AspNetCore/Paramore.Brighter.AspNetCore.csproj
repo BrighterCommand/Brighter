@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <VersionPrefix>1.0.0</VersionPrefix>
+    <Version>1.0.0</Version>
     <TargetFrameworks>netstandard1.5;netstandard2.0</TargetFrameworks>
     <Authors>Daniel Stockhammer</Authors>
     <Description>ASP.NET Core integration for Brighter</Description>
