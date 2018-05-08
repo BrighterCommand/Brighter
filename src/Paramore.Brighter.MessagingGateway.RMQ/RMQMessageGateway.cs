@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void ConnectWithRetry(string queueName)
         {
-            _retryPolicy.Execute(ConnectToBroker, new Dictionary<string, object> {{"queueName", queueName}});
+            _retryPolicy.Execute((ctx) => ConnectToBroker(), new Dictionary<string, object> {{"queueName", queueName}});
         }
 
         protected virtual void ConnectToBroker()
