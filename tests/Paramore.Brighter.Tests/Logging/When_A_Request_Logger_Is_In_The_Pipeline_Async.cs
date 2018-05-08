@@ -31,9 +31,8 @@ namespace Paramore.Brighter.Tests.Logging
 
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-
             LogProvider.SetCurrentLogProvider(new SpyLogProvider(_logger));
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         [Fact]
