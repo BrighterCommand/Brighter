@@ -48,21 +48,10 @@ namespace Paramore.Brighter.Tests.Logging
             _logRecords.Should().Contain(log => log.Message.Contains(typeof(MyCommand).ToString()));
         }
 
-        private void Release()
-        {
-            LogProvider.SetCurrentLogProvider(null);
-        }
-
         public void Dispose()
         {
             _commandProcessor?.Dispose();
-            Release();
             GC.SuppressFinalize(this);
-        }
-
-        ~CommandProcessorWithLoggingInPipelineAsyncTests()
-        {
-            Release();
         }
     }
 }
