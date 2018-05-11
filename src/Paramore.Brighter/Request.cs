@@ -9,7 +9,7 @@ namespace Paramore.Brighter
     /// then populates that into the <see cref="MessageHeader"/> as the replyTo address). When we create a <see cref="Reply"/> then we set the <see cref="ReplyAddress"/> from the <see cref="Request"/>
     /// onto the <see cref="Reply"/> and the <see cref="IAmAMessageMapper"/> for the <see cref="Reply"/> sets this as the topic so that it is routed correctly.
     /// </summary>
-    public class Request : Command
+    public class Request : Command, ICall
     {
         /// <summary>
         /// The address of the queue to reply to - usually private to the sender

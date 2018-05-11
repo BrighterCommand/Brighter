@@ -508,6 +508,38 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
+        /// The message is placed into a message queue but not into the message store.
+        /// An ephemeral reply queue is created, and its name used to set the reply address for the response. We produce
+        /// a queue per exchange, to simplify correlating send and receive.
+        /// The response is directed to a registered handler.
+        /// Because the operation blocks, there is a mandatory timeout
+        /// </summary>
+        /// <param name="request">What message do we want a reply to</param>
+        /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public void Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : IResponse
+        {
+            if (timeOutInMilliseconds <= 0)
+            {
+                throw new ConfigurationException("Timeout to a call method must have a duration greater than zero");
+            }
+            
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+
+            var message = messageMapper.MapToMessage(request);
+
+            RetryAndBreakCircuit(() =>
+            {
+                _messageProducer.Send(message);
+            });
+ }
+ 
+        
+
+        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
@@ -577,5 +609,6 @@ namespace Paramore.Brighter
                 .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
         }
-    }
+
+   }
 }

@@ -37,6 +37,8 @@ namespace Paramore.Brighter
         /// <value>The identifier.</value>
         public Guid Id { get; set; }
 
+        public ReplyAddress SendersAddress { get; private set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Command"/> class.
         /// </summary>
