@@ -1,6 +1,5 @@
 ﻿using System;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -35,6 +34,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors
  
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyRequestMessageMapper()));
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
+            
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.Register<MyResponse, MyResponseHandler>();
+            var handlerFactory = new TestHandlerFactory<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -45,6 +48,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             _commandProcessor = new CommandProcessor(
+                subscriberRegistry,
+                handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
@@ -64,6 +69,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
             //should convert the command into a message
             _fakeMessageProducer.SentMessages[0].Should().Be(_message);
+            
+            //should forward response to a handler
+            MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.SendersAddress) {Id = _myRequest.Id});
 
         }
         

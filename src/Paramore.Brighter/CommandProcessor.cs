@@ -52,6 +52,7 @@ namespace Paramore.Brighter
         private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
+        private IAmAChannelFactory _responseChannelFactory;
         private IAmAMessageProducerAsync _asyncMessageProducer;
         private bool _disposed;
 
@@ -207,6 +208,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
@@ -216,12 +218,14 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
+            IAmAChannelFactory responseChannelFactory = null,
             int messageStoreTimeout = 300)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _messageStore = messageStore;
             _messageProducer = messageProducer;
+            _responseChannelFactory = responseChannelFactory;
             _messageStoreTimeout = messageStoreTimeout;
         }
 
@@ -518,25 +522,39 @@ namespace Paramore.Brighter
         /// <param name="request">What message do we want a reply to</param>
         /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
         /// <exception cref="NotImplementedException"></exception>
-        public void Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : IResponse
+        public void Call<T, TResponse>(T request, int timeOutInMilliseconds)
+            where T : class, ICall where TResponse : IResponse
         {
             if (timeOutInMilliseconds <= 0)
             {
                 throw new ConfigurationException("Timeout to a call method must have a duration greater than zero");
             }
-            
+
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+                throw new ArgumentOutOfRangeException(
+                    $"No message mapper registered for messages of type: {typeof(T)}");
 
-            var message = messageMapper.MapToMessage(request);
-
-            RetryAndBreakCircuit(() =>
+            //create a reply queue via creating a consumer - we use random identifiers as we will destroy
+            var channelName = Guid.NewGuid();
+            var routingKey = channelName.ToString();
+            using (var responseChannel =
+                _responseChannelFactory.CreateInputChannel(channelName:routingKey, routingKey:routingKey))
             {
-                _messageProducer.Send(message);
-            });
- }
- 
+
+                request.ReplyAddress.Topic = routingKey;
+                request.ReplyAddress.CorrelationId = channelName; 
+                var message = messageMapper.MapToMessage(request);
+
+                RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+
+                //now we block on the receiver to try and get the message, until timeout.
+                //encapsulate in a retry policy to allow people to fix failures
+
+            } //clean up everything at this point, whatever happens
+
+
+        }
         
 
         /// <summary>
