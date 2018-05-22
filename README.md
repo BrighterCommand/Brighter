@@ -35,7 +35,7 @@ We provide a Docker Compose file to allow you to run the test suite, without hav
 
 To run it, you will need to scale the redis sentinel to at least 3 nodes, and use at least two redis slaves. For example:
 
-docker-compose up -d --build --scale redis-slave2 --scale redis-sentinel=3
+docker-compose up -d --build --scale redis-slave=2 --scale redis-sentinel=3
 
 The goal is to allow you to begin working with Brighter as easily as possible for development.
 
