@@ -35,13 +35,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public IAmAChannel CreateInputChannel(string channelName, 
             string routingKey, 
             bool isDurable = false, 
-            ushort preFetchSize = 1, 
             bool highAvailability = false)
         {
             var messageConsumer = _kafkaMessageConsumerFactory.Create(channelName, 
                 routingKey, 
                 isDurable, 
-                preFetchSize, 
                 highAvailability);
             return new Channel(channelName, messageConsumer);
         }

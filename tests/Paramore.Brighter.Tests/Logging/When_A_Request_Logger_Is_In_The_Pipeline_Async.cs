@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
@@ -13,13 +14,14 @@ namespace Paramore.Brighter.Tests.Logging
     [Collection("Request Logging Async")]
     public class CommandProcessorWithLoggingInPipelineAsyncTests: IDisposable
     {
-        private readonly SpyLog _logger;
         private readonly MyCommand _myCommand;
         private readonly CommandProcessor _commandProcessor;
+        private readonly List<SpyLog.LogRecord> _logRecords;
 
         public CommandProcessorWithLoggingInPipelineAsyncTests()
         {
-            _logger = new SpyLog();
+            _logRecords = new List<SpyLog.LogRecord>();
+            SpyLog logger = new SpyLog(_logRecords);
             _myCommand = new MyCommand();
 
             var registry = new SubscriberRegistry();
@@ -31,9 +33,8 @@ namespace Paramore.Brighter.Tests.Logging
 
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
+            LogProvider.SetCurrentLogProvider(new SpyLogProvider(logger));
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-
-            LogProvider.SetCurrentLogProvider(new SpyLogProvider(_logger));
         }
 
         [Fact]
@@ -42,26 +43,15 @@ namespace Paramore.Brighter.Tests.Logging
             await _commandProcessor.SendAsync(_myCommand);
 
             //_should_log_the_request_handler_call
-            _logger.Logs.Should().Contain(log => log.Message.Contains("Logging handler pipeline call"));
+            _logRecords.Should().Contain(log => log.Message.Contains("Logging handler pipeline call"));
             //_should_log_the_type_of_handler_in_the_call
-            _logger.Logs.Should().Contain(log => log.Message.Contains(typeof(MyCommand).ToString()));
-        }
-
-        private void Release()
-        {
-            LogProvider.SetCurrentLogProvider(null);
+            _logRecords.Should().Contain(log => log.Message.Contains(typeof(MyCommand).ToString()));
         }
 
         public void Dispose()
         {
             _commandProcessor?.Dispose();
-            Release();
             GC.SuppressFinalize(this);
-        }
-
-        ~CommandProcessorWithLoggingInPipelineAsyncTests()
-        {
-            Release();
         }
     }
 }

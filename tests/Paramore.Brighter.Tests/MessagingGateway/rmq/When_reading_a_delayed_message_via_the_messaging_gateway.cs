@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, 1, false);
+            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, false);
             _messageConsumer.Purge();
 
             _client = new TestRMQListener(rmqConnection, _message.Header.Topic);

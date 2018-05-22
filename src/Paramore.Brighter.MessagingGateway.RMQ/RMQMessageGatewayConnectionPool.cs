@@ -29,16 +29,22 @@ using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    /// <summary>
-    /// Class MessageGatewayConnectionPool.
-    /// </summary>
-    public class RMQMessageGatewayConnectionPool
+  /// <summary>
+  /// Class MessageGatewayConnectionPool.
+  /// </summary>
+  public class RMQMessageGatewayConnectionPool
     {
-        private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
+      private readonly string _connectionName;
+      private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
 
-        /// <summary>
+      public RMQMessageGatewayConnectionPool(string connectionName)
+      {
+        _connectionName = connectionName;
+      }
+
+      /// <summary>
         /// Return matching RabbitMQ connection if exist (match by amqp scheme)
         /// or create new connection to RabbitMQ (thread-safe)
         /// </summary>
@@ -90,8 +96,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             connectionFactory.RequestedConnectionTimeout = 5000;
             connectionFactory.SocketReadTimeout = 5000;
             connectionFactory.SocketWriteTimeout = 5000;
-            
-            var connection = connectionFactory.CreateConnection();
+
+            var connection = connectionFactory.CreateConnection(_connectionName);
             
             s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 

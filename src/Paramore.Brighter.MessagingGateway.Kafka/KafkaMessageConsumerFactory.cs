@@ -47,7 +47,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public IAmAMessageConsumer Create(string groupId, 
             string topic, 
             bool isDurable, 
-            ushort preFetchSize, 
             bool highAvailability)
         {
             return new KafkaMessageConsumer(groupId, topic, _globalConfiguration, _consumerConfiguration);

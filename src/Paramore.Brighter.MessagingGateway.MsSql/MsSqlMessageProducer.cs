@@ -5,7 +5,7 @@ using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlMessageProducer : IAmAMessageProducer
+    public class MsSqlMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageProducer>);
         private readonly MsSqlMessageQueue<Message> _sqlQ;

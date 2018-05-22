@@ -15,12 +15,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         }
 
         public IAmAChannel CreateInputChannel(string channelName, string topic, bool isDurable = false,
-            ushort preFetchSize = 1,
             bool highAvailability = false)
         {
             Logger.Value.Debug($"MsSqlInputChannelFactory: create input channel {channelName} for topic {topic}");
             return new Channel(channelName,
-                _msSqlMessageConsumerFactory.Create(channelName, topic, isDurable, preFetchSize, highAvailability));
+                _msSqlMessageConsumerFactory.Create(channelName, topic, isDurable, highAvailability));
         }
     }
 }

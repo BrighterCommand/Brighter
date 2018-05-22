@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                                                       nameof(msSqlMessagingGatewayConfiguration));
         }
 
-        public IAmAMessageConsumer Create(string channelName, string topic, bool isDurable, ushort preFetchSize,
+        public IAmAMessageConsumer Create(string channelName, string topic, bool isDurable,
             bool highAvailability)
         {
             if (topic == null) throw new ArgumentNullException(nameof(topic));

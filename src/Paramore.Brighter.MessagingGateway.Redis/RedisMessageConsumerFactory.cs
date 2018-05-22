@@ -36,17 +36,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             _configuration = configuration;
         }
 
-       
+
         /// <summary>
         /// Creates the specified queue name.
         /// </summary>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
         /// <param name="isDurable">Ignored, depends on Redis persistence of database.</param>
-        /// <param name="preFetchSize"> Always don't send me one message at a time (1) </param>
         /// <param name="highAvailability">Does the queue exist in multiple nodes (depends on Redis clustering,  not Brighter</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, ushort preFetchSize,
+        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable,
             bool highAvailability)
         {
             return new RedisMessageConsumer(_configuration, channelName, routingKey);

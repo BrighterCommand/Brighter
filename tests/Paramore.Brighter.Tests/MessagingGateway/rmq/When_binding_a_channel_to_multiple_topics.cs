@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             var topics = new[] {_messageTopic1.Header.Topic, _messageTopic2.Header.Topic};
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, "Multiple.Topic.Queue", topics, false, 1, false);
+            _messageConsumer = new RmqMessageConsumer(rmqConnection, "Multiple.Topic.Queue", topics, false, false);
             _messageConsumer.Purge();
 
             _client = new TestRMQListener(rmqConnection, "Multiple.Topic.Queue", topics);

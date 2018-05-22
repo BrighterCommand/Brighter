@@ -38,7 +38,7 @@ namespace Paramore.Brighter.ServiceActivator
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
             _connection = connection;
-            _consumerName = new ConsumerName($"{_connection.Name}-{DateTime.Now.Ticks}");
+            _consumerName = new ConsumerName($"{_connection.Name}-{Guid.NewGuid()}");
         }
 
         public Consumer Create()

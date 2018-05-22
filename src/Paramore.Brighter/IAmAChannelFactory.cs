@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,6 +42,6 @@ namespace Paramore.Brighter
         /// <param name="routingKey"></param>
         /// <param name="isDurable"></param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, ushort preFetchSize = 1, bool highAvailability = false);
+        IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, bool highAvailability = false);
     }
 }

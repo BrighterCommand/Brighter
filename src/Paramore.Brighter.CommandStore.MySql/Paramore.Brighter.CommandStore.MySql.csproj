@@ -4,18 +4,21 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MySql</Description>
     <AssemblyTitle>Paramore.Brighter.CommandStore.MsSql</AssemblyTitle>
     <Authors>Derek Comartin</Authors>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.CommandStore.MySql</AssemblyName>
     <PackageId>Paramore.Brighter.CommandStore.MySql</PackageId>
     <PackageTags>MySql;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="MySqlConnector" Version="0.36.0" />
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <PackageReference Include="MySqlConnector" Version="0.40.1" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
+    <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
 </Project>

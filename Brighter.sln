@@ -4,9 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 15.0.27130.2027
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
-ProjectSection(SolutionItems) = preProject
-	samples\RMQPartitionTesting\README.md = samples\RMQPartitionTesting\README.md
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		samples\RMQPartitionTesting\README.md = samples\RMQPartitionTesting\README.md
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{329736D2-BF92-4D06-A7BF-19F4B6B64EDD}"
 EndProject
@@ -99,21 +99,38 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingReceiverConsole", 
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RedisTaskQueueExamples", "RedisTaskQueueExamples", "{1DFC9C79-BA26-41A7-8AE5-89C3FC93134E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiver", "samples\RedisTaskQueueExamples\GreetingsReceiver\GreetingsReceiver.csproj", "{9456A24E-4CA1-4FC5-A850-B88FE9815B9B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiver", "samples\RedisTaskQueueExamples\GreetingsReceiver\GreetingsReceiver.csproj", "{9456A24E-4CA1-4FC5-A850-B88FE9815B9B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\RedisTaskQueueExamples\GreetingsSender\GreetingsSender.csproj", "{DCCED182-1CFE-4184-BA56-EAB98DEF2939}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RedisTaskQueueExamples\GreetingsSender\GreetingsSender.csproj", "{DCCED182-1CFE-4184-BA56-EAB98DEF2939}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\RedisTaskQueueExamples\Greetings\Greetings.csproj", "{CDD80D0B-D420-4AB9-B031-44A19819B71F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RedisTaskQueueExamples\Greetings\Greetings.csproj", "{CDD80D0B-D420-4AB9-B031-44A19819B71F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQPartitionTesting", "RMQPartitionTesting", "{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}"
+	ProjectSection(SolutionItems) = preProject
+		samples\RMQPartitionTesting\docker-compose.yaml = samples\RMQPartitionTesting\docker-compose.yaml
+		samples\RMQPartitionTesting\Handling RMQ Failure.md = samples\RMQPartitionTesting\Handling RMQ Failure.md
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\RMQPartitionTesting\GreetingsPumper\GreetingsPumper.csproj", "{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQPartitionTesting\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{51F5EB35-071A-417B-A4E8-2527A62EDA52}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D8F63587-D29B-4839-BE9D-C05CFDED10A4}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ha-proxy", "ha-proxy", "{73CB582F-E48C-49EE-A912-F5EE17A730E0}"
 ProjectSection(SolutionItems) = preProject
-	samples\RMQPartitionTesting\docker-compose.yaml = samples\RMQPartitionTesting\docker-compose.yaml
-	samples\RMQPartitionTesting\Handling RMQ Failure.md = samples\RMQPartitionTesting\Handling RMQ Failure.md
+	samples\containers\ha-proxy\Dockerfile = samples\containers\ha-proxy\Dockerfile
+	samples\containers\ha-proxy\haproxy.cfg = samples\containers\ha-proxy\haproxy.cfg
 EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPumper", "samples\RMQPartitionTesting\GreetingsPumper\GreetingsPumper.csproj", "{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\RMQPartitionTesting\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{51F5EB35-071A-417B-A4E8-2527A62EDA52}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rabbit-mq", "rabbit-mq", "{D81254B9-5BC5-4A08-ACE3-03E362B17FF8}"
+ProjectSection(SolutionItems) = preProject
+	samples\containers\rabbit-mq\Dockerfile = samples\containers\rabbit-mq\Dockerfile
+	samples\containers\rabbit-mq\rabbitmq.config = samples\containers\rabbit-mq\rabbitmq.config
+EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -601,6 +618,8 @@ Global
 		{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5} = {AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}
 		{51F5EB35-071A-417B-A4E8-2527A62EDA52} = {AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}
+		{73CB582F-E48C-49EE-A912-F5EE17A730E0} = {BC8C2D08-2713-4DDB-89A9-875943D87EF1}
+		{D81254B9-5BC5-4A08-ACE3-03E362B17FF8} = {BC8C2D08-2713-4DDB-89A9-875943D87EF1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

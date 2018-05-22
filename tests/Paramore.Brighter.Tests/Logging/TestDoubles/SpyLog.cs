@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Logging;
 
@@ -6,7 +6,12 @@ namespace Paramore.Brighter.Tests.Logging.TestDoubles
 {
     internal class SpyLog : ILog
     {
-        public IList<LogRecord> Logs { get; } = new List<LogRecord>();
+        public IList<LogRecord> Logs { get; }
+
+        public SpyLog(List<LogRecord> logRecords)
+        {
+            Logs = logRecords;
+        }
 
         public bool Log(LogLevel logLevel, Func<string> messageFunc, Exception exception = null, params object[] formatParameters)
         {
