@@ -16,7 +16,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MySqlConnector" Version="0.40.1" />
+    <PackageReference Include="MySqlConnector" Version="0.40.4" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='net452'">
     <Reference Include="Microsoft.CSharp" />

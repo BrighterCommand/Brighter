@@ -4,7 +4,7 @@
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.PostgreSql</AssemblyTitle>
     <Authors>Tarun Pothulapati</Authors>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessageStore.PostgreSql</AssemblyName>
@@ -17,9 +17,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="3.2.7" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
+    <PackageReference Include="Npgsql" Version="4.0.0" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
   </ItemGroup>
 </Project>
