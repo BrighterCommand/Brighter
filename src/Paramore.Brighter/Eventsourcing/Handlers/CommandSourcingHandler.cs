@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             {
                  _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 var existingCommand = _commandStore.Get<T>(command.Id);
-                if (existingCommand != null)
+                if (existingCommand.Id != Guid.Empty)
                 {
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");

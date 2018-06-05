@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
                 _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
                 var existingCommand = await _commandStore.GetAsync<T>(command.Id, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                if (existingCommand != null)
+                if (existingCommand.Id != Guid.Empty)
                 {
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
