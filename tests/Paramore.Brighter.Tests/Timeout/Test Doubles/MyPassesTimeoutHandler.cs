@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,22 +32,12 @@ namespace Paramore.Brighter.Tests.Timeout.Test_Doubles
 {
     internal class MyPassesTimeoutHandler : RequestHandler<MyCommand>
     {
-        public static bool Commandreceived { get; set; }
-
         [TimeoutPolicy(10000, 0, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
-            Task.Delay(100, ct).ContinueWith((antecedent) =>
-            {
-                Commandreceived = true;
-            }).Wait();
+            Task.Delay(100, ct).ContinueWith((antecedent) => { command.TaskCompleted = true; }, ct).Wait(ct);
             return base.Handle(command);
-        }
-
-        public static bool Shouldreceive(MyCommand command)
-        {
-            return Commandreceived;
         }
     }
 }

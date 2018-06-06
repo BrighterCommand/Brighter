@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Tests.Timeout
             _commandProcessor.Send(_myCommand);
 
             //_should_complete_the_command_before_an_exception
-            MyPassesTimeoutHandler.Shouldreceive(_myCommand);
+            Assert.True(_myCommand.TaskCompleted);
         }
 
         public void Dispose()

@@ -57,11 +57,11 @@ namespace Paramore.Brighter.Tests.Timeout
             _thrownException = (AggregateException)Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_a_timeout_exception
-            _thrownException.Flatten().InnerExceptions.First().Should().BeOfType<TimeoutException>();
+            Assert.IsType<TimeoutException>(_thrownException.Flatten().InnerExceptions.First());
             //_should_signal_that_a_timeout_occured_and_handler_should_be_cancelled
-            _myCommand.WasCancelled.Should().BeTrue();
+            Assert.True(_myCommand.WasCancelled);
             //_should_not_run_to_completion
-            _myCommand.TaskCompleted.Should().BeFalse();
+            Assert.False(_myCommand.TaskCompleted);
         }
 
         public void Dispose()

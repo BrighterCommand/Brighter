@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Tests.Logging
 {
     
-    public class CommandProcessorWithLoggingInPipelineTests : IDisposable
+    public class CommandProcessorWithLoggingInPipelineTests : IClassFixture<LoggerFixture>, IDisposable
     {
         private readonly ITestOutputHelper _output;
 
@@ -23,9 +23,6 @@ namespace Paramore.Brighter.Tests.Logging
         [Fact]
         public void When_A_Request_Logger_Is_In_The_Pipeline()
         {
-            if (!(Log.Logger is Serilog.Core.Logger))
-                Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo.TestCorrelator().CreateLogger();
-
             using (TestCorrelator.CreateContext())
             {
                 var myCommand = new MyCommand();
@@ -44,6 +41,8 @@ namespace Paramore.Brighter.Tests.Logging
 
                 //_should_log_the_request_handler_call
                 //_should_log_the_type_of_handler_in_the_call
+
+                _output.WriteLine($"Logger Type: {Log.Logger}");
                 foreach (var logEvent in TestCorrelator.GetLogEventsFromCurrentContext())
                 {
                     _output.WriteLine(logEvent.MessageTemplate.Text);
@@ -60,6 +59,14 @@ namespace Paramore.Brighter.Tests.Logging
         public void Dispose()
         {
             GC.SuppressFinalize(this);
+        }
+    }
+
+    public class LoggerFixture
+    {
+        public LoggerFixture()
+        {
+            Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo.TestCorrelator().CreateLogger();
         }
     }
 }

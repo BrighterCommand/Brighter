@@ -11,7 +11,7 @@ using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Logging
 {
-    public class CommandProcessorWithLoggingInPipelineAsyncTests: IDisposable
+    public class CommandProcessorWithLoggingInPipelineAsyncTests: IClassFixture<LoggerFixture>, IDisposable
     {
         private readonly MyCommand _myCommand;
         private readonly CommandProcessor _commandProcessor;
@@ -25,7 +25,6 @@ namespace Paramore.Brighter.Tests.Logging
 
             var container = new TinyIoCContainer();
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggedHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyCommand>, RequestLoggingHandlerAsync<MyCommand>>();
 
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
@@ -35,9 +34,6 @@ namespace Paramore.Brighter.Tests.Logging
         [Fact]
         public async Task When_A_Request_Logger_Is_In_The_Pipeline_Async()
         {
-            if (!(Log.Logger is Serilog.Core.Logger))
-                Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo.TestCorrelator().CreateLogger();
-
             using (TestCorrelator.CreateContext())
             {
                 await _commandProcessor.SendAsync(_myCommand);
