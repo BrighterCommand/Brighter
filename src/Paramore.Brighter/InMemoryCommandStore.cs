@@ -100,7 +100,7 @@ namespace Paramore.Brighter
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
             if (!_commands.ContainsKey(id))
-                return null;
+                return new T { Id = Guid.Empty };
 
             var commandStoreItem = _commands[id];
             if (commandStoreItem.CommandType != typeof (T))
