@@ -84,7 +84,7 @@ after_build:
   - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
 
 test_script:
-  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=RMQ&Category!=AWS&Category!=RESTMS&Category!=Kafka"
+  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --filter "Category!=RMQ&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis"
 
 artifacts:
   - path: nupkgs\*.nupkg
