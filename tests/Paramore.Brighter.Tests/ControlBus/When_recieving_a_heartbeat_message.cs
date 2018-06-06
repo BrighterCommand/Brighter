@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Tests.ControlBus
 
             A.CallTo(() => dispatcher.Consumers).Returns(new List<IAmAConsumer> {firstConsumer, secondConsumer});
 
-            var hostName = new HostName($"{Environment.MachineName}.{Assembly.GetEntryAssembly().FullName}");
+            var hostName = new HostName($"{Environment.MachineName}.{Assembly.GetEntryAssembly()?.FullName}");
             A.CallTo(() => dispatcher.HostName).Returns(hostName);
             _hostName = hostName;
 
