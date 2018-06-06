@@ -7,6 +7,11 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
+## Release 7.4.0 ##
+  - Updated to signed version of Polly, works with netcore2.1.
+  - Fix for Sql CommandStore.
+  - Fixes to make flaky tests stable.
+  
 ## Release 7.3.0 ##  
   - Added beta Support for a Redis transport
   - Support for Binding a channel to multiple topics 
