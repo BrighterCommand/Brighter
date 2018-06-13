@@ -1,58 +1,72 @@
 ﻿using System;
-using System.Collections.Generic;
 using FluentAssertions;
 using Xunit;
-using Paramore.Brighter.Logging;
-using Paramore.Brighter.Logging.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Logging.TestDoubles;
+using Serilog;
+using Serilog.Sinks.TestCorrelator;
 using TinyIoC;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Tests.Logging
 {
-    [Collection("Request Logging")]
-    public class CommandProcessorWithLoggingInPipelineTests : IDisposable
+    
+    public class CommandProcessorWithLoggingInPipelineTests : IClassFixture<LoggerFixture>, IDisposable
     {
-        private readonly MyCommand _myCommand;
-        private readonly CommandProcessor _commandProcessor;
-        private readonly List<SpyLog.LogRecord> _logRecords;
+        private readonly ITestOutputHelper _output;
 
-        public CommandProcessorWithLoggingInPipelineTests()
+        public CommandProcessorWithLoggingInPipelineTests(ITestOutputHelper output)
         {
-            _logRecords = new List<SpyLog.LogRecord>();
-            SpyLog logger = new SpyLog(_logRecords);
-
-            _myCommand = new MyCommand();
-
-            var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyLoggedHandler>();
-
-            var container = new TinyIoCContainer();
-            container.Register<IHandleRequests<MyCommand>, MyLoggedHandler>();
-            container.Register<IHandleRequests<MyCommand>, RequestLoggingHandler<MyCommand>>();
-
-            var handlerFactory = new TinyIocHandlerFactory(container);
-
-            LogProvider.SetCurrentLogProvider(new SpyLogProvider(logger));
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _output = output;
         }
 
         [Fact]
         public void When_A_Request_Logger_Is_In_The_Pipeline()
         {
-            _commandProcessor.Send(_myCommand);
+            using (TestCorrelator.CreateContext())
+            {
+                var myCommand = new MyCommand();
 
-            //_should_log_the_request_handler_call
-            _logRecords.Should().Contain(log => log.Message.Contains("Logging handler pipeline call"));
-            //_should_log_the_type_of_handler_in_the_call
-            _logRecords.Should().Contain(log => log.Message.Contains(typeof(MyCommand).ToString()));
+                var registry = new SubscriberRegistry();
+                registry.Register<MyCommand, MyLoggedHandler>();
+
+                var container = new TinyIoCContainer();
+                container.Register<IHandleRequests<MyCommand>, MyLoggedHandler>();
+
+                var handlerFactory = new TinyIocHandlerFactory(container);
+
+                var commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+
+                commandProcessor.Send(myCommand);
+
+                //_should_log_the_request_handler_call
+                //_should_log_the_type_of_handler_in_the_call
+
+                _output.WriteLine($"Logger Type: {Log.Logger}");
+                foreach (var logEvent in TestCorrelator.GetLogEventsFromCurrentContext())
+                {
+                    _output.WriteLine(logEvent.MessageTemplate.Text);
+                }
+                
+                //TestCorrelator.GetLogEventsFromCurrentContext().Should().HaveCount(3);
+                TestCorrelator.GetLogEventsFromCurrentContext()
+                    .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
+                    .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
+            }
         }
 
 
         public void Dispose()
         {
-            _commandProcessor?.Dispose();
             GC.SuppressFinalize(this);
+        }
+    }
+
+    public class LoggerFixture
+    {
+        public LoggerFixture()
+        {
+            Log.Logger = new LoggerConfiguration().MinimumLevel.Information().WriteTo.TestCorrelator().CreateLogger();
         }
     }
 }
