@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         private readonly RmqMessageConsumerFactory _messageConsumerFactory;
 
-        /// <summaryedisdids>
+        /// <summary>
         /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>

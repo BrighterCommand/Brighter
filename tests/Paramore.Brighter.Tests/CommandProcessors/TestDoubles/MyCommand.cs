@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -36,5 +36,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         public Guid Id { get; set; }
 
         public string Value { get; set; }
+        public bool WasCancelled { get; set; }
+        public bool TaskCompleted { get; set; }
     }
 }

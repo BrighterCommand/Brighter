@@ -12,7 +12,7 @@
     <GenerateAssemblyFileVersionAttribute>false</GenerateAssemblyFileVersionAttribute>
     <AssemblyName>KafkaTaskQueueSamples.Greetings</AssemblyName>
     <RootNamespace>KafkaTaskQueueSamples.Greetings</RootNamespace>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
@@ -20,6 +20,6 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.4.0" />
+    <PackageReference Include="System.Reflection.TypeExtensions" Version="4.5.0" />
   </ItemGroup>
 </Project>

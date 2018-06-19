@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             _connectionFactory = new ConnectionFactory
             {
-                Uri = Connection.AmpqUri.Uri.ToString(),
+                Uri = Connection.AmpqUri.Uri,
                 RequestedHeartbeat = 30
             };
 
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void ConnectWithRetry(string queueName)
         {
-            _retryPolicy.Execute(ConnectToBroker, new Dictionary<string, object> {{"queueName", queueName}});
+            _retryPolicy.Execute((ctx) => ConnectToBroker(), new Dictionary<string, object> {{"queueName", queueName}});
         }
 
         protected virtual void ConnectToBroker()

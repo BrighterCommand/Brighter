@@ -33,8 +33,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.MySql
 {
-    [Trait("Category", "Sqlite")]
-    [Collection("Sqlite MessageStore")]
+    [Trait("Category", "MySql")]
+    [Collection("MySql MessageStore")]
     public class MySqlMessageStoreWritngMessagesAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;

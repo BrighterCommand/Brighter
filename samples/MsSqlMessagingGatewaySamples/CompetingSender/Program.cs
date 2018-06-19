@@ -45,12 +45,12 @@ namespace CompetingSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>) messageStore, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();
 
-            using (var transaction = new TransactionScope(TransactionScopeOption.RequiresNew,
+            using (new TransactionScope(TransactionScopeOption.RequiresNew,
                 new TransactionOptions {IsolationLevel = IsolationLevel.ReadCommitted},
                 TransactionScopeAsyncFlowOption.Enabled))
             {

@@ -5,13 +5,21 @@ When we push a collection of functionality it is available via [nuget.org](http:
 
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
-## Master ##  
+## Master ##
+
+## Release 7.4.0 ##
+  - Updated to signed version of Polly, works with netcore2.1.
+  - Fix for Sql CommandStore.
+  - Fixes to make flaky tests stable.
+  
+## Release 7.3.0 ##  
   - Added beta Support for a Redis transport
   - Support for Binding a channel to multiple topics 
   - RMQ Transport: Fixed handling of socket timeout where node we are connected to (not master) partitions from cluster and is paused under the pause minority strategy. Now resets connection successfully.
   - RMQ Transport: Fixed issue with OperationInterrupted exception when master node partitions and we are connected to it
   - Overall improved reliability of Brighter RMQ transport when connecting to a cluster that experiences a partition
   - Fixed an issue where multiple performers did not have distinct names and so could not be tracked
+  - RMQ changed from push rabbit consumer to just simple pull based.
 
 ## Release 7.2.0 ##
   - Support for PostgreSql Message Store (Tarun Pothulapati @Pothulapati)

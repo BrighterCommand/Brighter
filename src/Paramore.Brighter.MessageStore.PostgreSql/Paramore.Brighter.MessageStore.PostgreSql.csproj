@@ -1,21 +1,23 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../build/common.props" />
   <PropertyGroup>
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
     <AssemblyTitle>Paramore.Brighter.MessageStore.PostgreSql</AssemblyTitle>
     <Authors>Tarun Pothulapati</Authors>
-    <TargetFramework>netstandard1.5</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessageStore.PostgreSql</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.PostgreSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter.MessageStore.PostgreSql</RepositoryUrl>
-    <LangVersion>7.2</LangVersion>
+    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="3.2.7" />
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <PackageReference Include="Npgsql" Version="4.0.0" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
   </ItemGroup>
 </Project>

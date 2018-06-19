@@ -29,8 +29,7 @@ namespace HelloWorldAsync
 {
     internal class GreetingCommand : Command
     {
-        public GreetingCommand(string name)
-            : base(new Guid())
+        public GreetingCommand(string name) : base(Guid.NewGuid())
         {
             Name = name;
         }
