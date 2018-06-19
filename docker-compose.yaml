@@ -89,6 +89,16 @@ services:
     environment:
       POSTGRES_PASSWORD: password
 
+  dynamo:
+    image: dwmkerr/dynamodb
+    command: "-sharedDb"
+    hostname: dynamo
+    restart: always
+    volumes:
+      - dynamodb:/data
+    ports:
+      - "8000:8000"
+
 volumes:
   rabbitmq-home:
     driver: local
@@ -113,5 +123,7 @@ volumes:
   postgres-config:
     driver: local
   postgres-logs:
+    driver: local
+  dynamodb:
     driver: local
   
