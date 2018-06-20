@@ -1,0 +1,17 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="AWSSDK.DynamoDBv2">
+      <HintPath>C:\Users\jonathan.ollifflee\.nuget\packages\awssdk.dynamodbv2\3.3.8.1\lib\netstandard1.3\AWSSDK.DynamoDBv2.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

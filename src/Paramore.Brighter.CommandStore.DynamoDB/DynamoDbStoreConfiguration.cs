@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,40 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.CommandStore.DynamoDB
 {
-    internal class MyThrowingEventHandlerAsync : RequestHandlerAsync<MyEvent>
+    /// <summary>
+    /// Class DynamoDbStoreConfiguration
+    /// </summary>
+    public class DynamoDbStoreConfiguration
     {
-        private static MyEvent s_receivedEvent;
+        /// <summary>
+        /// Gets the table name
+        /// </summary>
+        /// <value>The table name</value>
+        public string TableName { get; }
+        /// <summary>
+        /// Gets whether to use strongly consistent reads
+        /// </summary>
+        /// <value>Whether to use stronly consistent reads</value>
+        public bool UseStronglyConsistentRead { get; }
 
-        public MyThrowingEventHandlerAsync()
+        /// <summary>
+        /// Initalises a new instance of the <see cref="DynamoDbStoreConfiguration"/> class.
+        /// </summary>
+        /// <param name="tableName">The table name.</param>
+        /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
+        public DynamoDbStoreConfiguration(string tableName, bool useStronglyConsistentRead)
         {
-            s_receivedEvent = null;
+            TableName = tableName;
+            UseStronglyConsistentRead = useStronglyConsistentRead;
         }
-
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            LogEvent(command);
-
-            await Task.Delay(5, cancellationToken);
-
-            throw new InvalidOperationException();
-        }
-
-        private static void LogEvent(MyEvent @event)
-        {
-            s_receivedEvent = @event;
-        }
-
-        public static bool ShouldReceive(MyEvent myEvent)
-        {
-            return s_receivedEvent.Id == myEvent.Id;
-        }
-    }
+    }     
 }

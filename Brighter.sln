@@ -121,16 +121,20 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ha-proxy", "ha-proxy", "{73CB582F-E48C-49EE-A912-F5EE17A730E0}"
-ProjectSection(SolutionItems) = preProject
-	samples\containers\ha-proxy\Dockerfile = samples\containers\ha-proxy\Dockerfile
-	samples\containers\ha-proxy\haproxy.cfg = samples\containers\ha-proxy\haproxy.cfg
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		samples\containers\ha-proxy\Dockerfile = samples\containers\ha-proxy\Dockerfile
+		samples\containers\ha-proxy\haproxy.cfg = samples\containers\ha-proxy\haproxy.cfg
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "rabbit-mq", "rabbit-mq", "{D81254B9-5BC5-4A08-ACE3-03E362B17FF8}"
-ProjectSection(SolutionItems) = preProject
-	samples\containers\rabbit-mq\Dockerfile = samples\containers\rabbit-mq\Dockerfile
-	samples\containers\rabbit-mq\rabbitmq.config = samples\containers\rabbit-mq\rabbitmq.config
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		samples\containers\rabbit-mq\Dockerfile = samples\containers\rabbit-mq\Dockerfile
+		samples\containers\rabbit-mq\rabbitmq.config = samples\containers\rabbit-mq\rabbitmq.config
+	EndProjectSection
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageStore.DynamoDB", "src\Paramore.Brighter.MessageStore.DynamoDB\Paramore.Brighter.MessageStore.DynamoDB.csproj", "{61657DEB-06F7-4876-9F29-2764EF353275}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.CommandStore.DynamoDB", "src\Paramore.Brighter.CommandStore.DynamoDB\Paramore.Brighter.CommandStore.DynamoDB.csproj", "{B796D6F5-AE94-4CA2-8651-B1F36E589451}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -586,6 +590,30 @@ Global
 		{51F5EB35-071A-417B-A4E8-2527A62EDA52}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{51F5EB35-071A-417B-A4E8-2527A62EDA52}.Release|x86.ActiveCfg = Release|Any CPU
 		{51F5EB35-071A-417B-A4E8-2527A62EDA52}.Release|x86.Build.0 = Release|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Debug|x86.Build.0 = Debug|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Release|Any CPU.Build.0 = Release|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Release|x86.ActiveCfg = Release|Any CPU
+		{61657DEB-06F7-4876-9F29-2764EF353275}.Release|x86.Build.0 = Release|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Debug|x86.Build.0 = Debug|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Release|x86.ActiveCfg = Release|Any CPU
+		{B796D6F5-AE94-4CA2-8651-B1F36E589451}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

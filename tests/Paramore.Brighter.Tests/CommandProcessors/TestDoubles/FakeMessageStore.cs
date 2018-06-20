@@ -42,6 +42,13 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             _messages.Add(message);
         }
 
+        /// <summary>
+        ///     Finds a command with the specified identifier.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
+        /// <returns><see cref="Message"/></returns>
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
             foreach (var message in _messages)
@@ -79,5 +86,55 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         }
 
         public bool ContinueOnCapturedContext { get; set; }
+    }
+
+    public class DynamoDbMessage
+    {
+        [DynamoDBHashKey]
+        public string Id { get; set; }
+        [DynamoDBProperty]
+        public string MessageId { get; set; }
+        [DynamoDBProperty]
+        public string Topic { get; set; }
+        [DynamoDBProperty]
+        public string MessageType { get; set; }
+        [DynamoDBRangeKey]
+        public string TimeStamp { get; set; }
+        [DynamoDBProperty]
+        public string HeaderBag { get; set; }
+        [DynamoDBProperty]
+        public string Body { get; set; }
+
+        public DynamoDbMessage() { }
+
+        public DynamoDbMessage (Message message)
+        {
+            Id = $"{message.Header.TimeStamp:yyyy-MM-dd}";
+            MessageId = message.Id.ToString();
+            Topic = message.Header.Topic;
+            MessageType = message.Header.MessageType.ToString();
+            TimeStamp = message.Header.TimeStamp == DateTime.MinValue ? $"{DateTime.UtcNow}" : $"{message.Header.TimeStamp}";
+            HeaderBag = JsonConvert.SerializeObject(message.Header.Bag);
+            Body = message.Body.Value;
+        }
+
+        public Message ConvertToMessage()
+        {
+            var messageId = Guid.Parse(MessageId);
+            var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
+            var timestamp = DateTime.Parse(TimeStamp);
+            var bag = JsonConvert.DeserializeObject<Dictionary<string, string>>(HeaderBag);
+
+            var header = new MessageHeader(messageId, Topic, messageType, timestamp);
+
+            foreach (var key in bag.Keys)
+            {
+                header.Bag.Add(key, bag[key]);
+            }
+
+            var body = new MessageBody(Body);
+
+            return new Message(header, body);
+        }
     }
 }
