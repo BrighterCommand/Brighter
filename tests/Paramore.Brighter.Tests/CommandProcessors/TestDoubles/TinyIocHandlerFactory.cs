@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -44,11 +44,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         public void Release(IHandleRequests handler)
         {
             var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            disposable?.Dispose();
         }
     }
 }

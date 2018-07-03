@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,23 +34,23 @@ namespace Paramore.Brighter.Tests.Timeout.Test_Doubles
 {
     internal class MyFailsDueToTimeoutHandler : RequestHandler<MyCommand>
     {
-        [TimeoutPolicy(300, 1, HandlerTiming.Before)]
+        [TimeoutPolicy(500, 1, HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
             if (ct.IsCancellationRequested)
             {
+                command.WasCancelled = true;
                 //already died
-                MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = true;
                 return base.Handle(command);
             }
             try
             {
-                var delay = Task.Delay(500, ct).ContinueWith(
+                var delay = Task.Delay(1000, ct).ContinueWith(
                     x =>
                     {
                         // done something I should not do, because I should of been cancel
-                        MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
+                        command.WasCancelled = false;
                     },
                     ct);
 
@@ -60,20 +60,14 @@ namespace Paramore.Brighter.Tests.Timeout.Test_Doubles
             {
                 foreach (var tce in e.InnerExceptions.OfType<TaskCanceledException>())
                 {
-                    MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = true;
-                    MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = false;
+                    command.WasCancelled = true;
+                    command.TaskCompleted = false;
                     return base.Handle(command);
                 }
             }
 
-            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
+            command.TaskCompleted = true;
             return base.Handle(command);
         }
-    }
-
-    public static class MyFailsDueToTimeoutHandlerStateTracker
-    {
-        public static bool WasCancelled { get; set; }
-        public static bool TaskCompleted { get; set; }
     }
 }

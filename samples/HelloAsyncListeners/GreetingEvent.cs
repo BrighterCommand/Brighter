@@ -5,7 +5,7 @@ namespace HelloAsyncListeners
 {
     public class GreetingEvent : Event
     {
-        public GreetingEvent(string name) : base(new Guid())
+        public GreetingEvent(string name) : base(Guid.NewGuid())
         {
             Name = name;
         }

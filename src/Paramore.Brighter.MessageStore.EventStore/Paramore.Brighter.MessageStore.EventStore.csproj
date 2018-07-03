@@ -17,6 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.4.1" />
+    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
   </ItemGroup>
 </Project>

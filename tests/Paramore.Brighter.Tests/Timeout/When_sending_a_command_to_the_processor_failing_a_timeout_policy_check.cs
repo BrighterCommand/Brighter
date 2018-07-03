@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,14 +26,12 @@ using System;
 using System.Linq;
 using FluentAssertions;
 using Xunit;
-using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Timeout.Test_Doubles;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Timeout
 {
-    [Collection("Timeout Policy Check")]
     public class TimeoutHandlerFailsCheckTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
@@ -47,13 +45,9 @@ namespace Paramore.Brighter.Tests.Timeout
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, TimeoutPolicyHandler<MyCommand>>().AsSingleton();
+            container.Register<IHandleRequests<MyCommand>, MyFailsDueToTimeoutHandler>();
 
-            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled = false;
-            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted = true;
-
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+           _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //We have to catch the final exception that bubbles out after retry
@@ -63,11 +57,11 @@ namespace Paramore.Brighter.Tests.Timeout
             _thrownException = (AggregateException)Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             //_should_throw_a_timeout_exception
-            _thrownException.Flatten().InnerExceptions.First().Should().BeOfType<TimeoutException>();
+            Assert.IsType<TimeoutException>(_thrownException.Flatten().InnerExceptions.First());
             //_should_signal_that_a_timeout_occured_and_handler_should_be_cancelled
-            MyFailsDueToTimeoutHandlerStateTracker.WasCancelled.Should().BeTrue();
+            Assert.True(_myCommand.WasCancelled);
             //_should_not_run_to_completion
-            MyFailsDueToTimeoutHandlerStateTracker.TaskCompleted.Should().BeFalse();
+            Assert.False(_myCommand.TaskCompleted);
         }
 
         public void Dispose()

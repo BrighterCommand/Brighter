@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
     /// </summary>
     public class MsSqlCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MsSqlCommandStore>);
+        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<MsSqlCommandStore>);
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        _logger.Value.WarnFormat(
+                        s_logger.Value.WarnFormat(
                             "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                             command.Id);
                         return;
@@ -134,7 +134,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        _logger.Value.WarnFormat(
+                        s_logger.Value.WarnFormat(
                             "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
                             command.Id);
                         return;
