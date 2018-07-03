@@ -59,7 +59,7 @@ namespace Paramore.Brighter.FeatureSwitch.Handlers
 
             if (featureEnabled is FeatureSwitchStatus.Config)
             {              
-                featureEnabled = Context.FeatureSwitches.StatusOf(_handler);
+                featureEnabled = Context.FeatureSwitches?.StatusOf(_handler) ?? FeatureSwitchStatus.On;
             }
 
             return featureEnabled is FeatureSwitchStatus.Off 
