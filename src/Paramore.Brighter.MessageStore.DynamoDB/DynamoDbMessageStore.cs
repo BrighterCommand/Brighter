@@ -43,6 +43,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbMessageStore>);
 
         private readonly DynamoDBContext _context;
+        private readonly DynamoDbStoreConfiguration _storeConfiguration;
         private readonly DynamoDBOperationConfig _operationConfig;
         private readonly DynamoDBOperationConfig _queryOperationConfig;
 
@@ -57,10 +58,11 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         public DynamoDbMessageStore(DynamoDBContext context, DynamoDbStoreConfiguration configuration)
         {
             _context = context;
+            _storeConfiguration = configuration;
             _operationConfig = new DynamoDBOperationConfig
             {
                 OverrideTableName = configuration.TableName,
-                ConsistentRead = configuration.UseStronglyConsistentRead
+                ConsistentRead = configuration.UseStronglyConsistentRead            
             };
         }
 

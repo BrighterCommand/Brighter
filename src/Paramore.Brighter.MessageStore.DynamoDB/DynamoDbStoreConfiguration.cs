@@ -40,15 +40,14 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         /// <value>Whether to use stronly consistent reads</value>
         public bool UseStronglyConsistentRead { get; }
 
+        public string MessageIdIndex { get; }
+
         /// <summary>
         /// Initalises a new instance of the <see cref="DynamoDbStoreConfiguration"/> class.
         /// </summary>
         /// <param name="tableName">The table name.</param>
         /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
-        public DynamoDbStoreConfiguration(string tableName, bool useStronglyConsistentRead)
-        {
-            TableName = tableName;
-            UseStronglyConsistentRead = useStronglyConsistentRead;
-        }
+        public DynamoDbStoreConfiguration(string tableName, bool useStronglyConsistentRead, string messageIdIndex)
+            => (TableName, UseStronglyConsistentRead, MessageIdIndex) = (tableName, useStronglyConsistentRead, messageIdIndex);
     }     
 }

@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests
 
             DynamoDbContext = new DynamoDBContext(Client);
             DynamoDbCommandStoreTestConfiguration = new Brighter.CommandStore.DynamoDB.DynamoDbStoreConfiguration($"command_{_tableName}", true);
-            DynamoDbMessageStoreTestConfiguration = new Brighter.MessageStore.DynamoDB.DynamoDbStoreConfiguration($"message_{_tableName}", true);
+            DynamoDbMessageStoreTestConfiguration = new Brighter.MessageStore.DynamoDB.DynamoDbStoreConfiguration($"message_{_tableName}", true, "MessageId");
         }
 
         public void CreateMessageStoreTable(CreateTableRequest request)
