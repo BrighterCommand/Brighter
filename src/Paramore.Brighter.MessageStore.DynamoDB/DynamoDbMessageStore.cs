@@ -115,12 +115,12 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
     }
 
@@ -144,7 +144,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         public DynamoDbMessage() { }
 
         public DynamoDbMessage (Message message)
-        {
+        {            
             Id = $"{message.Header.TimeStamp:yyyy-MM-dd}";
             MessageId = message.Id.ToString();
             Topic = message.Header.Topic;
