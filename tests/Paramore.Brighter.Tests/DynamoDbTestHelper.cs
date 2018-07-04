@@ -23,9 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.MessageStore.DynamoDB;
 
 namespace Paramore.Brighter.Tests
 {
@@ -67,6 +70,13 @@ namespace Paramore.Brighter.Tests
             Client.CreateTableAsync(request).GetAwaiter().GetResult();
 
             WaitUntilTableReady(DynamoDbCommandStoreTestConfiguration.TableName);
+        }
+
+        public async Task<IEnumerable<DynamoDbMessage>> Scan()
+        {
+            return await DynamoDbContext.ScanAsync<DynamoDbMessage>(new List<ScanCondition>(), new DynamoDBOperationConfig {OverrideTableName = DynamoDbMessageStoreTestConfiguration.TableName})
+                                        .GetNextSetAsync()
+                                        .ConfigureAwait(false);
         }
 
         public void WaitUntilTableReady(string tableName)

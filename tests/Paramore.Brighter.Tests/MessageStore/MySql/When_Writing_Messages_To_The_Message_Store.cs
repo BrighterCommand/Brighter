@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.MessageStore.MySql;
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.Tests.MessageStore.MySql
         private readonly MySqlMessageStore _mySqlMessageStore;
         private readonly Message _messageEarliest;
         private readonly Message _messageLatest;
-        private IEnumerable<Message> _retrievedMessages;
+        private readonly Guid[] _guids;
 
         public MySqlMessageStoreWritngMessagesTests()
         {
