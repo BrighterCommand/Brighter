@@ -59,11 +59,29 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         {
             _context = context;
             _storeConfiguration = configuration;
+
             _operationConfig = new DynamoDBOperationConfig
             {
                 OverrideTableName = configuration.TableName,
                 ConsistentRead = configuration.UseStronglyConsistentRead            
             };
+
+            _queryOperationConfig = new DynamoDBOperationConfig
+            {
+                OverrideTableName = configuration.TableName,
+                IndexName = configuration.MessageIdIndex                
+            };
+        }
+
+        public DynamoDbMessageStore(DynamoDBContext context, DynamoDbStoreConfiguration configuration, DynamoDBOperationConfig queryOperationConfig)
+        {
+            _context = context;
+            _operationConfig = new DynamoDBOperationConfig
+            {
+                OverrideTableName = configuration.TableName,
+                ConsistentRead = configuration.UseStronglyConsistentRead
+            };
+            _queryOperationConfig = queryOperationConfig;
         }
 
         /// <summary>
@@ -110,9 +128,18 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         private async Task<Message> GetMessageFromDynamo(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
             var storedId = id.ToString();
-            var storedMessage = await _context.LoadAsync<DynamoDbMessage>(storedId, _operationConfig, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            return storedMessage is null ? new Message() : storedMessage.ConvertToMessage();
+            _queryOperationConfig.QueryFilter = new List<ScanCondition>
+            {
+                new ScanCondition(_storeConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
+            };
+
+            var messages = 
+                await _context.QueryAsync<DynamoDbMessage>(storedId, _queryOperationConfig)
+                                .GetNextSetAsync(cancellationToken)
+                                .ConfigureAwait(ContinueOnCapturedContext);            
+
+            return messages.FirstOrDefault()?.ConvertToMessage() ?? new Message();
         }
         
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
