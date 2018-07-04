@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Tests
         public AmazonDynamoDBClient Client { get; }
 
         private readonly string _tableName;
+        private readonly CreateTableRequest _createTableRequest;
 
         public DynamoDbTestHelper()
         {          
@@ -47,7 +48,7 @@ namespace Paramore.Brighter.Tests
             };
 
             Client = new AmazonDynamoDBClient(clientConfig);
-            _tableName = $"test_{Guid.NewGuid()}";
+            _tableName = $"test_{Guid.NewGuid()}";            
 
             DynamoDbContext = new DynamoDBContext(Client);
             DynamoDbCommandStoreTestConfiguration = new Brighter.CommandStore.DynamoDB.DynamoDbStoreConfiguration($"command_{_tableName}", true);
