@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 
@@ -15,30 +16,72 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             _tableName = tableName;
         }
 
-        public CreateTableRequest CreateMessageStoreTableRequest(int readCapacityUnits = 2, int writeCapacityUnits = 1)
+        public CreateTableRequest CreateMessageStoreTableRequest(ProvisionedThroughput tableProvisionedThroughput, ProvisionedThroughput idGlobalIndexThroughput)
         {
+            if (tableProvisionedThroughput is null)
+            {
+                throw new ArgumentNullException(nameof(tableProvisionedThroughput));
+            }
+
+            if (idGlobalIndexThroughput is null)
+            {
+                idGlobalIndexThroughput = tableProvisionedThroughput;                
+            }
+
             return new CreateTableRequest
             {
                 TableName = _tableName,
-                ProvisionedThroughput = new ProvisionedThroughput
-                {
-                    ReadCapacityUnits = readCapacityUnits,
-                    WriteCapacityUnits = writeCapacityUnits
-                },
+                ProvisionedThroughput = tableProvisionedThroughput,
                 AttributeDefinitions = new List<AttributeDefinition>
                 {
                     new AttributeDefinition
                     {
-                        AttributeName = "Id",
+                        AttributeName = "Topic+Date",
+                        AttributeType = ScalarAttributeType.S
+                    },
+                    new AttributeDefinition
+                    {
+                        AttributeName = "Time",
+                        AttributeType = ScalarAttributeType.S
+                    },
+                    new AttributeDefinition
+                    {
+                        AttributeName = "MessageId",
                         AttributeType = ScalarAttributeType.S
                     }
+
                 },
                 KeySchema = new List<KeySchemaElement>
                 {
                     new KeySchemaElement
                     {
-                        AttributeName = "Id",
+                        AttributeName = "Topic+Date",
                         KeyType = KeyType.HASH
+                    },
+                    new KeySchemaElement
+                    {
+                        AttributeName = "Time",
+                        KeyType = KeyType.RANGE
+                    }
+                },
+                GlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
+                {
+                    new GlobalSecondaryIndex
+                    {
+                        ProvisionedThroughput = idGlobalIndexThroughput,                        
+                        IndexName = "MessageId",
+                        KeySchema = new List<KeySchemaElement>
+                        {
+                            new KeySchemaElement
+                            {
+                                AttributeName = "MessageId",
+                                KeyType = KeyType.HASH
+                            }
+                        },
+                        Projection = new Projection
+                        {
+                            ProjectionType = ProjectionType.ALL
+                        }
                     }
                 }
             };

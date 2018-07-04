@@ -126,30 +126,38 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
 
     public class DynamoDbMessage
     {
-        [DynamoDBHashKey]
-        public string Id { get; set; }
-        [DynamoDBProperty]
+        [DynamoDBHashKey("Topic+Date")]
+        public string TopicDate { get; set; }
+        [DynamoDBRangeKey]
+        public string Time { get; set; }
+        [DynamoDBGlobalSecondaryIndexHashKey("MessageId")]
         public string MessageId { get; set; }
         [DynamoDBProperty]
         public string Topic { get; set; }
         [DynamoDBProperty]
         public string MessageType { get; set; }
-        [DynamoDBRangeKey]
+        [DynamoDBProperty]
         public string TimeStamp { get; set; }
         [DynamoDBProperty]
         public string HeaderBag { get; set; }
         [DynamoDBProperty]
         public string Body { get; set; }
 
+        [DynamoDBIgnore]
+        public DateTime Date { get; set; }
+
         public DynamoDbMessage() { }
 
         public DynamoDbMessage (Message message)
         {            
-            Id = $"{message.Header.TimeStamp:yyyy-MM-dd}";
+            Date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
+
+            TopicDate = $"{message.Header.Topic}+{Date:yyyy-MM-dd}";
+            Time = $"{Date:T}";
             MessageId = message.Id.ToString();
             Topic = message.Header.Topic;
             MessageType = message.Header.MessageType.ToString();
-            TimeStamp = message.Header.TimeStamp == DateTime.MinValue ? $"{DateTime.UtcNow}" : $"{message.Header.TimeStamp}";
+            TimeStamp = $"{Date}";
             HeaderBag = JsonConvert.SerializeObject(message.Header.Bag);
             Body = message.Body.Value;
         }
