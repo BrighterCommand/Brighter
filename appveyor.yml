@@ -11,11 +11,11 @@ dotnet_csproj:
   informational_version: '{version}'
 
 build_script:
-- cmd: dotnet build . --configuration Release
+  - cmd: dotnet build . --configuration Release
 
 test: off
 
 artifacts:
-- path: **\*.nupkg
+  - path: '**\*.nupkg'
 
 deploy: off
