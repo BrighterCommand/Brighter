@@ -6,7 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AspNetCore
 {
-    internal class AspNetHandlerBuilder : IBrighterHandlerBuilder
+    public class AspNetHandlerBuilder : IBrighterHandlerBuilder
     {
         private readonly AspNetSubscriberRegistry _subscriberRegistry;
 

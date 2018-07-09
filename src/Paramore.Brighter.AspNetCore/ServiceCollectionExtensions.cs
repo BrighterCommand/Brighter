@@ -12,9 +12,22 @@ namespace Paramore.Brighter.AspNetCore
 
             var options = new BrighterOptions();
             configure?.Invoke(options);
+            services.AddSingleton(options);
 
             var subscriberRegistry = new AspNetSubscriberRegistry(services, options.HandlerLifetime);
-            var handlerFactory = new AspNetHandlerFactory(services);
+            services.AddSingleton<AspNetSubscriberRegistry>(subscriberRegistry);
+
+            services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
+
+            return new AspNetHandlerBuilder(services, subscriberRegistry);
+        }
+
+        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
+        {
+            var options = provider.GetService<BrighterOptions>();
+            var subscriberRegistry = provider.GetService<AspNetSubscriberRegistry>();
+
+            var handlerFactory = new AspNetHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
 
             var policyBuilder = CommandProcessorBuilder.With()
@@ -32,9 +45,7 @@ namespace Paramore.Brighter.AspNetCore
                 .RequestContextFactory(options.RequestContextFactory)
                 .Build();
 
-            services.AddSingleton<IAmACommandProcessor>(commandProcessor);
-
-            return new AspNetHandlerBuilder(services, subscriberRegistry);
+            return commandProcessor;
         }
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AspNetCore
 {
-    internal class AspNetSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry
+    public class AspNetSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;

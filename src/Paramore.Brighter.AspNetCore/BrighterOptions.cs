@@ -2,7 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AspNetCore
 {
-    public sealed class BrighterOptions
+    public class BrighterOptions
     {
         /// <summary>
         /// Configures the request context factory. Defaults to <see cref="InMemoryRequestContextFactory"/>.

@@ -1,35 +1,36 @@
 using System;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.AspNetCore
 {
-    internal class AspNetHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
+    public class AspNetHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
     {
-        private readonly IServiceCollection _services;
+        private readonly IServiceProvider _serviceProvider;
 
-        public AspNetHandlerFactory(IServiceCollection services)
+        public AspNetHandlerFactory(IServiceProvider serviceProvider)
         {
-            _services = services;
+            _serviceProvider = serviceProvider;
         }
 
         IHandleRequests IAmAHandlerFactory.Create(Type handlerType)
         {
-            return (IHandleRequests)_services.BuildServiceProvider().GetService(handlerType);
+            return (IHandleRequests)_serviceProvider.GetService(handlerType);
         }
 
         IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
         {
-            return (IHandleRequestsAsync)_services.BuildServiceProvider().GetService(handlerType);
+            return (IHandleRequestsAsync)_serviceProvider.GetService(handlerType);
         }
 
         public void Release(IHandleRequests handler)
         {
-            // no op
+            var diposal = handler as IDisposable;
+            diposal?.Dispose();
         }
 
         public void Release(IHandleRequestsAsync handler)
         {
-            // no op
+            var diposal = handler as IDisposable;
+            diposal?.Dispose();
         }
     }
 }
