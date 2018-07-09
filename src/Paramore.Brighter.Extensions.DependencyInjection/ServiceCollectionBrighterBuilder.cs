@@ -4,16 +4,16 @@ using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.AspNetCore
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
-    public class AspNetHandlerBuilder : IBrighterHandlerBuilder
+    public class ServiceCollectionBrighterBuilder : IBrighterHandlerBuilder
     {
-        private readonly AspNetSubscriberRegistry _subscriberRegistry;
+        private readonly ServiceCollectionSubscriberRegistry _serviceCollectionSubscriberRegistry;
 
-        public AspNetHandlerBuilder(IServiceCollection services, AspNetSubscriberRegistry subscriberRegistry)
+        public ServiceCollectionBrighterBuilder(IServiceCollection services, ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry)
         {
             Services = services;
-            _subscriberRegistry = subscriberRegistry;
+            _serviceCollectionSubscriberRegistry = serviceCollectionSubscriberRegistry;
         }
 
         public IServiceCollection Services { get; }
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.AspNetCore
             if (registerHandlers == null)
                 throw new ArgumentNullException(nameof(registerHandlers));
 
-            registerHandlers(_subscriberRegistry);
+            registerHandlers(_serviceCollectionSubscriberRegistry);
 
             return this;
         }
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.AspNetCore
             if (registerHandlers == null)
                 throw new ArgumentNullException(nameof(registerHandlers));
 
-            registerHandlers(_subscriberRegistry);
+            registerHandlers(_serviceCollectionSubscriberRegistry);
 
             return this;
         }
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.AspNetCore
 
             foreach (var subscriber in subscribers)
             {
-                _subscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
+                _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
             }
         }
     }

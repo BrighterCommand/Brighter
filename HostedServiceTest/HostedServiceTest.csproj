@@ -28,8 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.HostedService\Paramore.Brighter.HostedService.csproj" />
-    <ProjectReference Include="..\src\Paramore.Brighter.AspNetCore\Paramore.Brighter.AspNetCore.csproj" />
+    <ProjectReference Include="..\src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
   </ItemGroup>
 
 </Project>

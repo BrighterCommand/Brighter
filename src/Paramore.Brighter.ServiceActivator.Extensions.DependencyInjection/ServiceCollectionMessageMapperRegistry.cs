@@ -2,15 +2,15 @@
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.HostedService
+namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
-    public class HostMessageMapperRegistry 
+    public class ServiceCollectionMessageMapperRegistry 
     {
         private readonly IServiceCollection _serviceCollection;
         private readonly ServiceLifetime _serviceLifetime;
         private readonly Dictionary<Type, Type> _mapperRegistry = new Dictionary<Type, Type>();
 
-        public HostMessageMapperRegistry(IServiceCollection serviceCollection, ServiceLifetime serviceLifetime)
+        public ServiceCollectionMessageMapperRegistry(IServiceCollection serviceCollection, ServiceLifetime serviceLifetime)
         {
             _serviceCollection = serviceCollection;
             _serviceLifetime = serviceLifetime;

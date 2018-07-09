@@ -2,15 +2,15 @@ using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.AspNetCore
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
-    public class AspNetSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry
+    public class ServiceCollectionSubscriberRegistry : IAmASubscriberRegistry, IAmAnAsyncSubcriberRegistry
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;
         private readonly ServiceLifetime _lifetime;
 
-        public AspNetSubscriberRegistry(IServiceCollection services, ServiceLifetime lifetime)
+        public ServiceCollectionSubscriberRegistry(IServiceCollection services, ServiceLifetime lifetime)
         {
             _services = services;
             _registry = new SubscriberRegistry();

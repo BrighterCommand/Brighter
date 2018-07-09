@@ -1,12 +1,12 @@
 using System;
 
-namespace Paramore.Brighter.AspNetCore
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
-    public class AspNetHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
+    public class ServiceProviderHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
     {
         private readonly IServiceProvider _serviceProvider;
 
-        public AspNetHandlerFactory(IServiceProvider serviceProvider)
+        public ServiceProviderHandlerFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
         }

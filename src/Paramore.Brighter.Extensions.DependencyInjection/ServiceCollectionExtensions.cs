@@ -1,7 +1,7 @@
 using System;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.AspNetCore
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
@@ -14,20 +14,20 @@ namespace Paramore.Brighter.AspNetCore
             configure?.Invoke(options);
             services.AddSingleton(options);
 
-            var subscriberRegistry = new AspNetSubscriberRegistry(services, options.HandlerLifetime);
-            services.AddSingleton<AspNetSubscriberRegistry>(subscriberRegistry);
+            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
+            services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
             services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
 
-            return new AspNetHandlerBuilder(services, subscriberRegistry);
+            return new ServiceCollectionBrighterBuilder(services, subscriberRegistry);
         }
 
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
             var options = provider.GetService<BrighterOptions>();
-            var subscriberRegistry = provider.GetService<AspNetSubscriberRegistry>();
+            var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
 
-            var handlerFactory = new AspNetHandlerFactory(provider);
+            var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
 
             var policyBuilder = CommandProcessorBuilder.With()

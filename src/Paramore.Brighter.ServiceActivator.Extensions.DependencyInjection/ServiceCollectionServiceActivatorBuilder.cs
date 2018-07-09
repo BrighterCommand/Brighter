@@ -2,20 +2,20 @@
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter.AspNetCore;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.HostedService
+namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
-    public class ServiceActivatorBuilder : AspNetHandlerBuilder, IServiceActivatorBuilder
+    public class ServiceCollectionServiceActivatorBuilder : ServiceCollectionBrighterBuilder, IServiceActivatorBuilder
     {
-        private readonly HostMessageMapperRegistry _mapperRegistry;
+        private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
 
-        public ServiceActivatorBuilder(IServiceCollection services, AspNetSubscriberRegistry subscriberRegistry, HostMessageMapperRegistry mapperRegistry) : base(services, subscriberRegistry)
+        public ServiceCollectionServiceActivatorBuilder(IServiceCollection services, ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry, ServiceCollectionMessageMapperRegistry mapperRegistry) : base((IServiceCollection) services, (ServiceCollectionSubscriberRegistry) serviceCollectionSubscriberRegistry)
         {
             _mapperRegistry = mapperRegistry;
         }
 
-        public IServiceActivatorBuilder MapperRegistry(Action<HostMessageMapperRegistry> registerMappers)
+        public IServiceActivatorBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
         {
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));
             

@@ -2,7 +2,7 @@ using System;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Paramore.Brighter.AspNetCore
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public interface IBrighterHandlerBuilder
     {

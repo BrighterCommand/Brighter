@@ -1,12 +1,12 @@
 ﻿using System;
 
-namespace Paramore.Brighter.HostedService
+namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
-    public class MapperFactory : IAmAMessageMapperFactory
+    public class ServiceProviderMapperFactory : IAmAMessageMapperFactory
     {
         private readonly IServiceProvider _container;
 
-        public MapperFactory(IServiceProvider serviceProvider)
+        public ServiceProviderMapperFactory(IServiceProvider serviceProvider)
         {
             _container = serviceProvider;
         }
