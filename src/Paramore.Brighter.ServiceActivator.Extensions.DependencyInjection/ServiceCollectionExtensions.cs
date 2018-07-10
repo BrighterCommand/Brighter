@@ -36,7 +36,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             var options = provider.GetService<ServiceActivatorOptions>();
             var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
 
-           var handlerFactory = new ServiceProviderHandlerFactory(provider);
+            var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
 
             var policyBuilder = CommandProcessorBuilder.With()
@@ -64,7 +64,14 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var dispatcherBuilder = DispatchBuilder.With().CommandProcessor(commandProcessor);
 
-            var messageMapperRegistry = serviceProvider.GetService<ServiceCollectionMessageMapperRegistry>();
+            var serviceCollectionMessageMapperRegistry = serviceProvider.GetService<ServiceCollectionMessageMapperRegistry>();
+            
+            var messageMapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(serviceProvider));
+
+            foreach (var messageMapper in serviceCollectionMessageMapperRegistry)
+            {
+                messageMapperRegistry.Add(messageMapper.Key, messageMapper.Value);
+            }
             
             return dispatcherBuilder.MessageMappers(messageMapperRegistry)
                 .DefaultChannelFactory(options.ChannelFactory)

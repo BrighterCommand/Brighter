@@ -1,20 +1,19 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
     public class ServiceProviderMapperFactory : IAmAMessageMapperFactory
     {
-        private readonly IServiceCollection _serviceCollection;
+        private readonly IServiceProvider _serviceProvider;
 
-        public ServiceProviderMapperFactory(IServiceCollection serviceCollection)
+        public ServiceProviderMapperFactory(IServiceProvider serviceProvider)
         {
-            _serviceCollection = serviceCollection;
+            _serviceProvider = serviceProvider;
         }
 
         public IAmAMessageMapper Create(Type messageMapperType)
         {
-            return (IAmAMessageMapper) _serviceCollection.BuildServiceProvider().GetService(messageMapperType);
+            return (IAmAMessageMapper) _serviceProvider.GetService(messageMapperType);
         }
     }
 }
