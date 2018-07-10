@@ -22,7 +22,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, services.BuildServiceProvider(), options.MapperLifetime);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
             
 

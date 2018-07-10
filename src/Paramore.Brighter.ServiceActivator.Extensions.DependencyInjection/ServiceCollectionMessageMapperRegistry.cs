@@ -11,12 +11,13 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
         public ServiceCollectionMessageMapperRegistry(
             IServiceCollection serviceCollection,
-            IServiceProvider serviceProvider, 
             ServiceLifetime serviceLifetime)
         {
             _serviceCollection = serviceCollection;
             _serviceLifetime = serviceLifetime;
-            _mapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(serviceProvider));
+            _mapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(serviceCollection));
+
+           
         }
         
 
