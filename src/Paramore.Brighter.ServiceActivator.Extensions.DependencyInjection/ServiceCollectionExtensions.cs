@@ -6,7 +6,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
     public static class ServiceActivatorServiceCollectionExtensions
     {
-        public static IServiceActivatorBuilder AddServiceActivator(this IServiceCollection services, Action<ServiceActivatorOptions> configure = null)
+        public static IServiceActivatorBuilder AddServiceActivator(
+            this IServiceCollection services,
+            Action<ServiceActivatorOptions> configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
@@ -20,8 +22,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, services.BuildServiceProvider(), options.MapperLifetime);
             services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
+            
 
             services.AddSingleton<IDispatcher>(BuildDispatcher);
 
@@ -61,7 +64,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var dispatcherBuilder = DispatchBuilder.With().CommandProcessor(commandProcessor);
 
-            var messageMapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(serviceProvider));
+            var messageMapperRegistry = serviceProvider.GetService<ServiceCollectionMessageMapperRegistry>();
             
             return dispatcherBuilder.MessageMappers(messageMapperRegistry)
                 .DefaultChannelFactory(options.ChannelFactory)
