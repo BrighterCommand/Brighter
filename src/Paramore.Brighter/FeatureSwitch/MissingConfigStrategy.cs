@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,40 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using Paramore.Brighter.FeatureSwitch;
-
-namespace Paramore.Brighter
+namespace Paramore.Brighter.FeatureSwitch
 {
-    /// <summary>
-    /// Class RequestContext
-    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
-    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
-    /// and this interface is mainly provided for testing
-    /// </summary>
-    public class RequestContext : IRequestContext
+    public enum MissingConfigStrategy
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestContext"/> class.
+        /// Silently handle missing feature switch by treating it as <see cref="FeatureSwitchStatus.On"/>
         /// </summary>
-        public RequestContext()
-        {
-            Bag = new Dictionary<string, object>();
-        }
-
+        SilentOn,
         /// <summary>
-        /// Gets the bag.
+        /// Siently handle missing feature switch by treating it as <see cref="FeatureSwitchStatus.Off"/>
         /// </summary>
-        /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; private set; }
+        SilentOff,
         /// <summary>
-        /// Gets the policies.
+        /// Throw <see cref="ConfigurationException"/> when no configuration exists for a handler
         /// </summary>
-        /// <value>The policies.</value>
-        public IAmAPolicyRegistry Policies { get; set; }
-        /// <summary>
-        /// Gets the Feature Switches
-        /// </summary>
-        public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
+        Exception
     }
 }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,33 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
+using Paramore.Brighter.FeatureSwitch.Attributes;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter
-{
-    /// <summary>
-    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
-    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
-    /// and this interface is mainly provided for testing
-    /// </summary>
-    public interface IRequestContext
+namespace Paramore.Brighter.Tests.FeatureSwitch.TestDoubles
+{    
+    class MyFeatureSwitchedConfigHandler : RequestHandler<MyCommand>
     {
-        /// <summary>
-        /// Gets the bag.
-        /// </summary>
-        /// <value>The bag.</value>
-        Dictionary<string, object> Bag { get; }
-        
-        /// <summary>
-        /// Gets the policies.
-        /// </summary>
-        /// <value>The policies.</value>
-        IAmAPolicyRegistry Policies { get; }
+        public static bool CommandReceived { get; set; }
 
-        /// <summary>
-        /// Gets the Feature Switches
-        /// </summary>
-        IAmAFeatureSwitchRegistry FeatureSwitches { get; }
+        [FeatureSwitch(typeof(MyFeatureSwitchedConfigHandler), FeatureSwitchStatus.Config, 1, HandlerTiming.Before)]
+        public override MyCommand Handle(MyCommand comand)
+        {
+            CommandReceived = true;
+
+            return base.Handle(comand);
+        }
+
+        public static bool DidReceive(MyCommand command)
+        {
+            return CommandReceived;
+        }
     }
 }

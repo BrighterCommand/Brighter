@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,33 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using Paramore.Brighter.FeatureSwitch;
+using System;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.FeatureSwitch
 {
-    /// <summary>
-    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
-    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
-    /// and this interface is mainly provided for testing
-    /// </summary>
-    public interface IRequestContext
-    {
-        /// <summary>
-        /// Gets the bag.
-        /// </summary>
-        /// <value>The bag.</value>
-        Dictionary<string, object> Bag { get; }
-        
-        /// <summary>
-        /// Gets the policies.
-        /// </summary>
-        /// <value>The policies.</value>
-        IAmAPolicyRegistry Policies { get; }
+    public interface IAmAFeatureSwitchRegistry
+    {        
+        MissingConfigStrategy MissingConfigStrategy { get; set; } 
 
         /// <summary>
-        /// Gets the Feature Switches
+        /// Check the <see cref="FeatureSwitchStatus"/> of a Handler based on type.
         /// </summary>
-        IAmAFeatureSwitchRegistry FeatureSwitches { get; }
+        /// <param name="handler"></param>
+        /// <returns></returns>
+        FeatureSwitchStatus StatusOf(Type handler);
     }
 }

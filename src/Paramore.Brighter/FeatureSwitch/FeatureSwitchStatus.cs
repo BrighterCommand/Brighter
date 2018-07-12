@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,40 +22,24 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-using Paramore.Brighter.FeatureSwitch;
-
-namespace Paramore.Brighter
+namespace Paramore.Brighter.FeatureSwitch
 {
     /// <summary>
-    /// Class RequestContext
-    /// Any pipeline has a request context that allows you to flow information between instances of <see cref="IHandleRequests"/>
-    /// The default in-memory <see cref="RequestContext"/> created by an <see cref="InMemoryRequestContextFactory"/> is suitable for most purposes
-    /// and this interface is mainly provided for testing
+    /// Status type of a Feature Switch
     /// </summary>
-    public class RequestContext : IRequestContext
+    public enum FeatureSwitchStatus
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="RequestContext"/> class.
+        /// Feature Switch is always off
         /// </summary>
-        public RequestContext()
-        {
-            Bag = new Dictionary<string, object>();
-        }
-
+        Off,
         /// <summary>
-        /// Gets the bag.
+        /// Feature Switch is always on
         /// </summary>
-        /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; private set; }
+        On,
         /// <summary>
-        /// Gets the policies.
+        /// Feature Switch state is determined by configuration
         /// </summary>
-        /// <value>The policies.</value>
-        public IAmAPolicyRegistry Policies { get; set; }
-        /// <summary>
-        /// Gets the Feature Switches
-        /// </summary>
-        public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
+        Config
     }
 }

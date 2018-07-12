@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Paramore.Brighter.FeatureSwitch;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -76,6 +78,7 @@ namespace Paramore.Brighter
         private IAmAHandlerFactory _handlerFactory;
         private IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private IAmAPolicyRegistry _policyRegistry;
+        private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private int _messageStoreWriteTimeout;
         private int _messagingGatewaySendTimeout;
         private bool _useTaskQueues = false;
@@ -167,6 +170,17 @@ namespace Paramore.Brighter
             _useTaskQueues = false;
             return this;
         }
+        
+        /// <summary>
+        /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
+        /// </summary>
+        /// <param name="featureSwitchRegistry">The feature switch config provider</param>
+        /// <returns>INeedARequestContext</returns>
+        public INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        {
+            _featureSwitchRegistry = featureSwitchRegistry;
+            return this;
+        }
 
         /// <summary>
         /// The factory for <see cref="IRequestContext"/> used within the pipeline to pass information between <see cref="IHandleRequests{T}"/> steps. If you do not need to override
@@ -194,7 +208,8 @@ namespace Paramore.Brighter
                     handlerFactory: _handlerFactory,
                     asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry);
+                    policyRegistry: _policyRegistry,
+                    featureSwitchRegistry: _featureSwitchRegistry);
             }
             else
             {
@@ -209,7 +224,8 @@ namespace Paramore.Brighter
                     asyncMessageStore: _asyncMessageStore,
                     messageProducer: _messagingGateway,
                     asyncMessageProducer: _asyncMessagingGateway,
-                    messageStoreTimeout: _messageStoreWriteTimeout
+                    messageStoreTimeout: _messageStoreWriteTimeout,
+                    featureSwitchRegistry: _featureSwitchRegistry
                     );
             }
         }
@@ -277,7 +293,15 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="featureSwitchRegistry"></param>
+        /// <returns></returns>
+        INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
+    
     /// <summary>
     /// Interface IAmACommandProcessorBuilder{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
     /// </summary>
