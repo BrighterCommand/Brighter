@@ -18,18 +18,19 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Starting dispatcher");
+            _logger.LogInformation("Starting hosted service dispatcher");
             _dispatcher.Receive();
 
             var completionSource = new TaskCompletionSource<IDispatcher>();
             completionSource.SetResult(_dispatcher);
+
             return completionSource.Task;
         }
 
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Stopping dispatcher");
+            _logger.LogInformation("Stopping hosted service dispatcher");
             return _dispatcher.End();
         }
     }

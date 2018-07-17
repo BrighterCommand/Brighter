@@ -61,6 +61,7 @@ namespace HostedServiceTest
                     services.AddSingleton<ILoggerFactory>(x => new SerilogLoggerFactory());
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
+                .UseConsoleLifetime()
                 .Build();
 
             await host.RunAsync();
