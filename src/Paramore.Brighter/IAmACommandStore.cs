@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,5 +48,14 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>T.</returns>
         T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new();
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <returns>True if it exists, False otherwise</returns>
+        bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest;
     }
 }

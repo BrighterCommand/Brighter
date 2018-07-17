@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class CommandSourcingHandler<T> : RequestHandler<T> where T: class, IRequest, new()
+    public class CommandSourcingHandler<T> : RequestHandler<T> where T: class, IRequest
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandSourcingHandler<T>>);
 
@@ -72,8 +72,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             if (_onceOnly)
             {
                  _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
-                var existingCommand = _commandStore.Get<T>(command.Id);
-                if (existingCommand.Id != Guid.Empty)
+                if (_commandStore.Exists<T>(command.Id))
                 {
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");

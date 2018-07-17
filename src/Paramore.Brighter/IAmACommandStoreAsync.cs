@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,7 +53,17 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task{T}"/>.</returns>
         Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new();
-        
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
+        /// <returns>True if it exists, False otherwise</returns>
+        Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
+
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
