@@ -108,7 +108,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
         /// <returns>True if it exists, False otherwise</returns>
         public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"SELECT TOP 1 CommandId FROM {MessageStoreTableName} WHERE CommandId = @commandId";
+            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId LIMIT 1";
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id)
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
         /// <returns>True if it exists, False otherwise</returns>
         public async Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"SELECT TOP 1 CommandId FROM {MessageStoreTableName} WHERE CommandId = @commandId";
+            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId LIMIT 1";
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id)
