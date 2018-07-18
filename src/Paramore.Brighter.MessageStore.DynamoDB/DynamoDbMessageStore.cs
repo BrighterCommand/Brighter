@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,7 +54,6 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         ///     Initialises a new instance of the <see cref="DynamoDbMessageStore"/> class.
         /// </summary>
         /// <param name="context">The DynamoDBContext</param>
-        /// <param name="tableName">The table name to store messages</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
         public DynamoDbMessageStore(DynamoDBContext context, DynamoDbStoreConfiguration configuration)
         {
@@ -62,14 +62,14 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
 
             _operationConfig = new DynamoDBOperationConfig
             {
-                OverrideTableName = configuration.TableName,
-                ConsistentRead = configuration.UseStronglyConsistentRead            
+                OverrideTableName = configuration.TableName, 
+                ConsistentRead = configuration.UseStronglyConsistentRead
             };
 
             _queryOperationConfig = new DynamoDBOperationConfig
             {
-                OverrideTableName = configuration.TableName,
-                IndexName = configuration.MessageIdIndex                
+                OverrideTableName = configuration.TableName, 
+                IndexName = configuration.MessageIdIndex
             };
         }
 
@@ -78,12 +78,13 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             _context = context;
             _operationConfig = new DynamoDBOperationConfig
             {
-                OverrideTableName = configuration.TableName,
+                OverrideTableName = configuration.TableName, 
                 ConsistentRead = configuration.UseStronglyConsistentRead
             };
             _queryOperationConfig = queryOperationConfig;
         }
 
+        /// <inheritdoc />
         /// <summary>
         ///     Adds a message to the store
         /// </summary>       
@@ -92,8 +93,9 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         public void Add(Message message, int messageStoreTimeout = -1)
         {
             AddAsync(message, messageStoreTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
-        }        
+        }
 
+        /// <inheritdoc />
         /// <summary>
         ///     Adds a message to the store
         /// </summary>
@@ -105,21 +107,29 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             var messageToStore = new DynamoDbMessage(message);
 
             await _context.SaveAsync(messageToStore, _operationConfig, cancellationToken)
-                          .ConfigureAwait(ContinueOnCapturedContext);
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
+        /// <inheritdoc />
         /// <summary>
         ///     Finds a command with the specified identifier.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns><see cref="Message"/></returns>
+        /// <param name="messageId">The identifier.</param>
+        /// <param name="messageStoreTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
             return GetMessageFromDynamo(messageId).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
+        /// <inheritdoc />
+        /// <summary>
+        ///     Finds a message with the specified identifier.
+        /// </summary>
+        /// <param name="messageId">The identifier.</param>
+        /// <param name="messageStoreTimeout">Timeout in milliseconds; -1 for default timeout</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             return await GetMessageFromDynamo(messageId, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -134,22 +144,73 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
                 new ScanCondition(_storeConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
             };
 
-            var messages = 
+            var messages =
                 await _context.QueryAsync<DynamoDbMessage>(storedId, _queryOperationConfig)
-                                .GetNextSetAsync(cancellationToken)
-                                .ConfigureAwait(ContinueOnCapturedContext);            
+                    .GetNextSetAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext);
 
             return messages.FirstOrDefault()?.ConvertToMessage() ?? new Message();
         }
-        
+
+        /// <summary>
+        /// Get paginated list of Messages. Not supported by DynamoDB
+        /// </summary>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <returns><exception cref="NotSupportedException"></exception></returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
             throw new NotSupportedException();
         }
 
+        /// <inheritdoc />
+        /// <summary>
+        /// Get paginated list of Messages. Not supported by DynamoDB
+        /// </summary>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <param name="cancellationToken"></param>
+        /// <returns><exception cref="T:System.NotSupportedException"></exception></returns>
         public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken cancellationToken = default(CancellationToken))
         {
             throw new NotSupportedException();
+        }
+
+        /// <summary>
+        ///     Get list of messages based on date and time
+        /// </summary>
+        /// <param name="topic">The topic of the message. First part of the partition key for Message Store.</param>
+        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Message Store.</param>
+        /// <param name="startTime">Time to retrieve messages from on given date.</param>
+        /// <param name="endTime">Time to retrieve message until on given date.</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns><see cref="T:List Paramore.Brighter.Message"/></returns>
+        public IList<Message> Get(string topic, DateTime date, DateTime? startTime = null, DateTime? endTime = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var primaryKey = $"{topic}+{date:yyyy-MM-dd}";
+
+            var filter = GenerateFilter(startTime, endTime);
+            
+            var query = _context.QueryAsync<DynamoDbMessage>(primaryKey, filter.Operator, filter.Values, _operationConfig)
+                                .GetRemainingAsync(cancellationToken)
+                                .GetAwaiter()
+                                .GetResult();
+
+            var results = query;
+
+            return results.Select(r => r.ConvertToMessage()).ToList();            
+        }
+        
+        private static (QueryOperator Operator, IEnumerable<string> Values) GenerateFilter(DateTime? startTime, DateTime? endTime)
+        {
+            var start = $"{startTime ?? DateTime.MinValue:T}";
+            var end = $"{endTime ?? DateTime.MaxValue:T}";
+            
+            return startTime is null && endTime is null || startTime.HasValue && endTime.HasValue
+                ? (QueryOperator.Between, new[] {start, end})
+                : startTime is null
+                    ? (QueryOperator.LessThanOrEqual, new[] {end})
+                    : (QueryOperator.GreaterThanOrEqual, new[] {start});
         }
     }
 
@@ -157,28 +218,37 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
     {
         [DynamoDBHashKey("Topic+Date")]
         public string TopicDate { get; set; }
+
         [DynamoDBRangeKey]
         public string Time { get; set; }
+
         [DynamoDBGlobalSecondaryIndexHashKey("MessageId")]
         public string MessageId { get; set; }
+
         [DynamoDBProperty]
         public string Topic { get; set; }
+
         [DynamoDBProperty]
         public string MessageType { get; set; }
+
         [DynamoDBProperty]
         public string TimeStamp { get; set; }
+
         [DynamoDBProperty]
         public string HeaderBag { get; set; }
+
         [DynamoDBProperty]
         public string Body { get; set; }
 
         [DynamoDBIgnore]
         public DateTime Date { get; set; }
 
-        public DynamoDbMessage() { }
+        public DynamoDbMessage()
+        {
+        }
 
-        public DynamoDbMessage (Message message)
-        {            
+        public DynamoDbMessage(Message message)
+        {
             Date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 
             TopicDate = $"{message.Header.Topic}+{Date:yyyy-MM-dd}";
