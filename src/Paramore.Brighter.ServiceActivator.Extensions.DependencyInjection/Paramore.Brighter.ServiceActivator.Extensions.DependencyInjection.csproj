@@ -5,6 +5,8 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>Service Activator Microsoft.Extensions.DependencyInjection support</Description>
     <Authors>Toby Henderson</Authors>
+    <PackageProjectUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions/blob/master/LICENSE.md</PackageLicenseUrl>
   </PropertyGroup>
 
   <ItemGroup>

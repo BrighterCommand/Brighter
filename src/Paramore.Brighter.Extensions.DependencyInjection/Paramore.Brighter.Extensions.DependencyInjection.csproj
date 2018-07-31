@@ -2,12 +2,10 @@
   <PropertyGroup>
     <TargetFrameworks>netstandard1.5;netstandard2.0</TargetFrameworks>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Authors>Daniel Stockhammer</Authors>
+    <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <Description>Brighter Microsoft.Extensions.DependencyInjection support</Description>
-    <PackageProjectUrl>https://github.com/BrighterCommand/Brighter</PackageProjectUrl>
-    <PackageLicenseUrl>https://raw.githubusercontent.com/BrighterCommand/Brighter/master/LICENCE.txt</PackageLicenseUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>git://github.com/BrighterCommand/Brighter</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions</PackageProjectUrl>
+    <PackageLicenseUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions/blob/master/LICENSE.md</PackageLicenseUrl>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Paramore.Brighter" Version="7.4.2" />
