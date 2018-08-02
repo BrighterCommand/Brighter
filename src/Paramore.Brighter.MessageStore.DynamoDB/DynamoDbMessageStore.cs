@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbMessageStore>);
 
         private readonly DynamoDBContext _context;
-        private readonly DynamoDbStoreConfiguration _storeConfiguration;
+        private readonly DynamoDbMessageStoreConfiguration _messageStoreConfiguration;
         private readonly DynamoDBOperationConfig _operationConfig;
         private readonly DynamoDBOperationConfig _queryOperationConfig;
 
@@ -55,10 +55,10 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         /// </summary>
         /// <param name="context">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbMessageStore(DynamoDBContext context, DynamoDbStoreConfiguration configuration)
+        public DynamoDbMessageStore(DynamoDBContext context, DynamoDbMessageStoreConfiguration configuration)
         {
             _context = context;
-            _storeConfiguration = configuration;
+            _messageStoreConfiguration = configuration;
 
             _operationConfig = new DynamoDBOperationConfig
             {
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             };
         }
 
-        public DynamoDbMessageStore(DynamoDBContext context, DynamoDbStoreConfiguration configuration, DynamoDBOperationConfig queryOperationConfig)
+        public DynamoDbMessageStore(DynamoDBContext context, DynamoDbMessageStoreConfiguration configuration, DynamoDBOperationConfig queryOperationConfig)
         {
             _context = context;
             _operationConfig = new DynamoDBOperationConfig
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
 
             _queryOperationConfig.QueryFilter = new List<ScanCondition>
             {
-                new ScanCondition(_storeConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
+                new ScanCondition(_messageStoreConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
             };
 
             var messages =
@@ -203,8 +203,8 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         
         private static (QueryOperator Operator, IEnumerable<string> Values) GenerateFilter(DateTime? startTime, DateTime? endTime)
         {
-            var start = $"{startTime ?? DateTime.MinValue:T}";
-            var end = $"{endTime ?? DateTime.MaxValue:T}";
+            var start = $"{startTime?.Ticks ?? DateTime.MinValue.Ticks}";
+            var end = $"{endTime?.Ticks ?? DateTime.MaxValue.Ticks}";
             
             return startTime is null && endTime is null || startTime.HasValue && endTime.HasValue
                 ? (QueryOperator.Between, new[] {start, end})
@@ -252,7 +252,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             Date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 
             TopicDate = $"{message.Header.Topic}+{Date:yyyy-MM-dd}";
-            Time = $"{Date:T}";
+            Time = $"{Date.Ticks}";
             MessageId = message.Id.ToString();
             Topic = message.Header.Topic;
             MessageType = message.Header.MessageType.ToString();

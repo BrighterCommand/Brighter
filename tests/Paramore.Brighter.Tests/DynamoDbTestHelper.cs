@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.CommandStore.DynamoDB;
 using Paramore.Brighter.MessageStore.DynamoDB;
 
 namespace Paramore.Brighter.Tests
@@ -35,27 +36,24 @@ namespace Paramore.Brighter.Tests
     public class DynamoDbTestHelper
     {
         public DynamoDBContext DynamoDbContext { get; }
-        public Brighter.CommandStore.DynamoDB.DynamoDbStoreConfiguration DynamoDbCommandStoreTestConfiguration { get; }
-        public Brighter.MessageStore.DynamoDB.DynamoDbStoreConfiguration DynamoDbMessageStoreTestConfiguration { get; }
+        public DynamoDbCommandStoreConfiguration DynamoDbCommandCommandStoreTestConfiguration { get; }
+        public DynamoDbMessageStoreConfiguration DynamoDbMessageStoreTestConfiguration { get; }
         
         public AmazonDynamoDBClient Client { get; }
 
-        private readonly string _tableName;
-        private readonly CreateTableRequest _createTableRequest;
-
         public DynamoDbTestHelper()
-        {          
+        {
             var clientConfig = new AmazonDynamoDBConfig
             {
                 ServiceURL = "http://localhost:8000"
             };
 
             Client = new AmazonDynamoDBClient(clientConfig);
-            _tableName = $"test_{Guid.NewGuid()}";            
+            var tableName = $"test_{Guid.NewGuid()}";            
 
             DynamoDbContext = new DynamoDBContext(Client);
-            DynamoDbCommandStoreTestConfiguration = new Brighter.CommandStore.DynamoDB.DynamoDbStoreConfiguration($"command_{_tableName}", true);
-            DynamoDbMessageStoreTestConfiguration = new Brighter.MessageStore.DynamoDB.DynamoDbStoreConfiguration($"message_{_tableName}", true, "MessageId");
+            DynamoDbCommandCommandStoreTestConfiguration = new DynamoDbCommandStoreConfiguration($"command_{tableName}", true, "CommandId");
+            DynamoDbMessageStoreTestConfiguration = new DynamoDbMessageStoreConfiguration($"message_{tableName}", true, "MessageId");
         }
 
         public void CreateMessageStoreTable(CreateTableRequest request)
@@ -69,7 +67,7 @@ namespace Paramore.Brighter.Tests
         {
             Client.CreateTableAsync(request).GetAwaiter().GetResult();
 
-            WaitUntilTableReady(DynamoDbCommandStoreTestConfiguration.TableName);
+            WaitUntilTableReady(DynamoDbCommandCommandStoreTestConfiguration.TableName);
         }
 
         public async Task<IEnumerable<DynamoDbMessage>> Scan()
@@ -79,7 +77,7 @@ namespace Paramore.Brighter.Tests
                                         .ConfigureAwait(false);
         }
 
-        public void WaitUntilTableReady(string tableName)
+        private void WaitUntilTableReady(string tableName)
         {
             string status = null;
             do
@@ -100,7 +98,7 @@ namespace Paramore.Brighter.Tests
 
         public void CleanUpCommandDb()
         {
-            Client.DeleteTableAsync(DynamoDbCommandStoreTestConfiguration.TableName).GetAwaiter().GetResult();
+            Client.DeleteTableAsync(DynamoDbCommandCommandStoreTestConfiguration.TableName).GetAwaiter().GetResult();
         }
 
         public void CleanUpMessageDb()

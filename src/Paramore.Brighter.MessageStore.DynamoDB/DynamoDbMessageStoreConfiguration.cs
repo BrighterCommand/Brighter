@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
     /// <summary>
     /// Class DynamoDbStoreConfiguration
     /// </summary>
-    public class DynamoDbStoreConfiguration
+    public class DynamoDbMessageStoreConfiguration
     {
         /// <summary>
         /// Gets the table name
@@ -43,11 +43,12 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
         public string MessageIdIndex { get; }
 
         /// <summary>
-        /// Initalises a new instance of the <see cref="DynamoDbStoreConfiguration"/> class.
+        /// Initalises a new instance of the <see cref="DynamoDbMessageStoreConfiguration"/> class.
         /// </summary>
         /// <param name="tableName">The table name.</param>
         /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
-        public DynamoDbStoreConfiguration(string tableName, bool useStronglyConsistentRead, string messageIdIndex)
+        /// <param name="messageIdIndex">Name of Message Id index for scan operations</param>
+        public DynamoDbMessageStoreConfiguration(string tableName, bool useStronglyConsistentRead, string messageIdIndex)
             => (TableName, UseStronglyConsistentRead, MessageIdIndex) = (tableName, useStronglyConsistentRead, messageIdIndex);
     }     
 }

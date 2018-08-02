@@ -27,7 +27,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
     /// <summary>
     /// Class DynamoDbStoreConfiguration
     /// </summary>
-    public class DynamoDbStoreConfiguration
+    public class DynamoDbCommandStoreConfiguration
     {
         /// <summary>
         /// Gets the table name
@@ -40,15 +40,15 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         /// <value>Whether to use stronly consistent reads</value>
         public bool UseStronglyConsistentRead { get; }
 
+        public string CommandIdIndex { get; }
+
         /// <summary>
-        /// Initalises a new instance of the <see cref="DynamoDbStoreConfiguration"/> class.
+        /// Initalises a new instance of the <see cref="DynamoDbCommandStoreConfiguration"/> class.
         /// </summary>
         /// <param name="tableName">The table name.</param>
         /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
-        public DynamoDbStoreConfiguration(string tableName, bool useStronglyConsistentRead)
-        {
-            TableName = tableName;
-            UseStronglyConsistentRead = useStronglyConsistentRead;
-        }
+        /// <param name="commandIdIndex">Name of Command Id index for Scan operations</param>
+        public DynamoDbCommandStoreConfiguration(string tableName, bool useStronglyConsistentRead, string commandIdIndex)
+            => (TableName, UseStronglyConsistentRead, CommandIdIndex) = (tableName, useStronglyConsistentRead, commandIdIndex);
     }     
 }

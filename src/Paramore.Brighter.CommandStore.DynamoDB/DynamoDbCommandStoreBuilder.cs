@@ -31,12 +31,19 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
                 {
                     new AttributeDefinition
                     {
-                        AttributeName = "Key",
+                        AttributeName = "Command+Date",
                         AttributeType = ScalarAttributeType.S
-                    },
+                    }
+                    ,
                     new AttributeDefinition
                     {
-                        AttributeName = "TimeStamp",
+                        AttributeName = "Time",
+                        AttributeType = ScalarAttributeType.S
+                    }
+                    ,
+                    new AttributeDefinition
+                    {
+                        AttributeName = "CommandId",
                         AttributeType = ScalarAttributeType.S
                     }
                 },
@@ -44,26 +51,28 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
                 {
                     new KeySchemaElement
                     {
-                        AttributeName = "Key",
+                        AttributeName = "Command+Date",
                         KeyType = KeyType.HASH
-                    },
+                    }
+                    ,
                     new KeySchemaElement
                     {
-                        AttributeName = "TimeStamp",
+                        AttributeName = "Time",
                         KeyType = KeyType.RANGE
                     }
-                },
+                }
+                ,
                 GlobalSecondaryIndexes = new List<GlobalSecondaryIndex>
                 {
                     new GlobalSecondaryIndex
                     {
-                        IndexName = "MessageId",
+                        IndexName = "CommandId",
                         ProvisionedThroughput = provisionedThroughput,
                         KeySchema = new List<KeySchemaElement>
                         {
                             new KeySchemaElement
                             {
-                                AttributeName = "MessageId",
+                                AttributeName = "CommandId",
                                 KeyType = KeyType.HASH
                             }
                         },
