@@ -6,6 +6,7 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+  - Support for Feature Switches on handlers
 
 ## Release 7.4.0 ##
   - Updated to signed version of Polly, works with netcore2.1.
