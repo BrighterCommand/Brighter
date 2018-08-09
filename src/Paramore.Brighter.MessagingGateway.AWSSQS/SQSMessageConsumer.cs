@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.messaginggateway.awssqs
 // Author           : ian
 // Created          : 08-17-2015
@@ -14,6 +14,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -30,6 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageConsumer>);
 
         private readonly AWSCredentials _credentials;
+        private readonly RegionEndpoint _regionEndpoint;
         private readonly string _queueUrl;
 
         /// <summary>
@@ -42,6 +44,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _queueUrl = queueUrl;
             _credentials = credentials;
             DelaySupported = true;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqsMessageConsumer"/> class.
+        /// </summary>
+        /// <param name="credentials">The AWS Credentials used to connect to the SQS queue.</param>
+        /// <param name="regionEndpoint">The AWS region used to connect to the SQS queue.</param>
+        /// <param name="queueUrl">The queue URL.</param>
+        public SqsMessageConsumer(AWSCredentials credentials, RegionEndpoint regionEndpoint, string queueUrl) : this(credentials, queueUrl)
+        {
+            _regionEndpoint = regionEndpoint;
         }
 
         /// <summary>
@@ -70,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             _logger.Value.DebugFormat("SqsMessageConsumer: Preparing to retrieve next message from queue {0}", _queueUrl);
 
-            var rawSqsMessage = new SqsQueuedRetriever(_credentials).GetMessage(_queueUrl, timeoutInMilliseconds, noOfMessagesToCache).Result;
+            var rawSqsMessage = new SqsQueuedRetriever(_credentials, _regionEndpoint).GetMessage(_queueUrl, timeoutInMilliseconds, noOfMessagesToCache).Result;
 
             if(rawSqsMessage == null)
                 return new Message();

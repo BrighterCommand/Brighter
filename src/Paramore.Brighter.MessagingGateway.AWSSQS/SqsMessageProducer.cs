@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.messaginggateway.awssqs
 // Author           : ian
 // Created          : 08-17-2015
@@ -14,6 +14,7 @@
 
 using System;
 using System.Net;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
@@ -30,6 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageProducer>);
 
         private readonly AWSCredentials _credentials;
+        private readonly RegionEndpoint _regionEndpoint;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
@@ -41,6 +43,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
+        /// </summary>
+        /// <param name="credentials">The credentials for the AWS account being used</param>
+        /// <param name="regionEndpoint">The AWS region used to connect to the SNS.</param>
+        public SqsMessageProducer(AWSCredentials credentials, RegionEndpoint regionEndpoint) : this(credentials)
+        {
+            _regionEndpoint = regionEndpoint;
+        }
+
+        /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -49,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var messageString = JsonConvert.SerializeObject(message);
             _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
 
-            using (var client = new AmazonSimpleNotificationServiceClient(_credentials))
+            using (var client = new AmazonSimpleNotificationServiceClient(_credentials, _regionEndpoint))
             {
                 var topicArn = EnsureTopic(message.Header.Topic, client);
                 var publishRequest = new PublishRequest(topicArn, messageString);

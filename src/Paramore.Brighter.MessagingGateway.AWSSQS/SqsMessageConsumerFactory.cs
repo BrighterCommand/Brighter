@@ -12,6 +12,7 @@
 // <summary></summary>
 // ***********************************************************************
 
+using Amazon;
 using Amazon.Runtime;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -22,6 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly AWSCredentials _credentials;
+        private readonly RegionEndpoint _regionEndpoint;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
@@ -29,6 +31,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SqsMessageConsumerFactory(AWSCredentials credentials) 
         {
             _credentials = credentials;
+        }
+
+        public SqsMessageConsumerFactory(AWSCredentials credentials, RegionEndpoint regionEndpoint) : this(credentials)
+        {
+            _regionEndpoint = regionEndpoint;
         }
 
         /// <summary>
@@ -41,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, bool highAvailability = false)
         {
-            return new SqsMessageConsumer(_credentials, channelName);
+            return new SqsMessageConsumer(_credentials, _regionEndpoint, channelName);
         }
     }
 }
