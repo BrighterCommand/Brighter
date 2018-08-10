@@ -116,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     client.DeleteMessageAsync(new DeleteMessageRequest(_queueUrl, receiptHandle));
 
@@ -146,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 _logger.Value.InfoFormat("SqsMessageConsumer: Rejecting the message {0} with receipt handle {1} on the queue {2} with requeue paramter {3}", message.Id, receiptHandle, _queueUrl, requeue);
                 
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     if (requeue)
                     {
@@ -174,7 +174,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             try
             {
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     _logger.Value.InfoFormat("SqsMessageConsumer: Purging the queue {0}", _queueUrl);
 
@@ -210,7 +210,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 Reject(message, false);
 
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
 
