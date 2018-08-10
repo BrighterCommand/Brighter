@@ -35,13 +35,13 @@ namespace Paramore.Brighter
         /// <summary>
         /// The _factory method{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
         /// </summary>
-        private readonly Func<IAmAMessageMapper> _factoryMethod;
+        private readonly Func<Type, IAmAMessageMapper> _factoryMethod;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SimpleMessageMapperFactory"/> class.
         /// </summary>
         /// <param name="factoryMethod">The factory method.</param>
-        public SimpleMessageMapperFactory(Func<IAmAMessageMapper> factoryMethod)
+        public SimpleMessageMapperFactory(Func<Type, IAmAMessageMapper> factoryMethod)
         {
             _factoryMethod = factoryMethod;
         }
@@ -53,7 +53,7 @@ namespace Paramore.Brighter
         /// <returns>IAmAMessageMapper.</returns>
         public IAmAMessageMapper Create(Type messageMapperType)
         {
-            return _factoryMethod();
+            return _factoryMethod(messageMapperType);
         }
     }
 }

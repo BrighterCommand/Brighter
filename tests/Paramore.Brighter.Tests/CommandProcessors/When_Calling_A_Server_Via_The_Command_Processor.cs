@@ -1,8 +1,10 @@
 ﻿using System;
 using FluentAssertions;
 using Newtonsoft.Json.Linq;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using ServiceStack.DataAnnotations;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
@@ -32,8 +34,17 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             var body = new MessageBody(json.ToString());
             _message = new Message(header, body);
  
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyRequestMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            {
+                if (type == typeof(MyRequestMessageMapper))
+                    return new MyRequestMessageMapper();
+                if (type == typeof(MyResponseMessageMapper))
+                    return new MyResponseMessageMapper();
+               
+                throw new ConfigurationException($"No mapper found for {type.Name}");
+            }));
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
+            messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
@@ -47,6 +58,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
+            InMemoryChannelFactory inMemoryChannelFactory = new InMemoryChannelFactory();
+            //we need to seed the response as the fake producer does not actually send across the wire
+            inMemoryChannelFactory.SeedChannel(new[] {_message});
+            
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -54,7 +69,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 (IAmAMessageStore<Message>)null,
-                (IAmAMessageProducer)_fakeMessageProducer);
+                (IAmAMessageProducer)_fakeMessageProducer,
+                responseChannelFactory: inMemoryChannelFactory);
   
         }
 
@@ -71,7 +87,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _fakeMessageProducer.SentMessages[0].Should().Be(_message);
             
             //should forward response to a handler
-            MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.SendersAddress) {Id = _myRequest.Id});
+            MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
 
         }
         

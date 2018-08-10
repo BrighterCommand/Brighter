@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var channel = new FakeChannel();
             IAmACommandProcessor commandProcessor = new SpyCommandProcessor();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             _connection = new Connection<MyEvent>(new ConnectionName("test"), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));

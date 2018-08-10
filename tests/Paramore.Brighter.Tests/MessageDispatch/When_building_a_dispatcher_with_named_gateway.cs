@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
         public DispatchBuilderWithNamedGateway()
         {
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             var policyRegistry = new PolicyRegistry
             {

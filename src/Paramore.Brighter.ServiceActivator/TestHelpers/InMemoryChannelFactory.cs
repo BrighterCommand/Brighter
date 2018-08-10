@@ -22,20 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
     public class InMemoryChannelFactory : IAmAChannelFactory
     {
-        private readonly FakeChannel _channel;
+        private IEnumerable<Message> _seedMessages;
+        private readonly IAmAChannel _channel;
 
         public InMemoryChannelFactory(FakeChannel channel = null)
         {
-            _channel = channel ?? new FakeChannel();
+            _channel = channel;
         }
 
         public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, bool highAvailability = false)
         {
-            return _channel;
+            var  channel = _channel ?? new FakeChannel();
+            foreach (var message in _seedMessages)
+            {
+                channel.Enqueue(message);
+            }
+            return channel;
+        }
+
+        public void SeedChannel(IEnumerable<Message> seedMessages)
+        {
+            _seedMessages = seedMessages;
         }
     }
 }

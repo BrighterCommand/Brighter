@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 );
 
             var messageMapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
+                new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _commandProcessor = CommandProcessorBuilder.With()

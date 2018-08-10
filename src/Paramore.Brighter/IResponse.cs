@@ -2,16 +2,15 @@ using System;
 
 namespace Paramore.Brighter
 {
-    public interface IResponse
+    /// <summary>
+    /// A Response to a Request. We derive from IRequest because our message handling infrastructure receives requests
+    /// even if in a Request-Response paradigm that is a response to another request.
+    /// </summary>
+    public interface IResponse : IRequest
     {
         /// <summary>
         /// Allow us to correlate request and response
         /// </summary>
         Guid CorrelationId { get; }
-        
-        /// <summary>
-        /// The address of the queue to reply to - usually private to the sender
-        /// </summary>
-         ReplyAddress SendersAddress { get; }
-    }
+  }
 }

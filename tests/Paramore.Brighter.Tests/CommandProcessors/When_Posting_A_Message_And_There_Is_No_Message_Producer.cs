@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             var retryPolicy = Policy
@@ -73,6 +73,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         public void When_Posting_A_Message_And_There_Is_No_Message_Producer()
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
+
+            _exception.Should().BeOfType<InvalidOperationException>();
         }
 
         public void Dispose()

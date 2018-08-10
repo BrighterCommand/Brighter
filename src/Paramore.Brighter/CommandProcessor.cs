@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
@@ -522,16 +523,21 @@ namespace Paramore.Brighter
         /// <param name="request">What message do we want a reply to</param>
         /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
         /// <exception cref="NotImplementedException"></exception>
-        public void Call<T, TResponse>(T request, int timeOutInMilliseconds)
-            where T : class, ICall where TResponse : IResponse
+        public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds)
+            where T : class, ICall where TResponse : class, IResponse
         {
             if (timeOutInMilliseconds <= 0)
             {
-                throw new ConfigurationException("Timeout to a call method must have a duration greater than zero");
+                throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
+            var outMessageMapper = _mapperRegistry.Get<T>();
+            if (outMessageMapper == null)
+                throw new ArgumentOutOfRangeException(
+                    $"No message mapper registered for messages of type: {typeof(T)}");
+            
+            var responseMessageMapper = _mapperRegistry.Get<TResponse>();
+            if (responseMessageMapper == null)
                 throw new ArgumentOutOfRangeException(
                     $"No message mapper registered for messages of type: {typeof(T)}");
 
@@ -544,15 +550,21 @@ namespace Paramore.Brighter
 
                 request.ReplyAddress.Topic = routingKey;
                 request.ReplyAddress.CorrelationId = channelName; 
-                var message = messageMapper.MapToMessage(request);
+                var outMessage = outMessageMapper.MapToMessage(request);
 
-                RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+                //We don't store the message, if we continue to fail further retry is left to the sender 
+                Retry(() => _messageProducer.Send(outMessage));
 
+                Message responseMessage = null;
                 //now we block on the receiver to try and get the message, until timeout.
-                //encapsulate in a retry policy to allow people to fix failures
+                Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+
+                //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                var response = responseMessageMapper.MapToRequest(responseMessage);
+
+                return response;
 
             } //clean up everything at this point, whatever happens
-
 
         }
         

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
         public DispatchBuilderTests()
         {
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyEventMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var retryPolicy = Policy
