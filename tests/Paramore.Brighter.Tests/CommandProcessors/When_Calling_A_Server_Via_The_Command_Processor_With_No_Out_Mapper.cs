@@ -7,26 +7,23 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorCallTestsNoTimeout : IDisposable
+    public class CommandProcessorMissingOutMapperTests
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new MyRequest();
-
-        public CommandProcessorCallTestsNoTimeout()
+        
+        public CommandProcessorMissingOutMapperTests()
         {
-            _myRequest.RequestValue = "Hello World";
+             _myRequest.RequestValue = "Hello World";
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
-                if (type == typeof(MyRequestMessageMapper))
-                    return new MyRequestMessageMapper();
                 if (type == typeof(MyResponseMessageMapper))
                     return new MyResponseMessageMapper();
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }));
             
-            messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -54,17 +51,15 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 (IAmAMessageStore<Message>)null,
                 (IAmAMessageProducer)new FakeMessageProducer(),
                 responseChannelFactory: new InMemoryChannelFactory());
-
         }
-
-
+           
         [Fact]
-        public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Timeout()
+        public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Out_Mapper()
         {
-            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 0));
+            var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 500));
             
-            //should throw an exception as we require a timeout to be set
-            exception.Should().BeOfType<InvalidOperationException>();
+            //should throw an exception as we require a mapper for the outgoing request 
+            exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
 
 
@@ -72,5 +67,5 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         {
             _commandProcessor.Dispose();
         }
-    }
+  }
 }

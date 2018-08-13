@@ -536,8 +536,8 @@ namespace Paramore.Brighter
                 throw new ArgumentOutOfRangeException(
                     $"No message mapper registered for messages of type: {typeof(T)}");
             
-            var responseMessageMapper = _mapperRegistry.Get<TResponse>();
-            if (responseMessageMapper == null)
+            var inMessageMapper = _mapperRegistry.Get<TResponse>();
+            if (inMessageMapper == null)
                 throw new ArgumentOutOfRangeException(
                     $"No message mapper registered for messages of type: {typeof(T)}");
 
@@ -560,7 +560,7 @@ namespace Paramore.Brighter
                 Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                var response = responseMessageMapper.MapToRequest(responseMessage);
+                var response = inMessageMapper.MapToRequest(responseMessage);
 
                 return response;
 
