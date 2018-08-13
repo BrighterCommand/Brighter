@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -90,13 +90,60 @@ namespace Paramore.Brighter.CommandStore.Sqlite
 
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @CommandId", this.MessageStoreTableName);
+            var sql = $"select * from {this.MessageStoreTableName} where CommandId = @CommandId";
             var parameters = new[]
             {
                 this.CreateSqlParameter("CommandId", id)
             };
 
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, parameters);
+        }
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <returns>True if it exists, False otherwise</returns>
+        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        {
+            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId LIMIT 1";
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", id)
+            };
+
+            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
+                parameters);
+        }
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <returns>True if it exists, False otherwise</returns>
+        public async Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId LIMIT 1";
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", id)
+            };
+
+            return await ExecuteCommandAsync<bool>(
+                    async command =>
+                    {
+                        var reader = await command.ExecuteReaderAsync(cancellationToken);
+                        return reader.HasRows;
+                    },
+                    sql,
+                    timeoutInMilliseconds,
+                    parameters,
+                    cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
@@ -127,7 +174,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
 
         public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @CommandId", MessageStoreTableName);
+            var sql = $"select * from {MessageStoreTableName} where CommandId = @CommandId";
             var parameters = new[]
             {
                 CreateSqlParameter("@CommandId", id)
@@ -211,9 +258,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
 
         private string GetAddSql()
         {
-            var sqlAdd = string.Format(
-                "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
-                MessageStoreTableName);
+            var sqlAdd = $"insert into {MessageStoreTableName} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)";
             return sqlAdd;
         }
 

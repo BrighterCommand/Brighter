@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -56,6 +56,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
+            _mysqlCommandStore.Exists<MyCommand>(_raisedCommand.Id).Should().BeTrue();
         }
 
         public void Dispose()

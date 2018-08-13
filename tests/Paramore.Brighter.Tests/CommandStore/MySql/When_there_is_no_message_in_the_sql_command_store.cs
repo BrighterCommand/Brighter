@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -49,10 +49,12 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
-            _storedCommand = _mysqlCommandStore.Get<MyCommand>(Guid.NewGuid());
+            Guid commandId = Guid.NewGuid();
+            _storedCommand = _mysqlCommandStore.Get<MyCommand>(commandId);
 
            //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);
+            _mysqlCommandStore.Exists<MyCommand>(commandId).Should().BeFalse();
         }
 
         public void Dispose()

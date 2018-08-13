@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -58,6 +58,8 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
+            var exists = await _sqlCommandStore.ExistsAsync<MyCommand>(_raisedCommand.Id);
+            exists.Should().BeTrue();
         }
 
         public void Dispose()

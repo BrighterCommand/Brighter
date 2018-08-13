@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -50,10 +50,14 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
-            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(Guid.NewGuid());
+            Guid commandId = Guid.NewGuid();
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(commandId);
 
             //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);
+
+            bool exists = await _sqlCommandStore.ExistsAsync<MyCommand>(commandId);
+            exists.Should().BeFalse();
         }
 
         public void Dispose()

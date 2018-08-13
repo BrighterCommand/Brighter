@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
     /// approach is typically called Command Sourcing.
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class CommandSourcingHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest, new()
+    public class CommandSourcingHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandSourcingHandlerAsync<T>>);
 
@@ -62,8 +62,6 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             base.InitializeFromAttributeParams(initializerList);
         }
 
-  
-
         /// <summary>
         /// Awaitably logs the command we received to the command store.
         /// </summary>
@@ -77,8 +75,8 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             {
                 _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
-                var existingCommand = await _commandStore.GetAsync<T>(command.Id, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                if (existingCommand.Id != Guid.Empty)
+                var exists = await _commandStore.ExistsAsync<T>(command.Id, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                if (exists)
                 {
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");

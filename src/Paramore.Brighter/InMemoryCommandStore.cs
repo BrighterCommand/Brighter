@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -108,6 +108,34 @@ namespace Paramore.Brighter
                     commandStoreItem.CommandType.Name, typeof (T).Name));
 
             return JsonConvert.DeserializeObject<T>(commandStoreItem.CommandBody);
+        }
+
+        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        {
+            return _commands.ContainsKey(id);
+        }
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <returns>True if it exists, False otherwise</returns>
+        public Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var tcs = new TaskCompletionSource<bool>();
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+
+            var command = Exists<T>(id, timeoutInMilliseconds);
+
+            tcs.SetResult(command);
+            return tcs.Task;
         }
 
         /// <summary>

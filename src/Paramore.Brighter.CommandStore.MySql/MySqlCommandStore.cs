@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -97,8 +97,7 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// <returns>T.</returns>
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @commandId",
-                _configuration.CommandStoreTableName);
+            var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId";
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id)
@@ -106,6 +105,53 @@ namespace Paramore.Brighter.CommandStore.MySql
 
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds,
                 parameters);
+        }
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <returns>True if it exists, False otherwise</returns>
+        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        {
+            var sql = $"SELECT CommandId FROM {_configuration.CommandStoreTableName} WHERE CommandId = @commandId LIMIT 1";
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", id)
+            };
+
+            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
+                parameters);
+        }
+
+        /// <summary>
+        /// Checks whether a command with the specified identifier exists in the store
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="id">The identifier.</param>
+        /// <param name="timeoutInMilliseconds"></param>
+        /// <returns>True if it exists, False otherwise</returns>
+        public async Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var sql = $"SELECT CommandId FROM {_configuration.CommandStoreTableName} WHERE CommandId = @commandId LIMIT 1";
+            var parameters = new[]
+            {
+                CreateSqlParameter("CommandId", id)
+            };
+
+            return await ExecuteCommandAsync<bool>(
+                    async command =>
+                    {
+                        var reader = await command.ExecuteReaderAsync(cancellationToken);
+                        return reader.HasRows;
+                    },
+                    sql,
+                    timeoutInMilliseconds,
+                    cancellationToken,
+                    parameters)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -165,7 +211,7 @@ namespace Paramore.Brighter.CommandStore.MySql
         public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest, new()
         {
-            var sql = string.Format("select * from {0} where CommandId = @commandId", _configuration.CommandStoreTableName);
+            var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId";
 
             var parameters = new[]
             {
@@ -234,9 +280,7 @@ namespace Paramore.Brighter.CommandStore.MySql
         private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
         {
             var sqlAdd =
-                string.Format(
-                    "insert into {0} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)",
-                    _configuration.CommandStoreTableName);
+                $"insert into {_configuration.CommandStoreTableName} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)";
 
             var sqlcmd = connection.CreateCommand();
             if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
