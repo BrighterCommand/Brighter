@@ -7,6 +7,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
   - Support for Feature Switches on handlers
+  - Switch Command Sourcing Handler to using an Exists method when checking for duplicate messages
+  - Add a region endpoint parameter for AWS SQS + SNS
 
 ## Release 7.4.0 ##
   - Updated to signed version of Polly, works with netcore2.1.
