@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.messaginggateway.awssqs
 // Author           : ian
 // Created          : 08-17-2015
@@ -14,6 +14,7 @@
 
 using System;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -30,6 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageConsumer>);
 
         private readonly AWSCredentials _credentials;
+        private readonly RegionEndpoint _regionEndpoint;
         private readonly string _queueUrl;
 
         /// <summary>
@@ -42,6 +44,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _queueUrl = queueUrl;
             _credentials = credentials;
             DelaySupported = true;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqsMessageConsumer"/> class.
+        /// </summary>
+        /// <param name="credentials">The AWS Credentials used to connect to the SQS queue.</param>
+        /// <param name="regionEndpoint">The AWS region used to connect to the SQS queue.</param>
+        /// <param name="queueUrl">The queue URL.</param>
+        public SqsMessageConsumer(AWSCredentials credentials, RegionEndpoint regionEndpoint, string queueUrl) : this(credentials, queueUrl)
+        {
+            _regionEndpoint = regionEndpoint;
         }
 
         /// <summary>
@@ -70,7 +83,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             _logger.Value.DebugFormat("SqsMessageConsumer: Preparing to retrieve next message from queue {0}", _queueUrl);
 
-            var rawSqsMessage = new SqsQueuedRetriever(_credentials).GetMessage(_queueUrl, timeoutInMilliseconds, noOfMessagesToCache).Result;
+            var rawSqsMessage = new SqsQueuedRetriever(_credentials, _regionEndpoint).GetMessage(_queueUrl, timeoutInMilliseconds, noOfMessagesToCache).Result;
 
             if(rawSqsMessage == null)
                 return new Message();
@@ -103,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     client.DeleteMessageAsync(new DeleteMessageRequest(_queueUrl, receiptHandle));
 
@@ -133,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 _logger.Value.InfoFormat("SqsMessageConsumer: Rejecting the message {0} with receipt handle {1} on the queue {2} with requeue paramter {3}", message.Id, receiptHandle, _queueUrl, requeue);
                 
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     if (requeue)
                     {
@@ -161,7 +174,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             try
             {
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     _logger.Value.InfoFormat("SqsMessageConsumer: Purging the queue {0}", _queueUrl);
 
@@ -197,7 +210,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 Reject(message, false);
 
-                using (var client = new AmazonSQSClient(_credentials))
+                using (var client = new AmazonSQSClient(_credentials, _regionEndpoint))
                 {
                     _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
 
