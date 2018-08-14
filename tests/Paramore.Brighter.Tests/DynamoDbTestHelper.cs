@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Tests
     public class DynamoDbTestHelper
     {
         public DynamoDBContext DynamoDbContext { get; }
-        public DynamoDbCommandStoreConfiguration DynamoDbCommandCommandStoreTestConfiguration { get; }
+        public DynamoDbCommandStoreConfiguration DynamoDbCommandStoreTestConfiguration { get; }
         public DynamoDbMessageStoreConfiguration DynamoDbMessageStoreTestConfiguration { get; }
         
         public AmazonDynamoDBClient Client { get; }
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests
             var tableName = $"test_{Guid.NewGuid()}";            
 
             DynamoDbContext = new DynamoDBContext(Client);
-            DynamoDbCommandCommandStoreTestConfiguration = new DynamoDbCommandStoreConfiguration($"command_{tableName}", true, "CommandId");
+            DynamoDbCommandStoreTestConfiguration = new DynamoDbCommandStoreConfiguration($"command_{tableName}", true, "CommandId");
             DynamoDbMessageStoreTestConfiguration = new DynamoDbMessageStoreConfiguration($"message_{tableName}", true, "MessageId");
         }
 
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Tests
         {
             Client.CreateTableAsync(request).GetAwaiter().GetResult();
 
-            WaitUntilTableReady(DynamoDbCommandCommandStoreTestConfiguration.TableName);
+            WaitUntilTableReady(DynamoDbCommandStoreTestConfiguration.TableName);
         }
 
         public async Task<IEnumerable<DynamoDbMessage>> Scan()
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.Tests
 
         public void CleanUpCommandDb()
         {
-            Client.DeleteTableAsync(DynamoDbCommandCommandStoreTestConfiguration.TableName).GetAwaiter().GetResult();
+            Client.DeleteTableAsync(DynamoDbCommandStoreTestConfiguration.TableName).GetAwaiter().GetResult();
         }
 
         public void CleanUpMessageDb()
