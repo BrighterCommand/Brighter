@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Tests.MessageStore.DynamoDB
         {
             var retrievedMessages = _dynamoDbMessageStore.Get(_topic, _timeStamp, _timeStamp.AddHours(-3), _timeStamp.AddHours(-2));
 
-            //_should_read_the_last_two_messages_from_the_store
+            //_should_read_the_last_middle_message_from_the_store
             retrievedMessages.Should().HaveCount(1);
             retrievedMessages.Single().Should().Be(_message2);
         }

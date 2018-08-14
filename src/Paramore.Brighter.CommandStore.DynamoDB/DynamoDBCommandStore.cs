@@ -54,7 +54,6 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         ///     Initialises a new instance of the <see cref="DynamoDbCommandStore"/> class.
         /// </summary>
         /// <param name="context">The DynamoDBContext</param>
-        /// <param name="tableName">The table name to store Commands</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
         public DynamoDbCommandStore(DynamoDBContext context, DynamoDbCommandStoreConfiguration configuration)
         {            
@@ -140,6 +139,11 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
                     .ConfigureAwait(ContinueOnCapturedContext);            
 
             return storedCommand.FirstOrDefault()?.ConvertToCommand() ?? new T {Id = Guid.Empty};
+        }
+
+        public IList<T> Get<T>(DateTime date, DateTime? startTime = null, DateTime? endTime = null)
+        {
+            throw new NotImplementedException();
         }
     }
 
