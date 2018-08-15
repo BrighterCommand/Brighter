@@ -1,13 +1,13 @@
 version: '2'
 
 services:
-# rabbitmq:
-#   image: rabbitmq:3-management
-#   ports:
-#     - "5672:5672"
-#     - "15672:15672"
-#   volumes:
-#     - rabbitmq-home:/var/lib/rabbitmq
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-home:/var/lib/rabbitmq
 
   eventstore:
     image: eventstore/eventstore
@@ -21,15 +21,15 @@ services:
       - EVENTSTORE_START_STANDARD_PROJECTIONS=TRUE
     
   # Need to give 4GB of memory to Docker for SQL
-# sqlserver:
-#   image: microsoft/mssql-server-linux
-#   ports:
-#     - "1433:1433"
-#   volumes:
-#     - sqlserver-data:/var/opt/mssql
-#   environment:
-#     - ACCEPT_EULA=Y
-#     - SA_PASSWORD=password
+  sqlserver:
+    image: microsoft/mssql-server-linux
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=password
   mysql:
     image: mysql
     ports:
@@ -39,43 +39,43 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "root"
   
-#  redis-master:
-#    image: redis
-#    volumes:
-#      - redis-master-data:/data
-#    command: redis-server --appendonly yes 
-#    ports:
-#      - "6379:6379"
-#   
-#  redis-slave:
-#    image: redis
-#    volumes:
-#      - redis-slave-data:/data
-#    command: redis-server --slaveof redis-master 6379 --appendonly yes
-#
-#    # Instance 1
-#  redis-sentinel:
-#    build: ./samples/containers/redis-sentinel
-#    volumes:
-#      - redis-s1-data:/redis
-#    links:
-#      - redis-master
-#
-#  # Instance 2
-#  redis-sentinel1:
-#    build: ./samples/containers/redis-sentinel
-#    volumes:
-#      - redis-s1-data:/redis
-#    links:
-#      - redis-master
-#
-#  # Instance 3
-#  redis-sentinel2:
-#    build: ./samples/containers/redis-sentinel
-#    volumes:
-#      - redis-s1-data:/redis
-#    links:
-#      - redis-master
+  redis-master:
+    image: redis
+    volumes:
+      - redis-master-data:/data
+    command: redis-server --appendonly yes 
+    ports:
+      - "6379:6379"
+    
+  redis-slave:
+    image: redis
+    volumes:
+      - redis-slave-data:/data
+    command: redis-server --slaveof redis-master 6379 --appendonly yes
+
+    # Instance 1
+  redis-sentinel:
+    build: ./samples/containers/redis-sentinel
+    volumes:
+      - redis-s1-data:/redis
+    links:
+      - redis-master
+
+  # Instance 2
+  redis-sentinel1:
+    build: ./samples/containers/redis-sentinel
+    volumes:
+      - redis-s1-data:/redis
+    links:
+      - redis-master
+
+  # Instance 3
+  redis-sentinel2:
+    build: ./samples/containers/redis-sentinel
+    volumes:
+      - redis-s1-data:/redis
+    links:
+      - redis-master
 
   postgres:
     image: postgres
