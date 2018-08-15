@@ -1,7 +1,6 @@
 ﻿#region Licence
-
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -24,57 +23,37 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
-using Paramore.Brighter.MessageStore.MsSql;
 
-namespace Paramore.Brighter.Tests.MessageStore.MsSql
+namespace Paramore.Brighter.Tests.MessageStore.DynamoDB
 {
-    [Trait("Category", "MSSQL")]
-    [Collection("MSSQL MessageStore")]
-    public class MsSqlMessageStoreRangeRequestTests : IDisposable
+    [Trait("Category", "DynamoDB")]
+    [Collection("DynamoDB MessageStore")]
+    public class DynamoDbMessageStoreRangeRequestTests : BaseDynamoDBMessageStoreTests
     {
-        private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
-        private IEnumerable<Message> _messages;
-        private readonly MsSqlMessageStore _sqlMessageStore;
 
-        public MsSqlMessageStoreRangeRequestTests()
+        public DynamoDbMessageStoreRangeRequestTests()
         {
-            _msSqlTestHelper = new MsSqlTestHelper();
-            _msSqlTestHelper.SetupMessageDb();
-
-            _sqlMessageStore = new MsSqlMessageStore(_msSqlTestHelper.MessageStoreConfiguration);
             var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _sqlMessageStore.Add(messageEarliest);
+
+            _dynamoDbMessageStore.Add(messageEarliest);
             Task.Delay(100);
-            _sqlMessageStore.Add(message1);
+            _dynamoDbMessageStore.Add(message1);
             Task.Delay(100);
-             _sqlMessageStore.Add(message2);
+            _dynamoDbMessageStore.Add(message2);
         }
 
         [Fact]
-        public void When_There_Are_Multiple_Messages_In_The_Message_Store_And_A_Range_Is_Fetched()
+        public void When_there_are_multiple_messages_in_the_message_store_and_a_range_is_fetched()
         {
-            _messages = _sqlMessageStore.Get(1, 3);
-
-            //_should_fetch_1_message
-            _messages.Should().HaveCount(1);
-            //_should_fetch_expected_message
-            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
-            //_should_not_fetch_null_messages
-            _messages.Should().NotBeNull();
-        }
-
-        public void Dispose()
-        {
-            _msSqlTestHelper.CleanUpDb();
+            var exception = Catch.Exception(() => _dynamoDbMessageStore.GetAsync(1, 3).Wait());
+            exception.Should().BeOfType<NotSupportedException>();
         }
     }
 }
