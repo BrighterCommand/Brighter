@@ -190,7 +190,6 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             var primaryKey = $"{topic}+{date:yyyy-MM-dd}";
 
             var filter = GenerateFilter(startTime, endTime);
-            
             var query = _context.QueryAsync<DynamoDbMessage>(primaryKey, filter.Operator, filter.Values, _operationConfig)
                                 .GetRemainingAsync(cancellationToken)
                                 .GetAwaiter()
@@ -201,17 +200,27 @@ namespace Paramore.Brighter.MessageStore.DynamoDB
             return results.Select(r => r.ConvertToMessage()).ToList();            
         }
         
-        private static (QueryOperator Operator, IEnumerable<string> Values) GenerateFilter(DateTime? startTime, DateTime? endTime)
+        private static Filter GenerateFilter(DateTime? startTime, DateTime? endTime)
         {
             var start = $"{startTime?.Ticks ?? DateTime.MinValue.Ticks}";
             var end = $"{endTime?.Ticks ?? DateTime.MaxValue.Ticks}";
             
             return startTime is null && endTime is null || startTime.HasValue && endTime.HasValue
-                ? (QueryOperator.Between, new[] {start, end})
+                ? new Filter(QueryOperator.Between, new[] { start, end })
                 : startTime is null
-                    ? (QueryOperator.LessThanOrEqual, new[] {end})
-                    : (QueryOperator.GreaterThanOrEqual, new[] {start});
+                    ? new Filter(QueryOperator.LessThanOrEqual, new[] { end })
+                    : new Filter(QueryOperator.GreaterThanOrEqual, new[] { start });
         }
+
+        private class Filter
+        {
+            public QueryOperator Operator { get; }
+            public IEnumerable<string> Values { get; }
+
+            public Filter(QueryOperator @operator, IEnumerable<string> values)
+                => (Operator, Values) = (@operator, values);
+        }
+        
     }
 
     public class DynamoDbMessage
