@@ -45,12 +45,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         private readonly DynamoDBContext _context;
         private readonly DynamoDbCommandStoreConfiguration _configuration;
         private readonly DynamoDBOperationConfig _operationConfig;
-        private readonly DynamoDBOperationConfig _queryOperationConfig;
-
-        public Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
-        {
-            throw new NotImplementedException();
-        }
+        private readonly DynamoDBOperationConfig _queryOperationConfig;        
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -61,7 +56,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
         public DynamoDbCommandStore(DynamoDBContext context, DynamoDbCommandStoreConfiguration configuration)
         {            
-            _context = context;
+            _context = context;            
             _configuration = configuration;
             _operationConfig = new DynamoDBOperationConfig
             {
@@ -98,12 +93,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
             return GetCommandFromDynamo<T>(id).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
-        }
-
-        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {
-            throw new NotImplementedException();
-        }
+        }        
 
         /// <summary>
         ///     Adds a command to the store
@@ -129,7 +119,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
         public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
-        {
+        {                
             return await GetCommandFromDynamo<T>(id, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }        
 
@@ -155,6 +145,43 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
                     .ConfigureAwait(ContinueOnCapturedContext);            
 
             return storedCommand.FirstOrDefault()?.ConvertToCommand() ?? new T {Id = Guid.Empty};
+        }
+        
+        /// <summary>
+        ///     Checks if the command exists based on the id
+        /// </summary>
+        /// <param name="id">The identifier</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
+        /// <typeparam name="T">Type of command being checked</typeparam>
+        /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
+        public async Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var storedId = id.ToString();
+
+            _queryOperationConfig.QueryFilter = new List<ScanCondition>
+            {
+                new ScanCondition(_configuration.CommandIdIndex, ScanOperator.Equal, storedId)
+            };
+
+            var storedCommand =
+                await _context.QueryAsync<DynamoDbCommand<T>>(storedId, _queryOperationConfig)
+                        .GetNextSetAsync(cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext);
+
+            return storedCommand.Any();
+        }
+        
+        /// <summary>
+        ///     Checks if the command exists based on the id
+        /// </summary>
+        /// <param name="id">The identifier</param>
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>        
+        /// <typeparam name="T">Type of command being checked</typeparam>
+        /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
+        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        {
+            return ExistsAsync<T>(id).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
         /// <summary>
