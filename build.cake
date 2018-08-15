@@ -2,7 +2,7 @@
 // ARGUMENTS
 ///////////////////////////////////////////////////////////////////////////////
 
-var target = Argument("target", "UnitTests");
+var target = Argument("target", "LiteUnitTests");
 var configuration = Argument("configuration", "Release");
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -34,7 +34,7 @@ Task("Build")
     DotNetCoreBuild("Brighter.sln", settings);
 });
 
-Task("UnitTests")
+Task("LiteUnitTests")
   .IsDependentOn("Build")
   .Does(() =>
         {
@@ -42,10 +42,25 @@ Task("UnitTests")
             {
                 Configuration = configuration,
                 NoBuild = true,
-                Filter = "Category!=RMQ&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis&Category!=PostgreSql&Category!=MySql",
+                Filter = "Category!=RMQ&Category!=RMQDelay&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis&Category!=PostgreSql&Category!=MySql&Category!=MSSQL",
                 Verbosity  = DotNetCoreVerbosity.Minimal
             };
           DotNetCoreTest("./tests/Paramore.Brighter.Tests/Paramore.Brighter.Tests.csproj", settings);
         });
+
+Task("AllUnitTests")
+  .IsDependentOn("Build")
+  .Does(() =>
+        {
+          var settings = new DotNetCoreTestSettings
+            {
+                Configuration = configuration,
+                NoBuild = true,
+                Filter = "Category!=AWS&Category!=RESTMS&Category!=RMQDelay&Category!=Kafka&Category!=Redis",
+                Verbosity  = DotNetCoreVerbosity.Minimal
+            };
+          DotNetCoreTest("./tests/Paramore.Brighter.Tests/Paramore.Brighter.Tests.csproj", settings);
+        });
+
 
 RunTarget(target);
