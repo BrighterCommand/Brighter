@@ -5,7 +5,9 @@
     <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.DynamoDB\Paramore.Brighter.CommandStore.DynamoDB.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.MySql\Paramore.Brighter.CommandStore.MySql.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.DynamoDB\Paramore.Brighter.MessageStore.DynamoDB.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.EventStore\Paramore.Brighter.MessageStore.EventStore.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.MySql\Paramore.Brighter.MessageStore.MySql.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter.MessageStore.Sqlite\Paramore.Brighter.MessageStore.Sqlite.csproj" />
