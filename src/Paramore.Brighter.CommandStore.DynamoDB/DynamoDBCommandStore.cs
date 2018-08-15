@@ -47,6 +47,11 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         private readonly DynamoDBOperationConfig _operationConfig;
         private readonly DynamoDBOperationConfig _queryOperationConfig;
 
+        public Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            throw new NotImplementedException();
+        }
+
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
@@ -93,6 +98,11 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
             return GetCommandFromDynamo<T>(id).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+        }
+
+        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>
