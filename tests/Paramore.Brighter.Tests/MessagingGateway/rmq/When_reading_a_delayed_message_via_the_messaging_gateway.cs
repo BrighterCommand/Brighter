@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,7 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 {
-    [Trait("Category", "RMQ")]
+    [Trait("Category", "RMQDelay")]
     public class RmqMessageProducerDelayedMessageTests : IDisposable
     {
         private readonly IAmAMessageProducer _messageProducer;

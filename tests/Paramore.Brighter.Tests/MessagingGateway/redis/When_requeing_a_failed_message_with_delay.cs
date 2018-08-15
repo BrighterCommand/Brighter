@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         {
             var configuration = new RedisMessagingGatewayConfiguration
             {
-                RedisConnectionString = "localhost:6379?connectTimeout=1&sendTImeout=1000&",
+                RedisConnectionString = "redis://localhost:6379?ConnectTimeout=1000&SendTimeout=1000",
                 MaxPoolSize = 10,
                 MessageTimeToLive = TimeSpan.FromMinutes(10)
             };
