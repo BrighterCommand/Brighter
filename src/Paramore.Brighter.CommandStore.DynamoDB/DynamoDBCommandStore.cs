@@ -30,7 +30,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
-using Amazon.DynamoDBv2.Model;
 using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
@@ -124,6 +123,13 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
             return await GetCommandFromDynamo<T>(id, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }        
 
+        /// <summary>
+        ///     Finds commands based on the id of the command
+        /// </summary>
+        /// <param name="id">The identifier</param>
+        /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
+        /// <typeparam name="T">Type of command to be returned</typeparam>
+        /// <returns></returns>
         private async Task<T> GetCommandFromDynamo<T>(Guid id, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
         {
             var storedId = id.ToString();
@@ -141,9 +147,51 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
             return storedCommand.FirstOrDefault()?.ConvertToCommand() ?? new T {Id = Guid.Empty};
         }
 
-        public IList<T> Get<T>(DateTime date, DateTime? startTime = null, DateTime? endTime = null)
+        /// <summary>
+        ///     Get list of commands based on date and time
+        /// </summary>
+        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Message Store.</param>
+        /// <param name="startTime">Time to retrieve messages from on given date.</param>
+        /// <param name="endTime">Time to retrieve message until on given date.</param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns><see cref="T:List Paramore.Brighter.Message"/></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public IList<T> Get<T>(DateTime date, DateTime? startTime = null, DateTime? endTime = null, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            throw new NotImplementedException();
+            var type = typeof(T).Name;            
+            var primaryKey = $"{type}+{date:yyyy-MM-dd}";
+
+            var filter = GenerateFilter(startTime, endTime);
+            
+            var query = _context.QueryAsync<DynamoDbCommand<T>>(primaryKey, filter.Operator, filter.Values, _operationConfig)
+                .GetRemainingAsync(cancellationToken)
+                .GetAwaiter()
+                .GetResult();
+
+            var results = query;
+             
+            return results.Select(r => r.ConvertToCommand()).ToList();            
+        }
+        
+        private static Filter GenerateFilter(DateTime? startTime, DateTime? endTime)
+        {
+            var start = $"{startTime?.Ticks ?? DateTime.MinValue.Ticks}";
+            var end = $"{endTime?.Ticks ?? DateTime.MaxValue.Ticks}";
+            
+            return startTime is null && endTime is null || startTime.HasValue && endTime.HasValue
+                ? new Filter(QueryOperator.Between, new[] { start, end })
+                : startTime is null
+                    ? new Filter(QueryOperator.LessThanOrEqual, new[] { end })
+                    : new Filter(QueryOperator.GreaterThanOrEqual, new[] { start });
+        }
+
+        private class Filter
+        {
+            public QueryOperator Operator { get; }
+            public IEnumerable<string> Values { get; }
+
+            public Filter(QueryOperator @operator, IEnumerable<string> values)
+                => (Operator, Values) = (@operator, values);
         }
     }
 
