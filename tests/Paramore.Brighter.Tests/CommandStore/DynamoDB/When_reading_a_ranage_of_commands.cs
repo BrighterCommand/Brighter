@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
+using Amazon.DynamoDBv2.DataModel;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.CommandStore.DynamoDB;
@@ -8,33 +10,47 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
 {
-    public class DynamoDbRangeOfCommandsTests
+    public class DynamoDbRangeOfCommandsTests : IDisposable
     {
         private readonly Guid[] _guids;
-        private readonly DynamoDbCommand<MyCommand> _command2;
+        private readonly MyCommand _commandEarliest, _command2, _commandLatest;
+        private readonly DynamoDbCommand<MyCommand> _storedCommandEarliest, _storedCommand2, _storedCommandLatest;
         private readonly DynamoDbCommandStore _dynamoDbCommandStore;
-        private readonly DateTime _timeStamp = new DateTime(2018, 7, 5, 12, 0, 0);        
+        private readonly DateTime _timeStamp = new DateTime(2018, 7, 5, 12, 0, 0);
+        private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         
         public DynamoDbRangeOfCommandsTests()
         {            
             _guids = new[] {Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()};
             
-            var commandEarliest = ConstructCommand(new MyCommand { Id = _guids[0], Value = "Test Earliest"}, _timeStamp.AddHours(-4));
-            _command2 = ConstructCommand(new MyCommand { Id = _guids[1], Value = "Test Message 2"}, _timeStamp.AddHours(-2));
-            var commandLatest = ConstructCommand(new MyCommand { Id = _guids[2], Value = "Test Latest"}, _timeStamp.AddHours(-1));
+            _commandEarliest = new MyCommand { Id = _guids[0], Value = "Test Earliest"};
+            _storedCommandEarliest = ConstructCommand(_commandEarliest, _timeStamp.AddHours(-4));
+            
+            _command2 = new MyCommand { Id = _guids[1], Value = "Test Message 2"};
+            _storedCommand2 = ConstructCommand(_command2, _timeStamp.AddHours(-2));
+            
+            _commandLatest = new MyCommand { Id = _guids[2], Value = "Test Latest"};
+            _storedCommandLatest = ConstructCommand(_commandLatest, _timeStamp.AddHours(-1));
+            
             var nonTopicCommand = ConstructCommand(new DifferentCommand { Id = _guids[3], Value = "Different Command "}, _timeStamp.AddHours(-2));
 
-            var dynamoDbTestHelper = new DynamoDbTestHelper();
-            var createTableRequest = new DynamoDbCommandStoreBuilder(dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration.TableName).CreateCommandStoreTableRequest();
+            _dynamoDbTestHelper = new DynamoDbTestHelper();
+            var createTableRequest = new DynamoDbCommandStoreBuilder(_dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration.TableName).CreateCommandStoreTableRequest();
             
-            dynamoDbTestHelper.CreateCommandStoreTable(createTableRequest);
-            _dynamoDbCommandStore = new DynamoDbCommandStore(dynamoDbTestHelper.DynamoDbContext, dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration);
+            _dynamoDbTestHelper.CreateCommandStoreTable(createTableRequest);
+            _dynamoDbCommandStore = new DynamoDbCommandStore(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration);
 
-            var dbContext = dynamoDbTestHelper.DynamoDbContext;
-            dbContext.SaveAsync(commandEarliest).GetAwaiter().GetResult();
-            dbContext.SaveAsync(_command2).GetAwaiter().GetResult();
-            dbContext.SaveAsync(commandLatest).GetAwaiter().GetResult();
-            dbContext.SaveAsync(nonTopicCommand).GetAwaiter().GetResult();
+            var config = new DynamoDBOperationConfig
+            {
+                OverrideTableName = _dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration.TableName,
+                ConsistentRead = false
+            };
+            
+            var dbContext = _dynamoDbTestHelper.DynamoDbContext;
+            dbContext.SaveAsync(_storedCommandEarliest, config).GetAwaiter().GetResult();
+            dbContext.SaveAsync(_storedCommand2, config).GetAwaiter().GetResult();
+            dbContext.SaveAsync(_storedCommandLatest, config).GetAwaiter().GetResult();
+            dbContext.SaveAsync(nonTopicCommand, config).GetAwaiter().GetResult();
         }
 
         private DynamoDbCommand<T> ConstructCommand<T>(T command, DateTime timeStamp) where T : class, IRequest
@@ -56,7 +72,7 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
             
             //_should_read_the_last_two_messages_from_the_store
             retrievedMessages.Should().HaveCount(1);
-            retrievedMessages.Single().Should().Be(_command2);                                  
+            retrievedMessages.Single().Should().BeEquivalentTo(_command2);                                  
         }        
         
         [Fact]
@@ -66,8 +82,8 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
 
             //_should_read_the_last_two_messages_from_the_store
             retrievedMessages.Should().HaveCount(2);
-            retrievedMessages.FirstOrDefault(m => m.Id == _guids[1]).Should().NotBeNull();
-            retrievedMessages.FirstOrDefault(m => m.Id == _guids[2]).Should().NotBeNull();
+            retrievedMessages.First().Should().BeEquivalentTo(_command2);
+            retrievedMessages.Last().Should().BeEquivalentTo(_commandLatest);
         }
         
         [Fact]
@@ -77,8 +93,13 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
 
             //_should_read_the_last_two_messages_from_the_store
             retrievedMessages.Should().HaveCount(2);
-            retrievedMessages.FirstOrDefault(m => m.Id == _guids[0]).Should().NotBeNull();
-            retrievedMessages.FirstOrDefault(m => m.Id == _guids[1]).Should().NotBeNull();
+            retrievedMessages.First().Should().BeEquivalentTo(_commandEarliest);
+            retrievedMessages.Last().Should().BeEquivalentTo(_command2);
+        }
+        
+        public void Dispose()
+        {
+            _dynamoDbTestHelper.CleanUpCommandDb();
         }
     }
 
