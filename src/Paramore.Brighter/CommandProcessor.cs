@@ -200,7 +200,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required
+        /// Use this constructor when both rpc and command processor support is required
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -217,17 +217,13 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
-            IAmAChannelFactory responseChannelFactory = null,
-            int messageStoreTimeout = 300)
+            IAmAChannelFactory responseChannelFactory = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _messageStore = messageStore;
             _messageProducer = messageProducer;
             _responseChannelFactory = responseChannelFactory;
-            _messageStoreTimeout = messageStoreTimeout;
         }
 
         /// <summary>
@@ -559,8 +555,12 @@ namespace Paramore.Brighter
                 //now we block on the receiver to try and get the message, until timeout.
                 Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
-                //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                var response = inMessageMapper.MapToRequest(responseMessage);
+                TResponse response = default(TResponse);
+                if (responseMessage.Header.MessageType != MessageType.MT_NONE)
+                {
+                    //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                    response = inMessageMapper.MapToRequest(responseMessage);
+                }
 
                 return response;
 

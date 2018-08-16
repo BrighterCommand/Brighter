@@ -51,7 +51,6 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                     {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                 },
                 messageMapperRegistry,
-                (IAmAMessageStore<Message>)null,
                 (IAmAMessageProducer)new FakeMessageProducer(),
                 responseChannelFactory: new InMemoryChannelFactory());
 

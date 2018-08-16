@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using Polly.Fallback;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -76,9 +78,11 @@ namespace Paramore.Brighter
         private IAmAHandlerFactory _handlerFactory;
         private IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private IAmAPolicyRegistry _policyRegistry;
+        private IAmAChannelFactory _responseChannelFactory;
         private int _messageStoreWriteTimeout;
         private int _messagingGatewaySendTimeout;
         private bool _useTaskQueues = false;
+        private bool _useRequestReplyQueues = false;
 
         private CommandProcessorBuilder()
         {
@@ -164,7 +168,26 @@ namespace Paramore.Brighter
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext NoTaskQueues()
         {
-            _useTaskQueues = false;
+            return this;
+        }
+
+        /// <summary>
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Call{T}(T)"/> using RPC between client and server 
+        /// </summary>
+        /// <param name="messagingConfiguration"></param>
+        /// <returns></returns>
+        public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
+        {
+            _useRequestReplyQueues = true;
+            _messageStore = configuration.MessageStore;
+            _asyncMessageStore = configuration.AsyncMessageStore;
+            _messagingGateway = configuration.MessageProducer;
+            _asyncMessagingGateway = configuration.AsyncMessageProducer;
+            _messageMapperRegistry = configuration.MessageMapperRegistry;
+            _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
+            _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
+            _responseChannelFactory = configuration.ResponseChannelFactory;
+             
             return this;
         }
 
@@ -186,7 +209,7 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
-            if (!_useTaskQueues)
+            if (!(_useTaskQueues || _useRequestReplyQueues))
             {
                 return new CommandProcessor(
                     
@@ -196,7 +219,7 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry);
             }
-            else
+            else if (_useTaskQueues)
             {
                 return new CommandProcessor(
                     subscriberRegistry: _registry,
@@ -211,6 +234,22 @@ namespace Paramore.Brighter
                     asyncMessageProducer: _asyncMessagingGateway,
                     messageStoreTimeout: _messageStoreWriteTimeout
                     );
+            }
+            else if (_useRequestReplyQueues)
+            {
+                 return new CommandProcessor(
+                    subscriberRegistry: _registry,
+                    handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory,
+                    policyRegistry: _policyRegistry,
+                    mapperRegistry: _messageMapperRegistry,
+                    messageProducer: _messagingGateway,
+                    responseChannelFactory: _responseChannelFactory 
+                    );
+            }
+            else
+            {
+                throw new ConfigurationException("Unknown Command Processor Type");
             }
         }
     }
@@ -230,7 +269,7 @@ namespace Paramore.Brighter
     }
 
     /// <summary>
-    /// Interface INeedPolicy{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface INeedPolicy
     /// </summary>
     public interface INeedPolicy
     {
@@ -249,25 +288,31 @@ namespace Paramore.Brighter
 
   
     /// <summary>
-    /// Interface INeedMessaging{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface INeedMessaging
+    /// Note that a single command builder does not support both task queues and rpc, using the builder
     /// </summary>
     public interface INeedMessaging
     {
         /// <summary>
-        /// Tasks the queues.
+        /// Configure a task queue to send messags out of process
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext TaskQueues(MessagingConfiguration configuration);
         /// <summary>
-        /// Noes the task queues.
+        /// We don't send messages out of process
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext NoTaskQueues();
+        /// <summary>
+        ///  We want to use RPC to send messages to another processs
+        /// </summary>
+        /// <param name="messagingConfiguration"></param>
+        INeedARequestContext RequestReplyQueues(MessagingConfiguration messagingConfiguration);
     }
 
     /// <summary>
-    /// Interface INeedARequestContext{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface INeedARequestContext
     /// </summary>
     public interface INeedARequestContext
     {
@@ -277,9 +322,10 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
+
     }
     /// <summary>
-    /// Interface IAmACommandProcessorBuilder{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
+    /// Interface IAmACommandProcessorBuilder
     /// </summary>
     public interface IAmACommandProcessorBuilder
     {
