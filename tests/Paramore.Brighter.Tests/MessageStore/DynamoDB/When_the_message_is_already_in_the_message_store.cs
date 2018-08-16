@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,39 +23,32 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Tests.MessageStore.DynamoDB
 {
-    internal class MyThrowingEventHandlerAsync : RequestHandlerAsync<MyEvent>
+    [Trait("Category", "DynamoDB")]
+    [Collection("DynamoDB MessageStore")]
+    public class DynamoDbMessageStoreMessageAlreadyExistsTests : BaseDynamoDBMessageStoreTests
     {
-        private static MyEvent s_receivedEvent;
+        private readonly Message _messageEarliest;
 
-        public MyThrowingEventHandlerAsync()
-        {
-            s_receivedEvent = null;
+        private Exception _exception;
+
+        public DynamoDbMessageStoreMessageAlreadyExistsTests()
+        {            
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _dynamoDbMessageStore.Add(_messageEarliest);
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
+        [Fact]
+        public void When_the_message_is_already_in_the_message_store()
         {
-            LogEvent(command);
+            _exception = Catch.Exception(() => _dynamoDbMessageStore.Add(_messageEarliest));
 
-            await Task.Delay(5, cancellationToken);
-
-            throw new InvalidOperationException();
-        }
-
-        private static void LogEvent(MyEvent @event)
-        {
-            s_receivedEvent = @event;
-        }
-
-        public static bool ShouldReceive(MyEvent myEvent)
-        {
-            return s_receivedEvent.Id == myEvent.Id;
+            //_should_ignore_the_duplicate_key_and_still_succeed
+            _exception.Should().BeNull();
         }
     }
 }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,39 +23,31 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using FluentAssertions;
+using Xunit;
 
-namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
+namespace Paramore.Brighter.Tests.MessageStore.DynamoDB
 {
-    internal class MyThrowingEventHandlerAsync : RequestHandlerAsync<MyEvent>
+    [Trait("Category", "DynamoDB")]
+    [Collection("DynamoDB MessageStore")]
+    public class DynamoDbMessageStoreEmptyStoreTests : BaseDynamoDBMessageStoreTests
     {
-        private static MyEvent s_receivedEvent;
+        private readonly Message _messageEarliest;
 
-        public MyThrowingEventHandlerAsync()
+        private Message _storedMessage;
+
+        public DynamoDbMessageStoreEmptyStoreTests()
         {
-            s_receivedEvent = null;
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
+        [Fact]
+        public void When_there_is_no_message_in_the_dynamo_db_message_store()
         {
-            LogEvent(command);
+            _storedMessage = _dynamoDbMessageStore.Get(_messageEarliest.Id);
 
-            await Task.Delay(5, cancellationToken);
-
-            throw new InvalidOperationException();
-        }
-
-        private static void LogEvent(MyEvent @event)
-        {
-            s_receivedEvent = @event;
-        }
-
-        public static bool ShouldReceive(MyEvent myEvent)
-        {
-            return s_receivedEvent.Id == myEvent.Id;
+            //_should_return_a_empty_message
+            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
     }
 }
