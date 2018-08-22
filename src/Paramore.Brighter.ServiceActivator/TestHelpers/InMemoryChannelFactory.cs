@@ -28,7 +28,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
     public class InMemoryChannelFactory : IAmAChannelFactory
     {
-        private IEnumerable<Message> _seedMessages;
+        private readonly List<Message> _seedMessages = new List<Message>();
         private readonly IAmAChannel _channel;
 
         public InMemoryChannelFactory(FakeChannel channel = null)
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
 
         public void SeedChannel(IEnumerable<Message> seedMessages)
         {
-            _seedMessages = seedMessages;
+            _seedMessages.AddRange(seedMessages);
         }
     }
 }

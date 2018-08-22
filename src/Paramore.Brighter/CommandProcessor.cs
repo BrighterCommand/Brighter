@@ -544,26 +544,40 @@ namespace Paramore.Brighter
                 _responseChannelFactory.CreateInputChannel(channelName:routingKey, routingKey:routingKey))
             {
 
+                _logger.Value.InfoFormat("Create reply queue for topic {0}", routingKey);
                 request.ReplyAddress.Topic = routingKey;
                 request.ReplyAddress.CorrelationId = channelName; 
+                
+                //we do this to create the channel on the broker, or we won't have anything to send to; we 
+                //retry in case the connection is poor. An alternative would be to extract the code from
+                //the channel to create the connection, but this does not do much on a new queue
+                Retry(() => responseChannel.Purge());
+
                 var outMessage = outMessageMapper.MapToMessage(request);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
+                 _logger.Value.DebugFormat("Sending request  with routingkey {0}", routingKey);
                 Retry(() => _messageProducer.Send(outMessage));
 
                 Message responseMessage = null;
+                
                 //now we block on the receiver to try and get the message, until timeout.
-                Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+                 _logger.Value.DebugFormat("Awaiting response on {0}", routingKey);
+                 Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                    //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                     _logger.Value.DebugFormat("Reply recived from {0}", routingKey);
+                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     response = inMessageMapper.MapToRequest(responseMessage);
+                    Send(response);
                 }
 
+                 _logger.Value.InfoFormat("Deleting queue for routingkey: {0}", routingKey);
+                
                 return response;
-
+                
             } //clean up everything at this point, whatever happens
 
         }

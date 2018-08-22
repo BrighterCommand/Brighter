@@ -31,6 +31,7 @@ using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Serilog;
 
 namespace GreetingsSender
 {
@@ -38,6 +39,11 @@ namespace GreetingsSender
     {
         static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+              .MinimumLevel.Debug()
+              .WriteTo.LiterateConsole()
+              .CreateLogger();
+            
             var container = new TinyIoCContainer();
             container.Register<IHandleRequests<GreetingReply>, GreetingReplyHandler>();
             container.Register<IAmAMessageMapper<GreetingReply>, GreetingReplyMessageMapper>();
@@ -79,7 +85,12 @@ namespace GreetingsSender
 
             var commandProcessor = builder.Build();
 
-            commandProcessor.Call<GreetingRequest, GreetingReply>(new GreetingRequest{Name = "Ian", Language = "en-gb"}, 500 );
+            Console.WriteLine("Requesting Salutation...");
+            
+            //blocking call
+            commandProcessor.Call<GreetingRequest, GreetingReply>(new GreetingRequest{Name = "Ian", Language = "en-gb"}, 2000 );
+            
+            Console.WriteLine("Done...");
         }
     }
 }

@@ -125,7 +125,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             try
             {
-                EnsureChannel(_queueName);
+                //Why bind a queue? Because we use purge to initialize a queue for RPC
+                EnsureChannelBind();
                 _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
 
                 try { Channel.QueuePurge(_queueName); }
@@ -205,7 +206,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds. We retry at timeout /5 ms intervals, with a min of 5ms
+        /// until the timeout value is reached. </param>
         /// <returns>Message.</returns>
         public Message Receive(int timeoutInMilliseconds)
         {
@@ -215,7 +217,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 EnsureChannelBind();
 
-                var basicGetResult = Channel.BasicGet(_queueName, autoAck: false);
+                var now = DateTime.UtcNow;
+                var endBy = now.AddMilliseconds(timeoutInMilliseconds);
+                //ensure that we pause for at least 5 ms between reads.
+                var pause = ((timeoutInMilliseconds > 25) && (timeoutInMilliseconds / 5 > 5)) ? timeoutInMilliseconds / 5 : 5;
+                BasicGetResult basicGetResult = null;
+                while (now < endBy)
+                {
+                    basicGetResult = Channel.BasicGet(_queueName, autoAck: false);
+                    if (basicGetResult != null)
+                    {
+                        break;
+                    }
+                    Task.Delay(pause);
+                    now = DateTime.UtcNow;
+                }
 
                 if (basicGetResult == null)
                 {

@@ -7,4 +7,8 @@
   <ItemGroup>
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Serilog" Version="2.7.2-dev-01024" />
+    <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.1-dev-00044" />
+  </ItemGroup>
 </Project>

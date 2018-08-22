@@ -60,7 +60,7 @@ namespace Greetings.Ports.CommandHandlers
                     break;
             }
 
-            salutation += request.Name;
+            salutation += " " + request.Name;
 
             var response = new GreetingReply(request.ReplyAddress)
             {
