@@ -38,7 +38,7 @@ namespace Paramore.Brighter
     {
         private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
+        private ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
@@ -70,7 +70,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///     Gets the length.
+        ///  Gets the length.
         /// </summary>
         /// <value>The length.</value>
         public int Length { get { return _queue.Count; } }
@@ -80,6 +80,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The name.</value>
         public ChannelName Name { get { return new ChannelName(_channelName); } }
+
+        /// <summary>
+        /// Purges the queue
+        /// </summary>
+        public void Purge()
+        {
+            _messageConsumer.Purge();
+            _queue = new ConcurrentQueue<Message>();
+        }
 
         /// <summary>
         ///  Receives the specified timeout in milliseconds.

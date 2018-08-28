@@ -4,7 +4,7 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Redis&lt;</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.Redis</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
-    <TargetFrameworks>netstandard2.0;net461</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.Redis</AssemblyName>

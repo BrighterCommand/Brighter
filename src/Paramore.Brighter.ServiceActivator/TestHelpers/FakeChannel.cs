@@ -28,7 +28,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
     public class FakeChannel : IAmAChannel
     {
-        private readonly ConcurrentQueue<Message> _messageQueue = new ConcurrentQueue<Message>();
+        private ConcurrentQueue<Message> _messageQueue = new ConcurrentQueue<Message>();
 
         public bool DisposeHappened { get; set; }
         public bool AcknowledgeHappened { get; set; }
@@ -51,6 +51,11 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         public void Enqueue(Message message)
         {
             _messageQueue.Enqueue(message);
+        }
+
+        public void Purge()
+        {
+            _messageQueue = new ConcurrentQueue<Message>();
         }
 
         public virtual Message Receive(int timeoutinMilliseconds)

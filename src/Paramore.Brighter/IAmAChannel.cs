@@ -39,24 +39,23 @@ namespace Paramore.Brighter
         /// <value>The name.</value>
         ChannelName Name { get; }
         
-        /// <summary>
-        /// Receives the specified timeout in milliseconds.
-        /// </summary>
-        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>Message.</returns>
-        Message Receive(int timeoutinMilliseconds);
-        
-        /// <summary>
+         /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         void Acknowledge(Message message);
 
         /// <summary>
-        /// Gets the length.
+        /// Clears the queue
         /// </summary>
-        /// <value>The length.</value>
-        int Length { get; }
+        void Purge();
+        
+        /// <summary>
+        /// Receives the specified timeout in milliseconds.
+        /// </summary>
+        /// <param name="timeoutinMilliseconds">The timeout in milliseconds.</param>
+        /// <returns>Message.</returns>
+        Message Receive(int timeoutinMilliseconds);
 
         /// <summary>
         /// Rejects the specified message.

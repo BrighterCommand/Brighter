@@ -111,7 +111,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 _exchangeName,
                 message.Header.Topic,
                 false,
-                CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType, message.Header.ContentType, headers),
+                CreateBasicProperties(
+                    messageId, 
+                    message.Header.TimeStamp, 
+                    message.Body.BodyType, 
+                    message.Header.ContentType, 
+                    message.Header.ReplyTo,
+                    headers),
                 message.Body.Bytes);
         }
 
@@ -156,11 +162,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 string.Empty,
                 queueName,
                 false,
-                CreateBasicProperties(messageId, message.Header.TimeStamp, message.Body.BodyType, message.Header.ContentType, headers),
+                CreateBasicProperties(
+                    messageId, 
+                    message.Header.TimeStamp, 
+                    message.Body.BodyType, 
+                    message.Header.ContentType, 
+                    message.Header.ReplyTo,
+                    headers),
                 message.Body.Bytes);
         }
 
-        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType, IDictionary<string, object> headers = null)
+        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType, string replyTo, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
 
@@ -169,6 +181,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             basicProperties.Type = type;
             basicProperties.MessageId = id.ToString();
             basicProperties.Timestamp = new AmqpTimestamp(UnixTimestamp.GetUnixTimestampSeconds(timeStamp));
+            if (!string.IsNullOrEmpty(replyTo))
+                basicProperties.ReplyTo = replyTo;
 
             if (headers != null && headers.Any())
                 basicProperties.Headers = headers;

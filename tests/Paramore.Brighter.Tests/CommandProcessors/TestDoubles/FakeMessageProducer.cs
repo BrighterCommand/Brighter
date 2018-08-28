@@ -22,12 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync 
+    public class FakeMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
+        public List<Message> SentMessages = new List<Message>();
         public bool MessageWasSent { get; set; }
         public void Dispose() { }
 
@@ -42,6 +44,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
        public void Send(Message message)
         {
             MessageWasSent = true;
+            SentMessages.Add(message);
         }
         
         public void SendWithDelay(Message message, int delayMilliseconds = 0)

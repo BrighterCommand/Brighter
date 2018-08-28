@@ -55,8 +55,18 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; private set; }
-
+        /// <summary>
+        /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
+        /// this tends to he handled by a Dispatcher not a Command Processor. 
+        /// </summary>
+        public IAmAChannelFactory ResponseChannelFactory { get; set; }
+        /// <summary>
+        /// When do we timeout writing to the message store
+        /// </summary>
         public int MessageStoreWriteTimeout { get; set; }
+        /// <summary>
+        /// When do we timeout talking to the message oriented middleware
+        /// </summary>
         public int MessagingGatewaySendTimeout { get; set; }
 
         /// <summary>
@@ -72,7 +82,8 @@ namespace Paramore.Brighter
             IAmAMessageProducer messageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int messageStoreWriteTimeout = 300,
-            int messagingGatewaySendTimeout = 300
+            int messagingGatewaySendTimeout = 300,
+            IAmAChannelFactory responseChannelFactory = null
             )
         {
             MessageStore = messageStore;
@@ -80,6 +91,7 @@ namespace Paramore.Brighter
             MessageMapperRegistry = messageMapperRegistry;
             MessageStoreWriteTimeout = messageStoreWriteTimeout;
             MessagingGatewaySendTimeout = messagingGatewaySendTimeout;
+            ResponseChannelFactory = responseChannelFactory;
         }
 
         /// <summary>

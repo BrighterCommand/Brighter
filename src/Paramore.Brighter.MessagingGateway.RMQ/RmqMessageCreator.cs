@@ -73,6 +73,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var delayedMilliseconds = HeaderResult<int>.Empty();
             var redelivered = HeaderResult<bool>.Empty();
             var deliveryTag = HeaderResult<ulong>.Empty();
+            var messageType = HeaderResult<MessageType>.Empty();
+            var replyTo = HeaderResult<string>.Empty();
 
             Message message;
             try
@@ -84,7 +86,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 delayedMilliseconds = ReadDelayedMilliseconds(headers);
                 redelivered = ReadRedeliveredFlag(fromQueue.Redelivered);
                 deliveryTag = ReadDeliveryTag(fromQueue.DeliveryTag);
-                var messageType = ReadMessageType(headers);
+                messageType = ReadMessageType(headers);
+                replyTo = ReadReplyTo(fromQueue.BasicProperties);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success && handledCount.Success))
                 {
@@ -109,6 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                 message.DeliveryTag = deliveryTag.Result;
                 message.Redelivered = redelivered.Result;
+                message.Header.ReplyTo = replyTo.Result;
             }
             catch (Exception e)
             {
@@ -223,6 +227,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
         {
            return new HeaderResult<bool>(redelivered, true); 
+        }
+
+        private HeaderResult<string> ReadReplyTo(IBasicProperties basicProperties)
+        {
+            if (basicProperties.IsReplyToPresent())
+            {
+                return new HeaderResult<string>(basicProperties.ReplyTo, true);
+            }
+
+            return new HeaderResult<string>(null, true);
+ 
         }
 
         private static object ParseHeaderValue(object value)

@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new MessageBody(JsonConvert.SerializeObject(_myCommand))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(() => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
 
             var retryPolicy = Policy
                 .Handle<Exception>()

@@ -64,6 +64,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         }
         
 
-        public TimeSpan MessageTimeToLive => base.MessageTimeToLive;
+        public new TimeSpan MessageTimeToLive => base.MessageTimeToLive;
     }
 }

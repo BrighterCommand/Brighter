@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.FeatureSwitch;
@@ -54,6 +55,7 @@ namespace Paramore.Brighter
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
+        private IAmAChannelFactory _responseChannelFactory;
         private IAmAMessageProducerAsync _asyncMessageProducer;
         private bool _disposed;
 
@@ -215,7 +217,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required
+        /// Use this constructor when both rpc and command processor support is required
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -224,6 +226,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
@@ -232,17 +235,17 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IAmAPolicyRegistry policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            IAmAChannelFactory responseChannelFactory = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _messageStore = messageStore;
             _messageProducer = messageProducer;
             _messageStoreTimeout = messageStoreTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _responseChannelFactory = responseChannelFactory;
         }
 
         /// <summary>
@@ -537,6 +540,81 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
+        /// The message is placed into a message queue but not into the message store.
+        /// An ephemeral reply queue is created, and its name used to set the reply address for the response. We produce
+        /// a queue per exchange, to simplify correlating send and receive.
+        /// The response is directed to a registered handler.
+        /// Because the operation blocks, there is a mandatory timeout
+        /// </summary>
+        /// <param name="request">What message do we want a reply to</param>
+        /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds)
+            where T : class, ICall where TResponse : class, IResponse
+        {
+            if (timeOutInMilliseconds <= 0)
+            {
+                throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
+            }
+
+            var outMessageMapper = _mapperRegistry.Get<T>();
+            if (outMessageMapper == null)
+                throw new ArgumentOutOfRangeException(
+                    $"No message mapper registered for messages of type: {typeof(T)}");
+            
+            var inMessageMapper = _mapperRegistry.Get<TResponse>();
+            if (inMessageMapper == null)
+                throw new ArgumentOutOfRangeException(
+                    $"No message mapper registered for messages of type: {typeof(T)}");
+
+            //create a reply queue via creating a consumer - we use random identifiers as we will destroy
+            var channelName = Guid.NewGuid();
+            var routingKey = channelName.ToString();
+            using (var responseChannel =
+                _responseChannelFactory.CreateInputChannel(channelName:routingKey, routingKey:routingKey))
+            {
+
+                _logger.Value.InfoFormat("Create reply queue for topic {0}", routingKey);
+                request.ReplyAddress.Topic = routingKey;
+                request.ReplyAddress.CorrelationId = channelName; 
+                
+                //we do this to create the channel on the broker, or we won't have anything to send to; we 
+                //retry in case the connection is poor. An alternative would be to extract the code from
+                //the channel to create the connection, but this does not do much on a new queue
+                Retry(() => responseChannel.Purge());
+
+                var outMessage = outMessageMapper.MapToMessage(request);
+
+                //We don't store the message, if we continue to fail further retry is left to the sender 
+                 _logger.Value.DebugFormat("Sending request  with routingkey {0}", routingKey);
+                Retry(() => _messageProducer.Send(outMessage));
+
+                Message responseMessage = null;
+                
+                //now we block on the receiver to try and get the message, until timeout.
+                 _logger.Value.DebugFormat("Awaiting response on {0}", routingKey);
+                 Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+
+                TResponse response = default(TResponse);
+                if (responseMessage.Header.MessageType != MessageType.MT_NONE)
+                {
+                     _logger.Value.DebugFormat("Reply recived from {0}", routingKey);
+                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                    response = inMessageMapper.MapToRequest(responseMessage);
+                    Send(response);
+                }
+
+                 _logger.Value.InfoFormat("Deleting queue for routingkey: {0}", routingKey);
+                
+                return response;
+                
+            } //clean up everything at this point, whatever happens
+
+        }
+        
+
+        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
@@ -606,5 +684,6 @@ namespace Paramore.Brighter
                 .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
         }
-    }
+
+   }
 }
