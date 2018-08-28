@@ -135,6 +135,7 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessageStore.DynamoDB", "src\Paramore.Brighter.MessageStore.DynamoDB\Paramore.Brighter.MessageStore.DynamoDB.csproj", "{61657DEB-06F7-4876-9F29-2764EF353275}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.CommandStore.DynamoDB", "src\Paramore.Brighter.CommandStore.DynamoDB\Paramore.Brighter.CommandStore.DynamoDB.csproj", "{B796D6F5-AE94-4CA2-8651-B1F36E589451}"
+EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQRequestReplyExample", "RMQRequestReplyExample", "{ECE4A3A3-98D0-40E1-90DE-206F72C08853}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\RMQRequestReplyExamples\Greetings\Greetings.csproj", "{9343C89B-098C-4F4D-83CB-40A34686665E}"
