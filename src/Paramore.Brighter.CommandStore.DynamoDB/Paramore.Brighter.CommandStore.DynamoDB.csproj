@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFrameworks>netstandard1.5;net452</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.8.1" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.13.1" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
   <ItemGroup>
