@@ -10,6 +10,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
   - Switch Command Sourcing Handler to using an Exists method when checking for duplicate messages
   - Add a region endpoint parameter for AWS SQS + SNS
   - Support for DynamoDB Message and Command Stores (Jonny Olliff-Lee @DevJonny)
+  - Added a Call() method to CommandProcessor to support Request-Reply
 
 ## Release 7.4.0 ##
   - Updated to signed version of Polly, works with netcore2.1.
