@@ -28,7 +28,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.DynamoDB
 {
-    [Trait("Category", "DynamoDB")]
+    [Trait("Category", "AWS")]
     [Collection("DynamoDB MessageStore")]
     public class DynamoDbMessageStoreMessageAlreadyExistsTests : BaseDynamoDBMessageStoreTests
     {
