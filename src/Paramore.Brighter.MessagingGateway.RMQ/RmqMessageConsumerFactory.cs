@@ -22,33 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
-
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     public class RmqMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly RmqMessagingGatewayConnection _connection;
+        private readonly RmqMessagingGatewayConnection _rmqConnection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
+        /// <param name="rmqConnection">The connection to the broker hosting the queue</param>
         /// </summary>
-        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  connection)
+        public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  rmqConnection)
         {
-            _connection = connection;
+            _rmqConnection = rmqConnection;
         }
 
         /// <summary>
-        /// Creates the specified queue name.
+        /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable">Is the consumer target durable i.e. channel stores messages between restarts of consumer</param>
-        /// <param name="highAvailability">Does the queue exist in multiple nodes</param>
+        /// <param name="connection">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string queueName, string routingKey, bool isDurable, bool highAvailability = false)
+        public IAmAMessageConsumer Create(Connection connection)
         {
-            return new RmqMessageConsumer(_connection, queueName, routingKey, isDurable, highAvailability);
+            return new RmqMessageConsumer(
+                _rmqConnection, 
+                connection.ChannelName, //RMQ Queue Name 
+                connection.RoutingKey, 
+                connection.IsDurable, 
+                connection.HighAvailability);
         }
     }
 }

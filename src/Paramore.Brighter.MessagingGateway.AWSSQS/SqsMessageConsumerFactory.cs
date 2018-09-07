@@ -22,33 +22,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly AWSCredentials _credentials;
-        private readonly RegionEndpoint _regionEndpoint;
+        private readonly AWSMessagingGatewayConnection _awsConnection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumerFactory"/> class.
         /// </summary>
-        public SqsMessageConsumerFactory(AWSCredentials credentials) 
+        public SqsMessageConsumerFactory(AWSMessagingGatewayConnection awsConnection)
         {
-            _credentials = credentials;
-        }
-
-        public SqsMessageConsumerFactory(AWSCredentials credentials, RegionEndpoint regionEndpoint) : this(credentials)
-        {
-            _regionEndpoint = regionEndpoint;
+            _awsConnection = awsConnection;
         }
 
         /// <summary>
-        /// Creates the specified queue name.
+        /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable">if set to <c>true</c> [is durable].</param>
-        /// <param name="highAvailability">Our are queues high-availablility</param>
+        /// <param name="connection">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(string channelName, string routingKey, bool isDurable, bool highAvailability = false)
+        public IAmAMessageConsumer Create(Connection connection)
         {
-            return new SqsMessageConsumer(_credentials, _regionEndpoint, channelName);
+            return new SqsMessageConsumer(_awsConnection, connection.ChannelName);
         }
     }
 }

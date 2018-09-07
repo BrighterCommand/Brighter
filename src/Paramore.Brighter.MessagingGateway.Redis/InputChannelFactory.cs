@@ -44,14 +44,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Creates the input channel.
         /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable">Does this queue definition persist, always with Redis </param>
-        /// <param name="highAvailability">Do we mirror queues across a cluster? Handled by Redis Cluster if desired</param>
+        /// <param name="connection">The connection parameters with which to create the channel</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = true, bool highAvailability = false)
+        public IAmAChannel CreateInputChannel(Connection connection)
         {
-            return new Channel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable, highAvailability));
+            return new Channel(connection.ChannelName, _messageConsumerFactory.Create(connection));
         }
     }
 }

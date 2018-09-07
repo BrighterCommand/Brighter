@@ -1,41 +1,63 @@
 using System;
+using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
+using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
     [Trait("Category", "AWS")]
-    public class SqsMessageConsumerTests
+    public class SqsQueuePurgeTests : IDisposable
     {
-        private readonly TestAWSQueueListener _testQueueListener;
-        private readonly IAmAMessageProducer _sender;
-        private readonly IAmAMessageConsumer _receiver;
-        private readonly Message _sentMessage;
-        private readonly string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
+        private readonly Message _message;
+        private readonly IAmAChannel _channel;
+        private readonly SqsMessageProducer _messageProducer;
+        private readonly InputChannelFactory _channelFactory;
 
-        public SqsMessageConsumerTests()
+        public SqsQueuePurgeTests ()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
+            MyCommand myCommand = new MyCommand{Value = "Test"};
+            
+            _message = new Message(
+                new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageBody(JsonConvert.SerializeObject(myCommand))
+            );
+            
+            //Must have credentials stored in the SDK Credentials store or shared credentials file
+            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            {
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-            messageHeader.UpdateHandledCount();
-            _sentMessage = new Message(messageHeader, new MessageBody("test content"));
-
-            var credentials = new AnonymousAWSCredentials();
-            _sender = new SqsMessageProducer(credentials);
-            _receiver = new SqsMessageConsumer(credentials, _queueUrl);
-            _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
+                _channelFactory = new InputChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+                _channel = _channelFactory.CreateInputChannel(new Connection<MyCommand>());
+                
+                _messageProducer = new SqsMessageProducer(awsConnection);
+            }
         }
 
         [Fact]
         public void When_purging_the_queue()
         {
-            _sender.Send(_sentMessage);
-            _receiver.Purge();
+            //arange
+            _messageProducer.Send(_message);
+            _channel.Purge();
 
-           //should_clean_the_queue
-            _testQueueListener.Listen().Should().BeNull();
+            //act
+            var message = _channel.Receive(100);
+            
+            //assert
+            message.Header.MessageType.Should().Be(MessageType.MT_NONE);
+        }
+
+
+        public void Dispose()
+        {
+            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopic();
         }
     }
 }

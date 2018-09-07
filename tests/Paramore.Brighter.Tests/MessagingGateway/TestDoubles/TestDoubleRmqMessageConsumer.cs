@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.RMQ

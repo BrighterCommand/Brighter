@@ -69,13 +69,7 @@ namespace Paramore.Brighter
             _queue.Enqueue(message);
         }
 
-        /// <summary>
-        ///  Gets the length.
-        /// </summary>
-        /// <value>The length.</value>
-        public int Length { get { return _queue.Count; } }
-
-        /// <summary>
+       /// <summary>
         ///   Gets the name.
         /// </summary>
         /// <value>The name.</value>

@@ -1,5 +1,7 @@
 using System;
+using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
@@ -9,7 +11,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
     [Trait("Category", "AWS")]
     public class SqsMessageProducerRequeueTests : IDisposable
     {
-        private readonly TestAWSQueueListener _testQueueListener;
+        private readonly AWSQueueTools _queueTools;
         private readonly IAmAMessageProducer _sender;
         private readonly IAmAMessageConsumer _receiver;
         private readonly Message _sentMessage;
@@ -25,10 +27,14 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             messageHeader.UpdateHandledCount();
             _sentMessage = new Message(messageHeader, new MessageBody("test content"));
 
-            var credentials = new AnonymousAWSCredentials();
-            _sender = new SqsMessageProducer(credentials);
-            _receiver = new SqsMessageConsumer(credentials, _queueUrl);
-            _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
+            //Must have credentials stored in the SDK Credentials store or shared credentials file
+            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            {
+                var connection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                _sender = new SqsMessageProducer(connection);
+                _receiver = new SqsMessageConsumer(new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1), _queueUrl);
+                _queueTools = new AWSQueueTools(connection, _queueUrl);
+            }
         }
 
         [Fact]
@@ -47,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 
         public void Dispose()
         {
-            _testQueueListener.DeleteMessage(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
+            _queueTools.DeleteMessage(_requeuedMessage.Header.Bag["ReceiptHandle"].ToString());
         }
     }
 }

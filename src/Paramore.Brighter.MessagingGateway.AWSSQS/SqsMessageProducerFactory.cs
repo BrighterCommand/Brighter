@@ -5,22 +5,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class SqsMessageProducerFactory : IAmAMessageProducerFactory
     {
-        private readonly AWSCredentials _credentials;
-        private readonly RegionEndpoint _regionEndpoint;
+        private readonly AWSMessagingGatewayConnection _connection;
 
-        public SqsMessageProducerFactory(AWSCredentials credentials)
+        public SqsMessageProducerFactory(AWSMessagingGatewayConnection connection)
         {
-            _credentials = credentials;
-        }
-
-        public SqsMessageProducerFactory(AWSCredentials credentials, RegionEndpoint regionEndpoint) : this(credentials)
-        {
-            _regionEndpoint = regionEndpoint;
+            _connection = connection;
         }
 
         public IAmAMessageProducer Create()
         {
-            return new SqsMessageProducer(_credentials, _regionEndpoint);
+            return new SqsMessageProducer(_connection);
         }
     }
 }

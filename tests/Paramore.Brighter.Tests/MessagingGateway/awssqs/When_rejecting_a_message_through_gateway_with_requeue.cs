@@ -1,7 +1,11 @@
 using System;
+using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
+using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
@@ -9,43 +13,54 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
     [Trait("Category", "AWS")]
     public class SqsMessageConsumerRequeueTests : IDisposable
     {
-        private readonly string _queueUrl = "https://sqs.eu-west-1.amazonaws.com/027649620536/TestSqsTopicQueue";
-        private readonly TestAWSQueueListener _testQueueListener;
-        private readonly IAmAMessageProducer _sender;
-        private readonly IAmAMessageConsumer _receiver;
         private readonly Message _message;
-        private readonly Message _listenedMessage;
+        private readonly IAmAChannel _channel;
+        private readonly SqsMessageProducer _messageProducer;
+        private readonly InputChannelFactory _channelFactory;
 
         public SqsMessageConsumerRequeueTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "TestSqsTopic", MessageType.MT_COMMAND);
+            MyCommand myCommand = new MyCommand{Value = "Test"};
+            
+            _message = new Message(
+                new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageBody(JsonConvert.SerializeObject(myCommand))
+            );
+            
+            //Must have credentials stored in the SDK Credentials store or shared credentials file
+            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            {
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-            messageHeader.UpdateHandledCount();
-            _message = new Message(messageHeader, new MessageBody("test content"));
-
-            var credentials = new AnonymousAWSCredentials();
-            _sender = new SqsMessageProducer(credentials);
-            _receiver = new SqsMessageConsumer(credentials, _queueUrl);
-            _testQueueListener = new TestAWSQueueListener(credentials, _queueUrl);
-
-            _sender.Send(_message);
-
-            _listenedMessage = _receiver.Receive(1000);
-        }
+                _channelFactory = new InputChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+                _channel = _channelFactory.CreateInputChannel(new Connection<MyCommand>());
+                
+                _messageProducer = new SqsMessageProducer(awsConnection);
+            }
+ 
+       }
 
         [Fact]
         public void When_rejecting_a_message_through_gateway_with_requeue()
         {
-            _receiver.Reject(_listenedMessage, true);
+            _messageProducer.Send(_message);
 
-            //should_requeue_the_message
-            var message = _receiver.Receive(1000);
-            message.Should().Be(_listenedMessage);
+            var message = _channel.Receive(1000);
+            
+            _channel.Reject(message);
+
+            //should requeue_the_message
+            message = _channel.Receive(1000);
+            message.Should().Be(message);
         }
 
         public void Dispose()
         {
-            _testQueueListener.DeleteMessage(_listenedMessage.Header.Bag["ReceiptHandle"].ToString());
+            //Clean up resources that we have created
+            
+            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopic();
+ 
         }
     }
 }

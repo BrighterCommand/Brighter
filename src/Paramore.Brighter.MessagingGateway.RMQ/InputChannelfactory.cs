@@ -46,14 +46,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Creates the input channel.
         /// </summary>
-        /// <param name="channelName">Name of the channel.</param>
-        /// <param name="routingKey">The routing key.</param>
-        /// <param name="isDurable">Is the queue definition persisted</param>
-        /// <param name="highAvailability">Is the queue available on all nodes in a cluster</param>
+        /// <param name="connection">The connection parameters to create the queue with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateInputChannel(string channelName, string routingKey, bool isDurable = false, bool highAvailability = false)
+        public IAmAChannel CreateInputChannel(Connection connection)
         {
-            return new Channel(channelName, _messageConsumerFactory.Create(channelName, routingKey, isDurable, highAvailability));
+            return new Channel(connection.ChannelName, _messageConsumerFactory.Create(connection));
         }
     }
 }

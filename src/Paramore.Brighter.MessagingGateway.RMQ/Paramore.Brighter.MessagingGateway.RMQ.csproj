@@ -22,4 +22,7 @@
   <ItemGroup Condition="'$(TargetFramework)'=='net452'">
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
+  <ItemGroup>
+    <Folder Include="MessagingGatewayConfiguration" />
+  </ItemGroup>
 </Project>
