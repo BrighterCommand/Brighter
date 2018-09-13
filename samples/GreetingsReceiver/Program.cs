@@ -53,12 +53,12 @@ namespace HostedServiceTest
                     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
 
                     services.AddServiceActivator(options =>
-                        {
-                            options.Connections = connections;
-                            options.ChannelFactory = new InputChannelFactory(rmqMessageConsumerFactory);
-                        })
-                        .MapperRegistryFromAssemblies(typeof(GreetingEventHandler).Assembly)
-                        .HandlersFromAssemblies(typeof(GreetingEventHandler).Assembly);
+                    {
+                        options.Connections = connections;
+                        options.ChannelFactory = new InputChannelFactory(rmqMessageConsumerFactory);
+                    })
+                    .MapperRegistryFromAssemblies(typeof(GreetingEventHandler).Assembly)
+                    .HandlersFromAssemblies(typeof(GreetingEventHandler).Assembly);
 
                     services.AddSingleton<ILoggerFactory>(x => new SerilogLoggerFactory());
                     services.AddHostedService<ServiceActivatorHostedService>();
