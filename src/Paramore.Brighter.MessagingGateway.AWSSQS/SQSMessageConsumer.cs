@@ -30,9 +30,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly string _queueName;
-        private readonly string _topic;
-        private readonly bool _isFifo;
-        private readonly int _visibilityTimeoutInSeconds;
         private readonly Message _noopMessage = new Message();
 
         /// <summary>

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Diagnostics.SymbolStore;
+using System.Linq;
 using Amazon.SimpleNotificationService;
+using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
@@ -37,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public IAmAChannel CreateInputChannel(Connection connection)
         {
             EnsureQueue(connection);
-            return new Channel(connection.ChannelName, _messageConsumerFactory.Create(connection));
+            return new Channel(connection.ChannelName.ToValidSQSQueueName(), _messageConsumerFactory.Create(connection));
         }
 
         private void EnsureQueue(Connection connection)
@@ -45,11 +47,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                if (!QueueExists(sqsClient, connection.ChannelName))
+                (bool exists, string name) queueExists = QueueExists(sqsClient, connection.ChannelName.ToValidSQSQueueName());
+                if (!queueExists.exists)
                 {
                     try
                     {
-                        var request = new CreateQueueRequest(connection.ChannelName)
+                        var request = new CreateQueueRequest(connection.ChannelName.ToValidSQSQueueName())
                         {
                             Attributes =
                             {
@@ -61,19 +64,30 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         var queueUrl = response.QueueUrl;
                         if (!string.IsNullOrEmpty(queueUrl))
                         {
+                            //topic might not exist
                             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                             {
-                                var subscription = snsClient.SubscribeQueueAsync(connection.RoutingKey, sqsClient, queueUrl).Result;
+                                var exists = snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey);
+                                if (exists == null)
+                                {
+                                    var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(connection.RoutingKey)).Result;
+                                    if (!string.IsNullOrEmpty(createTopic.TopicArn))
+                                    {
+                                        var subscription = snsClient.SubscribeQueueAsync(connection.RoutingKey, sqsClient, queueUrl).Result;
+                                        //TODO: What happens if we fail here
+                                    }
+                                }
                             }
                         }
      
                     }
-                    catch (AmazonSQSException e)
+                    catch (AggregateException ae)
                     {
-                        //We need some retry semantics here
-                        var error = $"Could not create queue {connection.ChannelName} because {e.Message}";
+                        //TODO: We need some retry semantics here
+                        //TODO: We need to flatten the ae and handle some of these with ae.Handle((x) => {})
+                        var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message}";
                         _logger.Value.Error(error);
-                        throw new ChannelFailureException(error, e);
+                        throw new ChannelFailureException(error, ae);
                     }
                }
             }
@@ -90,34 +104,64 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return Convert.ToString(timeOutInSeconds);
         }
 
-        private bool QueueExists(AmazonSQSClient client, string channelName)
+        private (bool, string) QueueExists(AmazonSQSClient client, string channelName)
         {
             bool exists = false;
+            string queueUrl = null;
             try
             {
                 var response = client.GetQueueUrlAsync(channelName).Result;
                 //If the queue does not exist yet then
                 if (!string.IsNullOrWhiteSpace(response.QueueUrl))
                 {
+                    queueUrl = response.QueueUrl;
                     exists = true;
                 }
             }
-            catch (QueueDoesNotExistException)
+            catch (AggregateException ae)
             {
-                exists = false;
+                ae.Handle((e) =>
+                {
+                    if (e is QueueDoesNotExistException)
+                    {
+                        //handle this, because we expect a queue might be missing and will create
+                        exists = false;
+                        return true;
+                    }
+
+                    //we didn't expect this, so rethrow
+                    return false;
+                });
             }
 
-            return exists;
+            return (exists, queueUrl);
         }
 
-        public void DeleteQueue()
+        public void DeleteQueue(Connection connection)
         {
-            throw new NotImplementedException();
+            using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
+            {
+                //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
+                (bool exists, string name) queueExists = QueueExists(sqsClient, connection.ChannelName.ToValidSQSQueueName());
+                if (!queueExists.exists)
+                {
+                    sqsClient.DeleteQueueAsync(queueExists.name).Wait();
+                }
+
+            }
         }
 
-        public void DeleteTopic()
+        public void DeleteTopic(Connection connection)
         {
-            throw new NotImplementedException();
+            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            {
+                //TODO: could be a seperate method
+                var exists = snsClient.ListTopicsAsync().Result.Topics .SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey);
+                if (exists != null)
+                {
+                    snsClient.DeleteTopicAsync(connection.RoutingKey).Wait();
+                }
+            }
         }
     }
 }
