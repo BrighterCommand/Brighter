@@ -31,7 +31,7 @@ namespace Greetings.Ports.CommandHandlers
 {
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
-        //[UsePolicy(Paramore.Brighter.CommandProcessor.RETRYPOLICY, 0)]
+        [UsePolicy(Paramore.Brighter.CommandProcessor.RETRYPOLICY, 0)]
         public override GreetingEvent Handle(GreetingEvent @event)
         {
             Console.WriteLine("Received Greeting. Message Follows");

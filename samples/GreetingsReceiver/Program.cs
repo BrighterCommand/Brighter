@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
+using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
@@ -58,7 +59,7 @@ namespace HostedServiceTest
                         options.ChannelFactory = new InputChannelFactory(rmqMessageConsumerFactory);
                     })
                     .MapperRegistryFromAssemblies(typeof(GreetingEventHandler).Assembly)
-                    .HandlersFromAssemblies(typeof(GreetingEventHandler).Assembly);
+                    .HandlersFromAssemblies(typeof(GreetingEventHandler).Assembly, typeof(ExceptionPolicyHandler<>).Assembly);
 
                     services.AddSingleton<ILoggerFactory>(x => new SerilogLoggerFactory());
                     services.AddHostedService<ServiceActivatorHostedService>();
