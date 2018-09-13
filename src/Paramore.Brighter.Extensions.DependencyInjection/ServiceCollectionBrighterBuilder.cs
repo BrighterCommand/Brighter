@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         public IBrighterHandlerBuilder HandlersFromAssemblies(params Assembly[] assemblies)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies);
+            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).GetTypeInfo().Assembly);
             return this;
         }
 
@@ -46,14 +46,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         public IBrighterHandlerBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies);
+            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).GetTypeInfo().Assembly);
             return this;
         }
 
-        private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies)
+        private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies,
+            Assembly assembly)
         {
+            assemblies = assemblies.Concat(new [] {assembly});
             var subscribers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes)
+                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
                 from i in ti.ImplementedInterfaces
                 where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == interfaceType
