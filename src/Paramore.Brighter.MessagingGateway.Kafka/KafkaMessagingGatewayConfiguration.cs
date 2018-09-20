@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var config = new Dictionary<string, object>()
             {
                 {"client.id", Name },
-                {"bootstrap.servers", string.Join(";", BootStrapServers)}
+                {"bootstrap.servers", string.Join(", ", BootStrapServers)}
             };
 
             if (MaxInFlightRequestsPerConnection.HasValue)
