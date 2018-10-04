@@ -28,9 +28,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public enum AutoResetOffsetEnum
     {
-        Beginning,
-        End,
-        Error
+        None,
+        Earliest,
+        Latest
     }
 
     public class KafkaMessagingConsumerConfiguration
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             EnableAutoCommit = true;
             AutoCommitInterval = new TimeSpan(0, 0, 0, 0, 5000);
-            AutoResetOffset = AutoResetOffsetEnum.End;
+            AutoResetOffset = AutoResetOffsetEnum.Earliest;
         }
 
         public IEnumerable<KeyValuePair<string, object>> ToConfig()
