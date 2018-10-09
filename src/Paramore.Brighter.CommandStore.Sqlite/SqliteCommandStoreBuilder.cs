@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -30,7 +30,8 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                 "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                 "CommandType nvarchar(256)," +
                 "CommandBody ntext," +
-                "Timestamp dateTime" +
+                "Timestamp dateTime," +
+                "ContextKey nvarchar(256)" +
                 ")";
 
         public static string GetDDL(string tableName)

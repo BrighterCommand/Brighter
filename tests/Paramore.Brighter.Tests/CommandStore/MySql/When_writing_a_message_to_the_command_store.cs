@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
         private readonly MySqlTestHelper _mysqlTestHelper;
         private readonly MySqlCommandStore _mysqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private MyCommand _storedCommand;
 
         public SqlCommandStoreAddMessageTests()
@@ -46,13 +47,14 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
 
             _mysqlCommandStore = new MySqlCommandStore(_mysqlTestHelper.CommandStoreConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
-            _mysqlCommandStore.Add(_raisedCommand);
+            _contextKey = "test-context";
+            _mysqlCommandStore.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Command_Store()
         {
-            _storedCommand = _mysqlCommandStore.Get<MyCommand>(_raisedCommand.Id);
+            _storedCommand = _mysqlCommandStore.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_command_store
             _storedCommand.Should().NotBeNull();

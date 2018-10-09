@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteCommandStore _sqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private Exception _exception;
 
         public SqliteCommandStoreDuplicateMessageTests()
@@ -45,17 +46,18 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
             _sqliteTestHelper.SetupCommandDb();
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             _raisedCommand = new MyCommand { Value = "Test" };
-            _sqlCommandStore.Add(_raisedCommand);
+            _contextKey = "context-key";
+            _sqlCommandStore.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store()
         {
-            _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand));
+            _exception = Catch.Exception(() => _sqlCommandStore.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
-            _sqlCommandStore.Exists<MyCommand>(_raisedCommand.Id).Should().BeTrue();
+            _sqlCommandStore.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
         }
 
         public void Dispose()

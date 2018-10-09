@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -36,22 +36,38 @@ namespace Paramore.Brighter.Eventsourcing.Attributes
     /// </summary>
     public class UseCommandSourcingAttribute : RequestHandlerAttribute
     {
+        public string ContextKey { get; }
         public bool OnceOnly { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandlerAttribute"/> class.
         /// </summary>
         /// <param name="step">The step.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="timing">The timing.</param>
-        public UseCommandSourcingAttribute(int step, bool onceOnly=false, HandlerTiming timing = HandlerTiming.Before) : base(step, timing)
+        public UseCommandSourcingAttribute(int step, string contextKey = null, bool onceOnly=false, HandlerTiming timing = HandlerTiming.Before) 
+            : base(step, timing)
         {
+            ContextKey = contextKey;
             OnceOnly = onceOnly;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="RequestHandlerAttribute"/> class.
+        /// </summary>
+        /// <param name="step">The step.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the type of the handler)</param>
+        /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
+        /// <param name="timing">The timing.</param>
+        public UseCommandSourcingAttribute(int step, Type contextKey, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before) 
+            : this(step, contextKey.FullName, onceOnly, timing)
+        {
         }
 
         public override object[] InitializerParams()
         {
-            return new object[] {OnceOnly};
+            return new object[] {OnceOnly, ContextKey};
         }
 
         /// <summary>

@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteCommandStore _sqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private Exception _exception;
 
         public SqliteCommandStoreDuplicateMessageAsyncTests()
@@ -47,18 +48,19 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             _raisedCommand = new MyCommand {Value = "Test"};
+            _contextKey = "context-key";
         }
 
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Command_Store_Async()
         {
-            await _sqlCommandStore.AddAsync(_raisedCommand);
+            await _sqlCommandStore.AddAsync(_raisedCommand, _contextKey);
 
-            _exception = await Catch.ExceptionAsync(() => _sqlCommandStore.AddAsync(_raisedCommand));
+            _exception = await Catch.ExceptionAsync(() => _sqlCommandStore.AddAsync(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
-            var exists = await _sqlCommandStore.ExistsAsync<MyCommand>(_raisedCommand.Id);
+            var exists = await _sqlCommandStore.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
             exists.Should().BeTrue();
         }
 

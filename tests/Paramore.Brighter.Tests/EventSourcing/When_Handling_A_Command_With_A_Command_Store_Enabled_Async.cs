@@ -1,4 +1,4 @@
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -12,6 +12,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
         private readonly MyCommand _command;
         private readonly IAmACommandStoreAsync _commandStore;
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly string _contextKey;
 
         public CommandProcessorUsingCommandStoreAsyncTests()
         {
@@ -25,6 +26,8 @@ namespace Paramore.Brighter.Tests.EventSourcing
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
             container.Register(_commandStore);
 
+            _contextKey = typeof(MyStoredCommandHandlerAsync).FullName;
+
             _command = new MyCommand {Value = "My Test String"};
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
@@ -36,7 +39,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_command_store
-            _commandStore.GetAsync<MyCommand>(_command.Id).Result.Value.Should().Be(_command.Value);
+            _commandStore.GetAsync<MyCommand>(_command.Id, _contextKey).Result.Value.Should().Be(_command.Value);
         }
     }
 }

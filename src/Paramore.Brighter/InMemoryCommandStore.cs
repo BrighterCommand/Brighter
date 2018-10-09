@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class InMemoryCommandStore : IAmACommandStore, IAmACommandStoreAsync
     {
-        private readonly Dictionary<Guid, CommandStoreItem> _commands = new Dictionary<Guid, CommandStoreItem>();
+        private readonly Dictionary<string, CommandStoreItem> _commands = new Dictionary<string, CommandStoreItem>();
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -53,15 +53,17 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        public void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            if (!_commands.ContainsKey(command.Id))
+            string key = CreateKey(command.Id, contextKey);
+            if (!Exists<T>(command.Id, contextKey))
             {
-                _commands.Add(command.Id, new CommandStoreItem(typeof (T), string.Empty));
+                _commands.Add(key, new CommandStoreItem(typeof (T), string.Empty, contextKey));
             }
 
-            _commands[command.Id].CommandBody = JsonConvert.SerializeObject(command);
+            _commands[key].CommandBody = JsonConvert.SerializeObject(command);
         }
 
         /// <summary>
@@ -69,11 +71,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<object>();
 
@@ -83,7 +86,7 @@ namespace Paramore.Brighter
                 return tcs.Task;
             }
 
-            Add(command, timeoutInMilliseconds);
+            Add(command, contextKey, timeoutInMilliseconds);
 
             tcs.SetResult(new object());
             return tcs.Task;
@@ -94,25 +97,26 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>ICommand.</returns>
         /// <exception cref="System.TypeLoadException"></exception>
-        public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            if (!_commands.ContainsKey(id))
+            if (!Exists<T>(id, contextKey))
                 return new T { Id = Guid.Empty };
 
-            var commandStoreItem = _commands[id];
+            var commandStoreItem = _commands[CreateKey(id, contextKey)];
             if (commandStoreItem.CommandType != typeof (T))
-                throw new TypeLoadException(string.Format("The type of item {0) is {1} not{2}", id,
-                    commandStoreItem.CommandType.Name, typeof (T).Name));
+                throw new TypeLoadException(string.Format($"The type of item {id} is {commandStoreItem.CommandType.Name} not {typeof(T).Name}"));
 
             return JsonConvert.DeserializeObject<T>(commandStoreItem.CommandBody);
         }
 
-        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            return _commands.ContainsKey(id);
+            string key = CreateKey(id, contextKey);
+            return _commands.ContainsKey(key);
         }
 
         /// <summary>
@@ -120,9 +124,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<bool>();
 
@@ -132,7 +137,7 @@ namespace Paramore.Brighter
                 return tcs.Task;
             }
 
-            var command = Exists<T>(id, timeoutInMilliseconds);
+            var command = Exists<T>(id, contextKey, timeoutInMilliseconds);
 
             tcs.SetResult(command);
             return tcs.Task;
@@ -143,12 +148,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey"></param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="Task{T}" />.</returns>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
+        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
         {
             var tcs = new TaskCompletionSource<T>();
 
@@ -158,10 +164,15 @@ namespace Paramore.Brighter
                 return tcs.Task;
             }
 
-            var command = Get<T>(id, timeoutInMilliseconds);
+            var command = Get<T>(id, contextKey, timeoutInMilliseconds);
 
             tcs.SetResult(command);
             return tcs.Task;
+        }
+
+        private string CreateKey(Guid id, string contextKey)
+        {
+            return $"{id}:{contextKey}";
         }
 
         /// <summary>
@@ -175,11 +186,13 @@ namespace Paramore.Brighter
             /// <param name="commandType">Type of the command.</param>
             /// <param name="commandBody">The command body.</param>
             /// <param name="commandWhen">The command when.</param>
-            private CommandStoreItem(Type commandType, string commandBody, DateTime commandWhen)
+            /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+            private CommandStoreItem(Type commandType, string commandBody, DateTime commandWhen, string contextKey)
             {
                 CommandType = commandType;
                 CommandBody = commandBody;
                 CommandWhen = commandWhen;
+                ContextKey = contextKey;
             }
 
             /// <summary>
@@ -187,8 +200,8 @@ namespace Paramore.Brighter
             /// </summary>
             /// <param name="commandType">Type of the command.</param>
             /// <param name="commandBody">The command body.</param>
-            public CommandStoreItem(Type commandType, string commandBody)
-                : this(commandType, commandBody, DateTime.UtcNow) {}
+            public CommandStoreItem(Type commandType, string commandBody, string contextKey)
+                : this(commandType, commandBody, DateTime.UtcNow, contextKey) {}
 
             /// <summary>
             /// Gets or sets the command body.
@@ -197,16 +210,22 @@ namespace Paramore.Brighter
             public string CommandBody { get; set; }
             
             /// <summary>
-            /// Gets or sets the type of the command.
+            /// Gets the type of the command.
             /// </summary>
             /// <value>The type of the command.</value>
-            public Type CommandType { get; private set; }
+            public Type CommandType { get; }
 
             /// <summary>
-            /// Gets or sets the command when.
+            /// Gets the command when.
             /// </summary>
             /// <value>The command when.</value>
-            public DateTime CommandWhen { get; private set; }
+            public DateTime CommandWhen { get; }
+
+            /// <summary>
+            /// Gets the context key
+            /// </summary>
+            /// <value>The command context key.</value>
+            public string ContextKey { get; }
         }
     }
 }

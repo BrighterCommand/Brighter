@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
     {
         private readonly MySqlTestHelper _mysqlTestHelper;
         private readonly MySqlCommandStore _mysqlCommandStore;
+        private readonly string _contextKey;
         private MyCommand _storedCommand;
 
         public SqlCommandStoreEmptyWhenSearchedTests()
@@ -44,17 +45,18 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
             _mysqlTestHelper.SetupCommandDb();
 
             _mysqlCommandStore = new MySqlCommandStore(_mysqlTestHelper.CommandStoreConfiguration);
+            _contextKey = "test-context";
         }
 
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
             Guid commandId = Guid.NewGuid();
-            _storedCommand = _mysqlCommandStore.Get<MyCommand>(commandId);
+            _storedCommand = _mysqlCommandStore.Get<MyCommand>(commandId, _contextKey);
 
            //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);
-            _mysqlCommandStore.Exists<MyCommand>(commandId).Should().BeFalse();
+            _mysqlCommandStore.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
         }
 
         public void Dispose()

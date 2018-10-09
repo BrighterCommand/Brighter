@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                                         , [MessageType] nvarchar(32) NULL
                                         , [Timestamp] datetime NULL
                                         , [HeaderBag] ntext NULL
-                                        , [Body] ntext NULL
+                                        , [Body] ntext NULL,
                                         , CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
                                         );";
 

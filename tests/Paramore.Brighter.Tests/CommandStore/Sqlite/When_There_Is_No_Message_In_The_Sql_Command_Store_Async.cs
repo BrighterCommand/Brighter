@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteCommandStore _sqlCommandStore;
+        private readonly string _contextKey;
         private MyCommand _storedCommand;
 
         public SqliteCommandStoreEmptyWhenSearchedAsyncTests()
@@ -45,18 +46,19 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
             _sqliteTestHelper.SetupCommandDb();
 
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _contextKey = "context-key";
         }
 
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
             Guid commandId = Guid.NewGuid();
-            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(commandId);
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(commandId, _contextKey);
 
             //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);
 
-            bool exists = await _sqlCommandStore.ExistsAsync<MyCommand>(commandId);
+            bool exists = await _sqlCommandStore.ExistsAsync<MyCommand>(commandId, _contextKey);
             exists.Should().BeFalse();
         }
 

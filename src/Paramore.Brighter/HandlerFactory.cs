@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,7 +31,7 @@ namespace Paramore.Brighter
         private readonly RequestHandlerAttribute _attribute;
         private readonly IAmAHandlerFactory _factory;
         private readonly Type _messageType;
-        private IRequestContext _requestContext;
+        private readonly IRequestContext _requestContext;
 
         public HandlerFactory(RequestHandlerAttribute attribute, IAmAHandlerFactory factory, IRequestContext requestContext)
         {

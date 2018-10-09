@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
         private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         private readonly DynamoDbCommandStore _dynamoDbCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private Exception _exception;
 
         public DynamoDbCommandStoreDuplicateMessageAsyncTests()
@@ -46,15 +47,16 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
             _dynamoDbTestHelper.CreateCommandStoreTable(new DynamoDbCommandStoreBuilder(_dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration.TableName).CreateCommandStoreTableRequest(readCapacityUnits: 2, writeCapacityUnits: 1));
 
             _dynamoDbCommandStore = new DynamoDbCommandStore(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration);
-            _raisedCommand = new MyCommand {Value = "Test"};            
+            _raisedCommand = new MyCommand {Value = "Test"};
+            _contextKey = "context-key";
         }
 
         [Fact]
         public async Task When_the_message_is_already_in_the_command_store_async()
         {
-            _dynamoDbCommandStore.Add(_raisedCommand);
+            _dynamoDbCommandStore.Add(_raisedCommand, _contextKey);
 
-            _exception = await Catch.ExceptionAsync(() => _dynamoDbCommandStore.AddAsync(_raisedCommand));
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbCommandStore.AddAsync(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();

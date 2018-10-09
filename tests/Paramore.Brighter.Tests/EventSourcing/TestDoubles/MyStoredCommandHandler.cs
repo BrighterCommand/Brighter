@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
 {
     internal class MyStoredCommandHandler : RequestHandler<MyCommand>
     {
-        [UseCommandSourcing(1, onceOnly:true, timing: HandlerTiming.Before)]
+        [UseCommandSourcing(1, onceOnly:true, contextKey: typeof(MyStoredCommandHandler), timing: HandlerTiming.Before)]
         public override MyCommand Handle(MyCommand command)
         {
             return base.Handle(command);

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteCommandStore _sqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private MyCommand _storedCommand;
 
         public SqliteCommandStoreAddMessageTests()
@@ -46,13 +47,14 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
 
             _sqlCommandStore = new SqliteCommandStore(new SqliteCommandStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
             _raisedCommand = new MyCommand {Value = "Test"};
-            _sqlCommandStore.Add(_raisedCommand);
+            _contextKey = "context-key";
+            _sqlCommandStore.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Command_Store()
         {
-            _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id);
+            _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_command_store
             _storedCommand.Should().NotBeNull();

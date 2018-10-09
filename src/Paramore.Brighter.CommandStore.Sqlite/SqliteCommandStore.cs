@@ -54,9 +54,9 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             ContinueOnCapturedContext = false;
         }
 
-        public void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var parameters = InitAddDbParameters(command);
+            var parameters = InitAddDbParameters(command, contextKey);
 
             using (var connection = GetConnection())
             {
@@ -88,12 +88,13 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                    sqlException.SqliteErrorCode == SqliteUniqueKeyError;
         }
 
-        public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            var sql = $"select * from {this.MessageStoreTableName} where CommandId = @CommandId";
+            var sql = $"select * from {this.MessageStoreTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
             {
-                this.CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, parameters);
@@ -104,14 +105,16 @@ namespace Paramore.Brighter.CommandStore.Sqlite
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId LIMIT 1";
+            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
@@ -125,12 +128,13 @@ namespace Paramore.Brighter.CommandStore.Sqlite
         /// <param name="id">The identifier.</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId LIMIT 1";
+            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return await ExecuteCommandAsync<bool>(
@@ -146,9 +150,9 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var parameters = InitAddDbParameters(command);
+            var parameters = InitAddDbParameters(command, contextKey);
 
             using (var connection = GetConnection())
             {
@@ -172,12 +176,13 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             }
         }
 
-        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
         {
-            var sql = $"select * from {MessageStoreTableName} where CommandId = @CommandId";
+            var sql = $"select * from {MessageStoreTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
             {
-                CreateSqlParameter("@CommandId", id)
+                CreateSqlParameter("@CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return await ExecuteCommandAsync(
@@ -258,11 +263,11 @@ namespace Paramore.Brighter.CommandStore.Sqlite
 
         private string GetAddSql()
         {
-            var sqlAdd = $"insert into {MessageStoreTableName} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)";
+            var sqlAdd = $"insert into {MessageStoreTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
             return sqlAdd;
         }
 
-        private DbParameter[] InitAddDbParameters<T>(T command) where T : class, IRequest
+        private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
         {
             var commandJson = JsonConvert.SerializeObject(command);
             var parameters = new[]
@@ -270,7 +275,8 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                 CreateSqlParameter("CommandID", command.Id), //was CommandId
                 CreateSqlParameter("CommandType", typeof (T).Name), 
                 CreateSqlParameter("CommandBody", commandJson), 
-                CreateSqlParameter("Timestamp", DateTime.UtcNow)
+                CreateSqlParameter("Timestamp", DateTime.UtcNow),
+                CreateSqlParameter("ContextKey", contextKey)
             };
             return parameters;
         }

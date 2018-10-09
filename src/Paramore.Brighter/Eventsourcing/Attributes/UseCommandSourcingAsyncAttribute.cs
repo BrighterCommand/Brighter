@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -37,23 +37,38 @@ namespace Paramore.Brighter.Eventsourcing.Attributes
     public class UseCommandSourcingAsyncAttribute : RequestHandlerAttribute
     {
         public bool OnceOnly { get; }
+        public string ContextKey { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UseCommandSourcingAsyncAttribute"/> class.
         /// </summary>
         /// <param name="step">The step.</param>
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timing">The timing.</param>
-        public UseCommandSourcingAsyncAttribute(int step, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before)
+        public UseCommandSourcingAsyncAttribute(int step, bool onceOnly = false, string contextKey = null, HandlerTiming timing = HandlerTiming.Before)
             : base(step, timing)
         {
             OnceOnly = onceOnly;
+            ContextKey = contextKey;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UseCommandSourcingAsyncAttribute"/> class.
+        /// </summary>
+        /// <param name="step">The step.</param>
+        /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        /// <param name="timing">The timing.</param>
+        public UseCommandSourcingAsyncAttribute(int step, Type contextKey, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before)
+            : this(step, onceOnly, contextKey.FullName, timing)
+        {
         }
 
         public override object[] InitializerParams()
         {
             
-            return new object[]{OnceOnly};
+            return new object[]{OnceOnly, ContextKey};
         }
 
         /// <summary>

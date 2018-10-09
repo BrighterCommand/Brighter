@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
         private readonly MySqlTestHelper _mysqlTestHelper;
         private readonly MySqlCommandStore _mysqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private Exception _exception;
 
         public MySqlCommandStoreDuplicateMessageTests()
@@ -46,17 +47,29 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
 
             _mysqlCommandStore = new MySqlCommandStore(_mysqlTestHelper.CommandStoreConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
-            _mysqlCommandStore.Add(_raisedCommand);
+            _contextKey = "test-context";
+            _mysqlCommandStore.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Command_Store()
         {
-            _exception = Catch.Exception(() => _mysqlCommandStore.Add(_raisedCommand));
+            _exception = Catch.Exception(() => _mysqlCommandStore.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
-            _mysqlCommandStore.Exists<MyCommand>(_raisedCommand.Id).Should().BeTrue();
+            _mysqlCommandStore.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+        }
+
+        [Fact]
+        public void When_The_Message_Is_Already_In_The_Command_Store_Different_Context()
+        {
+            _mysqlCommandStore.Add(_raisedCommand, "some other key");
+
+            var storedCommand = _mysqlCommandStore.Get<MyCommand>(_raisedCommand.Id, "some other key");
+
+            //_should_read_the_command_from_the__dynamo_db_command_store
+            storedCommand.Should().NotBeNull();
         }
 
         public void Dispose()

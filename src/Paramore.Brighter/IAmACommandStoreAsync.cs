@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
+        Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
 
         /// <summary>
         /// Awaitably finds the specified identifier.
@@ -52,7 +52,7 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns><see cref="Task{T}"/>.</returns>
-        Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new();
+        Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new();
 
         /// <summary>
         /// Checks whether a command with the specified identifier exists in the store
@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds"></param>
         /// <param name="cancellationToken">Allow the sender to cancel the operation, if the parameter is supplied</param>
         /// <returns>True if it exists, False otherwise</returns>
-        Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
+        Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.

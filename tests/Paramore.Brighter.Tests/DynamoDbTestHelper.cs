@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests
             var tableName = $"test_{Guid.NewGuid()}";            
 
             DynamoDbContext = new DynamoDBContext(Client);
-            DynamoDbCommandStoreTestConfiguration = new DynamoDbCommandStoreConfiguration($"command_{tableName}", true, "CommandId");
+            DynamoDbCommandStoreTestConfiguration = new DynamoDbCommandStoreConfiguration($"command_{tableName}", true, "CommandId", "ContextKey");
             DynamoDbMessageStoreTestConfiguration = new DynamoDbMessageStoreConfiguration($"message_{tableName}", true, "MessageId");
         }
 

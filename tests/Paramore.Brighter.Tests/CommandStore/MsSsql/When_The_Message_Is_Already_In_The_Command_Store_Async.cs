@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlCommandStore _sqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private Exception _exception;
 
         public SqlCommandStoreDuplicateMessageAsyncTests()
@@ -47,19 +48,31 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
+            _contextKey = "test-context";
         }
 
         [Fact]
         public async Task When_The_Message_Is_Already_In_The_Command_Store_Async()
         {
-            await _sqlCommandStore.AddAsync(_raisedCommand);
+            await _sqlCommandStore.AddAsync(_raisedCommand, _contextKey);
 
-            _exception = await Catch.ExceptionAsync(() => _sqlCommandStore.AddAsync(_raisedCommand));
+            _exception = await Catch.ExceptionAsync(() => _sqlCommandStore.AddAsync(_raisedCommand, _contextKey));
 
            //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
-            var exists = await _sqlCommandStore.ExistsAsync<MyCommand>(_raisedCommand.Id);
+            var exists = await _sqlCommandStore.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
             exists.Should().BeTrue();
+        }
+
+        [Fact]
+        public async void When_The_Message_Is_Already_In_The_Command_Store_Different_Context()
+        {
+            await _sqlCommandStore.AddAsync(_raisedCommand, "some other key");
+
+            var storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id, "some other key");
+
+            //_should_read_the_command_from_the__dynamo_db_command_store
+            storedCommand.Should().NotBeNull();
         }
 
         public void Dispose()
