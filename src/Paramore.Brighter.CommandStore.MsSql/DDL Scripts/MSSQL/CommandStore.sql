@@ -9,6 +9,7 @@ CREATE TABLE [Commands] (
 , [CommandType] nvarchar(256) NULL
 , [CommandBody] ntext NULL
 , [Timestamp] datetime NULL
+, [ContextKey] nvarchar(256) NULL
 , PRIMARY KEY ( [Id] )
 );
 GO
