@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlCommandStore _sqlCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private MyCommand _storedCommand;
 
         public SqlCommandStoreAddMessageAsyncTests()
@@ -47,14 +48,15 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
 
             _sqlCommandStore = new MsSqlCommandStore(_msSqlTestHelper.CommandStoreConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
+            _contextKey = "context-key";
         }
 
         [Fact]
         public async Task When_Writing_A_Message_To_The_Command_Store_Async()
         {
-            await _sqlCommandStore.AddAsync(_raisedCommand);
+            await _sqlCommandStore.AddAsync(_raisedCommand, _contextKey);
 
-            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id);
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_command_store
             _storedCommand.Should().NotBeNull();

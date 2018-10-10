@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
 
         private readonly IAmACommandStoreAsync _commandStore;
         private bool _onceOnly;
+        private string _contextKey;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandSourcingHandlerAsync{T}" /> class.
@@ -59,6 +60,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             _onceOnly = (bool) initializerList[0];
+            _contextKey = (string)initializerList[1];
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -75,7 +77,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             {
                 _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
-                var exists = await _commandStore.ExistsAsync<T>(command.Id, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                var exists = await _commandStore.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 if (exists)
                 {
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
@@ -86,7 +88,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
             //TODO: We should not use an infinite timeout here - how to configure
-            await _commandStore.AddAsync(command, -1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            await _commandStore.AddAsync(command, _contextKey, - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

@@ -13,12 +13,13 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
        
         private readonly DynamoDbCommandStore _dynamoDbCommandStore;
         private readonly Guid _guid = Guid.NewGuid();
-        
+        private string _contextKey;
+
         public DynamoDbCommandExistsTests()
         {                        
             _command = new MyCommand { Id = _guid, Value = "Test Earliest"};
+            _contextKey = "test-context-key";
 
-            
             var createTableRequest = new DynamoDbCommandStoreBuilder(DynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration.TableName).CreateCommandStoreTableRequest();
             
             DynamoDbTestHelper.CreateCommandStoreTable(createTableRequest);
@@ -31,21 +32,29 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
             };
             
             var dbContext = DynamoDbTestHelper.DynamoDbContext;
-            dbContext.SaveAsync(ConstructCommand(_command, DateTime.UtcNow), config).GetAwaiter().GetResult();
+            dbContext.SaveAsync(ConstructCommand(_command, DateTime.UtcNow, _contextKey), config).GetAwaiter().GetResult();
         }
 
         [Fact]
         public void When_checking_a_command_exist()
         {
-            var commandExists = _dynamoDbCommandStore.Exists<MyCommand>(_command.Id);
+            var commandExists = _dynamoDbCommandStore.Exists<MyCommand>(_command.Id, _contextKey);
 
             commandExists.Should().BeTrue("because the command exists.", commandExists);
         }
 
         [Fact]
+        public void When_checking_a_command_exist_different_context_key()
+        {
+            var commandExists = _dynamoDbCommandStore.Exists<MyCommand>(_command.Id, "some-other-context-key");
+
+            commandExists.Should().BeFalse("because the command exists for a different context key.", commandExists);
+        }
+
+        [Fact]
         public void When_checking_a_command_does_not_exist()
         {
-            var commandExists = _dynamoDbCommandStore.Exists<MyCommand>(Guid.Empty);
+            var commandExists = _dynamoDbCommandStore.Exists<MyCommand>(Guid.Empty, _contextKey);
 
             commandExists.Should().BeFalse("because the command doesn't exists.", commandExists);
         }

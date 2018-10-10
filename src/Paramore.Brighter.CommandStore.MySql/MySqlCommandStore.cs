@@ -59,11 +59,12 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns>Task.</returns>
-        public void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var parameters = InitAddDbParameters(command);
+            var parameters = InitAddDbParameters(command, contextKey);
 
             using (var connection = GetConnection())
             {
@@ -93,14 +94,16 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns>T.</returns>
-        public T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
         {
-            var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId";
+            var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId and ContextKey = @contextKey";
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds,
@@ -112,14 +115,16 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest
+        public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"SELECT CommandId FROM {_configuration.CommandStoreTableName} WHERE CommandId = @commandId LIMIT 1";
+            var sql = $"SELECT CommandId FROM {_configuration.CommandStoreTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
@@ -131,14 +136,16 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"SELECT CommandId FROM {_configuration.CommandStoreTableName} WHERE CommandId = @commandId LIMIT 1";
+            var sql = $"SELECT CommandId FROM {_configuration.CommandStoreTableName} WHERE CommandId = @commandId and ContextKey = @contextKey LIMIT 1";
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return await ExecuteCommandAsync<bool>(
@@ -159,13 +166,14 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task" />.</returns>
-        public async Task AddAsync<T>(T command, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
-            var parameters = InitAddDbParameters(command);
+            var parameters = InitAddDbParameters(command, contextKey);
 
             using (var connection = GetConnection())
             {
@@ -205,17 +213,19 @@ namespace Paramore.Brighter.CommandStore.MySql
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(Guid id, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest, new()
         {
-            var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId";
+            var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId and ContextKey = @contextKey";
 
             var parameters = new[]
             {
-                CreateSqlParameter("CommandId", id)
+                CreateSqlParameter("CommandId", id),
+                CreateSqlParameter("ContextKey", contextKey)
             };
 
             return await ExecuteCommandAsync(
@@ -280,7 +290,7 @@ namespace Paramore.Brighter.CommandStore.MySql
         private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
         {
             var sqlAdd =
-                $"insert into {_configuration.CommandStoreTableName} (CommandID, CommandType, CommandBody, Timestamp) values (@CommandID, @CommandType, @CommandBody, @Timestamp)";
+                $"insert into {_configuration.CommandStoreTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
 
             var sqlcmd = connection.CreateCommand();
             if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
@@ -290,7 +300,7 @@ namespace Paramore.Brighter.CommandStore.MySql
             return sqlcmd;
         }
 
-        private DbParameter[] InitAddDbParameters<T>(T command) where T : class, IRequest
+        private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
         {
             var commandJson = JsonConvert.SerializeObject(command);
             var parameters = new[]
@@ -298,7 +308,8 @@ namespace Paramore.Brighter.CommandStore.MySql
                 CreateSqlParameter("CommandID", command.Id),
                 CreateSqlParameter("CommandType", typeof (T).Name),
                 CreateSqlParameter("CommandBody", commandJson),
-                CreateSqlParameter("Timestamp", DateTime.UtcNow)
+                CreateSqlParameter("Timestamp", DateTime.UtcNow),
+                CreateSqlParameter("ContextKey", contextKey),
             };
             return parameters;
         }

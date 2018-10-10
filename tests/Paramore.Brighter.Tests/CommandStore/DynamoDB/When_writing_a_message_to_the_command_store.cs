@@ -37,6 +37,7 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
         private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         private readonly DynamoDbCommandStore _dynamoDbCommandStore;
         private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private MyCommand _storedCommand;
 
         public DynamoDbCommandStoreAddMessageTests()
@@ -46,13 +47,14 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
 
             _dynamoDbCommandStore = new DynamoDbCommandStore(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbCommandStoreTestConfiguration);
             _raisedCommand = new MyCommand {Value = "Test"};
-            _dynamoDbCommandStore.Add(_raisedCommand);
+            _contextKey = "context-key";
+            _dynamoDbCommandStore.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
         public void When_writing_a_message_to_the_command_store()
         {
-            _storedCommand = _dynamoDbCommandStore.Get<MyCommand>(_raisedCommand.Id);
+            _storedCommand = _dynamoDbCommandStore.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__dynamo_db_command_store
             _storedCommand.Should().NotBeNull();

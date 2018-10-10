@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -35,6 +35,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
         private readonly MyCommand _command;
         private readonly IAmACommandStore _commandstore;
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly string _contextKey;
 
         public CommandProcessorUsingCommandStoreTests()
         {
@@ -50,6 +51,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
 
             _command = new MyCommand {Value = "My Test String"};
 
+            _contextKey = typeof(MyStoredCommandHandler).FullName;
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
         }
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             _commandProcessor.Send(_command);
 
             //should_store_the_command_to_the_command_store
-            _commandstore.Get<MyCommand>(_command.Id).Value.Should().Be(_command.Value);
+            _commandstore.Get<MyCommand>(_command.Id, _contextKey).Value.Should().Be(_command.Value);
         }
     }
 }

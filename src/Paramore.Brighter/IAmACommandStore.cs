@@ -37,25 +37,28 @@ namespace Paramore.Brighter
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
-        void Add<T>(T command, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest;
 
         /// <summary>
         /// Finds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>T.</returns>
-        T Get<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest, new();
+        T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new();
 
         /// <summary>
         /// Checks whether a command with the specified identifier exists in the store
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="id">The identifier.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        bool Exists<T>(Guid id, int timeoutInMilliseconds = -1) where T : class, IRequest;
+        bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest;
     }
 }

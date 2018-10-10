@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -34,6 +34,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                             [CommandType] [NVARCHAR](256) NULL ,
                             [CommandBody] [NTEXT] NULL ,
                             [Timestamp] [DATETIME] NULL ,
+                            [ContextKey] [NVARCHAR](256) NULL,
                             PRIMARY KEY ( [Id] )
                         );";
 

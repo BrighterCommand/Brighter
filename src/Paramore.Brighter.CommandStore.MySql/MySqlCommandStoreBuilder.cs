@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -32,6 +32,7 @@ namespace Paramore.Brighter.CommandStore.MySql
                 `CommandType` VARCHAR(256) NOT NULL , 
                 `CommandBody` TEXT NOT NULL , 
                 `Timestamp` TIMESTAMP(4) NOT NULL , 
+                `ContextKey` VARCHAR(256)  NULL , 
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;";
 

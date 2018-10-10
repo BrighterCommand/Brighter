@@ -45,6 +45,11 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
                     {
                         AttributeName = "CommandId",
                         AttributeType = ScalarAttributeType.S
+                    },
+                    new AttributeDefinition
+                    {
+                        AttributeName = "ContextKey",
+                        AttributeType = ScalarAttributeType.S
                     }
                 },
                 KeySchema = new List<KeySchemaElement>
@@ -73,6 +78,23 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
                             new KeySchemaElement
                             {
                                 AttributeName = "CommandId",
+                                KeyType = KeyType.HASH
+                            }
+                        },
+                        Projection = new Projection
+                        {
+                            ProjectionType = ProjectionType.ALL
+                        }
+                    },
+                    new GlobalSecondaryIndex
+                    {
+                        IndexName = "ContextKey",
+                        ProvisionedThroughput = provisionedThroughput,
+                        KeySchema = new List<KeySchemaElement>
+                        {
+                            new KeySchemaElement
+                            {
+                                AttributeName = "ContextKey",
                                 KeyType = KeyType.HASH
                             }
                         },

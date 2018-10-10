@@ -51,12 +51,12 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
         public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
         {
             Guid commandId = Guid.NewGuid();
-            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(commandId);
+            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(commandId, "some-key");
 
             //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);
 
-            bool exists = await _sqlCommandStore.ExistsAsync<MyCommand>(commandId);
+            bool exists = await _sqlCommandStore.ExistsAsync<MyCommand>(commandId, "some-key");
             exists.Should().BeFalse();
         }
 

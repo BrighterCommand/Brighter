@@ -13,15 +13,16 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
             DynamoDbTestHelper = new DynamoDbTestHelper();
         }
         
-        protected DynamoDbCommand<T> ConstructCommand<T>(T command, DateTime timeStamp) where T : class, IRequest
-        {                                               
+        protected DynamoDbCommand<T> ConstructCommand<T>(T command, DateTime timeStamp, string contextKey) where T : class, IRequest
+        {
             return new DynamoDbCommand<T>
             {
                 CommandDate = $"{typeof(T).Name}+{timeStamp:yyyy-MM-dd}",
                 Time = $"{timeStamp.Ticks}",
                 CommandId = command.Id.ToString(),
                 CommandType = typeof(T).Name,
-                CommandBody = JsonConvert.SerializeObject(command),       
+                CommandBody = JsonConvert.SerializeObject(command),
+                ContextKey = contextKey
             };
         }
                 

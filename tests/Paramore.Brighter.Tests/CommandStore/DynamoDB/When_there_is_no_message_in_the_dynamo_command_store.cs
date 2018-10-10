@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
-            _storedCommand = _dynamoDbCommandStore.Get<MyCommand>(Guid.NewGuid());
+            _storedCommand = _dynamoDbCommandStore.Get<MyCommand>(Guid.NewGuid(), "some key");
 
             //_should_return_an_empty_command_on_a_missing_command
             _storedCommand.Id.Should().Be(Guid.Empty);
