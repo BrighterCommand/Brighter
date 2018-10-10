@@ -7,6 +7,7 @@ using Xunit;
 namespace Paramore.Brighter.Tests.MessagingGateway.redis
 {
     [Trait("Category", "Redis")]
+    [Collection("Redis")]
     public class RedisGatewayConfigurationTests 
     {
         [Fact]
