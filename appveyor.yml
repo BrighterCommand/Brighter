@@ -53,7 +53,7 @@ nuget:
   disable_publish_on_pr: true
 
 install:
-  - Get-NetNat | Remove-NetNat
+  - ps: Get-NetNat | Remove-NetNat
   - docker --version
   - nuget install redis-64 -ExcludeVersion
   - redis-64\tools\redis-server.exe --service-install
