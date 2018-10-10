@@ -17,12 +17,6 @@
   <ItemGroup>
     <PackageReference Include="System.Data.SqlClient" Version="4.5.0" />
   </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)'=='net452'">
-    <Reference Include="Microsoft.CSharp" />
-  </ItemGroup>
   <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
     <EmbeddedResource Include=".\DDL Scripts\MSSQL\CommandStore.sql" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
   </ItemGroup>
