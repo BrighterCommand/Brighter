@@ -15,7 +15,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             var configuration = new RedisMessagingGatewayConfiguration
             {
                 BackoffMultiplier = 5,
-                BufferLength = 4096,
                 BufferPoolMaxSize = 1024,
                 DeactivatedClientsExpiry = TimeSpan.Zero,
                 DefaultConnectTimeout = 10,
@@ -35,7 +34,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             
             //Redis Config is static, so we can just look at the values we should have initialized
             RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
-            RedisConfig.BufferLength.Should().Be(configuration.BufferLength.Value);
             RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
             RedisConfig.DeactivatedClientsExpiry.Should().Be(configuration.DeactivatedClientsExpiry.Value);
             RedisConfig.DefaultConnectTimeout.Should().Be(configuration.DefaultConnectTimeout.Value);

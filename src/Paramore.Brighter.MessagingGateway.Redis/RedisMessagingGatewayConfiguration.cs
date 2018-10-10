@@ -54,11 +54,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int? DefaultRetryTimeout { get; set; }
 
         /// <summary>
-        /// The Byte Buffer Size to combine Redis Operations within (default 1450 bytes)
-        /// </summary>
-        public int? BufferLength { get; set; }
-
-        /// <summary>
         /// The Byte Buffer Size for Operations to use a byte buffer pool (default 500kb)
         /// </summary>
         public int? BufferPoolMaxSize { get; set; }

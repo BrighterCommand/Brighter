@@ -88,11 +88,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 RedisConfig.BackOffMultiplier = GatewayConfiguration.BackoffMultiplier.Value;
             }
 
-            if (GatewayConfiguration.BufferLength.HasValue)
-            {
-                RedisConfig.BufferLength = GatewayConfiguration.BufferLength.Value;
-            }
-            
             if (GatewayConfiguration.DeactivatedClientsExpiry.HasValue)
             {
                 RedisConfig.DeactivatedClientsExpiry = GatewayConfiguration.DeactivatedClientsExpiry.Value;
