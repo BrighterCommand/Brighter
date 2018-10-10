@@ -85,27 +85,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (sqsMessage == null)
                     return _noopMessage; 
             
-             var message = CreateMessage(sqsMessage);
+             var message = new SqsMessageCreator().CreateMessage(sqsMessage);
             
             _logger.Value.InfoFormat("SqsMessageConsumer: Received message from queue {0}, message: {1}{2}",
                 _queueName, Environment.NewLine, JsonConvert.SerializeObject(message));
  
 
             return message;
-        }
-
-        private Message CreateMessage(Amazon.SQS.Model.Message rawSqsMessage)
-        {
-            var sqsmessage = JsonConvert.DeserializeObject<SqsMessage>(rawSqsMessage.Body);
-
-            var contractResolver = new MessageDefaultContractResolver();
-            var settings = new JsonSerializerSettings {ContractResolver = contractResolver};
-
-            var message = JsonConvert.DeserializeObject<Message>(sqsmessage.Message ?? rawSqsMessage.Body, settings);
-
-            message.Header.Bag.Add("ReceiptHandle", rawSqsMessage.ReceiptHandle);
-
-           return message;
         }
 
         /// <summary>

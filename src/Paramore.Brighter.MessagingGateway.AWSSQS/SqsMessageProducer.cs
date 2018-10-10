@@ -14,8 +14,6 @@
 
 using System;
 using System.Net;
-using Amazon;
-using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Newtonsoft.Json;
@@ -46,15 +44,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            var messageString = JsonConvert.SerializeObject(message);
-            _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
+            _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", 
+                message.Header.Topic, message.Id, message.Body);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
             {
                 var topicArn = EnsureTopic(message.Header.Topic, client);
-                var publishRequest = new PublishRequest(topicArn, messageString);
-                client.PublishAsync(publishRequest).Wait();
-            }
+                var publisher = new SqsMessagePublisher(topicArn, client);
+                publisher.Publish(message);
+           }
         }
 
         /// <summary>

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.SymbolStore;
 using System.Linq;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                             Attributes =
                             {
                                 {"VisibilityTimeout", connection.VisibilityTimeout.ToString()},
-                                {"ReceiveMessageWaitTimeoutSeconds",ToSecondsAsString(connection.TimeoutInMiliseconds) }
+                                {"ReceiveMessageWaitTimeSeconds",ToSecondsAsString(connection.TimeoutInMiliseconds) }
                             }
                         };
                         var response = sqsClient.CreateQueueAsync(request).Result;
