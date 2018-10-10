@@ -53,13 +53,10 @@ nuget:
   disable_publish_on_pr: true
 
 install:
-  - ps: Get-NetNat | Remove-NetNat
   - docker --version
   - nuget install redis-64 -ExcludeVersion
   - redis-64\tools\redis-server.exe --service-install
   - redis-64\tools\redis-server.exe --service-start
-  - choco install docker-compose -y
-  - docker-compose -f docker-compose.appveyor.yaml up -d
 
 before_build:
   - cmd: dotnet --info
