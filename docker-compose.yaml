@@ -1,13 +1,13 @@
 version: '2'
 
 services:
-  rabbitmq:
-    image: rabbitmq:3-management
-    ports:
-      - "5672:5672"
-      - "15672:15672"
-    volumes:
-      - rabbitmq-home:/var/lib/rabbitmq
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   ports:
+  #     - "5672:5672"
+  #     - "15672:15672"
+  #   volumes:
+  #     - rabbitmq-home:/var/lib/rabbitmq
 
   eventstore:
     image: eventstore/eventstore
@@ -21,15 +21,15 @@ services:
       - EVENTSTORE_START_STANDARD_PROJECTIONS=TRUE
     
   # Need to give 4GB of memory to Docker for SQL
-  sqlserver:
-    image: microsoft/mssql-server-linux
-    ports:
-      - "1433:1433"
-    volumes:
-      - sqlserver-data:/var/opt/mssql
-    environment:
-      - ACCEPT_EULA=Y
-      - SA_PASSWORD=password
+  # sqlserver:
+  #   image: microsoft/mssql-server-linux
+  #   ports:
+  #     - "1433:1433"
+  #   volumes:
+  #     - sqlserver-data:/var/opt/mssql
+  #   environment:
+  #     - ACCEPT_EULA=Y
+  #     - SA_PASSWORD=password
   mysql:
     image: mysql
     ports:
