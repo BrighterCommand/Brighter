@@ -121,6 +121,8 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Richard Tappenden](https://github.com/tapmantwo)**
   * Various fixes
+  * Command Sourcing Once-Only improvements
+  * Command Store improvements
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
