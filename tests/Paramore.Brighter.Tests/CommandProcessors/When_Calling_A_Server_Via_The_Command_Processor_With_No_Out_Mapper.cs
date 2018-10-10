@@ -7,7 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorMissingOutMapperTests
+    public class CommandProcessorMissingOutMapperTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new MyRequest();
