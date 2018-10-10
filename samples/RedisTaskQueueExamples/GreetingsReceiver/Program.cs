@@ -17,7 +17,7 @@ namespace Greetings
         static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.LiterateConsole()
+                .WriteTo.Console()
                 .CreateLogger();
 
             var container = new TinyIoCContainer();

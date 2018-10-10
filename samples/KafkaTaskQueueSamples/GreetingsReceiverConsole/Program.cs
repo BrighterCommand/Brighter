@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -41,7 +41,7 @@ namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
         public static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.LiterateConsole()
+                .WriteTo.Console()
                 .CreateLogger();
 
             var container = new TinyIoCContainer();

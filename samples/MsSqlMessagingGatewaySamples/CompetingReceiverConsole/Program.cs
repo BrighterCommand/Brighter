@@ -18,7 +18,7 @@ namespace CompetingReceiverConsole
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Warning()
-                .WriteTo.LiterateConsole()
+                .WriteTo.Console()
                 .CreateLogger();
 
             var container = new TinyIoCContainer();

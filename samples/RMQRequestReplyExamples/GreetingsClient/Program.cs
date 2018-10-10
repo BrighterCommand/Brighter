@@ -41,7 +41,7 @@ namespace GreetingsSender
         {
             Log.Logger = new LoggerConfiguration()
               .MinimumLevel.Debug()
-              .WriteTo.LiterateConsole()
+              .WriteTo.Console()
               .CreateLogger();
             
             var container = new TinyIoCContainer();
