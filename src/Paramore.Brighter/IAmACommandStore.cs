@@ -49,7 +49,7 @@ namespace Paramore.Brighter
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>T.</returns>
-        T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new();
+        T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest;
 
         /// <summary>
         /// Checks whether a command with the specified identifier exists in the store

@@ -54,8 +54,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         {
             _commandStore = commandStore;
         }
-
-
+        
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             _onceOnly = (bool) initializerList[0];

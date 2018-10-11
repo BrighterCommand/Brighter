@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -21,6 +21,9 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
+using System;
+using Newtonsoft.Json;
 
 namespace Paramore.Brighter.CommandStore.MsSql
 {
@@ -45,6 +48,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
         /// </summary>
         /// <value>The connection string.</value>
         public string ConnectionString { get; private set; }
+
         /// <summary>
         /// Gets the name of the message store table.
         /// </summary>

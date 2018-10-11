@@ -27,6 +27,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
@@ -48,14 +49,17 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
         }
 
         [Fact]
-        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_Async()
+        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_And_I_Get_Async()
         {
             Guid commandId = Guid.NewGuid();
-            _storedCommand = await _sqlCommandStore.GetAsync<MyCommand>(commandId, "some-key");
+            var exception = await Catch.ExceptionAsync(() => _sqlCommandStore.GetAsync<MyCommand>(commandId, "some-key"));
+            exception.Should().BeOfType<CommandNotFoundException<MyCommand>>();
+        }
 
-            //_should_return_an_empty_command_on_a_missing_command
-            _storedCommand.Id.Should().Be(Guid.Empty);
-
+        [Fact]
+        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_And_I_Check_Exists_Async()
+        {
+            Guid commandId = Guid.NewGuid();
             bool exists = await _sqlCommandStore.ExistsAsync<MyCommand>(commandId, "some-key");
             exists.Should().BeFalse();
         }

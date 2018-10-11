@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Paramore.Brighter.CommandStore.Sqlite.Logging;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 
 namespace Paramore.Brighter.CommandStore.Sqlite
 {
@@ -88,7 +89,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                    sqlException.SqliteErrorCode == SqliteUniqueKeyError;
         }
 
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {this.MessageStoreTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
@@ -97,7 +98,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                 CreateSqlParameter("ContextKey", contextKey)
             };
 
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds, parameters);
+            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
         }
 
         /// <summary>
@@ -176,7 +177,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             }
         }
 
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var sql = $"select * from {MessageStoreTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
@@ -189,7 +190,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                 async command =>
                 {
                     return ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken)
-                        .ConfigureAwait(ContinueOnCapturedContext));
+                        .ConfigureAwait(ContinueOnCapturedContext), id);
                 },
                 sql,
                 timeoutInMilliseconds,
@@ -281,7 +282,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, IRequest, new()
+        private TResult ReadCommand<TResult>(IDataReader dr, Guid id) where TResult : class, IRequest
         {
             using (dr)
             {
@@ -293,7 +294,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
                     return JsonConvert.DeserializeObject<TResult>(body);
                 }
 
-                return new TResult {Id = Guid.Empty};
+                throw new CommandNotFoundException<TResult>(id);
             }
         }
 

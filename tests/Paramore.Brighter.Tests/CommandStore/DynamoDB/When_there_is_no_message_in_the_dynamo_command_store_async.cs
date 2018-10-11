@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Paramore.Brighter.CommandStore.DynamoDB;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
@@ -36,7 +37,6 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
     {
         private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         private readonly DynamoDbCommandStore _dynamoDbCommandStore;
-        private MyCommand _storedCommand;
 
         public DynamoDbCommandStoreEmptyWhenSearchedAsyncTests()
         {
@@ -49,11 +49,8 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
         [Fact]
         public async void When_There_Is_No_Message_In_The_Sql_Command_Store()
         {
-            _storedCommand = await _dynamoDbCommandStore.GetAsync<MyCommand>(Guid.NewGuid(), "some key");
-
-            //_should_return_an_empty_command_on_a_missing_command
-            _storedCommand.Id.Should().Be(Guid.Empty);
-            _storedCommand.Value.Should().Be(null);
+            var exception = await Catch.ExceptionAsync(() => _dynamoDbCommandStore.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
+            exception.Should().BeOfType<CommandNotFoundException<MyCommand>>();
         }
 
         public void Dispose()

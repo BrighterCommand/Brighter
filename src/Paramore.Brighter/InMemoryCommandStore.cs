@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 
 namespace Paramore.Brighter
 {
@@ -101,10 +102,12 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>ICommand.</returns>
         /// <exception cref="System.TypeLoadException"></exception>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             if (!Exists<T>(id, contextKey))
-                return new T { Id = Guid.Empty };
+            {
+               throw new CommandNotFoundException<T>(id);
+            }
 
             var commandStoreItem = _commands[CreateKey(id, contextKey)];
             if (commandStoreItem.CommandType != typeof (T))
@@ -154,7 +157,7 @@ namespace Paramore.Brighter
         /// <returns><see cref="Task{T}" />.</returns>
         /// <returns><see cref="Task" />Allows the sender to cancel the call, optional</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
+        public Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<T>();
 
