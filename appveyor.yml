@@ -57,6 +57,7 @@ install:
   - nuget install redis-64 -ExcludeVersion
   - redis-64\tools\redis-server.exe --service-install
   - redis-64\tools\redis-server.exe --service-start
+  - docker-compose -f docker-compose.appveyor.yaml up -d
 
 before_build:
   - cmd: dotnet --info
