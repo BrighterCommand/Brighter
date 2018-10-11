@@ -66,4 +66,7 @@ volumes:
     driver: local
   dynamodb:
     driver: local
-  
+networks:
+  default:
+    external:
+      name: nat
