@@ -1,9 +1,11 @@
 # .NET Core Extensions for [Brighter](https://github.com/BrighterCommand/Paramore.Brighter).
+
  - Dependency Injection integration for Brighter
  - Dependency Injection integration for Service Activator
  - IHostedService for background tasks 
 
-[![Build status](https://ci.appveyor.com/api/projects/status/09ed8f3g2olmebna?svg=true)](https://ci.appveyor.com/project/dstockhammer/paramore-brighter-aspnetcore)
+[![Build status](https://ci.appveyor.com/api/projects/status/gw8l6btumifwfye7/branch/master?svg=true)](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter-extensions/branch/master)
+
 [![NuGet](https://img.shields.io/nuget/v/Paramore.Brighter.AspNetCore.svg)](https://www.nuget.org/packages/Paramore.Brighter.AspNetCore)
 
 # 1. Paramore.Brighter.Extensions.DependencyInjection

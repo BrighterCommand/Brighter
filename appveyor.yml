@@ -3,7 +3,7 @@ image: Visual Studio 2017
 
 dotnet_csproj:
   patch: true
-  file: '**\Directory.Build.Props'
+  file: 'Directory.Build.Props'
   version: '{version}'
   package_version: '{version}'
   assembly_version: '1.0.0.0'
