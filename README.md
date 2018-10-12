@@ -6,7 +6,7 @@
 
 [![Build status](https://ci.appveyor.com/api/projects/status/gw8l6btumifwfye7/branch/master?svg=true)](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter-extensions/branch/master)
 
-[![NuGet](https://img.shields.io/nuget/v/Paramore.Brighter.AspNetCore.svg)](https://www.nuget.org/packages/Paramore.Brighter.AspNetCore)
+[![NuGet](https://img.shields.io/nuget/v/Paramore.Brighter.Extensions.DependencyInjection.svg)](https://www.nuget.org/packages/Paramore.Brighter.Extensions.DependencyInjection)
 
 # 1. Paramore.Brighter.Extensions.DependencyInjection
 
