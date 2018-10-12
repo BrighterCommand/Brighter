@@ -4,8 +4,6 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>Daniel Stockhammer, Toby Henderson</Authors>
     <Description>Brighter Microsoft.Extensions.DependencyInjection support</Description>
-    <PackageProjectUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions</PackageProjectUrl>
-    <PackageLicenseUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions/blob/master/LICENSE.md</PackageLicenseUrl>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Paramore.Brighter" Version="7.4.2" />
