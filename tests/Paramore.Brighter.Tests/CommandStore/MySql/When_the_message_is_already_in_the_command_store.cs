@@ -27,6 +27,7 @@ using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.CommandStore.MySql;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 
 namespace Paramore.Brighter.Tests.CommandStore.MySql
 {
@@ -66,10 +67,9 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
         {
             _mysqlCommandStore.Add(_raisedCommand, "some other key");
 
-            var storedCommand = _mysqlCommandStore.Get<MyCommand>(_raisedCommand.Id, "some other key");
+            _exception = Catch.Exception(() => _mysqlCommandStore.Get<MyCommand>(_raisedCommand.Id, "some other key"));
 
-            //_should_read_the_command_from_the__dynamo_db_command_store
-            storedCommand.Should().NotBeNull();
+            _exception.Should().BeOfType<CommandNotFoundException<MyCommand>>();
         }
 
         public void Dispose()

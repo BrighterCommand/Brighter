@@ -26,6 +26,7 @@ using System;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.CommandStore.MySql;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MySql
@@ -49,13 +50,17 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Command_Store()
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Get()
         {
             Guid commandId = Guid.NewGuid();
-            _storedCommand = _mysqlCommandStore.Get<MyCommand>(commandId, _contextKey);
+            var exception = Catch.Exception(() => _mysqlCommandStore.Get<MyCommand>(commandId, _contextKey));
+            exception.Should().BeOfType<CommandNotFoundException<MyCommand>>();
+        }
 
-           //_should_return_an_empty_command_on_a_missing_command
-            _storedCommand.Id.Should().Be(Guid.Empty);
+        [Fact]
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Exists()
+        {
+            Guid commandId = Guid.NewGuid();
             _mysqlCommandStore.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
         }
 

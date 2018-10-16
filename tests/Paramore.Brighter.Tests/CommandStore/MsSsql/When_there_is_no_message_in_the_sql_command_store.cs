@@ -26,6 +26,7 @@ using System;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
@@ -49,13 +50,18 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Command_Store()
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store_And_Call_Get()
         {
             Guid commandId = Guid.NewGuid();
-            _storedCommand = _sqlCommandStore.Get<MyCommand>(commandId, _contextKey);
+            var exception = Catch.Exception(() => _storedCommand = _sqlCommandStore.Get<MyCommand>(commandId, _contextKey));
 
-           //_should_return_an_empty_command_on_a_missing_command
-            _storedCommand.Id.Should().Be(Guid.Empty);
+            exception.Should().BeOfType<CommandNotFoundException<MyCommand>>();
+        }
+
+        [Fact]
+        public void When_There_Is_No_Message_In_The_Sql_Command_Store_And_Call_Exists()
+        {
+            Guid commandId = Guid.NewGuid();
             _sqlCommandStore.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
         }
 

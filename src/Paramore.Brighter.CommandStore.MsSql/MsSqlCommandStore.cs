@@ -31,6 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.CommandStore.MsSql.Logging;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 
 namespace Paramore.Brighter.CommandStore.MsSql
 {
@@ -98,7 +99,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns>T.</returns>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId AND ContextKey = @contextKey";
             var parameters = new[]
@@ -107,7 +108,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                 CreateSqlParameter("ContextKey", contextKey)
             };
 
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader()), sql, timeoutInMilliseconds,
+            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds,
                 parameters);
         }
 
@@ -220,7 +221,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
         /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns><see cref="Task{T}" />.</returns>
         public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
-            where T : class, IRequest, new()
+            where T : class, IRequest
         {
             var sql = $"select * from {_configuration.CommandStoreTableName} where CommandId = @commandId AND ContextKey = @contextKey";
 
@@ -231,7 +232,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
             };
 
             return await ExecuteCommandAsync(
-                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                async command => ReadCommand<T>(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext), id),
                 sql,
                 timeoutInMilliseconds,
                 cancellationToken,
@@ -312,7 +313,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr) where TResult : class, IRequest, new()
+        private TResult ReadCommand<TResult>(IDataReader dr, Guid commandId) where TResult : class, IRequest
         {
             if (dr.Read())
             {
@@ -320,7 +321,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                 return JsonConvert.DeserializeObject<TResult>(body);
             }
 
-            return new TResult {Id = Guid.Empty};
+            throw new CommandNotFoundException<TResult>(commandId);
         }
     }
 }

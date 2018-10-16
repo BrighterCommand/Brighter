@@ -31,6 +31,7 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Newtonsoft.Json;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.CommandStore.DynamoDB
@@ -92,7 +93,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <returns><see cref="T"/></returns>
-        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest, new()
+        public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             return GetCommandFromDynamo<T>(id, contextKey).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
@@ -122,7 +123,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {                
             return await GetCommandFromDynamo<T>(id, contextKey, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
@@ -135,7 +136,7 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command to be returned</typeparam>
         /// <returns></returns>
-        private async Task<T> GetCommandFromDynamo<T>(Guid id, string contextKey, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest, new()
+        private async Task<T> GetCommandFromDynamo<T>(Guid id, string contextKey, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var storedId = id.ToString();
 
@@ -148,9 +149,13 @@ namespace Paramore.Brighter.CommandStore.DynamoDB
             var storedCommand = 
                 await _context.QueryAsync<DynamoDbCommand<T>>(storedId, _queryOperationConfig)
                     .GetNextSetAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);            
+                    .ConfigureAwait(ContinueOnCapturedContext);
 
-            return storedCommand.FirstOrDefault()?.ConvertToCommand() ?? new T {Id = Guid.Empty};
+            var result = storedCommand.FirstOrDefault()?.ConvertToCommand();
+            if ( result == null)
+                throw new CommandNotFoundException<T>(id);
+
+            return result;
         }
 
         /// <summary>

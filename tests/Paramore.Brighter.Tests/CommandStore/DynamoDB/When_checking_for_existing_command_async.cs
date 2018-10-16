@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
         [Fact]
         public async Task When_checking_a_command_exist_for_a_different_context()
         {
-            var commandExists = await _dynamoDbCommandStore.ExistsAsync<MyCommand>(_command.Id, _contextKey);
+            var commandExists = await _dynamoDbCommandStore.ExistsAsync<MyCommand>(_command.Id, "some other context");
 
             commandExists.Should().BeFalse("because the command exists for a different context.", commandExists);
         }
