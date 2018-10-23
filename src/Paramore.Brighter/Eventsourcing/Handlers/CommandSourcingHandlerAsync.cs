@@ -87,10 +87,12 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             
             _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
+            T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
             //TODO: We should not use an infinite timeout here - how to configure
             await _commandStore.AddAsync(command, _contextKey, - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return handledCommand;
         }
     }
 }

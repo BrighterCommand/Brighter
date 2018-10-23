@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -43,6 +44,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();
+            registry.Register<MyCommandToFail, MyStoredCommandToFailHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
@@ -63,6 +65,15 @@ namespace Paramore.Brighter.Tests.EventSourcing
 
             //should_store_the_command_to_the_command_store
             _commandstore.Get<MyCommand>(_command.Id, _contextKey).Value.Should().Be(_command.Value);
+        }
+
+        [Fact]
+        public void Command_Is_Not_Stored_If_The_Handler_Is_Not_Succesful()
+        {
+            Guid id = Guid.NewGuid();
+            Catch.Exception(() => _commandProcessor.Send(new MyCommandToFail() { Id = id}));
+
+            _commandstore.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName).Should().BeFalse();
         }
     }
 }

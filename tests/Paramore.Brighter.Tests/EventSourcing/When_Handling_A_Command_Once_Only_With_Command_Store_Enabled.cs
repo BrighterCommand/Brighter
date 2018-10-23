@@ -39,7 +39,6 @@ namespace Paramore.Brighter.Tests.EventSourcing
             Exception ex = Assert.Throws<OnceOnlyException>(() => _commandProcessor.Send(_command));
             
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
-
         }
         
     }
