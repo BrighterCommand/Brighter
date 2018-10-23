@@ -17,14 +17,15 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly InputChannelFactory _channelFactory;
+        private MyCommand _myCommand;
 
         public SqsMessageConsumerRequeueTests()
         {
-            MyCommand myCommand = new MyCommand{Value = "Test"};
+            _myCommand = new MyCommand{Value = "Test"};
             
             _message = new Message(
-                new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonConvert.SerializeObject(myCommand))
+                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageBody(JsonConvert.SerializeObject(_myCommand))
             );
             
             //Must have credentials stored in the SDK Credentials store or shared credentials file
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 
             //should requeue_the_message
             message = _channel.Receive(1000);
-            message.Should().Be(message);
+            message.Id.Should().Be(_myCommand.Id);
         }
 
         public void Dispose()

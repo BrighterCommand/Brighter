@@ -69,11 +69,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                                 var exists = snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey);
                                 if (exists == null)
                                 {
-                                    var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(connection.RoutingKey)).Result;
+                                    var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(connection.RoutingKey.ToValidSNSTopicName())).Result;
                                     if (!string.IsNullOrEmpty(createTopic.TopicArn))
                                     {
-                                        var subscription = snsClient.SubscribeQueueAsync(connection.RoutingKey, sqsClient, queueUrl).Result;
+                                        var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
                                         //TODO: What happens if we fail here
+                                        //TODO: Do we need to keep the ARN?
                                     }
                                 }
                             }
@@ -84,6 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     {
                         //TODO: We need some retry semantics here
                         //TODO: We need to flatten the ae and handle some of these with ae.Handle((x) => {})
+                        //QueueDeletedRecentlyException - wait 60 seconds then retry
                         var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message}";
                         _logger.Value.Error(error);
                         throw new ChannelFailureException(error, ae);

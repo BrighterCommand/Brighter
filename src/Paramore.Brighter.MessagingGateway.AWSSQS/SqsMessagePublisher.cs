@@ -30,10 +30,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             messageAttributes.Add(HeaderNames.HandledCount, new MessageAttributeValue {StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String"});
             messageAttributes.Add(HeaderNames.MessageType, new MessageAttributeValue{StringValue = message.Header.MessageType.ToString(), DataType = "String"});
             messageAttributes.Add(HeaderNames.Timestamp, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"});
-            
+            messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"});
+             
             //we can set up to 10 attributes; we have set 6 above, so only 3 remain max. we may have none
             var headerList = new List<string>(message.Header.Bag.Keys);
-            var headersLength = Math.Min(4, headerList.Count);
+            var headersLength = Math.Min(3, headerList.Count);
             for (int i = 0; i < headersLength; i++)
             {
                 var key = headerList[i];

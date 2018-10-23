@@ -20,6 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var messageType = HeaderResult<MessageType>.Empty();
             var timeStamp = HeaderResult<DateTime>.Empty();
             var receiptHandle = HeaderResult<string>.Empty();
+            var replyTo = HeaderResult<string>.Empty();
             
 
             Message message;
@@ -32,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 handledCount = ReadHandledCount(sqsMessage);
                 messageType = ReadMessageType(sqsMessage);
                 timeStamp = ReadTimestamp(sqsMessage);
-                //TODO: We probably need a replyTo header to support request-reply
+                replyTo = ReadReplyTo(sqsMessage);
                 receiptHandle = ReadReceiptHandle(sqsMessage);
                 
                 if (false == (topic.Success && messageId.Success && contentType.Success && correlationId.Success 
@@ -74,6 +75,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return attributeValue.StringValue;
         }
 
+        private HeaderResult<string> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
+        {
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.ReplyTo, out MessageAttributeValue value))
+            {
+                return new HeaderResult<string>(value.StringValue, true);
+            }
+            return new HeaderResult<string>(String.Empty, true);
+        }
+        
         private HeaderResult<DateTime> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.HandledCount, out MessageAttributeValue value))

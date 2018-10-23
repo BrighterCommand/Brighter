@@ -30,5 +30,16 @@
             
             return new RoutingKey(topic);
         }
-    }
+        
+        public static string ToValidSNSTopicName(this string topic)
+        {
+            //SNS only opic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
+            //underscores (_) are allowed. Topic names must be unique within an AWS account.
+            topic = topic.Replace(".", "_");
+            if (topic.Length > 256)
+                topic = topic.Substring(0, 256);
+            
+            return topic;
+        }
+     }
 }
