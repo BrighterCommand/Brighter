@@ -12,6 +12,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
   - Support for DynamoDB Message and Command Stores (Jonny Olliff-Lee @DevJonny)
   - Added a Call() method to CommandProcessor to support Request-Reply
   - Add a context field to the command store, to allow identification of a context, and share a table across multiple handlers. Note that this is a breaking schema change for users of the command store
+  - Command Sourcing handler now writes to store only once the handler has successfully completed
 
 ## Release 7.4.0 ##
   - Updated to signed version of Polly, works with netcore2.1.
