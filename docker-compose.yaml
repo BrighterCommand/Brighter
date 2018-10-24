@@ -100,7 +100,7 @@ services:
     volumes:
       - dynamodb:/data
     ports:
-      - "8000:8000"
+      - "8111:8000"
 
 volumes:
   rabbitmq-home:

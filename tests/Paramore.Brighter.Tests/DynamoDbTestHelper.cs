@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Tests
         {
             var clientConfig = new AmazonDynamoDBConfig
             {
-                ServiceURL = "http://localhost:8000"
+                ServiceURL = "http://localhost:8111"
             };
 
             Client = new AmazonDynamoDBClient(clientConfig);
