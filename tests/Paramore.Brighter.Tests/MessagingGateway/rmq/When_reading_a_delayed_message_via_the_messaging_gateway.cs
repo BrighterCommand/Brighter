@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             var rmqConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange", supportDelay: true)
+                Exchange = new Exchange("paramore.delay.brighter.exchange", supportDelay: true)
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
