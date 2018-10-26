@@ -13,6 +13,7 @@
 // ***********************************************************************
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -37,9 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="connection">The connection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
-       public SqsMessageConsumer(
-            AWSMessagingGatewayConnection connection, 
-            string queueName)
+       public SqsMessageConsumer(AWSMessagingGatewayConnection connection, string queueName)
         {
             _connection = connection;
             _queueName = queueName;
@@ -64,13 +63,25 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
                 {
                     MaxNumberOfMessages = 1,
-                    WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds
+                    WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds,
+                    MessageAttributeNames = new List<string>() { "All" },
+                    AttributeNames = new List<string>() { "All" }
                 };
 
                 var receiveResponse = client.ReceiveMessageAsync(request).Result;
 
                 sqsMessage = receiveResponse.Messages.SingleOrDefault();
 
+            }
+            catch (InvalidOperationException ioe)
+            {
+                _logger.Value.DebugFormat("SqsMessageConsumer: Could not determine number of messages to retrieve");
+                throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", ioe);
+            }
+            catch (OperationCanceledException oce)
+            {
+                 _logger.Value.DebugFormat("SqsMessageConsumer: Could not find messages to retrieve");
+                throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", oce);
             }
             catch (Exception e)
             {

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
@@ -73,8 +74,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                                     if (!string.IsNullOrEmpty(createTopic.TopicArn))
                                     {
                                         var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
-                                        //TODO: What happens if we fail here
-                                        //TODO: Do we need to keep the ARN?
+                                        //We need to support raw messages to allow the use of message attributes
+                                        snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true"));
                                     }
                                 }
                             }
@@ -85,11 +86,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     {
                         //TODO: We need some retry semantics here
                         //TODO: We need to flatten the ae and handle some of these with ae.Handle((x) => {})
-                        //QueueDeletedRecentlyException - wait 60 seconds then retry
-                        var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message}";
-                        _logger.Value.Error(error);
-                        throw new ChannelFailureException(error, ae);
-                    }
+                        ae.Handle(ex =>
+                        {
+                            if (ex is QueueDeletedRecentlyException)
+                            {
+                                 //QueueDeletedRecentlyException - wait 60 seconds then retry
+                                var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message} waiting 60s to retry";
+                                _logger.Value.Error(error);
+                                Task.Delay(TimeSpan.FromSeconds(60));
+                                throw new ChannelFailureException(error, ae);
+                            }
+
+                            return false;
+                        });
+                   }
                }
             }
         }

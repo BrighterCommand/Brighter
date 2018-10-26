@@ -32,16 +32,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             messageAttributes.Add(HeaderNames.Timestamp, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"});
             messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"});
              
-            //we can set up to 10 attributes; we have set 6 above, so only 3 remain max. we may have none
-            var headerList = new List<string>(message.Header.Bag.Keys);
-            var headersLength = Math.Min(3, headerList.Count);
-            for (int i = 0; i < headersLength; i++)
-            {
-                var key = headerList[i];
-                var value = message.Header.Bag[key];
-                messageAttributes.Add(key, new MessageAttributeValue{StringValue = Convert.ToString(value), DataType = "String"});
-            }
+            //we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
+            var bagJson = JsonConvert.SerializeObject(message.Header.Bag.Keys);
 
+            messageAttributes.Add(HeaderNames.Bag, new MessageAttributeValue{StringValue = Convert.ToString(bagJson), DataType = "String"});
             publishRequest.MessageAttributes = messageAttributes;
             
             

@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public static class HeaderNames
@@ -10,5 +12,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public static readonly string MessageType = "message-type";
         public static readonly string Timestamp = "timestamp";
         public static readonly string ReplyTo = "reply-to";
+        public static string Bag = "bag"; 
     }
 }

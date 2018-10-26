@@ -30,8 +30,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _contentType = "text\\plain";
             _topicName = _myCommand.GetType().FullName.ToString().ToValidSNSTopicName();
             
-            
-            
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
                 new MessageBody(JsonConvert.SerializeObject(_myCommand))
@@ -57,12 +55,15 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _messageProducer.Send(_message);
             
             var message =_channel.Receive(2000);
+            
+            //clear the queue
+            _channel.Acknowledge(message);
 
             //should_send_the_message_to_aws_sqs
             message.Id.Should().Be(_myCommand.Id);
             message.Redelivered.Should().BeFalse();
             message.Header.Id.Should().Be(_myCommand.Id);
-            message.Header.Topic.Should().Be(_topicName);
+            message.Header.Topic.Should().Contain(_topicName);
             message.Header.CorrelationId.Should().Be(_correlationId);
             message.Header.ReplyTo.Should().Be(_replyTo);
             message.Header.ContentType.Should().Be(_contentType);
@@ -75,8 +76,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 
         public void Dispose()
         {
-            //Clean up resources that we have created
-
             var connection = new Connection<MyCommand>();
             _channelFactory.DeleteQueue(connection);
             _channelFactory.DeleteTopic(connection);

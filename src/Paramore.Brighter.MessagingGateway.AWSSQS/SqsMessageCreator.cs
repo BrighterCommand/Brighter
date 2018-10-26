@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Amazon.SQS.Model;
 using Newtonsoft.Json;
 using Paramore.Brighter.Extensions;
@@ -50,10 +51,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                     message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
 
-                    //we end up putting our existing headers in the bag here
-                    //that is fine, as we will tend to look for additional headers by name anyway
-                    sqsMessage.MessageAttributes.Each(attribute => message.Header.Bag.Add(attribute.Key, ParseHeaderValue(attribute.Value)));
- 
+                    //deserialize the bag 
+                    var bag = ReadMessageBag(sqsMessage);
+                    foreach (var key in bag.Keys)
+                    {
+                        message.Header.Bag.Add(key, bag[key]);
+                    }
+
                 }
 
                 message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
@@ -68,6 +72,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             
             return message;
+        }
+
+        private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
+        {
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue value))
+            {
+                var bag = (Dictionary<string, object>)JsonConvert.DeserializeObject(value.StringValue);
+                return bag;
+            }
+            return new Dictionary<string, object>();
         }
 
         private string ParseHeaderValue(MessageAttributeValue attributeValue)
