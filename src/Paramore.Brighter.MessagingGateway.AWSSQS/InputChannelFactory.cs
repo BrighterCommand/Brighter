@@ -90,10 +90,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         {
                             if (ex is QueueDeletedRecentlyException)
                             {
-                                 //QueueDeletedRecentlyException - wait 60 seconds then retry
+                                //QueueDeletedRecentlyException - wait 30 seconds then retry
+                                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
+                                //and assume we are halfway through
                                 var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message} waiting 60s to retry";
                                 _logger.Value.Error(error);
-                                Task.Delay(TimeSpan.FromSeconds(60));
+                                Task.Delay(TimeSpan.FromSeconds(30));
                                 throw new ChannelFailureException(error, ae);
                             }
 

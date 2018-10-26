@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             message.Header.ContentType.Should().Be(_contentType);
             message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message.Header.HandledCount.Should().Be(0);
-            message.Header.TimeStamp.Should().BeAfter(DateTime.UtcNow);
+            message.Header.TimeStamp.Should().BeAfter(DateTime.UtcNow.AddSeconds(-1));
             message.Header.DelayedMilliseconds.Should().Be(0);
             message.Body.Should().Be("foo");
         }

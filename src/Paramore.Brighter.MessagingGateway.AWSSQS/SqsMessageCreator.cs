@@ -49,8 +49,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
+                    if (correlationId.Success)
+                        messageHeader.CorrelationId = correlationId.Result;
 
+                    if (replyTo.Success)
+                        messageHeader.ReplyTo = replyTo.Result;
+
+                    if (contentType.Success)
+                        messageHeader.ContentType = contentType.Result;
+                    
+                    message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
+                    
                     //deserialize the bag 
                     var bag = ReadMessageBag(sqsMessage);
                     foreach (var key in bag.Keys)
@@ -58,9 +67,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         message.Header.Bag.Add(key, bag[key]);
                     }
 
-                }
+                    
+                    if(receiptHandle.Success)
+                        message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
+               }
 
-                message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
 
 
             }
@@ -74,19 +85,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return message;
         }
 
-        private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
-        {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue value))
-            {
-                var bag = (Dictionary<string, object>)JsonConvert.DeserializeObject(value.StringValue);
-                return bag;
-            }
-            return new Dictionary<string, object>();
-        }
-
         private string ParseHeaderValue(MessageAttributeValue attributeValue)
         {
             return attributeValue.StringValue;
+        }
+
+       private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
+        {
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue value))
+            {
+                try
+                {
+                    var bag = (Dictionary<string, object>)JsonConvert.DeserializeObject(value.StringValue);
+                    return bag;
+                }
+                catch (Exception)
+                {
+                    //we weill just suppress conversion errors, and return an empty bag
+                }
+           }
+            return new Dictionary<string, object>();
         }
 
         private HeaderResult<string> ReadReplyTo(Amazon.SQS.Model.Message sqsMessage)
@@ -100,7 +118,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         
         private HeaderResult<DateTime> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.HandledCount, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out MessageAttributeValue value))
             {
                 if (DateTime.TryParse(value.StringValue, out DateTime timestamp))
                 {
@@ -112,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private HeaderResult<MessageType> ReadMessageType(Amazon.SQS.Model.Message sqsMessage)
         {
-            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.HandledCount, out MessageAttributeValue value))
+            if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue value))
             {
                 if (Enum.TryParse<MessageType>(value.StringValue, out MessageType messageType))
                 {
