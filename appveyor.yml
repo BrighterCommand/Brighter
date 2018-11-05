@@ -1,9 +1,7 @@
 version: 1.0.{build}
 image: Ubuntu1804
 configuration: Release
-services:
-- docker
-stack: jdk 12
+stack: jdk 12, docker
 dotnet_csproj:
   patch: true
   file: '**\*.csproj'
