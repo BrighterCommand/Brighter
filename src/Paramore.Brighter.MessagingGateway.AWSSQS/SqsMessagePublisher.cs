@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public void Publish(Message message)
         {
-            var messageString = JsonConvert.SerializeObject(message.Body);
+            var messageString = message.Body.Value;
             var publishRequest = new PublishRequest(_topicArn, messageString);
 
             var messageAttributes = new Dictionary<string, MessageAttributeValue>();
@@ -30,7 +30,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             messageAttributes.Add(HeaderNames.HandledCount, new MessageAttributeValue {StringValue = Convert.ToString(message.Header.HandledCount), DataType = "String"});
             messageAttributes.Add(HeaderNames.MessageType, new MessageAttributeValue{StringValue = message.Header.MessageType.ToString(), DataType = "String"});
             messageAttributes.Add(HeaderNames.Timestamp, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.TimeStamp), DataType = "String"});
-            messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"});
+            if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+                messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"});
              
             //we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
             var bagJson = JsonConvert.SerializeObject(message.Header.Bag.Keys);

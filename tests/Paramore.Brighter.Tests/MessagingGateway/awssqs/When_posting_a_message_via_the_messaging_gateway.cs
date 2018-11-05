@@ -16,11 +16,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly InputChannelFactory _channelFactory;
-        private MyCommand _myCommand;
-        private Guid _correlationId;
-        private string _replyTo;
-        private string _contentType;
-        private string _topicName;
+        private readonly MyCommand _myCommand;
+        private readonly Guid _correlationId;
+        private readonly string _replyTo;
+        private readonly string _contentType;
+        private readonly string _topicName;
 
         public SqsMessageProeducerSendTests()
         {
@@ -69,9 +69,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             message.Header.ContentType.Should().Be(_contentType);
             message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             message.Header.HandledCount.Should().Be(0);
-            message.Header.TimeStamp.Should().BeAfter(DateTime.UtcNow.AddSeconds(-1));
+            //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
+            message.Header.TimeStamp.Should().BeAfter(RoundToSeconds(DateTime.UtcNow.AddMinutes(-1)));
             message.Header.DelayedMilliseconds.Should().Be(0);
-            message.Body.Should().Be("foo");
+            //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
+            message.Body.Value.Should().Be("{\"Id\":\"" + _myCommand.Id.ToString() + "\",\"Value\":\"" + _myCommand.Value + "\",\"WasCancelled\":false,\"TaskCompleted\":false}");
         }
 
         public void Dispose()
@@ -80,5 +82,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _channelFactory.DeleteQueue(connection);
             _channelFactory.DeleteTopic(connection);
         }
+        
+        private DateTime RoundToSeconds(DateTime dateTime)
+        {
+            return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
+        }
+
     }
 }

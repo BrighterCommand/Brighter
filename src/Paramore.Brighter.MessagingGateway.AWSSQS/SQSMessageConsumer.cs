@@ -219,14 +219,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
 
-                    message.Header.Bag.Remove("ReceiptHandle");
-                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    var request = new SendMessageRequest(urlResponse.QueueUrl, JsonConvert.SerializeObject(message))
-                                  {
-                                      DelaySeconds = (int)TimeSpan.FromMilliseconds(delayMilliseconds).TotalSeconds
-                                  };
-
-                    client.SendMessageAsync(request).Wait();
+                    if (message.Header.Bag.ContainsKey("ReceiptHandle"))
+                        message.Header.Bag.Remove("ReceiptHandle");
+                    var sqsMessageProducer = new SqsMessageProducer(_connection);
+                    sqsMessageProducer.Send(message);
                 }
 
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeued the message {0}", message.Id);

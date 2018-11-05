@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Amazon.SQS.Model;
 using Newtonsoft.Json;
 using Paramore.Brighter.Extensions;
@@ -57,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                     if (contentType.Success)
                         messageHeader.ContentType = contentType.Result;
-                    
+                   
                     message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
                     
                     //deserialize the bag 
@@ -189,6 +190,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue value))
             {
+                //arn:aws:sns:eu-west-1:940518884121:Paramore_Brighter_Tests_CommandProcessors_TestDoubles_MyCommand
+                //we have an arn, and we want the topic
+                var topicIndex = value.StringValue.IndexOf(':');
+                var topic = value.StringValue.Substring(topicIndex);
+                
                 return new HeaderResult<string>(value.StringValue, true);
             }
             return new HeaderResult<string>(String.Empty, false);
