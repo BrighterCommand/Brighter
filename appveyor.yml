@@ -1,97 +1,35 @@
-version: 7.4.{build}
+version: 1.0.{build}
+image: Ubuntu1804
 configuration: Release
-
-image: Visual Studio 2017
-
 services:
-  - mssql2016
-  - mysql
-  - postgresql
-
-environment:
-  Sql__TestsBrighterConnectionString: Server=(local)\SQL2016;Database=BrighterTests;User ID=sa;Password=Password12!;Application Name=BrighterTests
-  Sql__TestsMasterConnectionString: Server=(local)\SQL2016;Database=master;User ID=sa;Password=Password12!;Application Name=BrighterTests
-  MySql__TestsBrighterConnectionString: Server=localhost;Uid=root;Pwd=Password12!;Database=BrighterTests
-  MySql__TestsMasterConnectionString: Server=localhost;Uid=root;Pwd=Password12!
-  PostgreSql__TestsBrighterConnectionString: Host=localhost;Username=postgres;Password=Password12!;Database=brightertests
-  PostgreSql__TestsMasterConnectionString: Host=localhost;Username=postgres;Password=Password12!
-  
-pull_requests:
-  do_not_increment_build_number: true
-
-branches:
-  only:
-  - master
-  - testappveyor
-  # blacklist
-  except:
-    - gh-pages
-
-skip_commits:
-  files:
-    - '**/*.md'
-
-skip_tags: true
-
-assembly_info:
-  patch: true
-  file: '**\AssemblyInfo.*'
-  assembly_version: 7.0.0.0
-  assembly_file_version: '{version}'
-  assembly_informational_version: '{version}'
+- docker
+stack: jdk 12
 dotnet_csproj:
   patch: true
-  file: '**\*.csproj;**\*.props'
+  file: '**\*.csproj'
   version: '{version}'
   package_version: '{version}'
-  assembly_version: 7.0.0.0
+  assembly_version: '{version}'
   file_version: '{version}'
   informational_version: '{version}'
-
-nuget:
-  project_feed: true
-  disable_publish_on_pr: true
-
+environment:
+  Sql__TestsBrighterConnectionString: Server=localhost;Database=BrighterTests;User ID=sa;Password=Password123!;Application Name=BrighterTests
+  Sql__TestsMasterConnectionString: Server=localhost;Database=master;User ID=sa;Password=Password123!;Application Name=BrighterTests
 install:
-  - nuget install redis-64 -ExcludeVersion
-  - redis-64\tools\redis-server.exe --service-install
-  - redis-64\tools\redis-server.exe --service-start
-
-before_build:
-  - cmd: dotnet --info
-  - cmd: dotnet restore --verbosity Minimal
-
-build_script:
-  - cmd: dotnet build --configuration %CONFIGURATION%
-
-after_build:
-  - cmd: dotnet pack src\Paramore.Brighter --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.ServiceActivator --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.CommandStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.EventStore --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.MySql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.PostgreSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessageStore.Sqlite --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AWSSQS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.AzureServiceBus --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.Kafka --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%-beta
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.MsSql --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%-beta
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.Redis --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%-beta
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RESTMS --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-  - cmd: dotnet pack src\Paramore.Brighter.MessagingGateway.RMQ --include-symbols --configuration %CONFIGURATION% --no-build --output ..\..\nupkgs /p:PackageVersion=%APPVEYOR_BUILD_VERSION%
-
-test_script:
-  - cmd: dotnet test tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj --no-build --filter "Category!=RMQ&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis"
-
-artifacts:
-  - path: nupkgs\*.nupkg
-
-notifications:
-- provider: Webhook
-  url: https://webhooks.gitter.im/e/f67b9440940cca246ec4
-  on_build_success: true
-  on_build_failure: true
-  on_build_status_changed: true
+- sh: >-
+    docker-compose up -d
+build:
+  publish_nuget: true
+  publish_nuget_symbols: true
+  include_nuget_references: true
+  verbosity: minimal
+before_test:
+- sh: >-
+    docker ps
+    curl http://localhost:8111/shell/
+test:
+  categories:
+    except:
+    - AWS
+    - RESTMS
+    - Kafka
