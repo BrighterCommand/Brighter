@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.redis
 {
+    [Collection("Redis")]
     [Trait("Category", "Redis")]
     public class RedisMessageProducerMultipleSendTests : IDisposable
     {

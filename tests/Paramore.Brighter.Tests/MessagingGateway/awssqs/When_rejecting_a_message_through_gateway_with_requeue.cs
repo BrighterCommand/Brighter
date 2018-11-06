@@ -10,6 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
+    [Collection("AWS")]
     [Trait("Category", "AWS")]
     public class SqsMessageConsumerRequeueTests : IDisposable
     {
@@ -18,13 +19,21 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         private readonly SqsMessageProducer _messageProducer;
         private readonly InputChannelFactory _channelFactory;
         private MyCommand _myCommand;
+        private readonly Guid _correlationId;
+        private readonly string _replyTo;
+        private readonly string _contentType;
+        private readonly string _topicName;
 
         public SqsMessageConsumerRequeueTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
+            _correlationId = Guid.NewGuid();
+            _replyTo = "http:\\queueUrl";
+            _contentType = "text\\plain";
+            _topicName = _myCommand.GetType().FullName.ToString().ToValidSNSTopicName();
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
                 new MessageBody(JsonConvert.SerializeObject(_myCommand))
             );
             
@@ -51,7 +60,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _channel.Reject(message);
 
             //should requeue_the_message
-            message = _channel.Receive(1000);
+            message = _channel.Receive(3000);
+            
+            //clear the queue
+            _channel.Acknowledge(message);
+
             message.Id.Should().Be(_myCommand.Id);
         }
 

@@ -8,6 +8,19 @@ using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
+    //arn:aws:sns:us-east-1:123456789012:my_corporate_topic:02034b43-fefa-4e07-a5eb-3be56f8c54ce
+    //https://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html#genref-arns
+    internal enum ARNAmazonSNS
+    {
+        Arn = 0,
+        Aws = 1,
+        Sns = 2,
+        Region = 3,
+        AccountId = 4,
+        TopicName = 5,
+        SubscriptionId = 6
+    }
+    
     internal class SqsMessageCreator
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageCreator>);
@@ -86,12 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return message;
         }
 
-        private string ParseHeaderValue(MessageAttributeValue attributeValue)
-        {
-            return attributeValue.StringValue;
-        }
-
-       private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
+        private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Bag, out MessageAttributeValue value))
             {
@@ -190,12 +198,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Topic, out MessageAttributeValue value))
             {
-                //arn:aws:sns:eu-west-1:940518884121:Paramore_Brighter_Tests_CommandProcessors_TestDoubles_MyCommand
                 //we have an arn, and we want the topic
-                var topicIndex = value.StringValue.IndexOf(':');
-                var topic = value.StringValue.Substring(topicIndex);
-                
-                return new HeaderResult<string>(value.StringValue, true);
+                var arnElements = value.StringValue.Split(':');
+                var topic = arnElements[(int)ARNAmazonSNS.TopicName];
+                return new HeaderResult<string>(topic, true);
             }
             return new HeaderResult<string>(String.Empty, false);
         }

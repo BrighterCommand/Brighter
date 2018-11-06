@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
+    [Collection("AWS")]
     [Trait("Category", "AWS")]
     public class SqsMessageProeducerSendTests : IDisposable
     {
