@@ -93,9 +93,9 @@ services:
       POSTGRES_PASSWORD: password
 
   dynamo:
-    image: amazon/dynamodb-local
+    image: dwmkerr/dynamodb
     ports:
-      - "8111:8000"
+      - "8000:8000"
 
 volumes:
   rabbitmq-home:

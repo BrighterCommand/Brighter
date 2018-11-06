@@ -1,7 +1,7 @@
 version: 1.0.{build}
 image: Ubuntu1804
 configuration: Release
-stack: jdk 12, docker
+stack: jdk 11
 dotnet_csproj:
   patch: true
   file: '**\*.csproj'
@@ -15,7 +15,13 @@ environment:
   Sql__TestsMasterConnectionString: Server=localhost;Database=master;User ID=sa;Password=Password123!;Application Name=BrighterTests
 install:
 - sh: >-
+    sudo snap install docker
+
     docker-compose up -d
+
+    java --version
+
+    docker ps
 build:
   publish_nuget: true
   publish_nuget_symbols: true
@@ -24,7 +30,8 @@ build:
 before_test:
 - sh: >-
     docker ps
-    curl http://localhost:8111/shell/
+ 
+    curl http://localhost:8000/shell/
 test:
   categories:
     except:
