@@ -1,7 +1,22 @@
-version: 1.0.{build}
+version: 7.4.{build}
 image: Ubuntu1804
 configuration: Release
 stack: jdk 11
+
+branches:
+  only:
+  - master
+  - testappveyor
+  # blacklist
+  except:
+    - gh-pages
+
+skip_commits:
+  files:
+    - '**/*.md'
+
+skip_tags: true
+
 dotnet_csproj:
   patch: true
   file: '**\*.csproj'
