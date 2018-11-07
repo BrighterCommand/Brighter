@@ -30,9 +30,8 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
                 VerifyMasterConnections = false
             };
             
-            var gateway = new TestRedisGateway(configuration);
-            
-            
+            using (var gateway = new TestRedisGateway(configuration))
+            {
             //Redis Config is static, so we can just look at the values we should have initialized
             RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
             RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
@@ -46,15 +45,17 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             RedisConfig.DefaultMaxPoolSize.Should().Be(configuration.MaxPoolSize.Value);
             gateway.MessageTimeToLive.Should().Be(configuration.MessageTimeToLive.Value);
             RedisConfig.VerifyMasterConnections.Should().Be(configuration.VerifyMasterConnections.Value);
+            }
+        }
+
 
         }
-    }
 
     /// <summary>
     /// There are some properties we want to test, use a test wrapper to expose them, instead of leaking from
     /// run-time classes
     /// </summary>
-    public class TestRedisGateway : RedisMessageGateway
+    public class TestRedisGateway : RedisMessageGateway, IDisposable
     {
         public TestRedisGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
             : base(redisMessagingGatewayConfiguration)
@@ -64,5 +65,13 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         
 
         public new TimeSpan MessageTimeToLive => base.MessageTimeToLive;
+
+        public void Dispose()
+        {
+            DisposePool();
+            Pool = null;
+            RedisConfig.Reset();
+            GC.SuppressFinalize(this);
+        }
     }
 }

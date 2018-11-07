@@ -1,5 +1,4 @@
 ﻿using System;
-using Amazon.SimpleNotificationService.Model;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.Tests.MessagingGateway.TestDoubles;
@@ -19,12 +18,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
 
         public RmqMessageConsumerRedisNotAvailableTests()
         {
-           var configuration = new RedisMessagingGatewayConfiguration
-            {
-                RedisConnectionString = "localhost:6379?connectTimeout=1&sendTImeout=1000&",
-                MaxPoolSize = 10,
-                MessageTimeToLive = TimeSpan.FromMinutes(10)
-            };
+            var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
             _messageConsumer = new RedisMessageConsumerSocketErrorOnGetClient(configuration, QueueName, Topic);
 
@@ -45,6 +39,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         
         public void Dispose()
         {
+            _messageConsumer.Purge();
             _messageConsumer.Dispose();
         }
     }
