@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ

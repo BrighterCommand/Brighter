@@ -30,7 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// Class HeaderResult.
     /// </summary>
     /// <typeparam name="TResult">The type of the t result.</typeparam>
-    public class HeaderResult<TResult>
+    internal class HeaderResult<TResult>
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="HeaderResult{TResult}"/> class.

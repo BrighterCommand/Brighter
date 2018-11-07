@@ -24,10 +24,12 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
+    [Collection("Kafka")]
     [Trait("Category", "Kafka")]
     public class KafkaMessageProducerSendTests : KafkaIntegrationTestBase
     {
@@ -43,7 +45,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
         [Theory, MemberData(nameof(ServerParameters))]
         public void When_posting_a_message_via_the_messaging_gateway(string bootStrapServer)
         {
-            using (var consumer = this.CreateMessageConsumer("TestConsumer", bootStrapServer, QueueName, Topic))
+            using (var consumer = this.CreateMessageConsumer<MyCommand>("TestConsumer", bootStrapServer, QueueName, Topic))
             using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
             {
                 var message = CreateMessage(Topic, $"test content [{QueueName}]");
@@ -54,9 +56,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 
                 consumer.Acknowledge(receivedMessage);
 
-                //_should_send_a_message_via_restms_with_the_matching_body
                 receivedMessageData.Should().Be(message.Body.Value);
-                //_should_have_an_empty_pipe_after_acknowledging_the_message
             }
         }
     }

@@ -29,7 +29,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
@@ -239,6 +238,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 }
 
                 var message = _messageCreator.CreateMessage(basicGetResult);
+                
                 _logger.Value.InfoFormat(
                     "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
                     _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),

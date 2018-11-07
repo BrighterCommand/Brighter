@@ -572,7 +572,11 @@ namespace Paramore.Brighter
             var channelName = Guid.NewGuid();
             var routingKey = channelName.ToString();
             using (var responseChannel =
-                _responseChannelFactory.CreateInputChannel(channelName:routingKey, routingKey:routingKey))
+                _responseChannelFactory.CreateInputChannel(
+                    new Connection(
+                        typeof(TResponse),
+                        channelName: new ChannelName(channelName.ToString()), 
+                        routingKey: new RoutingKey(routingKey))))
             {
 
                 _logger.Value.InfoFormat("Create reply queue for topic {0}", routingKey);
@@ -662,17 +666,6 @@ namespace Paramore.Brighter
                 .ConfigureAwait(continueOnCapturedContext);
         }
 
-        private void RetryAndBreakCircuit(Action send)
-        {
-            CheckCircuit(() => Retry(send));
-        }
-
-        private async Task RetryAndBreakCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            await CheckCircuitAsync(ct => RetryAsync(send, continueOnCapturedContext, ct), continueOnCapturedContext, cancellationToken)
-                .ConfigureAwait(continueOnCapturedContext);
-        }
-
         private void Retry(Action send)
         {
             _policyRegistry.Get(RETRYPOLICY).Execute(send);
@@ -685,5 +678,16 @@ namespace Paramore.Brighter
                 .ConfigureAwait(continueOnCapturedContext);
         }
 
-   }
+         private void RetryAndBreakCircuit(Action send)
+        {
+            CheckCircuit(() => Retry(send));
+        }
+
+        private async Task RetryAndBreakCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await CheckCircuitAsync(ct => RetryAsync(send, continueOnCapturedContext, ct), continueOnCapturedContext, cancellationToken)
+                .ConfigureAwait(continueOnCapturedContext);
+        }
+
+  }
 }

@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.ServiceActivator
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class ConnectionName.

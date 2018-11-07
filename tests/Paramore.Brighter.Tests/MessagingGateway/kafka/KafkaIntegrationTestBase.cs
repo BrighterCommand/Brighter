@@ -54,17 +54,21 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
                 }).Create();
         }
 
-        public IAmAMessageConsumer CreateMessageConsumer(string name, 
+        public IAmAMessageConsumer CreateMessageConsumer<T>(string name, 
             string bootStrapServer, 
             string groupName,
-            string topic)
+            string topic) where T : IRequest
         {
             return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = name,
                     BootStrapServers = new[] { bootStrapServer }
-                }).Create(groupName, topic, false, false);
+                }).Create(new Connection<T>(
+                    channelName: new ChannelName(groupName), 
+                    routingKey: new RoutingKey(topic)
+                    )
+            );
         }
 
         public Message CreateMessage(string topic, string messageBodyData)

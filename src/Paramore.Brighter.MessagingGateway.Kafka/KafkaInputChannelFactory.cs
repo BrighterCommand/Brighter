@@ -27,21 +27,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private readonly KafkaMessageConsumerFactory _kafkaMessageConsumerFactory;
         
+        /// <summary>
+        /// Initializes a new instance of the <see cref="KafkaInputChannelFactory"/> class.
+        /// </summary>
+        /// <param name="kafkaMessageConsumerFactory">The messageConsumerFactory.</param>
         public KafkaInputChannelFactory(KafkaMessageConsumerFactory kafkaMessageConsumerFactory)
         {
             _kafkaMessageConsumerFactory = kafkaMessageConsumerFactory;
         }
 
-        public IAmAChannel CreateInputChannel(string channelName, 
-            string routingKey, 
-            bool isDurable = false, 
-            bool highAvailability = false)
+        /// <summary>
+        /// Creates the input channel
+        /// </summary>
+        /// <param name="connection">The connection parameters with which to create the channel</param>
+        /// <returns></returns>
+        public IAmAChannel CreateInputChannel(Connection connection)
         {
-            var messageConsumer = _kafkaMessageConsumerFactory.Create(channelName, 
-                routingKey, 
-                isDurable, 
-                highAvailability);
-            return new Channel(channelName, messageConsumer);
+            return new Channel(connection.ChannelName, _kafkaMessageConsumerFactory.Create(connection));
         }
     }
 }

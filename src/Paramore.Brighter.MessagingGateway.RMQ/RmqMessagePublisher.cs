@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class RmqMessagePublisher.
     /// </summary>
-    public class RmqMessagePublisher
+internal class RmqMessagePublisher
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessagePublisher>);
         private static readonly string[] _headersToReset =

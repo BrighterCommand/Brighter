@@ -25,13 +25,13 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.Tests.MessagingGateway.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.RMQ 
 {
+    [Collection("RMQ")]
     [Trait("Category", "RMQ")]
     public class RmqMessageConsumerConnectionClosedTests : IDisposable
     {

@@ -108,7 +108,7 @@ namespace Paramore.Brighter.ServiceActivator
                     break;
                 }
 
-                //ayn ca
+                //async callback
                 if (message.Header.MessageType == MessageType.MT_CALLBACK)
                 {
                     message.Execute();
@@ -136,15 +136,15 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (AggregateException aggregateException)
                 {
-                    var stopAndRequeue = HandleProcessingException(aggregateException);
+                    var (stop, requeue) = HandleProcessingException(aggregateException);
 
-                    if (stopAndRequeue.Item2)   //requeue
+                    if (requeue)   
                     {
                         RequeueMessage(message);
                         continue;
                     }
 
-                    if (stopAndRequeue.Item1)   //stop
+                    if (stop)   
                     {
                         RejectMessage(message);
                         Channel.Dispose();
@@ -183,7 +183,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected abstract Task DispatchRequest(MessageHeader messageHeader, TRequest request);
 
-        protected Tuple<bool, bool> HandleProcessingException(AggregateException aggregateException)
+        protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
             var requeue = false;
@@ -206,7 +206,7 @@ namespace Paramore.Brighter.ServiceActivator
                 _logger.Value.ErrorException("MessagePump: Failed to dispatch message from {1} on thread # {0}", exception, Thread.CurrentThread.ManagedThreadId, Channel.Name);
             }
 
-            return new Tuple<bool, bool>(stop, requeue);
+            return (stop, requeue);
         }
 
         protected void IncrementUnacceptableMessageLimit()

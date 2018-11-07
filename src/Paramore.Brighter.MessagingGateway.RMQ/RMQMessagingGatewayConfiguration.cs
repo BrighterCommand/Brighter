@@ -26,7 +26,7 @@ THE SOFTWARE. */
 using System;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration
+namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     public class RmqMessagingGatewayConnection 
     {

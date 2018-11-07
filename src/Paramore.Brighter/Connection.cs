@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.ServiceActivator
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Class Connection.
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the channel.
         /// </summary>
         /// <value>The channel.</value>
-        public IAmAChannelFactory ChannelFactory { get; internal set; }
+        public IAmAChannelFactory ChannelFactory { get; set; }
 
         public bool HighAvailability { get; }
 
@@ -107,11 +107,10 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
-        [Obsolete("Use the other constructor or Connection<T>. This constructor will be removed in a future release.")]
-        public Connection(ConnectionName name, IAmAChannelFactory channelFactory, Type dataType, ChannelName channelName, RoutingKey routingKey, int noOfPerformers = 1, int timeoutInMilliseconds = 300, int requeueCount = -1, int requeueDelayInMilliseconds = 0, int unacceptableMessageLimit = 0, bool isDurable = false, bool isAsync = false, bool highAvailability = false)
-            : this(dataType, name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability)
-        {
-        }
+        /// <summary>
+        /// For SQS this governs how long a 'lock' is held on a message for one consumer to process
+        /// </summary>
+        public int VisibilityTimeout { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Connection"/> class.
@@ -128,7 +127,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="isDurable">The durability of the queue.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
-        /// <param name="highAvailability"></param>
+        /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
+        /// <param name="visibilityTimeout">How long should an SQS Queue message remain locked for processing</param>
         public Connection(
             Type dataType,
             ConnectionName name = null,
@@ -142,7 +142,8 @@ namespace Paramore.Brighter.ServiceActivator
             bool isDurable = false,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            bool highAvailability = false)
+            bool highAvailability = false,
+            int visibilityTimeout = 10)
         {
             DataType = dataType;
             Name = name ?? new ConnectionName(dataType.FullName);
@@ -157,6 +158,7 @@ namespace Paramore.Brighter.ServiceActivator
             IsAsync = isAsync;
             ChannelFactory = channelFactory;
             HighAvailability = highAvailability;
+            VisibilityTimeout = visibilityTimeout;
         }
     }
 
@@ -178,7 +180,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability"></param>
-        public Connection(
+        /// <param name="visibilityTimeout">How long should an SQS Queue message remain locked for processing</param>
+         public Connection(
             ConnectionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
@@ -190,8 +193,23 @@ namespace Paramore.Brighter.ServiceActivator
             bool isDurable = false,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            bool highAvailability = false)
-            : base(typeof(T), name, channelName, routingKey, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability)
+            bool highAvailability = false,
+            int visibilityTimeout = 10)
+            : base(
+                typeof(T), 
+                name, 
+                channelName, 
+                routingKey, 
+                noOfPerformers, 
+                timeoutInMilliseconds, 
+                requeueCount, 
+                requeueDelayInMilliseconds, 
+                unacceptableMessageLimit, 
+                isDurable, 
+                isAsync, 
+                channelFactory, 
+                highAvailability,
+                visibilityTimeout)
         {
         }
     }

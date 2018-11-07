@@ -14,8 +14,6 @@
 
 using System;
 using System.Net;
-using Amazon;
-using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Newtonsoft.Json;
@@ -28,28 +26,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageProducer : IAmAMessageProducer
     {
+        private readonly AWSMessagingGatewayConnection _connection;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageProducer>);
 
-        private readonly AWSCredentials _credentials;
-        private readonly RegionEndpoint _regionEndpoint;
-
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
         /// <param name="credentials">The credentials for the AWS account being used</param>
-        public SqsMessageProducer(AWSCredentials credentials) 
+        public SqsMessageProducer(AWSMessagingGatewayConnection connection)
         {
-            _credentials = credentials;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
-        /// </summary>
-        /// <param name="credentials">The credentials for the AWS account being used</param>
-        /// <param name="regionEndpoint">The AWS region used to connect to the SNS.</param>
-        public SqsMessageProducer(AWSCredentials credentials, RegionEndpoint regionEndpoint) : this(credentials)
-        {
-            _regionEndpoint = regionEndpoint;
+            _connection = connection;
         }
 
         /// <summary>
@@ -58,15 +44,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            var messageString = JsonConvert.SerializeObject(message);
-            _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", message.Header.Topic, message.Id, messageString);
+            _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", 
+                message.Header.Topic, message.Id, message.Body);
 
-            using (var client = new AmazonSimpleNotificationServiceClient(_credentials, _regionEndpoint))
+            using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
             {
                 var topicArn = EnsureTopic(message.Header.Topic, client);
-                var publishRequest = new PublishRequest(topicArn, messageString);
-                client.PublishAsync(publishRequest).Wait();
-            }
+                var publisher = new SqsMessagePublisher(topicArn, client);
+                publisher.Publish(message);
+           }
         }
 
         /// <summary>

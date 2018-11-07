@@ -5,8 +5,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.redis
 {
-    [Trait("Category", "Redis")]
     [Collection("Redis")]
+    [Trait("Category", "Redis")]
     public class RedisGoodMessageParsingTests
     {
         private const string GoodMessage =

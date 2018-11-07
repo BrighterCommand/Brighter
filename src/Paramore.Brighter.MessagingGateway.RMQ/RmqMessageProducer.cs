@@ -29,7 +29,6 @@ using System.Net.Sockets;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {

@@ -26,12 +26,12 @@ using System;
 using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 {
-    [Trait("Category", "RMQDelay")]
+    [Collection("RMQ")]
+    [Trait("Category", "RMQ")]
     public class RmqMessageProducerDelayedMessageTests : IDisposable
     {
         private readonly IAmAMessageProducer _messageProducer;

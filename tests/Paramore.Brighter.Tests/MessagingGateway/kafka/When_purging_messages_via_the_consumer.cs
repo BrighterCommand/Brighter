@@ -25,10 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FluentAssertions;
+using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
+    [Collection("Kafka")]
     [Trait("Category", "Kafka")]
     public class KafkaMessageConsumerPurgeTests : KafkaIntegrationTestBase
     {
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
         [Theory, MemberData(nameof(ServerParameters))]
         public void When_purging_messages_via_the_messaging_gateway(string bootStrapServer)
         {
-            using (var consumer = CreateMessageConsumer("TestConsumer", bootStrapServer, QueueName, Topic))
+            using (var consumer = CreateMessageConsumer<MyCommand>("TestConsumer", bootStrapServer, QueueName, Topic))
             using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
             {
                 consumer.Receive(30000);
