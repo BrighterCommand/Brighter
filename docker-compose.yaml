@@ -42,44 +42,11 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: "root"
   
-  redis-master:
+  redis:
     image: redis
-    volumes:
-      - redis-master-data:/data
-    command: redis-server --appendonly yes 
     ports:
       - "6379:6379"
     
-  redis-slave:
-    image: redis
-    volumes:
-      - redis-slave-data:/data
-    command: redis-server --slaveof redis-master 6379 --appendonly yes
-
-    # Instance 1
-  redis-sentinel:
-    build: ./samples/containers/redis-sentinel
-    volumes:
-      - redis-s1-data:/redis
-    links:
-      - redis-master
-
-  # Instance 2
-  redis-sentinel1:
-    build: ./samples/containers/redis-sentinel
-    volumes:
-      - redis-s1-data:/redis
-    links:
-      - redis-master
-
-  # Instance 3
-  redis-sentinel2:
-    build: ./samples/containers/redis-sentinel
-    volumes:
-      - redis-s1-data:/redis
-    links:
-      - redis-master
-
   postgres:
     image: postgres
     restart: on-failure
