@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
@@ -83,36 +84,39 @@ namespace GreetingsReceiverConsole
         };
 
         //create the gateway
-        var awsConnnection = new AWSMessagingGatewayConnection(new AnonymousAWSCredentials(), RegionEndpoint.EUWest1);
+      if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+      {
+          var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-        var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsConnnection);
+          var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
 
-        var dispatcher = DispatchBuilder.With()
-          .CommandProcessor(CommandProcessorBuilder.With()
-            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-            .Policies(policyRegistry)
-            .NoTaskQueues()
-            .RequestContextFactory(new InMemoryRequestContextFactory())
-            .Build())
-          .MessageMappers(messageMapperRegistry)
-          .DefaultChannelFactory(new InputChannelFactory(awsConnnection, sqsMessageConsumerFactory))
-          .Connections(new Connection[]
-          {
-            new Connection<GreetingEvent>(
-              new ConnectionName("paramore.example.greeting"),
-              new ChannelName("greeting.event"),
-              new RoutingKey("greeting.event"),
-              timeoutInMilliseconds: 200,
-              isDurable: true,
-              highAvailability: true)
-          }).Build();
+          var dispatcher = DispatchBuilder.With()
+              .CommandProcessor(CommandProcessorBuilder.With()
+                  .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                  .Policies(policyRegistry)
+                  .NoTaskQueues()
+                  .RequestContextFactory(new InMemoryRequestContextFactory())
+                  .Build())
+              .MessageMappers(messageMapperRegistry)
+              .DefaultChannelFactory(new InputChannelFactory(awsConnection, sqsMessageConsumerFactory))
+              .Connections(new Connection[]
+              {
+                  new Connection<GreetingEvent>(
+                      new ConnectionName("paramore.example.greeting"),
+                      new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                      new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                      timeoutInMilliseconds: 200,
+                      isDurable: true,
+                      highAvailability: true)
+              }).Build();
 
-        dispatcher.Receive();
+          dispatcher.Receive();
 
-        Console.WriteLine("Press Enter to stop ...");
-        Console.ReadLine();
+          Console.WriteLine("Press Enter to stop ...");
+          Console.ReadLine();
 
-        dispatcher.End().Wait();
+          dispatcher.End().Wait();
       }
+  }
     }
 }

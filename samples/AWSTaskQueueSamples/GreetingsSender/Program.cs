@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using Amazon;
 using Amazon.Runtime;
+using Amazon.Runtime.CredentialManagement;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
@@ -48,22 +49,21 @@ namespace GreetingsSender
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryMessageStore();
-            var rmqConnnection = new AWSMessagingGatewayConnection(
-                new AnonymousAWSCredentials(), 
-                RegionEndpoint.EUWest1
-                ); 
-            var producer = new SqsMessageProducer(rmqConnnection);
+            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            {
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                var producer = new SqsMessageProducer(awsConnection);
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+                var builder = CommandProcessorBuilder.With()
+                    .Handlers(new HandlerConfiguration())
+                    .DefaultPolicy()
+                    .TaskQueues(new MessagingConfiguration(new InMemoryMessageStore(), producer, messageMapperRegistry))
+                    .RequestContextFactory(new InMemoryRequestContextFactory());
 
-            var commandProcessor = builder.Build();
+                var commandProcessor = builder.Build();
 
-            commandProcessor.Post(new GreetingEvent("Ian"));
+                commandProcessor.Post(new GreetingEvent("Ian"));
+            }
         }
     }
 }
