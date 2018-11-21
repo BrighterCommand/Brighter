@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Xunit;
 
@@ -41,17 +42,17 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             _redisFixture.MessageProducer.Send(_messageTwo);
 
             //Now receive, the first message 
-            var sentMessageOne = _redisFixture.MessageConsumer.Receive(30000);
+            var sentMessageOne = _redisFixture.MessageConsumer.Receive(30000).Single();
 
             //now requeue the first message
             _redisFixture.MessageConsumer.Requeue(_messageOne, 300);
 
             //try receiving again; messageTwo should come first
-            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(30000);
+            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(30000).Single();
             var messageBodyTwo = sentMessageTwo.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageTwo);
             
-            sentMessageOne = _redisFixture.MessageConsumer.Receive(3000);
+            sentMessageOne = _redisFixture.MessageConsumer.Receive(3000).Single();
             var messageBodyOne = sentMessageOne.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageOne);
 

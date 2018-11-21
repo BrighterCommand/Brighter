@@ -38,7 +38,6 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlCommandStore _sqlCommandStore;
-        private MyCommand _storedCommand;
 
         public SqlCommandStoreEmptyWhenSearchedAsyncTests()
         {

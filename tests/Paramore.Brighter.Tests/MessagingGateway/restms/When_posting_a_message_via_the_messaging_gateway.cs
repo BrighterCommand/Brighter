@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
@@ -58,7 +59,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
         {
             _messageConsumer.Receive(30000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
             _messageProducer.Send(_message);
-            _sentMessage = _messageConsumer.Receive(30000);
+            _sentMessage = _messageConsumer.Receive(30000).Single();
             _messageBody = _sentMessage.Body.Value;
             _messageConsumer.Acknowledge(_sentMessage);
 

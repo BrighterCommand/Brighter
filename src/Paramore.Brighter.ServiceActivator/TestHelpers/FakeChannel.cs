@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Concurrent;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter.ServiceActivator.TestHelpers
 {
@@ -48,9 +49,14 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             AcknowledgeCount++;
         }
 
-        public void Enqueue(Message message)
+        public virtual void Dispose()
         {
-            _messageQueue.Enqueue(message);
+            DisposeHappened = true;
+        }
+        
+        public void Enqueue(params Message[] messages)
+        {
+            messages.Each((message) => _messageQueue.Enqueue(message));
         }
 
         public void Purge()
@@ -60,8 +66,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
 
         public virtual Message Receive(int timeoutinMilliseconds)
         {
-            Message message;
-            return _messageQueue.TryDequeue(out message) ? message : new Message();
+            return _messageQueue.TryDequeue(out Message message) ? message : new Message();
         }
 
         public virtual void Reject(Message message)
@@ -69,24 +74,15 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             RejectCount++;
         }
 
-        public virtual void Stop()
-        {
-            _messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
-        }
-
         public virtual void Requeue(Message message, int delayMilliseconds = 0)
         {
             _messageQueue.Enqueue(message);
         }
 
-        public virtual void Add(Message message, int millisecondsDelay = 0)
+        public virtual void Stop()
         {
-            _messageQueue.Enqueue(message);
+            _messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
         }
 
-        public virtual void Dispose()
-        {
-            DisposeHappened = true;
-        }
-    }
+   }
 }

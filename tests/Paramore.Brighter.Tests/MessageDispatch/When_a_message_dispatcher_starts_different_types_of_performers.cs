@@ -63,11 +63,11 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var @event = new MyEvent();
             var eventMessage = new MyEventMessageMapper().MapToMessage(@event);
-            _eventChannel.Add(eventMessage);
+            _eventChannel.Enqueue(eventMessage);
 
             var command = new MyCommand();
             var commandMessage = new MyCommandMessageMapper().MapToMessage(command);
-            _commandChannel.Add(commandMessage);
+            _commandChannel.Enqueue(commandMessage);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();

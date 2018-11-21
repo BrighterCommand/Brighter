@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
-            _channel.Add(unacceptableMessage);
+            _channel.Enqueue(unacceptableMessage);
         }
 
         [Fact]
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             Task.Delay(1000).Wait();
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Add(quitMessage);
+            _channel.Enqueue(quitMessage);
 
             Task.WaitAll(new[] { task });
 

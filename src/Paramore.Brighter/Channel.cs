@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
 {
@@ -39,16 +40,26 @@ namespace Paramore.Brighter
         private readonly string _channelName;
         private readonly IAmAMessageConsumer _messageConsumer;
         private ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
+        private readonly int _maxQueueLength;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
         /// </summary>
         /// <param name="channelName">Name of the queue.</param>
         /// <param name="messageConsumer">The messageConsumer.</param>
-        public Channel(string channelName, IAmAMessageConsumer messageConsumer)
+        /// <param name="maxQueueLength">What is the maximum buffer size we will accelt</param>
+        public Channel(string channelName, IAmAMessageConsumer messageConsumer, int maxQueueLength = 1)
         {
             _channelName = channelName;
             _messageConsumer = messageConsumer;
+
+            if (maxQueueLength < 1 || maxQueueLength > 10)
+            {
+                throw new ConfigurationException(
+                    "The channel buffer must have one item, and cannot have more than 10");
+            }
+            
+            _maxQueueLength = maxQueueLength;
         }
 
         /// <summary>
@@ -61,21 +72,33 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Inserts a message into the channel for consumption by the message pump. Used to send control signals to the pump, normal operation uses recieve.
+        /// Inserts messages into the channel for consumption by the message pump.
+        /// Note that there is an upperbound to what we can enqueue, although we always allow enqueing a quit
+        /// message. We will always try to clear the channel, when closing, as the stop message will get inserted
+        /// after the queue
         /// </summary>
-        /// <param name="message">The message to insert into the channel</param>
-        public void Enqueue(Message message)
+        /// <param name="messages">The messages to insert into the channel</param>
+        public void Enqueue(params Message[] messages)
         {
-            _queue.Enqueue(message);
+            var currentLength = _queue.Count;
+            var messagesToAdd = messages.Length;
+            var newLength = currentLength + messagesToAdd;
+
+            if (newLength > _maxQueueLength)
+            {
+                throw new InvalidOperationException("You cannot enqueue more items than the buffer length"); 
+            }
+            
+            messages.Each((message) => _queue.Enqueue(message));
         }
 
        /// <summary>
         ///   Gets the name.
         /// </summary>
         /// <value>The name.</value>
-        public ChannelName Name { get { return new ChannelName(_channelName); } }
+        public ChannelName Name => new ChannelName(_channelName);
 
-        /// <summary>
+       /// <summary>
         /// Purges the queue
         /// </summary>
         public void Purge()
@@ -91,10 +114,13 @@ namespace Paramore.Brighter
         /// <returns>Message.</returns>
         public Message Receive(int timeoutinMilliseconds)
         {
-            Message message;
-            if (!_queue.TryDequeue(out message))
+            if (!_queue.TryDequeue(out Message message))
             {
-                message = _messageConsumer.Receive(timeoutinMilliseconds);
+                Enqueue(_messageConsumer.Receive(timeoutinMilliseconds));
+                if (!_queue.TryDequeue(out message))
+                {
+                    message = new Message(); //Will be MT_NONE
+                }
             }
 
             return message;
@@ -110,7 +136,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        ///     Requeues the specified message.
+        /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">How long should we delay before requeueing</param>

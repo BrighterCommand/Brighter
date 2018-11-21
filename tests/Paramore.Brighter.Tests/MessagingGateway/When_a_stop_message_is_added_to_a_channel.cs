@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway
 
             _channel.Stop();
 
-            A.CallTo(() => _gateway.Receive(1000)).Returns(_sentMessage);
+            A.CallTo(() => _gateway.Receive(1000)).Returns(new Message[] {_sentMessage});
         }
 
         [Fact]

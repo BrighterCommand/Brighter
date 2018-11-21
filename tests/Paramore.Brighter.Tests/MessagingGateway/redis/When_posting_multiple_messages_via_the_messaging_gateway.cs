@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Xunit;
 
@@ -39,11 +40,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             _redisFixture.MessageProducer.Send(_messageTwo);
             
             //Now receive, and confirm order off is order on
-            var sentMessageOne = _redisFixture.MessageConsumer.Receive(30000);
+            var sentMessageOne = _redisFixture.MessageConsumer.Receive(30000).Single();
             var messageBodyOne = sentMessageOne.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageOne);
             
-            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(30000);
+            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(30000).Single();
             var messageBodyTwo = sentMessageTwo.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageTwo);
             

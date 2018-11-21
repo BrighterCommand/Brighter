@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
-            _channel.Add(message);
+            _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
-            _channel.Add(message);
+            _channel.Enqueue(message);
 
             _dispatcher.End().Wait();
 

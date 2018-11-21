@@ -39,7 +39,6 @@ namespace Paramore.Brighter.Tests.CommandStore.Sqlite
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteCommandStore _sqlCommandStore;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
 
         public SqliteCommandStoreEmptyWhenSearchedAsyncTests()
         {

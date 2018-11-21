@@ -104,7 +104,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="timeoutInMilliseconds">The period to await a message</param>
         /// <returns>The message read from the list</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public Message[] Receive(int timeoutInMilliseconds)
         {
             _logger.Value.DebugFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, Topic);
 
@@ -146,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 client?.Dispose();
             }
-            return message;
+            return new Message[] {message};
         }
 
 

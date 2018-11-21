@@ -51,10 +51,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
             var unacceptableMessage3 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
             var unacceptableMessage4 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
 
-            _channel.Add(unacceptableMessage1);
-            _channel.Add(unacceptableMessage2);
-            _channel.Add(unacceptableMessage3);
-            _channel.Add(unacceptableMessage4);
+            _channel.Enqueue(unacceptableMessage1);
+            _channel.Enqueue(unacceptableMessage2);
+            _channel.Enqueue(unacceptableMessage3);
+            _channel.Enqueue(unacceptableMessage4);
         }
 
         [Fact]

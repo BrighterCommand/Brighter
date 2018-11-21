@@ -208,7 +208,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds. We retry at timeout /5 ms intervals, with a min of 5ms
         /// until the timeout value is reached. </param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public Message[] Receive(int timeoutInMilliseconds)
         {
             _logger.Value.DebugFormat("RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
@@ -234,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                 if (basicGetResult == null)
                 {
-                    return _noopMessage;
+                    return new Message[] {_noopMessage};
                 }
 
                 var message = _messageCreator.CreateMessage(basicGetResult);
@@ -246,7 +246,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     JsonConvert.SerializeObject(message),
                     Environment.NewLine);
 
-                return message;
+                return new Message[]{message};
             }
             catch (EndOfStreamException endOfStreamException)
             {

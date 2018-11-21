@@ -47,9 +47,9 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
-            _channel.Add(unmappableMessage);
-            _channel.Add(unmappableMessage);
-            _channel.Add(unmappableMessage);
+            _channel.Enqueue(unmappableMessage);
+            _channel.Enqueue(unmappableMessage);
+            _channel.Enqueue(unmappableMessage);
         }
 
         [Fact]

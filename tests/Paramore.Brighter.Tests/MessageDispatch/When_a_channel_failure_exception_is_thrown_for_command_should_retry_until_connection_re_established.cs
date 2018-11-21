@@ -51,10 +51,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
-            _channel.Add(message1);
-            _channel.Add(message2);
+            _channel.Enqueue(message1);
+            _channel.Enqueue(message2);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Add(quitMessage);
+            _channel.Enqueue(quitMessage);
         }
 
         [Fact]

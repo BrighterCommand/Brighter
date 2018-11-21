@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
                 var message = CreateMessage(Topic, $"test content [{QueueName}]");
                 consumer.Receive(30000); 
                 producer.Send(message);
-                var receivedMessage = consumer.Receive(30000);
+                var receivedMessage = consumer.Receive(30000).Single();
                 var receivedMessageData = receivedMessage.Body.Value;
 
                 consumer.Acknowledge(receivedMessage);

@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
         /// <exception cref="System.NotImplementedException"></exception>
-        public Message Receive(int timeoutInMilliseconds = -1)
+        public Message[] Receive(int timeoutInMilliseconds = -1)
         {
             try
             {
@@ -211,11 +211,11 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             SendDeleteMessage(matchingMessage);
         }
 
-        private Message GetMessage(RestMSMessageLink messageUri)
+        private Message[] GetMessage(RestMSMessageLink messageUri)
         {
             if (messageUri == null)
             {
-                return new Message();
+                return new Message[] {new Message()};
             }
 
             _logger.Value.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
@@ -226,7 +226,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                 var response = client.GetAsync(messageUri.Href).Result;
                 response.EnsureSuccessStatusCode();
                 var pipeMessage = ParseResponse<RestMSMessage>(response);
-                return RestMSMessageCreator.CreateMessage(pipeMessage);
+                return new Message[] {RestMSMessageCreator.CreateMessage(pipeMessage)};
             }
             catch (AggregateException ae)
             {
@@ -239,7 +239,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
         }
 
-        private Message ReadMessage()
+        private Message[] ReadMessage()
         {
             var pipe = _pipe.GetPipe();
             return GetMessage(pipe.Messages?.FirstOrDefault());

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Xunit;
 
@@ -27,7 +28,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         {
             _redisFixture.MessageConsumer.Receive(1000); //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
             _redisFixture.MessageProducer.Send(_message);
-            var sentMessage = _redisFixture.MessageConsumer.Receive(1000);
+            var sentMessage = _redisFixture.MessageConsumer.Receive(1000).Single();
             var messageBody = sentMessage.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessage);
 

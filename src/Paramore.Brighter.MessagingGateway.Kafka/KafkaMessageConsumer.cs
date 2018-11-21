@@ -113,10 +113,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public Message[] Receive(int timeoutInMilliseconds)
         {
             if (!_consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds))
-                return new Message();
+                return new Message[]{new Message()};
 
             var messageType = kafkaMsg.Error.Code == ErrorCode.NoError
                 ? MessageType.MT_EVENT
@@ -130,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     }
                 };
             var messageBody = new MessageBody(kafkaMsg.Value);
-            return new Message(messageHeader, messageBody); 
+            return new Message[] {new Message(messageHeader, messageBody)}; 
         }
 
         /// <summary>

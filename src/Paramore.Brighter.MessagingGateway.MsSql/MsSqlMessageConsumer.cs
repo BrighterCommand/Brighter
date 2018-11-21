@@ -24,10 +24,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        public Message Receive(int timeoutInMilliseconds)
+        public Message[] Receive(int timeoutInMilliseconds)
         {
             var rc = _sqlQ.TryReceive(_topic, timeoutInMilliseconds);
-            return !rc.IsDataValid ? new Message() : rc.Message;
+            var message = !rc.IsDataValid ? new Message() : rc.Message;
+            return new Message[]{message};
         }
 
         /// <summary>

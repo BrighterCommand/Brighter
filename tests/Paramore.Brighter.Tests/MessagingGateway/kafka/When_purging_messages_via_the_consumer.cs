@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
                 }
                 
                 consumer.Purge();
-                var sentMessage = consumer.Receive(30000);
+                var sentMessage = consumer.Receive(30000).Single();
                 var messageBody = sentMessage.Body.Value;
                 messageBody.Should().Be(string.Empty);
             }

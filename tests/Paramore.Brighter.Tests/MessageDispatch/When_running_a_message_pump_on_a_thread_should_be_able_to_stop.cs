@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch
 
             var @event = new MyEvent();
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            _channel.Add(message);
+            _channel.Enqueue(message);
 
             _performer = new Performer(_channel, messagePump);
             _performerTask = _performer.Run();

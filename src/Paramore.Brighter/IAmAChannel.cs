@@ -72,7 +72,7 @@ namespace Paramore.Brighter
         /// Adds a message to the queue
         /// </summary>
         /// <param name="message"></param>
-        void Enqueue(Message message);
+        void Enqueue(params Message[] message);
 
         /// <summary>
         /// Requeues the specified message.

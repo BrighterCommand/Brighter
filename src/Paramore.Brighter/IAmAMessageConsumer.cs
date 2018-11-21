@@ -56,15 +56,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <returns>Message.</returns>
-        Message Receive(int timeoutInMilliseconds);
+        Message[] Receive(int timeoutInMilliseconds);
 
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message"></param>
-        void Requeue(Message message);
-
-        /// <summary>
+       /// <summary>
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>

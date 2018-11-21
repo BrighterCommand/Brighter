@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Receives the specified queue name.
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout 
-        public Message Receive(int timeoutInMilliseconds)
+        public Message[] Receive(int timeoutInMilliseconds)
         {
             AmazonSQSClient client = null;
             Amazon.SQS.Model.Message sqsMessage = null;
@@ -92,9 +92,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 client?.Dispose();
             }
-                
+
             if (sqsMessage == null)
-                    return _noopMessage; 
+                return new Message[] {_noopMessage}; 
             
              var message = new SqsMessageCreator().CreateMessage(sqsMessage);
             
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 _queueName, Environment.NewLine, JsonConvert.SerializeObject(message));
  
 
-            return message;
+            return new Message[] {message};
         }
 
         /// <summary>

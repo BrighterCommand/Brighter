@@ -39,7 +39,6 @@ namespace Paramore.Brighter.Tests.CommandStore.MySql
         private readonly MySqlTestHelper _mysqlTestHelper;
         private readonly MySqlCommandStore _mysqlCommandStore;
         private readonly string _contextKey;
-        private MyCommand _storedCommand;
 
         public SqlCommandStoreEmptyWhenSearchedAsyncTests()
         {
