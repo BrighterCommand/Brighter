@@ -30,15 +30,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// Class RMQInputChannelFactory.
     /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
-    public class InputChannelFactory : IAmAChannelFactory
+    public class ChannelFactory : IAmAChannelFactory
     {
         private readonly RmqMessageConsumerFactory _messageConsumerFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
+        /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public InputChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
+        public ChannelFactory(RmqMessageConsumerFactory messageConsumerFactory)
         {
             _messageConsumerFactory = messageConsumerFactory;
         }
@@ -48,9 +48,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="connection">The connection parameters to create the queue with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateInputChannel(Connection connection)
+        public IAmAChannel CreateChannel(Connection connection)
         {
-            return new Channel(connection.ChannelName, _messageConsumerFactory.Create(connection));
+            return new Channel(connection.ChannelName, 
+                _messageConsumerFactory.Create(connection), 
+                connection.BufferSize);
         }
     }
 }

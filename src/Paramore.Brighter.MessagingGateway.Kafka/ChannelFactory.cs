@@ -23,15 +23,15 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaInputChannelFactory : IAmAChannelFactory
+    public class ChannelFactory : IAmAChannelFactory
     {
         private readonly KafkaMessageConsumerFactory _kafkaMessageConsumerFactory;
         
         /// <summary>
-        /// Initializes a new instance of the <see cref="KafkaInputChannelFactory"/> class.
+        /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
         /// <param name="kafkaMessageConsumerFactory">The messageConsumerFactory.</param>
-        public KafkaInputChannelFactory(KafkaMessageConsumerFactory kafkaMessageConsumerFactory)
+        public ChannelFactory(KafkaMessageConsumerFactory kafkaMessageConsumerFactory)
         {
             _kafkaMessageConsumerFactory = kafkaMessageConsumerFactory;
         }
@@ -41,9 +41,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="connection">The connection parameters with which to create the channel</param>
         /// <returns></returns>
-        public IAmAChannel CreateInputChannel(Connection connection)
+        public IAmAChannel CreateChannel(Connection connection)
         {
-            return new Channel(connection.ChannelName, _kafkaMessageConsumerFactory.Create(connection));
+            return new Channel(
+                connection.ChannelName, 
+                _kafkaMessageConsumerFactory.Create(connection), 
+                connection.BufferSize);
         }
     }
 }

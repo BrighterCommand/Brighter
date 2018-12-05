@@ -9,18 +9,18 @@ using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class InputChannelFactory : IAmAChannelFactory
+    public class ChannelFactory : IAmAChannelFactory
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<InputChannelFactory>);
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ChannelFactory>);
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
+        /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
         /// <param name="awsConnection">The details of the connection to AWS</param>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public InputChannelFactory(
+        public ChannelFactory(
             AWSMessagingGatewayConnection awsConnection,
             SqsMessageConsumerFactory messageConsumerFactory)
         {
@@ -36,10 +36,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         ///  </summary>
         /// <param name="connection">The connection parameter so create the channel with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateInputChannel(Connection connection)
+        public IAmAChannel CreateChannel(Connection connection)
         {
             EnsureQueue(connection);
-            return new Channel(connection.ChannelName.ToValidSQSQueueName(), _messageConsumerFactory.Create(connection));
+            return new Channel(
+                connection.ChannelName.ToValidSQSQueueName(), 
+                _messageConsumerFactory.Create(connection), 
+                connection.BufferSize
+                );
         }
 
         private void EnsureQueue(Connection connection)

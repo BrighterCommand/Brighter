@@ -572,7 +572,7 @@ namespace Paramore.Brighter
             var channelName = Guid.NewGuid();
             var routingKey = channelName.ToString();
             using (var responseChannel =
-                _responseChannelFactory.CreateInputChannel(
+                _responseChannelFactory.CreateChannel(
                     new Connection(
                         typeof(TResponse),
                         channelName: new ChannelName(channelName.ToString()), 

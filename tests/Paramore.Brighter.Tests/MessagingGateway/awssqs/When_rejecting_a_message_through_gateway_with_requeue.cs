@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         private readonly Message _message;
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
-        private readonly InputChannelFactory _channelFactory;
+        private readonly ChannelFactory _channelFactory;
         private MyCommand _myCommand;
         private readonly Guid _correlationId;
         private readonly string _replyTo;
@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                _channelFactory = new InputChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-                _channel = _channelFactory.CreateInputChannel(new Connection<MyCommand>());
+                _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+                _channel = _channelFactory.CreateChannel(new Connection<MyCommand>());
                 
                 _messageProducer = new SqsMessageProducer(awsConnection);
             }

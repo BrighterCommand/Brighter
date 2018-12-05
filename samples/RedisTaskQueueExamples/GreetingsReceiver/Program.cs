@@ -73,7 +73,7 @@ namespace Greetings
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new InputChannelFactory(redisConsumerFactory))
+                .DefaultChannelFactory(new ChannelFactory(redisConsumerFactory))
                 .Connections(new Connection[]
                 {
                     new Connection<GreetingEvent>(

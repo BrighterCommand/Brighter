@@ -48,6 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private readonly string _queueName;
         private readonly RoutingKeys _routingKeys;
         private readonly bool _isDurable;
+        private readonly int _batchSize;
         private readonly RmqMessageCreator _messageCreator;
         private readonly Message _noopMessage = new Message();
 
@@ -59,17 +60,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
       /// <param name="routingKey">The routing key.</param>
       /// <param name="isDurable">Is the queue definition persisted</param>
       /// <param name="highAvailability">Is the queue available on all nodes in a cluster</param>
+      /// <param name="batchSize">How many messages to retrieve at one time; ought to be size of channel buffer</param>
       public RmqMessageConsumer(
             RmqMessagingGatewayConnection connection, 
             string queueName, 
             string routingKey, 
             bool isDurable, 
-            bool highAvailability = false) 
-            : base(connection)
+            bool highAvailability = false,
+            int batchSize = 1) 
+            : base(connection, batchSize)
         {
             _queueName = queueName;
             _routingKeys = new RoutingKeys(routingKey);
             _isDurable = isDurable;
+            _batchSize = batchSize;
             IsQueueMirroredAcrossAllNodesInTheCluster = highAvailability;
             _messageCreator = new RmqMessageCreator();
         }
@@ -87,8 +91,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             string queueName, 
             string[] routingKeys, 
             bool isDurable, 
-            bool highAvailability = false) 
-            : base(connection)
+            bool highAvailability = false,
+            int batchSize = 1) 
+            : base(connection, batchSize)
         {
             _queueName = queueName;
             _routingKeys = new RoutingKeys(routingKeys);

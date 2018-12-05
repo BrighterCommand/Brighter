@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
         /// </summary>
         /// <param name="connection">The connection information needed to talk to RMQ</param>
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection) : base(connection)
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection) : base(connection, 1)
         {
         }
 

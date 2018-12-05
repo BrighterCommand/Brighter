@@ -34,30 +34,23 @@ namespace Paramore.Brighter
     public class Connection
     {
         /// <summary>
+        /// How many messages do we store in the channel at any one time. When we read from a broker we need to balance
+        /// supporting fairness amongst multiple consuming threads (if any) and latency from reading from the broker
+        /// Must be greater than 1 and less than 10.
+        /// </summary>
+        public int BufferSize { get; }
+        
+        /// <summary>
         /// Gets the channel.
         /// </summary>
         /// <value>The channel.</value>
         public IAmAChannelFactory ChannelFactory { get; set; }
 
-        public bool HighAvailability { get; }
-
         /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public ConnectionName Name { get; }
-
-        /// <summary>
-        /// Gets or sets the name.
+        /// Gets the name we use for this channel.
         /// </summary>
         /// <value>The name.</value>
         public ChannelName ChannelName { get; }
-
-        /// <summary>
-        /// Gets or sets the name.
-        /// </summary>
-        /// <value>The name.</value>
-        public RoutingKey RoutingKey { get; }
 
         /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
@@ -66,10 +59,12 @@ namespace Paramore.Brighter
         public Type DataType { get; }
 
         /// <summary>
-        /// Gets a value indicating whether this instance is durable.
+        /// Is the channel mirrored across node in the cluster
+        /// Required when the API for queue creation in the Message Oriented Middleware needs us to set the value
+        /// on channel (queue) creation. For example, RMQ version 2.X set high availability via the client API
+        /// though it has moved to policy in versions 3+ 
         /// </summary>
-        /// <value><c>true</c> if this instance is durable; otherwise, <c>false</c>.</value>
-        public bool IsDurable { get; }
+        public bool HighAvailability { get; }
 
         /// <summary>
         /// Gets a value indicating whether this connection should use an asynchronous pipeline
@@ -80,19 +75,25 @@ namespace Paramore.Brighter
         public bool IsAsync { get; }
 
         /// <summary>
-        /// Gets the no of peformers.
+        /// Gets a value indicating whether this channel definition should survive restarts of the broker.
+        /// </summary>
+        /// <value><c>true</c> if this definition is durable; otherwise, <c>false</c>.</value>
+        public bool IsDurable { get; }
+
+        /// <summary>
+        /// Gets or sets the name pf the connection in log output.
+        /// </summary>
+        /// <value>The name.</value>
+        public ConnectionName Name { get; }
+
+        /// <summary>
+        /// Gets the no of threads that we will use to read from  this channel.
         /// </summary>
         /// <value>The no of peformers.</value>
         public int NoOfPeformers { get; }
 
         /// <summary>
-        /// Gets the timeout in miliseconds.
-        /// </summary>
-        /// <value>The timeout in miliseconds.</value>
-        public int TimeoutInMiliseconds { get; }
-
-        /// <summary>
-        /// Gets or sets the requeue count.
+        /// Gets or sets the number of times that we can requeue a message before we abandon it as poison pill.
         /// </summary>
         /// <value>The requeue count.</value>
         public int RequeueCount { get; }
@@ -103,12 +104,26 @@ namespace Paramore.Brighter
         public int RequeueDelayInMilliseconds { get; }
 
         /// <summary>
-        /// Gets the unacceptable messages limit
+        /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
+        /// </summary>
+        /// <value>The name.</value>
+        public RoutingKey RoutingKey { get; }
+
+         /// <summary>
+        /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
+        /// or busy
+        /// </summary>
+        /// <value>The timeout in miliseconds.</value>
+        public int TimeoutInMiliseconds { get; }
+        
+        /// <summary>
+        /// Gets the number of messages before we will terminate the channel due to high error rates
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
         /// <summary>
-        /// For SQS this governs how long a 'lock' is held on a message for one consumer to process
+        /// For some Message Oriented Middleware this governs how long a 'lock' is held on a message for one consumer
+        /// to process. For example SQS
         /// </summary>
         public int VisibilityTimeout { get; }
 
@@ -119,21 +134,23 @@ namespace Paramore.Brighter
         /// <param name="name">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
-        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
+        /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isDurable">The durability of the queue.</param>
-        /// <param name="isAsync"></param>
+        /// <param name="isDurable">The durability of the queue definition in the broker.</param>
+        /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
-        /// <param name="visibilityTimeout">How long should an SQS Queue message remain locked for processing</param>
+        /// <param name="visibilityTimeout">How long should a message remain locked for processing</param>
         public Connection(
             Type dataType,
             ConnectionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
+            int bufferSize = 1,
             int noOfPerformers = 1, 
             int timeoutInMilliseconds = 300,
             int requeueCount = -1,
@@ -149,6 +166,7 @@ namespace Paramore.Brighter
             Name = name ?? new ConnectionName(dataType.FullName);
             ChannelName = channelName ?? new ChannelName(dataType.FullName);
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
+            BufferSize = bufferSize;
             NoOfPeformers = noOfPerformers;
             TimeoutInMiliseconds = timeoutInMilliseconds;
             RequeueCount = requeueCount;
@@ -172,6 +190,7 @@ namespace Paramore.Brighter
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="bufferSize">The number of messages to buffer on the channel</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
@@ -186,6 +205,7 @@ namespace Paramore.Brighter
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int noOfPerformers = 1,
+            int bufferSize = 1,
             int timeoutInMilliseconds = 300,
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
@@ -200,6 +220,7 @@ namespace Paramore.Brighter
                 name, 
                 channelName, 
                 routingKey, 
+                bufferSize,
                 noOfPerformers, 
                 timeoutInMilliseconds, 
                 requeueCount, 

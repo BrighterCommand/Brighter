@@ -9,14 +9,14 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
 {
     [Collection("Redis")]
     [Trait("Category", "Redis")]
-    public class RmqMessageConsumerRedisNotAvailableTests : IDisposable
+    public class RedisMessageConsumerRedisNotAvailableTests : IDisposable
     {
         private const string QueueName = "test";
         private const string Topic = "test";
         private readonly RedisMessageConsumer _messageConsumer;
         private Exception _exception;
 
-        public RmqMessageConsumerRedisNotAvailableTests()
+        public RedisMessageConsumerRedisNotAvailableTests()
         {
             var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 

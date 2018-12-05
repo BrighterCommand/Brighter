@@ -96,7 +96,7 @@ namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new KafkaInputChannelFactory(messageConsumerFactory))
+                .DefaultChannelFactory(new ChannelFactory(messageConsumerFactory))
                 .Connections(new Connection[]
                 {
                     new Connection<GreetingEvent>(

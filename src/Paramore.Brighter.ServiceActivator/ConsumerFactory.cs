@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer Create()
         {
-            var channel = _connection.ChannelFactory.CreateInputChannel(_connection);
+            var channel = _connection.ChannelFactory.CreateChannel(_connection);
             var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer CreateAsync()
         {
-            var channel = _connection.ChannelFactory.CreateInputChannel(_connection);
+            var channel = _connection.ChannelFactory.CreateChannel(_connection);
             var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,

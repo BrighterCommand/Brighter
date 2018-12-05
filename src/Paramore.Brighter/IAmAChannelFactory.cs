@@ -42,6 +42,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="connection">The parameters with which to create the channel for the transport</param>
         /// <returns>IAmAnInputChannel.</returns>
-        IAmAChannel CreateInputChannel(Connection connection);
+        IAmAChannel CreateChannel(Connection connection);
     }
 }

@@ -108,7 +108,7 @@ namespace GreetingsServer
             var dispatcher = DispatchBuilder.With()
               .CommandProcessor(commandProcessor)
               .MessageMappers(messageMapperRegistry)
-              .DefaultChannelFactory(new InputChannelFactory(rmqMessageConsumerFactory))
+              .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
               .Connections(new Connection[]
               {
                 new Connection<GreetingRequest>(

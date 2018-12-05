@@ -69,7 +69,7 @@ namespace GreetingsSender
             };
             
             var producer = new RmqMessageProducer(rmqConnnection);
-            var inputChannelFactory = new InputChannelFactory(new RmqMessageConsumerFactory(rmqConnnection));
+            var inputChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnnection));
             
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, handerFactory))

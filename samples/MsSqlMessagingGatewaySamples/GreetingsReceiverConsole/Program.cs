@@ -94,7 +94,7 @@ namespace GreetingsReceiverConsole
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build())
                 .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new MsSqlInputChannelFactory(messageConsumerFactory))
+                .DefaultChannelFactory(new ChannelFactory(messageConsumerFactory))
                 .Connections(new Connection[]
                 {
                     new Connection<GreetingEvent>(

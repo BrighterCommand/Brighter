@@ -36,7 +36,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             _channel = channel;
         }
 
-        public IAmAChannel CreateInputChannel(Connection connection)
+        public IAmAChannel CreateChannel(Connection connection)
         {
             var  channel = _channel ?? new FakeChannel();
             foreach (var message in _seedMessages)

@@ -28,15 +28,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     /// Class RMQInputChannelFactory.
     /// Creates instances of <see cref="IAmAChannel"/>channels. Supports the creation of AMQP Application Layer channels using RabbitMQ
     /// </summary>
-    public class InputChannelFactory : IAmAChannelFactory
+    public class ChannelFactory : IAmAChannelFactory
     {
         private readonly RedisMessageConsumerFactory _messageConsumerFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="InputChannelFactory"/> class.
+        /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
         /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
-        public InputChannelFactory(RedisMessageConsumerFactory messageConsumerFactory)
+        public ChannelFactory(RedisMessageConsumerFactory messageConsumerFactory)
         {
             _messageConsumerFactory = messageConsumerFactory;
         }
@@ -46,9 +46,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="connection">The connection parameters with which to create the channel</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateInputChannel(Connection connection)
+        public IAmAChannel CreateChannel(Connection connection)
         {
-            return new Channel(connection.ChannelName, _messageConsumerFactory.Create(connection));
+            return new Channel(
+                connection.ChannelName, 
+                _messageConsumerFactory.Create(connection),
+                connection.BufferSize
+                );
         }
     }
 }

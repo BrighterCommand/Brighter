@@ -51,18 +51,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RMQMessageGateway>);
         private readonly Policy _circuitBreakerPolicy;
-
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
-
-        /// <summary>
-        ///     The configuration
-        /// </summary>
         protected readonly RmqMessagingGatewayConnection Connection;
-
-        /// <summary>
-        ///     The channel
-        /// </summary>
+        private readonly ushort _batchSize;
         protected IModel Channel;
 
         /// <summary>
@@ -70,9 +62,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         ///     Use if you need to inject a test logger
         ///     <param name="connection">The amqp uri and exchange to connect to</param>
         /// </summary>
-        protected RMQMessageGateway(RmqMessagingGatewayConnection connection)
+        protected RMQMessageGateway(RmqMessagingGatewayConnection connection, int batchSize = 1)
         {
             Connection = connection;
+            _batchSize = Convert.ToUInt16(batchSize);
 
             var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
 
@@ -132,8 +125,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
+                
+                //set the number of messages to fetch -- defaults to 1 unless set on connection
+                Channel.BasicQos(0, _batchSize, false);
 
-                //When AutoClose is true, the last channel to close will also cause the connection to close1. If it is set to
+                //When AutoClose is true, the last channel to close will also cause the connection to close. If it is set to
                 //true before any channel is created, the connection will close then and there.
                 if (connection.AutoClose == false) connection.AutoClose = true;
 

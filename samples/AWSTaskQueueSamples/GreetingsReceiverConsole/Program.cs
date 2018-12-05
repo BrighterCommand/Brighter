@@ -98,7 +98,7 @@ namespace GreetingsReceiverConsole
                   .RequestContextFactory(new InMemoryRequestContextFactory())
                   .Build())
               .MessageMappers(messageMapperRegistry)
-              .DefaultChannelFactory(new InputChannelFactory(awsConnection, sqsMessageConsumerFactory))
+              .DefaultChannelFactory(new ChannelFactory(awsConnection, sqsMessageConsumerFactory))
               .Connections(new Connection[]
               {
                   new Connection<GreetingEvent>(
