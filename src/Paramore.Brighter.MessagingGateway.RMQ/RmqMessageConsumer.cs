@@ -218,9 +218,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         messages[i] = message;
                         
                         _logger.Value.InfoFormat(
-                            "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
+                            "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {4}",
                             _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
-                            JsonConvert.SerializeObject(message),
                             JsonConvert.SerializeObject(message),
                             Environment.NewLine);
                     }
