@@ -29,6 +29,7 @@ using System.Text;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -63,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-        public Message CreateMessage(BasicGetResult fromQueue)
+        public Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
             var topic = HeaderResult<string>.Empty();
@@ -196,7 +197,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             });
         }
 
-        private HeaderResult<string> ReadTopic(BasicGetResult fromQueue, IDictionary<string, object> headers)
+        private HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
         {
             return ReadHeader(headers, HeaderNames.TOPIC).Map(s =>
             {

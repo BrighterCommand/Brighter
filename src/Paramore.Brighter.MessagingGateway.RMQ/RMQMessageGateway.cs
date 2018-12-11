@@ -126,7 +126,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                 Channel = connection.CreateModel();
                 
-                //set the number of messages to fetch -- defaults to 1 unless set on connection
+                //set the number of messages to fetch -- defaults to 1 unless set on connection, no impact on
+                //BasicGet, only works on BasicConsume
                 Channel.BasicQos(0, _batchSize, false);
 
                 //When AutoClose is true, the last channel to close will also cause the connection to close. If it is set to

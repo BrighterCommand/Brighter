@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public RmqMessageConsumerConnectionClosedTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test2", MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid(),  Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             _sentMessage = new Message(messageHeader, new MessageBody("test content"));
@@ -58,7 +58,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             _receiver = new RmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, false);
             _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
 
-            _receiver.Purge();
             _sender.Send(_sentMessage);
         }
 
@@ -76,7 +75,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public void Dispose()
         {
-            _receiver.Purge();
             _sender.Dispose();
             _receiver.Dispose();
         }

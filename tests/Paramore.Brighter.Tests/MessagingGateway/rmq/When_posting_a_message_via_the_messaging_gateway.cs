@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
@@ -37,13 +38,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         private readonly IAmAMessageProducer _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _message;
-        private readonly TestRMQListener _client;
-        private string _messageBody;
-        private IDictionary<string, object> _messageHeaders;
 
         public RmqMessageProducerSendMessageTests()
         {
-            _message = new Message(new MessageHeader(Guid.NewGuid(), "test1", MessageType.MT_COMMAND), new MessageBody("test content"));
+            _message = new Message(new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
@@ -53,9 +51,8 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
             _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, false);
-            _messageConsumer.Purge();
 
-            _client = new TestRMQListener(rmqConnection, _message.Header.Topic);
+            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
         }
 
         [Fact]
@@ -63,21 +60,14 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         {
             _messageProducer.Send(_message);
 
-            var result = _client.Listen();
-            _messageBody = result.GetBody();
-            _messageHeaders = result.GetHeaders();
+            var result = _messageConsumer.Receive(10000).First(); 
 
             //_should_send_a_message_via_rmq_with_the_matching_body
-            _messageBody.Should().Be(_message.Body.Value);
-            //_should_send_a_message_via_rmq_without_delay_header
-            _messageHeaders.Keys.Should().NotContain(HeaderNames.DELAY_MILLISECONDS);
-            //_should_received_a_message_via_rmq_without_delayed_header
-            _messageHeaders.Keys.Should().NotContain(HeaderNames.DELAYED_MILLISECONDS);
-        }
+            result.Body.Value.Should().Be(_message.Body.Value);
+       }
 
         public void Dispose()
         {
-            _messageConsumer.Purge();
             _messageProducer.Dispose();
         }
     }

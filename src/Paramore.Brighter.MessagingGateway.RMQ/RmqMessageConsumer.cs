@@ -45,6 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageConsumer>);
 
+        private PullConsumer _consumer;
         private readonly string _queueName;
         private readonly RoutingKeys _routingKeys;
         private readonly bool _isDurable;
@@ -68,15 +69,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             bool isDurable, 
             bool highAvailability = false,
             int batchSize = 1) 
-            : base(connection, batchSize)
-        {
-            _queueName = queueName;
-            _routingKeys = new RoutingKeys(routingKey);
-            _isDurable = isDurable;
-            _batchSize = batchSize;
-            IsQueueMirroredAcrossAllNodesInTheCluster = highAvailability;
-            _messageCreator = new RmqMessageCreator();
-        }
+            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, batchSize)
+        {}
 
       /// <summary>
       /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
@@ -100,6 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _isDurable = isDurable;
             IsQueueMirroredAcrossAllNodesInTheCluster = highAvailability;
             _messageCreator = new RmqMessageCreator();
+            _batchSize = batchSize;
         }
 
         /// <summary>
@@ -151,17 +146,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-         public void Requeue(Message message)
-        {
-            Requeue(message, 0);
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-         public void Requeue(Message message, int delayMilliseconds)
+        public void Requeue(Message message, int delayMilliseconds)
         {
             try
             {
@@ -221,37 +207,32 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 EnsureChannelBind();
 
-                var now = DateTime.UtcNow;
-                var endBy = now.AddMilliseconds(timeoutInMilliseconds);
-                //ensure that we pause for at least 5 ms between reads.
-                var pause = ((timeoutInMilliseconds > 25) && (timeoutInMilliseconds / 5 > 5)) ? timeoutInMilliseconds / 5 : 5;
-                BasicGetResult basicGetResult = null;
-                while (now < endBy)
-                {
-                    basicGetResult = Channel.BasicGet(_queueName, autoAck: false);
-                    if (basicGetResult != null)
-                    {
-                        break;
-                    }
-                    Task.Delay(pause);
-                    now = DateTime.UtcNow;
-                }
+                var (resultCount, results) = _consumer.DeQueue(timeoutInMilliseconds, _batchSize);
 
-                if (basicGetResult == null)
+                if (results != null && results.Length != 0)
+                {
+                    var messages = new Message[resultCount];
+                    for (var i = 0; i < resultCount; i++)
+                    {
+                        var message = _messageCreator.CreateMessage(results[i]);
+                        messages[i] = message;
+                        
+                        _logger.Value.InfoFormat(
+                            "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
+                            _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
+                            JsonConvert.SerializeObject(message),
+                            JsonConvert.SerializeObject(message),
+                            Environment.NewLine);
+                    }
+
+                    return messages;
+
+                }
+                else
                 {
                     return new Message[] {_noopMessage};
                 }
 
-                var message = _messageCreator.CreateMessage(basicGetResult);
-                
-                _logger.Value.InfoFormat(
-                    "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {5}{4}",
-                    _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
-                    JsonConvert.SerializeObject(message),
-                    JsonConvert.SerializeObject(message),
-                    Environment.NewLine);
-
-                return new Message[]{message};
             }
             catch (EndOfStreamException endOfStreamException)
             {
@@ -337,7 +318,39 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
         }
 
-      protected virtual void EnsureChannelBind()
+        protected virtual void CancelConsumer()
+        {
+            if (_consumer != null)
+            {
+                if (_consumer.IsRunning)
+                {
+                    _consumer.OnCancel();
+                }
+
+                _consumer = null;
+            }
+        }
+
+        protected virtual void CreateConsumer()
+        {
+            _consumer = new PullConsumer(Channel);
+            
+            Channel.BasicQos(0, (ushort)_batchSize, false);
+
+            Channel.BasicConsume(_queueName, false, string.Empty, SetQueueArguments(), _consumer);
+            
+            _consumer.HandleBasicConsumeOk(String.Empty);
+            
+            _logger.Value.InfoFormat("RmqMessageConsumer: Created consumer for queue {0} with routing key {1} via exchange {2} on connection {3}",
+                _queueName,
+                _routingKeys,
+                Connection.Exchange.Name,
+                Connection.AmpqUri.GetSanitizedUri()
+                );
+        }
+        
+
+        protected virtual void EnsureChannelBind()
         {
           if (Channel == null || Channel.IsClosed)
           {
@@ -351,6 +364,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
               Channel.QueueBind(_queueName, Connection.Exchange.Name, key);
             }
+            
+            CreateConsumer();
 
             _logger.Value.InfoFormat(
               "RmqMessageConsumer: Created rabbitmq channel {4} for queue {0} with routing key/s {1} via exchange {2} on connection {3}",
@@ -382,6 +397,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         public override void Dispose()
         {
+            CancelConsumer();
             Dispose(true);
             GC.SuppressFinalize(this);
         }
