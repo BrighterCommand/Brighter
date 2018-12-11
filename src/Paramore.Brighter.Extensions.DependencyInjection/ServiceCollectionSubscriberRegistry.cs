@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         public void Add(Type requestType, Type handlerType)
         {
-            _services.AddTransient(handlerType);
+            _services.Add(new ServiceDescriptor(handlerType, handlerType, _lifetime));
             _registry.Add(requestType, handlerType);
         }
     }

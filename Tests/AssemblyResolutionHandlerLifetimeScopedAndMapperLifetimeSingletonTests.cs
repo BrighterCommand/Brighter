@@ -1,0 +1,104 @@
+using System;
+using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter;
+using Paramore.Brighter.Eventsourcing.Handlers;
+using Paramore.Brighter.Logging.Handlers;
+using Paramore.Brighter.Monitoring.Handlers;
+using Paramore.Brighter.Policies.Handlers;
+using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Tests
+{
+    public class AssemblyResolutionHandlerLifetimeScopedAndMapperLifetimeSingletonTests
+    {
+        private readonly IServiceProvider _provider;
+        private readonly IServiceCollection _services;
+
+        public AssemblyResolutionHandlerLifetimeScopedAndMapperLifetimeSingletonTests()
+        {
+            _services = new ServiceCollection();
+
+            _services.AddServiceActivator(options =>
+                {
+                    options.HandlerLifetime = ServiceLifetime.Scoped;
+                    options.MapperLifetime = ServiceLifetime.Singleton;
+                })
+                .MapperRegistryFromAssemblies(typeof(TestEventHandler).Assembly)
+                .HandlersFromAssemblies(typeof(TestEventHandler).Assembly, typeof(ExceptionPolicyHandler<>).Assembly);
+
+            _provider = _services.BuildServiceProvider();
+        }
+
+        [Fact]
+        public void ShouldHaveRegistered12Correctly()
+        {
+            Assert.Equal(13, _services.Count);
+        }
+
+        [Fact]
+        public void ShouldHaveCommandProcessorRegisteredCorrectly()
+        {
+            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
+        }
+
+        [Fact]
+        public void ShouldHaveServiceActivatorRegisteredCorrectly()
+        {
+            TestRegistration(typeof(IDispatcher), ServiceLifetime.Singleton);
+        }
+
+        [Fact]
+        public void ShouldHaveTestHandlerRegisteredCorrectly()
+        {
+            TestRegistration(typeof(TestEventHandler), ServiceLifetime.Scoped);
+        }
+
+        [Fact]
+        public void ShouldHaveTestMapperRegisteredCorrectly()
+        {
+            TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Singleton);
+        }
+
+        [Fact]
+        public void ShouldHaveDefaultHandlerRegisteredCorrectly()
+        {
+            TestRegistration(typeof(ExceptionPolicyHandler<>), ServiceLifetime.Scoped);
+            TestRegistration(typeof(FallbackPolicyHandler<>), ServiceLifetime.Scoped);
+            TestRegistration(typeof(TimeoutPolicyHandler<>), ServiceLifetime.Scoped);
+            TestRegistration(typeof(MonitorHandler<>), ServiceLifetime.Scoped);
+            TestRegistration(typeof(CommandSourcingHandler<>), ServiceLifetime.Scoped);
+            TestRegistration(typeof(RequestLoggingHandler<>), ServiceLifetime.Scoped);
+        }
+
+        private void TestRegistration(Type expected, ServiceLifetime serviceLifetime)
+        {
+            var serviceDescriptor = _services.SingleOrDefault(x => x.ServiceType == expected);
+
+            Assert.Equal(expected, serviceDescriptor.ServiceType);
+            Assert.Equal(serviceLifetime, serviceDescriptor.Lifetime);
+        }
+
+
+        [Fact]
+        public void ShouldHaveCommandProcessor()
+        {
+            Assert.Equal(typeof(CommandProcessor), _provider.GetService<IAmACommandProcessor>().GetType());
+        } 
+
+        //[Fact]
+        //public void ShouldHaveHandler()
+        //{
+        //    Assert.NotNull(_provider.GetService<IAmAMessageMapper<GreetingEvent>>());
+        //    Assert.NotNull(_provider.GetService<IHandleRequests<GreetingEvent>>());
+        //}
+
+        //        [Fact]
+        //public void ShouldHaveMapper()
+        //{
+        //    Assert.NotNull(_provider.GetService<IAmAMessageMapper<GreetingEvent>>());
+        //}
+    }
+}
