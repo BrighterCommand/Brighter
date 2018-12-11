@@ -66,7 +66,7 @@ namespace HostedServiceTest
                 })
                 .UseConsoleLifetime()
                 .Build();
-
+            
             await host.RunAsync();
         }
     }

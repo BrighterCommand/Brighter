@@ -48,12 +48,12 @@ namespace GreetingsSender
             };
 
             var messageStore = new InMemoryMessageStore();
-            var rmqConnnection = new RmqMessagingGatewayConnection
+            var gatewayConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            var producer = new RmqMessageProducer(rmqConnnection);
+            var producer = new RmqMessageProducer(gatewayConnection);
 
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
@@ -63,7 +63,11 @@ namespace GreetingsSender
 
             var commandProcessor = builder.Build();
 
-            commandProcessor.Post(new GreetingEvent("Ian"));
+            for (int i = 0; i < 1000; i++)
+            {
+                commandProcessor.Post(new GreetingEvent("Ian"));
+            }
+           
         }
     }
 }

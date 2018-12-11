@@ -23,14 +23,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         public void Release(IHandleRequests handler)
         {
-            var diposal = handler as IDisposable;
-            diposal?.Dispose();
+            var disposal = handler as IDisposable;
+            disposal?.Dispose();
         }
 
         public void Release(IHandleRequestsAsync handler)
         {
-            var diposal = handler as IDisposable;
-            diposal?.Dispose();
+            var disposal = handler as IDisposable;
+            disposal?.Dispose();
         }
     }
 }
