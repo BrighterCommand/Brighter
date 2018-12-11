@@ -14,6 +14,9 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
   - Add a context field to the command store, to allow identification of a context, and share a table across multiple handlers. Note that this is a breaking schema change for users of the command store
   - Command Sourcing handler now writes to store only once the handler has successfully completed
   - Renamed InputChannelFactory to ChannelFactory as we don't have an OutputChannelFactory any more (and not for some time)
+  - Channel buffer now only source for message pump, populated via consumer when empty
+  - Consumers now return an array of messages, default size of 1 but can be up to 10
+  - Switch RMQ Consumers back to basic consume to support batch delivery
    
 
 ## Release 7.4.0 ##
