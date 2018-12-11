@@ -13,7 +13,7 @@
 
   <ItemGroup>
     <PackageReference Include="Paramore.Brighter.ServiceActivator" Version="7.4.2" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.1.1" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="2.2.0" />
   </ItemGroup>
 
 </Project>
