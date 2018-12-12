@@ -31,6 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly string _queueName;
+        private readonly int _batchSize;
         private readonly Message _noopMessage = new Message();
 
         /// <summary>
@@ -38,10 +39,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         /// <param name="connection">The connection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
-       public SqsMessageConsumer(AWSMessagingGatewayConnection connection, string queueName)
+        /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
+        public SqsMessageConsumer(
+            AWSMessagingGatewayConnection connection, 
+            string queueName,
+            int batchSize = 1)
         {
             _connection = connection;
             _queueName = queueName;
+            _batchSize = batchSize;
         }
 
         /// <summary>
@@ -62,7 +68,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 var request = new ReceiveMessageRequest(urlResponse.QueueUrl)
                 {
-                    MaxNumberOfMessages = 1,
+                    MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds,
                     MessageAttributeNames = new List<string>() { "All" },
                     AttributeNames = new List<string>() { "All" }

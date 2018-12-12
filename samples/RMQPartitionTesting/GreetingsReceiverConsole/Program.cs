@@ -103,6 +103,7 @@ namespace GreetingsReceiverConsole
                         new ConnectionName("paramore.example.greeting"),
                         new ChannelName("greeting.event"),
                         new RoutingKey("greeting.event"),
+                        bufferSize: 10, 
                         timeoutInMilliseconds: 200,
                         isDurable: true,
                         highAvailability: true)

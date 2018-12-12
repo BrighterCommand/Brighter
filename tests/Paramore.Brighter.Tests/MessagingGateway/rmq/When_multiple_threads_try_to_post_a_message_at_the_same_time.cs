@@ -40,7 +40,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public RmqMessageProducerSupportsMultipleThreadsTests()
         {
-            _message = new Message(new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), new MessageBody("test content"));
+            _message = new Message(
+                new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), 
+                new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {

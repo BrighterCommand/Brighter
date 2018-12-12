@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             var header = new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
             var originalMessage = new Message(header, new MessageBody("test3 content"));
 
-            var mutatedHeader = new MessageHeader(header.Id, "test3", MessageType.MT_COMMAND);
+            var mutatedHeader = new MessageHeader(header.Id, Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
             mutatedHeader.Bag.Add(HeaderNames.DELAY_MILLISECONDS, 1000);
             _message = new Message(mutatedHeader, originalMessage.Body);
 
@@ -63,10 +63,10 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         [Fact]
         public void When_reading_a_delayed_message_via_the_messaging_gateway()
         {
-            _messageProducer.SendWithDelay(_message, 1000);
+            _messageProducer.SendWithDelay(_message, 3000);
 
             var immediateResult = _messageConsumer.Receive(0).First();
-            var deliveredWithoutWait = immediateResult == null;
+            var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
 
             //_should_have_not_been_able_get_message_before_delay
             deliveredWithoutWait.Should().BeTrue();

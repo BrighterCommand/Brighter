@@ -41,7 +41,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public RmqMessageProducerSendMessageTests()
         {
-            _message = new Message(new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), new MessageBody("test content"));
+            _message = new Message(
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {

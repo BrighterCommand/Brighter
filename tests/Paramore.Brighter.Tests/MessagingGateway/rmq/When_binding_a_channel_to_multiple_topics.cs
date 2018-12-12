@@ -17,8 +17,12 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
         public RmqMessageConsumerMultipleTopicTests()
         {
-            _messageTopic1 = new Message(new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), new MessageBody("test content for topic test 1"));
-            _messageTopic2 = new Message(new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), new MessageBody("test content for topic test 2"));
+            _messageTopic1 = new Message(
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageBody("test content for topic test 1"));
+            _messageTopic2 = new Message(
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageBody("test content for topic test 2"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
