@@ -1,5 +1,6 @@
 version: 1.0.{build}
 image: Visual Studio 2017
+configuration: Release
 
 dotnet_csproj:
   patch: true
@@ -10,10 +11,13 @@ dotnet_csproj:
   file_version: '{version}'
   informational_version: '{version}'
 
-build_script:
-  - cmd: dotnet build . --configuration Release
+build:
+  publish_nuget: true
+  publish_nuget_symbols: true
+  include_nuget_references: true
+  verbosity: minimal
 
-test: off
+test: 
 
 artifacts:
   - path: '**\*.nupkg'
