@@ -2,7 +2,8 @@
   <PropertyGroup>
     <PackageProjectUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions</PackageProjectUrl>
     <PackageIconUrl>https://brightercommand.github.io/Brighter/images/brightercanon-nuget.png</PackageIconUrl>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions/blob/master/LICENSE.md</PackageLicenseUrl>
+    <!-- <PackageLicenseExpression>MIT</PackageLicenseExpression> -->
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/BrighterCommand/Paramore.Brighter.Extensions.git</RepositoryUrl>
     <AssemblyVersion>1.0.0.0</AssemblyVersion>
