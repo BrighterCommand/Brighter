@@ -8,7 +8,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 ## Master ##
   - Support for Feature Switches on handlers
   - Switch Command Sourcing Handler to using an Exists method when checking for duplicate messages
-  - Add a region endpoint parameter for AWS SQS + SNS
+  - Rewritten AWS SQS + SNS transport
   - Support for DynamoDB Message and Command Stores (Jonny Olliff-Lee @DevJonny)
   - Added a Call() method to CommandProcessor to support Request-Reply
   - Add a context field to the command store, to allow identification of a context, and share a table across multiple handlers. Note that this is a breaking schema change for users of the command store
