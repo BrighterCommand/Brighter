@@ -15,7 +15,7 @@ build_script:
   - cmd: dotnet build . --configuration Release
 
 test_script:
-  - cmd: dotnet test . --configuration Release 
+  - cmd: dotnet test tests\tests.csproj --configuration Release 
 
 artifacts:
   - path: '**\*.nupkg'
