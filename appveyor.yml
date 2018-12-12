@@ -11,13 +11,11 @@ dotnet_csproj:
   file_version: '{version}'
   informational_version: '{version}'
 
-build:
-  publish_nuget: true
-  publish_nuget_symbols: true
-  include_nuget_references: true
-  verbosity: minimal
+build_script:
+  - cmd: dotnet build . --configuration Release
 
-test: 
+test_script:
+  - cmd: dotnet test . --configuration Release 
 
 artifacts:
   - path: '**\*.nupkg'
