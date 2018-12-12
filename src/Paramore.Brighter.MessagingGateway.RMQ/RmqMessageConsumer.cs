@@ -336,7 +336,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             
             Channel.BasicQos(0, (ushort)_batchSize, false);
 
-            Channel.BasicConsume(_queueName, false, string.Empty, SetQueueArguments(), _consumer);
+            Channel.BasicConsume(_queueName, false, Connection.Name, SetQueueArguments(), _consumer);
             
             _consumer.HandleBasicConsumeOk(String.Empty);
             
