@@ -41,7 +41,7 @@ namespace Tests
         [Fact]
         public void ShouldHaveCommandProcessorRegisteredCorrectly()
         {
-            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
+            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Scoped);
         }
 
         [Fact]

@@ -17,7 +17,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
             services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
-            services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
+            if (options.HandlerLifetime == ServiceLifetime.Scoped)
+                services.AddScoped<IAmACommandProcessor>(BuildCommandProcessor);
+            else
+                services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry);
         }
