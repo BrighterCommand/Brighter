@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Message[] Receive(int timeoutInMilliseconds)
         {
             AmazonSQSClient client = null;
-            Amazon.SQS.Model.Message sqsMessage = null;
+            Amazon.SQS.Model.Message[] sqsMessages = new Amazon.SQS.Model.Message[0];
             try
             {
                 client = new AmazonSQSClient(_connection.Credentials, _connection.Region);
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 var receiveResponse = client.ReceiveMessageAsync(request).Result;
 
-                sqsMessage = receiveResponse.Messages.SingleOrDefault();
+                sqsMessages = receiveResponse.Messages.ToArray();
 
             }
             catch (InvalidOperationException ioe)
@@ -99,16 +99,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 client?.Dispose();
             }
 
-            if (sqsMessage == null)
-                return new Message[] {_noopMessage}; 
-            
-             var message = new SqsMessageCreator().CreateMessage(sqsMessage);
-            
-            _logger.Value.InfoFormat("SqsMessageConsumer: Received message from queue {0}, message: {1}{2}",
-                _queueName, Environment.NewLine, JsonConvert.SerializeObject(message));
- 
+            if (sqsMessages.Length == 0)
+            {
+                return new Message[] {_noopMessage};
+            }
 
-            return new Message[] {message};
+            var messages = new Message[sqsMessages.Length];
+            for(int i = 0; i < sqsMessages.Length; i++)
+            {
+                var message = new SqsMessageCreator().CreateMessage(sqsMessages[i]);
+                _logger.Value.InfoFormat("SqsMessageConsumer: Received message from queue {0}, message: {1}{2}",
+                    _queueName, Environment.NewLine, JsonConvert.SerializeObject(message));
+                messages[i] = message;
+
+            }
+
+            return messages;
         }
 
         /// <summary>
