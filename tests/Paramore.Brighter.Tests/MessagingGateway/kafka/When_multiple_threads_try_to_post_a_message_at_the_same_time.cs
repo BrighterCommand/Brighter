@@ -31,7 +31,6 @@ using Xunit;
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
     [Collection("Kafka")]
-    [Trait("Category", "Kafka")]
     public class KafkaMessageProducerSupportsMultipleThreadsTests : KafkaIntegrationTestBase
     {
         [Theory, MemberData(nameof(ServerParameters))]

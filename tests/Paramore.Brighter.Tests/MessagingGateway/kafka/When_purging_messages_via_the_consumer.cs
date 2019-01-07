@@ -31,7 +31,6 @@ using Xunit;
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
     [Collection("Kafka")]
-    [Trait("Category", "Kafka")]
     public class KafkaMessageConsumerPurgeTests : KafkaIntegrationTestBase
     {
         private const string Topic = "test";
