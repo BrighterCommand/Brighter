@@ -18,7 +18,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
   - Consumers now return an array of messages, default size of 1 but can be up to 10
   - Switch RMQ Consumers back to basic consume to support batch delivery
   - RMQ now supports batch sizes of up to 10 for consuming messages
-  - SNS+SQS now supports batch sizes of up to 10 for consuming messages 
+  - SNS+SQS now supports batch sizes of up to 10 for consuming messages
+  - Added support for the Outbox pattern via DepositPost and ClearPostBox
    
 
 ## Release 7.4.0 ##
