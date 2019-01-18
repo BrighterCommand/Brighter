@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
     public class FakeMessageStore : IAmAMessageStore<Message>, IAmAMessageStoreAsync<Message>
     {
-        private readonly List<Message> _messages = new List<Message>(); 
+        private readonly List<Message> _messages = new List<Message>();
 
         public bool MessageWasAdded { get; set; }
 
@@ -69,7 +69,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return _messages.Take(pageSize);
         }
 
-        public Task AddAsync(Message message, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task AddAsync(Message message, int messageStoreTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);
@@ -79,7 +80,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(0);
         }
 
-        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled<Message>(cancellationToken);
@@ -88,55 +90,5 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         }
 
         public bool ContinueOnCapturedContext { get; set; }
-    }
-
-    public class DynamoDbMessage
-    {
-        [DynamoDBHashKey]
-        public string Id { get; set; }
-        [DynamoDBProperty]
-        public string MessageId { get; set; }
-        [DynamoDBProperty]
-        public string Topic { get; set; }
-        [DynamoDBProperty]
-        public string MessageType { get; set; }
-        [DynamoDBRangeKey]
-        public string TimeStamp { get; set; }
-        [DynamoDBProperty]
-        public string HeaderBag { get; set; }
-        [DynamoDBProperty]
-        public string Body { get; set; }
-
-        public DynamoDbMessage() { }
-
-        public DynamoDbMessage (Message message)
-        {
-            Id = $"{message.Header.TimeStamp:yyyy-MM-dd}";
-            MessageId = message.Id.ToString();
-            Topic = message.Header.Topic;
-            MessageType = message.Header.MessageType.ToString();
-            TimeStamp = message.Header.TimeStamp == DateTime.MinValue ? $"{DateTime.UtcNow}" : $"{message.Header.TimeStamp}";
-            HeaderBag = JsonConvert.SerializeObject(message.Header.Bag);
-            Body = message.Body.Value;
-        }
-
-        public Message ConvertToMessage()
-        {
-            var messageId = Guid.Parse(MessageId);
-            var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
-            var timestamp = DateTime.Parse(TimeStamp);
-            var bag = JsonConvert.DeserializeObject<Dictionary<string, string>>(HeaderBag);
-
-            var header = new MessageHeader(messageId, Topic, messageType, timestamp);
-
-            foreach (var key in bag.Keys)
-            {
-                header.Bag.Add(key, bag[key]);
-            }
-
-            var body = new MessageBody(Body);
-
-            return new Message(header, body);
-        }
     }
 }

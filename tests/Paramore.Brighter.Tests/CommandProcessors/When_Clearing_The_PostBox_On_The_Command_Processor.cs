@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
+using System.Linq;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -32,23 +32,23 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorPostMissingMessageProducerAsyncTests : IDisposable
+    public class CommandProcessorPostBoxClearTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
+        private readonly Message _message;
         private readonly FakeMessageStore _fakeMessageStore;
-        private Exception _exception;
+        private readonly FakeMessageProducer _fakeMessageProducer;
 
-        public CommandProcessorPostMissingMessageProducerAsyncTests()
+        public CommandProcessorPostBoxClearTests()
         {
-            _myCommand.Value = "Hello World";
+            var myCommand = new MyCommand{ Value = "Hello World"};
 
             _fakeMessageStore = new FakeMessageStore();
+            _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonConvert.SerializeObject(_myCommand))
+                new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageBody(JsonConvert.SerializeObject(myCommand))
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
@@ -64,24 +64,32 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
+                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStoreAsync<Message>)_fakeMessageStore,
-                (IAmAMessageProducerAsync)null);
+                (IAmAMessageStore<Message>)_fakeMessageStore,
+                (IAmAMessageProducer)_fakeMessageProducer);
         }
 
         [Fact]
-        public async Task When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
+        public void When_Clearing_The_PostBox_On_The_Command_Processor()
         {
-            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
+            _fakeMessageStore.Add(_message);
+            
+            _commandProcessor.ClearPostBox(_message.Id);
 
-            //_should_throw_an_exception
-            _exception.Should().BeOfType<InvalidOperationException>();
+            //_should_send_a_message_via_the_messaging_gateway
+            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+
+            var sentMessage = _fakeMessageProducer.SentMessages.FirstOrDefault();
+            sentMessage.Should().NotBe(null);
+            sentMessage.Id.Should().Be(_message.Id);
+            sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
+            sentMessage.Body.Value.Should().Be(_message.Body.Value);
         }
 
         public void Dispose()
         {
             _commandProcessor.Dispose();
-        }
+       }
     }
 }

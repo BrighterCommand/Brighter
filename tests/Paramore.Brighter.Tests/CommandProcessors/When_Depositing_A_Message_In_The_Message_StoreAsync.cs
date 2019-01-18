@@ -1,27 +1,3 @@
-#region Licence
-/* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -32,15 +8,16 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorPostCommandAsyncTests
+    public class CommandProcessorDepositPostTestsAsync
     {
+        
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private Message _message;
+        private readonly Message _message;
         private readonly FakeMessageStore _fakeMessageStore;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
-        public CommandProcessorPostCommandAsyncTests()
+        public CommandProcessorDepositPostTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
@@ -71,22 +48,30 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 (IAmAMessageProducerAsync)_fakeMessageProducer);
         }
 
+
         [Fact]
-        public async Task When_Posting_A_Message_To_The_Command_Processor_Async()
+        public async Task When_depositing_a_message_in_the_message_store()
         {
-            await _commandProcessor.PostAsync(_myCommand);
-
-           //_should_store_the_message_in_the_sent_command_message_repository
+            //act
+            var postedMessageId = await _commandProcessor.DepositPostAsync(_myCommand);
+            
+            //assert
+            //message should be in the store
             _fakeMessageStore.MessageWasAdded.Should().BeTrue();
-            //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
-            //_should_convert_the_command_into_a_message
+            //message should not be posted
+            _fakeMessageProducer.MessageWasSent.Should().BeFalse();
+            
+            //message should correspond to the command
+            var depositedPost = _fakeMessageStore.Get(postedMessageId);
+            depositedPost.Id.Should().Be(_message.Id);
+            depositedPost.Body.Value.Should().Be(_message.Body.Value);
+            depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
+            depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
         }
-
+            
         public void Dispose()
         {
             _commandProcessor.Dispose();
         }
-
-    }
+     }
 }

@@ -483,24 +483,7 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            _logger.Value.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
-
-            if (_messageStore == null)
-                throw new InvalidOperationException("No message store defined.");
-            if (_messageProducer == null)
-                throw new InvalidOperationException("No mesage producer defined.");
-
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
-
-            var message = messageMapper.MapToMessage(request);
-
-            RetryAndBreakCircuit(() =>
-            {
-                _messageStore.Add(message, _messageStoreTimeout);
-                _messageProducer.Send(message);
-            });
+            ClearPostBox(DepositPost(request));
         }
 
         /// <summary>
@@ -519,12 +502,57 @@ namespace Paramore.Brighter
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            _logger.Value.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+            var messageId = await DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
+            await ClearPostBoxAsync(new Guid[]{messageId}, continueOnCapturedContext, cancellationToken);
+        }
+
+        /// <summary>
+        /// Adds a message into the message store, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="ClearPostBox"/> 
+        /// </summary>
+        /// <param name="request">The request to save to the message store</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns></returns>
+        public Guid DepositPost<T>(T request) where T : class, IRequest
+        {
+            _logger.Value.InfoFormat("Save request: {0} {1}", request.GetType(), request.Id);
+
+            if (_messageStore == null)
+                throw new InvalidOperationException("No message store defined.");
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+
+            var message = messageMapper.MapToMessage(request);
+
+            RetryAndBreakCircuit(() =>
+            {
+                _messageStore.Add(message, _messageStoreTimeout);
+            });
+
+            return message.Id;
+        }
+        
+        /// <summary>
+        /// Adds a message into the message store, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="ClearPostBoxAsync"/> 
+        /// </summary>
+        /// <param name="request">The request to save to the message store</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns></returns>
+        public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            _logger.Value.InfoFormat("Save request: {0} {1}", request.GetType(), request.Id);
 
             if (_asyncMessageStore == null)
                 throw new InvalidOperationException("No async message store defined.");
-            if (_asyncMessageProducer == null)
-                throw new InvalidOperationException("No async message producer defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
             if (messageMapper == null)
@@ -535,9 +563,65 @@ namespace Paramore.Brighter
             await RetryAndBreakCircuitAsync(async ct =>
             {
                 await _asyncMessageStore.AddAsync(message, _messageStoreTimeout, ct).ConfigureAwait(continueOnCapturedContext);
-                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext);
             }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+
+            return message.Id;
         }
+
+
+        /// <summary>
+        /// Flushes the message box message given by <param name="posts"> to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// <param name="posts">The posts to flush</param>
+        public void ClearPostBox(params Guid[] posts)
+        {
+            if (_messageStore == null)
+                throw new InvalidOperationException("No message store defined.");
+            if (_messageProducer == null)
+                throw new InvalidOperationException("No mesage producer defined.");
+
+
+            foreach (var messageId in posts)
+            {
+                var message = _messageStore.Get(messageId);
+                if (message == null)
+                    throw new NullReferenceException($"Message with Id {messageId} not found in the Message Store");
+                
+                _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+
+                RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+            }
+
+        }
+
+        /// <summary>
+        /// Flushes the message box message given by <param name="posts"> to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// <param name="posts">The posts to flush</param>
+         public async Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+
+            if (_asyncMessageStore == null)
+                throw new InvalidOperationException("No async message store defined.");
+            if (_asyncMessageProducer == null)
+                throw new InvalidOperationException("No async message producer defined.");
+
+            foreach (var messageId in posts)
+            {
+                var message = await _asyncMessageStore.GetAsync(messageId, _messageStoreTimeout, cancellationToken);
+                if (message == null)
+                    throw new NullReferenceException($"Message with Id {messageId} not found in the Message Store");
+                
+                 _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+             
+                await RetryAndBreakCircuitAsync(
+                    async ct => await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext), 
+                    continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+            }
+
+
+        }
+        
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
