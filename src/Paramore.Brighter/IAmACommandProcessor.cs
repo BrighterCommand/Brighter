@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -87,5 +89,55 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
+
+        /// <summary>
+        /// Adds a message into the message store, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="CommandProcessor.ClearPostBox"/> 
+        /// </summary>
+        /// <param name="request">The request to save to the message store</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns></returns>
+        Guid DepositPost<T>(T request) where T : class, IRequest;
+
+        /// <summary>
+        /// Adds a message into the message store, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="CommandProcessor.ClearPostBoxAsync"/> 
+        /// </summary>
+        /// <param name="request">The request to save to the message store</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns></returns>
+        Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
+
+        /// <summary>
+        /// Flushes the message box message given by <param name="posts"> to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// <param name="posts">The posts to flush</param>
+        void ClearPostBox(params Guid[] posts);
+
+        /// <summary>
+        /// Flushes the message box message given by <param name="posts"> to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// <param name="posts">The posts to flush</param>
+        Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
+        /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
+        /// The message is placed into a message queue but not into the message store.
+        /// An ephemeral reply queue is created, and its name used to set the reply address for the response. We produce
+        /// a queue per exchange, to simplify correlating send and receive.
+        /// The response is directed to a registered handler.
+        /// Because the operation blocks, there is a mandatory timeout
+        /// </summary>
+        /// <param name="request">What message do we want a reply to</param>
+        /// <param name="timeOutInMilliseconds">The call blocks, so we must time out</param>
+        /// <exception cref="NotImplementedException"></exception>
+        TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds)
+            where T : class, ICall where TResponse : class, IResponse;
     }
 }

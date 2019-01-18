@@ -38,12 +38,18 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
         Post,
         SendAsync,
         PublishAsync,
-        PostAsync
+        PostAsync,
+        Deposit,
+        DepositAsync,
+        Clear,
+        ClearAsync,
+        Call
     }
 
     internal class SpyCommandProcessor : IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
+        private readonly Dictionary<Guid, IRequest> _postBox = new Dictionary<Guid, IRequest>();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
 
@@ -91,6 +97,46 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);
             await Task.Delay(0);
+        }
+
+        public Guid DepositPost<T>(T request) where T : class, IRequest
+        {
+            _postBox.Add(request.Id, request);
+            return request.Id;
+        }
+
+        public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var tcs = new TaskCompletionSource<Guid>();
+            _postBox.Add(request.Id, request);
+            tcs.SetResult(request.Id);
+            return tcs.Task.Result;
+        }
+
+        public void ClearPostBox(params Guid[] posts)
+        {
+            foreach (var messageId in posts)
+            {
+                if (_postBox.TryGetValue(messageId, out IRequest request))
+                {
+                    _requests.Enqueue(request);
+                }
+            }
+        }
+
+        public async Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            ClearPostBox(posts.ToArray());
+            await Task.Delay(0);
+        }
+
+        public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : class, IResponse
+        {
+            _requests.Enqueue(request);
+            Commands.Add(CommandType.Call);
+            return default (TResponse);
         }
 
         public virtual T Observe<T>() where T : class, IRequest
