@@ -53,7 +53,7 @@ namespace Tests
         [Fact]
         public void ShouldHaveTestHandlerRegisteredCorrectly()
         {
-            TestRegistration(typeof(TestEventHandler), ServiceLifetime.Scoped);
+            TestRegistration(typeof(TestEventHandler), ServiceLifetime.Transient);
         }
 
         [Fact]
@@ -65,12 +65,12 @@ namespace Tests
         [Fact]
         public void ShouldHaveDefaultHandlerRegisteredCorrectly()
         {
-            TestRegistration(typeof(ExceptionPolicyHandler<>), ServiceLifetime.Scoped);
-            TestRegistration(typeof(FallbackPolicyHandler<>), ServiceLifetime.Scoped);
-            TestRegistration(typeof(TimeoutPolicyHandler<>), ServiceLifetime.Scoped);
-            TestRegistration(typeof(MonitorHandler<>), ServiceLifetime.Scoped);
-            TestRegistration(typeof(CommandSourcingHandler<>), ServiceLifetime.Scoped);
-            TestRegistration(typeof(RequestLoggingHandler<>), ServiceLifetime.Scoped);
+            TestRegistration(typeof(ExceptionPolicyHandler<>), ServiceLifetime.Transient);
+            TestRegistration(typeof(FallbackPolicyHandler<>), ServiceLifetime.Transient);
+            TestRegistration(typeof(TimeoutPolicyHandler<>), ServiceLifetime.Transient);
+            TestRegistration(typeof(MonitorHandler<>), ServiceLifetime.Transient);
+            TestRegistration(typeof(CommandSourcingHandler<>), ServiceLifetime.Transient);
+            TestRegistration(typeof(RequestLoggingHandler<>), ServiceLifetime.Transient);
         }
 
         private void TestRegistration(Type expected, ServiceLifetime serviceLifetime)
