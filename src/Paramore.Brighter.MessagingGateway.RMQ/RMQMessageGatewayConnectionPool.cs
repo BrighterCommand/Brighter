@@ -34,8 +34,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
   /// </summary>
   public class RMQMessageGatewayConnectionPool
     {
-      private readonly string _connectionName;
-      private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
+        private readonly string _connectionName;
+        private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
 

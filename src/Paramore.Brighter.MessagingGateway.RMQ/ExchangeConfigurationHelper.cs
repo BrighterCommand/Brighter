@@ -31,10 +31,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
         {
+            var arguments = new Dictionary<string, object>();
             if (connection.Exchange.SupportDelay)
-                channel.ExchangeDeclare(connection.Exchange.Name, "x-delayed-message", connection.Exchange.Durable, autoDelete: false, arguments: new Dictionary<string, object> { { "x-delayed-type", connection.Exchange.Type } });
-            else
-                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable);
+            {
+                arguments.Add("x-delayed-type", connection.Exchange.Type);
+                connection.Exchange.Type = "x-delayed-message";
+            }
+            channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false, arguments: arguments);
         }
     }
 }
