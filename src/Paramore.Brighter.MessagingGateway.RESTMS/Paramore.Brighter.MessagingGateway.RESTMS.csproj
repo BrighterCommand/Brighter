@@ -15,7 +15,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Hawk" Version="2.0.0-beta5" />
+    <PackageReference Include="Hawk" Version="6.0.3" />
     <PackageReference Include="System.Runtime.Serialization.Xml" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Serialization.Primitives" Version="4.3.0" />
     <PackageReference Include="System.Private.DataContractSerialization" Version="4.3.0" />
