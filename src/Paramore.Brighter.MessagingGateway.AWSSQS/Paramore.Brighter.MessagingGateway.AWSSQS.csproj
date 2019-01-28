@@ -15,9 +15,9 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Core" Version="3.3.27.1" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.3.14" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.3.3.50" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.31.6" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.3.17" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.3.53" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)'=='netstandard1.5'">
     <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
