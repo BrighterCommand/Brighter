@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _connectionFactory = new ConnectionFactory
             {
                 Uri = Connection.AmpqUri.Uri,
-                RequestedHeartbeat = 30
+                RequestedHeartbeat = connection.Heartbeat
             };
 
             DelaySupported = Connection.Exchange.SupportDelay;
@@ -119,7 +119,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             if (Channel == null || Channel.IsClosed)
             {
-                var connection = new RMQMessageGatewayConnectionPool(Connection.Name).GetConnection(_connectionFactory);
+                var connection = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
 
                 _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}",
                     Connection.AmpqUri.GetSanitizedUri());
@@ -144,7 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         protected void ResetConnectionToBroker()
         {
-            new RMQMessageGatewayConnectionPool(Connection.Name).ResetConnection(_connectionFactory);
+            new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
         }
 
         ~RMQMessageGateway()

@@ -29,22 +29,24 @@ using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-  /// <summary>
-  /// Class MessageGatewayConnectionPool.
-  /// </summary>
-  public class RMQMessageGatewayConnectionPool
+    /// <summary>
+    /// Class MessageGatewayConnectionPool.
+    /// </summary>
+    public class RMQMessageGatewayConnectionPool
     {
         private readonly string _connectionName;
+        private readonly ushort _connectionHeartbeat;
         private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
 
-      public RMQMessageGatewayConnectionPool(string connectionName)
-      {
-        _connectionName = connectionName;
-      }
-
-      /// <summary>
+        public RMQMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
+        {
+            _connectionName = connectionName;
+            _connectionHeartbeat = connectionHeartbeat;
+        }
+        
+        /// <summary>
         /// Return matching RabbitMQ connection if exist (match by amqp scheme)
         /// or create new connection to RabbitMQ (thread-safe)
         /// </summary>
@@ -56,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             var connectionFound = s_connectionPool.TryGetValue(connectionId, out var pooledConnection);
 
-            if (connectionFound != false && pooledConnection.Connection.IsOpen != false) 
+            if (connectionFound != false && pooledConnection.Connection.IsOpen != false)
                 return pooledConnection.Connection;
 
             lock (s_lock)
@@ -75,14 +77,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public void ResetConnection(ConnectionFactory connectionFactory)
         {
             var connectionId = GetConnectionId(connectionFactory);
-            
+
             lock (s_lock)
             {
-               var connection = s_connectionPool[connectionId];
-               TryRemoveConnection(connectionId);
-               CreateConnection(connectionFactory);
+                var connection = s_connectionPool[connectionId];
+                TryRemoveConnection(connectionId);
+                CreateConnection(connectionFactory);
             }
-       }
+        }
 
         private PooledConnection CreateConnection(ConnectionFactory connectionFactory)
         {
@@ -92,22 +94,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             s_logger.Value.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
 
-            connectionFactory.RequestedHeartbeat = 5;
+            connectionFactory.RequestedHeartbeat = _connectionHeartbeat;
             connectionFactory.RequestedConnectionTimeout = 5000;
             connectionFactory.SocketReadTimeout = 5000;
             connectionFactory.SocketWriteTimeout = 5000;
 
             var connection = connectionFactory.CreateConnection(_connectionName);
-            
+
             s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
-            
+
             EventHandler<ShutdownEventArgs> ShutdownHandler = delegate { TryRemoveConnection(connectionId); };
-            connection.ConnectionShutdown += ShutdownHandler; 
+            connection.ConnectionShutdown += ShutdownHandler;
 
             var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
             s_connectionPool.Add(connectionId, pooledConnection);
-            
+
             return pooledConnection;
         }
 
