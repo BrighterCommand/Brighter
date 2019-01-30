@@ -20,6 +20,7 @@ namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
         [UseCommandSourcingAsync(1, onceOnly: true, contextKey: typeof(MyStoredCommandToFailHandlerAsync), timing:HandlerTiming.Before)]
         public override async Task<MyCommandToFail> HandleAsync(MyCommandToFail command, CancellationToken cancellationToken = default(CancellationToken))
         {
+            await Task.Delay(0, cancellationToken);
             throw new NotImplementedException();
         }
     }

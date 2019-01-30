@@ -11,8 +11,6 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
     {
         private readonly IAmAMessageProducer _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private string _messageBody;
-        private IDictionary<string, object> _messageHeaders;
         private string _topic = Guid.NewGuid().ToString();
         private const int BatchSize = 3;
 

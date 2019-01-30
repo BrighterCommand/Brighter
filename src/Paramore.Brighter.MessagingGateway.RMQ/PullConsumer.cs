@@ -14,7 +14,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
         //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
         private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new ConcurrentQueue<BasicDeliverEventArgs>();
-        private EventingBasicConsumer consumer;
 
         public PullConsumer(IModel channel)
             :base(channel)

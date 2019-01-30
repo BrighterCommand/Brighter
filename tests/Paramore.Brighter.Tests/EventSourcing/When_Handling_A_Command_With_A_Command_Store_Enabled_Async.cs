@@ -50,7 +50,9 @@ namespace Paramore.Brighter.Tests.EventSourcing
             Guid id = Guid.NewGuid();
             Catch.Exception(() => _commandProcessor.Send(new MyCommandToFail() { Id = id }));
 
-            _commandStore.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName).Result.Should().BeFalse();
+            var exists =
+                await _commandStore.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
+            exists.Should().BeFalse();
         }
     }
 }

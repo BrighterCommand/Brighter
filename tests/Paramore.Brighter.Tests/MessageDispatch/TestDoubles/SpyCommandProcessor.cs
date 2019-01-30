@@ -110,6 +110,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
         {
             var tcs = new TaskCompletionSource<Guid>();
             _postBox.Add(request.Id, request);
+            await Task.Delay(0, cancellationToken);
             tcs.SetResult(request.Id);
             return tcs.Task.Result;
         }

@@ -36,6 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public AzureServiceBusMessageProducer(AzureServiceBusMessagingGatewayConfiguration configuration)
             : base(configuration)
         {
+            _pool = new MessageSenderPool();
         }
 
         /// <summary>
