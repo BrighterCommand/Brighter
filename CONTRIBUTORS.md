@@ -28,7 +28,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Derek Comartin](https://github.com/dcomartin)**
  * MySQL message store and command store
  
-**[Jame Clayton](https://github.com/mit-jamie-clayton)**
+**[Jamie Clayton](https://github.com/mit-jamie-clayton)**
 * Documentation fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
