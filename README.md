@@ -1,10 +1,10 @@
 | | |
 | ------------- | ------------- |
-|![canon](https://openclipart.org/people/amilo/canon.svg) |[Brighter](https://brightercommand.github.io/Brighter/)|
+|![canon](https://openclipart.org/download/175068/canon.svg) |[Brighter](https://github.com/BrighterCommand/Brighter)|
 ||Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker](http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern. It can be used for interoperability in a microservices architecture as well. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.svg)](https://www.nuget.org/packages/paramore.brighter/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
-| Web  |http://brightercommand.github.io/Brighter/  |
+| Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://paramore.readthedocs.io); [Wiki](https://github.com/BrighterCommand/Brighter/wiki)  |
 | Source  |https://github.com/BrighterCommand/Brighter |
 | Chat | [![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
@@ -19,7 +19,7 @@
  	- Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
 
 ## Documentation
-* More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](http://brightercommand.github.io/Brighter/)
+* More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](https://github.com/BrighterCommand/Brighter)
 
 
 ## What are the different branches?
@@ -27,7 +27,6 @@
 | Branch        | Description   |
 | ------------- | ------------- |
 | Master | The tip of active development. Anything in master should ship at the next release. Code here should conform to CI basics: compile, pass tests etc.  |
-| gh-pages | Documentation for the library|
 | [Other]  | A branch for any work that is not ready to go into master (for example would break CI) or is experimental i.e. we don't know if we intend to ever ship, we are just trying out ideas.  |
 
 ## Using Docker Compose to test ##
