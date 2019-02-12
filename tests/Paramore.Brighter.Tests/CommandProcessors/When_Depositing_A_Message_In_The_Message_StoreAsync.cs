@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -68,7 +68,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
         }
-            
+        
+        [Fact]
         public void Dispose()
         {
             _commandProcessor.Dispose();

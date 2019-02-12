@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -68,6 +68,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
         }
         
+        [Fact]
         public void Dispose()
         {
             _commandProcessor.Dispose();
