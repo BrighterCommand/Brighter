@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
 {
+    [Trait("Category", "DynamoDB")]
     public class DynamoDbCommandExistsAsyncTests : BaseCommandStoreDyamoDBBaseTest
     {       
         private readonly MyCommand _command;

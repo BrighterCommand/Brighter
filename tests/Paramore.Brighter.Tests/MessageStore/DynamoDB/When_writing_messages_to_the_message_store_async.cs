@@ -30,7 +30,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessageStore.DynamoDB
 {
-    [Trait("Category", "AWS")]
+    [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB MessageStore")]
     public class DynamoDbMessageStoreWritingMessagesAsyncTests : BaseDynamoDBMessageStoreTests
     {

@@ -10,6 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandStore.DynamoDB
 {
+    [Trait("Category", "DynamoDB")]
     public class DynamoDbRangeOfCommandsTests : IDisposable
     {
         private readonly Guid[] _guids;
