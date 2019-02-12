@@ -1,6 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using RabbitMQ&lt;</Description>
+    <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using RabbitMQ</Description>
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.RMQ</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
