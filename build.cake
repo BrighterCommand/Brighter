@@ -42,7 +42,7 @@ Task("LiteUnitTests")
             {
                 Configuration = configuration,
                 NoBuild = true,
-                Filter = "Category!=RMQ&Category!=RMQDelay&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis&Category!=PostgreSql&Category!=MySql&Category!=MSSQL",
+                Filter = "Category!=RMQ&Category!=RMQDelay&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis&Category!=PostgreSql&Category!=MySql&Category!=MSSQL&Category!=DynamoDB",
                 Verbosity  = DotNetCoreVerbosity.Minimal
             };
           DotNetCoreTest("./tests/Paramore.Brighter.Tests/Paramore.Brighter.Tests.csproj", settings);
