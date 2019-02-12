@@ -29,9 +29,6 @@ using System.Threading;
 using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
-using Thinktecture.IdentityModel.Hawk.Client;
-using Thinktecture.IdentityModel.Hawk.Core;
-using Thinktecture.IdentityModel.Hawk.Core.Helpers;
 
 namespace Paramore.Brighter.MessagingGateway.RESTMS
 {
@@ -62,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         public HttpClient Client()
         {
-            _client = new ThreadLocal<HttpClient>(() => CreateClient(BuildClientOptions(), _timeout));
+            _client = new ThreadLocal<HttpClient>(() => CreateClient(_timeout));
             return _client.Value;
         }
 
@@ -111,36 +108,10 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             return domainObject;
         }
 
-        /// <summary>
-        /// Builds the client options.
-        /// </summary>
-        /// <returns>ClientOptions.</returns>
-        private ClientOptions BuildClientOptions()
+        private HttpClient CreateClient( double timeout)
         {
-            var credential = new Credential()
-            {
-                Id = Configuration.RestMS.Id,
-                Algorithm = SupportedAlgorithms.SHA256,
-                User = Configuration.RestMS.User,
-                Key = Convert.FromBase64String(Configuration.RestMS.Key)
-            };
 
-            var options = new ClientOptions()
-            {
-                CredentialsCallback = () => credential
-            };
-            return options;
-        }
-
-        private HttpClient CreateClient(ClientOptions options, double timeout)
-        {
-            var handler = new HawkValidationHandler(options);
-            var requestHandler = new HttpClientHandler()
-            {
-                AllowAutoRedirect = true,
-            };
-            handler.InnerHandler = requestHandler;
-            var client = new HttpClient(handler)
+            var client = new HttpClient()
             {
                 Timeout = TimeSpan.FromMilliseconds(timeout),
                 
