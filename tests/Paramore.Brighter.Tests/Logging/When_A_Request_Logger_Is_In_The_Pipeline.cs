@@ -10,7 +10,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Tests.Logging
 {
-    
+    [Collection("Logger Tests")]
     public class CommandProcessorWithLoggingInPipelineTests : IClassFixture<LoggerFixture>, IDisposable
     {
         private readonly ITestOutputHelper _output;
