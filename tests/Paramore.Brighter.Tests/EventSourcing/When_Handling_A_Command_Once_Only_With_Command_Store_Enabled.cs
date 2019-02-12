@@ -1,6 +1,4 @@
-﻿using System;
-using Paramore.Brighter.Eventsourcing.Exceptions;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+﻿using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using TinyIoC;
 using Xunit;
@@ -36,10 +34,9 @@ namespace Paramore.Brighter.Tests.EventSourcing
         {
             _commandProcessor.Send(_command);
 
-            Exception ex = Assert.Throws<OnceOnlyException>(() => _commandProcessor.Send(_command));
+            var exception = Record.Exception(() => _commandProcessor.Send(_command));
             
-            Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
+            Assert.Null(exception);
         }
-        
     }
 }

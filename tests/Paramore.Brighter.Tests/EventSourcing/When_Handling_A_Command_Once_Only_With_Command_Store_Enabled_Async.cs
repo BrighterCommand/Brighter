@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using Paramore.Brighter.Eventsourcing.Exceptions;
+﻿using System.Threading.Tasks;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using TinyIoC;
@@ -36,11 +34,10 @@ namespace Paramore.Brighter.Tests.EventSourcing
         public async Task When_Handling_A_Command_Only_Once()
         {
             await _commandProcessor.SendAsync(_command);
+
+            var exception = await Record.ExceptionAsync(() => _commandProcessor.SendAsync(_command));
             
-            Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(() => _commandProcessor.SendAsync(_command));
-            
-            Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
- 
+            Assert.Null(exception);
         }
     }
 }

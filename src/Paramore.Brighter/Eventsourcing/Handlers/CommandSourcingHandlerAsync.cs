@@ -25,7 +25,6 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Eventsourcing.Handlers
@@ -80,8 +79,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
                 var exists = await _commandStore.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 if (exists)
                 {
-                    _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
-                    throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
+                    _logger.Value.WarnFormat("Command {0} has already been seen", command.Id);
                 }
             }
             

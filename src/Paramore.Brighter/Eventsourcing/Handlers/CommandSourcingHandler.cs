@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Eventsourcing.Handlers
@@ -75,10 +74,8 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
                  _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 if (_commandStore.Exists<T>(command.Id, _contextKey))
                 {
-                    _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
-                    throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
+                    _logger.Value.WarnFormat("Command {0} has already been seen", command.Id);
                 }
-
             }
             
             T handledCommand = base.Handle(command);
