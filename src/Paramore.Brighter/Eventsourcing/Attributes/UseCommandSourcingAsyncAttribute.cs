@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Eventsourcing.Attributes
     {
         public bool OnceOnly { get; }
         public string ContextKey { get; }
+        public OnceOnlyAction OnceOnlyAction { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UseCommandSourcingAsyncAttribute"/> class.
@@ -46,11 +47,13 @@ namespace Paramore.Brighter.Eventsourcing.Attributes
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timing">The timing.</param>
-        public UseCommandSourcingAsyncAttribute(int step, bool onceOnly = false, string contextKey = null, HandlerTiming timing = HandlerTiming.Before)
+        /// <param name="onceOnlyAction">Action to take if prevent duplicate messages, and we receive a duplicate message</param>
+        public UseCommandSourcingAsyncAttribute(int step, bool onceOnly = false, string contextKey = null, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw)
             : base(step, timing)
         {
             OnceOnly = onceOnly;
             ContextKey = contextKey;
+            OnceOnlyAction = onceOnlyAction;
         }
 
         /// <summary>
@@ -60,15 +63,16 @@ namespace Paramore.Brighter.Eventsourcing.Attributes
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timing">The timing.</param>
-        public UseCommandSourcingAsyncAttribute(int step, Type contextKey, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before)
-            : this(step, onceOnly, contextKey.FullName, timing)
+        /// <param name="onceOnlyAction">Action to take if prevent duplicate messages, and we receive a duplicate message</param>
+        public UseCommandSourcingAsyncAttribute(int step, Type contextKey, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw)
+            : this(step, onceOnly, contextKey.FullName, timing, onceOnlyAction)
         {
         }
 
         public override object[] InitializerParams()
         {
             
-            return new object[]{OnceOnly, ContextKey};
+            return new object[]{OnceOnly, ContextKey, OnceOnlyAction};
         }
 
         /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
@@ -8,6 +8,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
+    [Collection("AWS")]
+    [Trait("Category", "AWS")]
     public class SQSBufferedConsumerTests
     {
         private readonly SqsMessageProducer _messageProducer;
