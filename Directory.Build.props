@@ -3,8 +3,8 @@
     <Authors>Ian Cooper</Authors>
     <Copyright>Copyright © Ian Cooper 2014</Copyright>
     <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
-    <PackageIconUrl>https://brightercommand.github.io/Brighter//images/brightercanon-nuget.png</PackageIconUrl>
-    <PackageProjectUrl>https://brightercommand.github.io/Brighter/</PackageProjectUrl>
+    <PackageIconUrl>https://github.com/BrighterCommand/Brighter/blob/master/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
     <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter</RepositoryUrl>
