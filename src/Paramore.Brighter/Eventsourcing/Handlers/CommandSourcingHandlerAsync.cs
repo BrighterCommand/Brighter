@@ -46,6 +46,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         private readonly IAmACommandStoreAsync _commandStore;
         private bool _onceOnly;
         private string _contextKey;
+        private OnceOnlyAction _onceOnlyAction;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandSourcingHandlerAsync{T}" /> class.
@@ -61,6 +62,8 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         {
             _onceOnly = (bool) initializerList[0];
             _contextKey = (string)initializerList[1];
+            _onceOnlyAction = (OnceOnlyAction)initializerList[2];
+            
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -78,10 +81,17 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
                 _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
                 var exists = await _commandStore.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                if (exists)
+                
+                if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
+                }
+
+                if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
+                {
+                    _logger.Value.WarnFormat("Command {0} has already been seen", command.Id);
+                    return command;
                 }
             }
             

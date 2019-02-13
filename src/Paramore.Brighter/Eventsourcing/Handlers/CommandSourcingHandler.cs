@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         private readonly IAmACommandStore _commandStore;
         private bool _onceOnly;
         private string _contextKey;
+        private OnceOnlyAction _onceOnlyAction;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
@@ -59,6 +60,8 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
         {
             _onceOnly = (bool) initializerList[0];
             _contextKey = (string)initializerList[1];
+            _onceOnlyAction = (OnceOnlyAction)initializerList[2];
+            
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -73,12 +76,20 @@ namespace Paramore.Brighter.Eventsourcing.Handlers
             if (_onceOnly)
             {
                  _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
-                if (_commandStore.Exists<T>(command.Id, _contextKey))
-                {
+
+                 var exists = _commandStore.Exists<T>(command.Id, _contextKey); 
+                 
+                if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
+                {                    
                     _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
+                if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
+                {
+                    _logger.Value.WarnFormat("Command {0} has already been seen", command.Id);
+                    return command;
+                }                
             }
             
             T handledCommand = base.Handle(command);
