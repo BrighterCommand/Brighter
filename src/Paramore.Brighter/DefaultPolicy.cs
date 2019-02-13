@@ -1,4 +1,5 @@
-#region Licence
+﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Toby Henderson
 
@@ -25,65 +26,49 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
+using Polly.Registry;
 
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class DefaultPolicy
-    /// We use <a href="">Polly</a> policies to provide Quality of Service. 
-    /// By default we provide them for a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> and require you to register policies with
-    /// The is a default policy which will retry once only. If you want better control over retries please use the <see cref="PolicyRegistry"/>
-    /// to respectively determine retry attempts for putting onto and popping off the queue and for breaking the circuit if we cannot
-    /// You can register additional policies (or reuse these) to provide QoS for individual handlers. The <see cref="UsePolicyAttribute"/> and <see cref="ExceptionPolicyandler"/>
-    /// provide an easy way to do this using the policies that you add to this registry
-    /// This is a default implementation of <see cref="IAmAPolicyRegistry"/>
+    ///     Class DefaultPolicy
+    ///     We use <a href="">Polly</a> policies to provide Quality of Service.
+    ///     By default we provide them for a
+    ///     <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> and require you to
+    ///     register policies with
+    ///     The is a default policy which will retry once only. If you want better control over retries please use the
+    ///     <see cref="PolicyRegistry" />
+    ///     to respectively determine retry attempts for putting onto and popping off the queue and for breaking the circuit if
+    ///     we cannot
+    ///     You can register additional policies (or reuse these) to provide QoS for individual handlers. The
+    ///     <see cref="UsePolicyAttribute" /> and <see cref="ExceptionPolicyHandler" />
+    ///     provide an easy way to do this using the policies that you add to this registry
+    ///     This is a default implementation of <see cref="IAmAPolicyRegistry" />
     /// </summary>
-    public class DefaultPolicy : IAmAPolicyRegistry
+    public class DefaultPolicy : PolicyRegistry
     {
-        /// <summary>
-        /// Gets the default policy of retry once
-        /// </summary>
-        /// <param name="policyName">Name of the policy. As this a default policy this is not used</param>
-        /// <returns>Policy.</returns>
-        public Policy Get(string policyName)
+        public DefaultPolicy()
         {
-            switch (policyName)
-            {
-                case CommandProcessor.CIRCUITBREAKER:
-                    return Policy.Handle<Exception>().CircuitBreaker(10, new TimeSpan(5000));
-
-                case CommandProcessor.CIRCUITBREAKERASYNC:
-                    return Policy.Handle<Exception>().CircuitBreakerAsync(10, new TimeSpan(5000));
-
-                case CommandProcessor.RETRYPOLICY:
-                    return Policy.Handle<Exception>().WaitAndRetry(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50),
-                        TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
-
-                case CommandProcessor.RETRYPOLICYASYNC:
-                    return Policy.Handle<Exception>().WaitAndRetryAsync(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50),
-                        TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
-
-                default:
-                    return Policy.Handle<Exception>().Retry();
-            }
+            AddDefaultPolicies();
         }
 
-        /// <summary>
-        /// This will always return false as there is only one default policy
-        /// </summary>
-        /// <param name="policyName">Name of the policy. As this a default policy this is not used</param>
-        /// <returns></returns>
-        public bool Has(string policyName)
+        private void AddDefaultPolicies()
         {
-            return false;
+            Add(CommandProcessor.CIRCUITBREAKER, Policy.Handle<Exception>().CircuitBreaker(10, new TimeSpan(5000)));
+            Add(CommandProcessor.CIRCUITBREAKERASYNC,
+                Policy.Handle<Exception>().CircuitBreakerAsync(10, new TimeSpan(5000)));
+            Add(CommandProcessor.RETRYPOLICY,
+                Policy.Handle<Exception>().WaitAndRetry(new[]
+                {
+                    TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromMilliseconds(150)
+                }));
+            Add(CommandProcessor.RETRYPOLICYASYNC,
+                Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+                {
+                    TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
+                    TimeSpan.FromMilliseconds(150)
+                }));
         }
     }
 }

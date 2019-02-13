@@ -4,6 +4,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
@@ -40,9 +41,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
+            PolicyRegistry policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
+                policyRegistry,
                 messageMapperRegistry,
                 (IAmAMessageStoreAsync<Message>)_fakeMessageStore,
                 (IAmAMessageProducerAsync)_fakeMessageProducer);

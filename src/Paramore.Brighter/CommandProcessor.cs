@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,12 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Polly;
+using Polly.Registry;
 
 namespace Paramore.Brighter
 {
@@ -48,7 +48,7 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
-        private readonly IAmAPolicyRegistry _policyRegistry;
+        private readonly IPolicyRegistry<string>  _policyRegistry;
         private readonly int _messageStoreTimeout;
         private readonly IAmAMessageStore<Message> _messageStore;
         private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
@@ -61,7 +61,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
-        /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
+        /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
         public const string CIRCUITBREAKER = "Paramore.Brighter.CommandProcessor.CircuitBreaker";
@@ -74,13 +74,13 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
-        /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
+        /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
         public const string CIRCUITBREAKERASYNC = "Paramore.Brighter.CommandProcessor.CircuitBreaker.Async";
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines the retry strategy when communication with the Work Queue fails.
-        /// Register that policy with your <see cref="IAmAPolicyRegistry"/> such as <see cref="PolicyRegistry"/>
+        /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
         public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
@@ -100,7 +100,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string> policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _subscriberRegistry = subscriberRegistry;
@@ -124,7 +124,7 @@ namespace Paramore.Brighter
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _subscriberRegistry = subscriberRegistry;
@@ -147,7 +147,7 @@ namespace Paramore.Brighter
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
         {
             _subscriberRegistry = subscriberRegistry;
@@ -170,7 +170,7 @@ namespace Paramore.Brighter
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageProducer messageProducer,
@@ -199,7 +199,7 @@ namespace Paramore.Brighter
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
@@ -224,7 +224,6 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="messageStore">The message store.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
@@ -233,7 +232,7 @@ namespace Paramore.Brighter
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300,
@@ -265,7 +264,7 @@ namespace Paramore.Brighter
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
             IAmAMessageProducerAsync asyncMessageProducer,
@@ -301,7 +300,7 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
-            IAmAPolicyRegistry policyRegistry,
+            IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAMessageStore<Message> messageStore,
             IAmAMessageStoreAsync<Message> asyncMessageStore,
@@ -572,13 +571,14 @@ namespace Paramore.Brighter
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// </summary>
         /// <param name="posts">The posts to flush</param>
         public void ClearPostBox(params Guid[] posts)
         {
             if (_messageStore == null)
                 throw new InvalidOperationException("No message store defined.");
             if (_messageProducer == null)
-                throw new InvalidOperationException("No mesage producer defined.");
+                throw new InvalidOperationException("No message producer defined.");
 
 
             foreach (var messageId in posts)
@@ -597,6 +597,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// </summary>
         /// <param name="posts">The posts to flush</param>
          public async Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -687,7 +688,7 @@ namespace Paramore.Brighter
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                     _logger.Value.DebugFormat("Reply recived from {0}", routingKey);
+                     _logger.Value.DebugFormat("Reply received from {0}", routingKey);
                      //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     response = inMessageMapper.MapToRequest(responseMessage);
                     Send(response);
@@ -740,24 +741,24 @@ namespace Paramore.Brighter
 
         private void CheckCircuit(Action send)
         {
-            _policyRegistry.Get(CIRCUITBREAKER).Execute(send);
+            _policyRegistry.Get<Policy>(CIRCUITBREAKER).Execute(send);
         }
 
         private async Task CheckCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _policyRegistry.Get(CIRCUITBREAKERASYNC)
+            await _policyRegistry.Get<AsyncPolicy>(CIRCUITBREAKERASYNC)
                 .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
         }
 
         private void Retry(Action send)
         {
-            _policyRegistry.Get(RETRYPOLICY).Execute(send);
+            _policyRegistry.Get<Policy>(RETRYPOLICY).Execute(send);
         }
 
         private async Task RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _policyRegistry.Get(RETRYPOLICYASYNC)
+            await _policyRegistry.Get<AsyncPolicy>(RETRYPOLICYASYNC)
                 .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
         }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,6 +28,7 @@ using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 using Paramore.Brighter.ServiceActivator.Ports.Mappers;
 using Polly;
+using Polly.Registry;
 
 //Needs a different namespace to the DispatchBuilder to avoid collisions
 namespace Paramore.Brighter.ServiceActivator.ControlBus

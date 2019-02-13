@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors

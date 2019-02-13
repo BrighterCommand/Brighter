@@ -1,9 +1,10 @@
-using System;
+﻿using System;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors

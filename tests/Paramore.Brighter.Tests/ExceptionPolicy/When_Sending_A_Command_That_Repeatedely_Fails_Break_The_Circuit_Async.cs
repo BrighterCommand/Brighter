@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,6 +31,7 @@ using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
 using Polly;
 using Polly.CircuitBreaker;
+using Polly.Registry;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,6 +28,7 @@ using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
@@ -56,11 +57,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
             var retryPolicy = Policy
                 .Handle<Exception>()
-                .Retry();
+                .RetryAsync();
 
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),

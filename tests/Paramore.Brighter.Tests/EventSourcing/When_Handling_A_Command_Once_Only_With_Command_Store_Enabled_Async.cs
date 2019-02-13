@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
+using Polly.Registry;
 using TinyIoC;
 using Xunit;
 

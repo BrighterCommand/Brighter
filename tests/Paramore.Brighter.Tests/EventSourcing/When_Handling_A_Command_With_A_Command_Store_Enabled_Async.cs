@@ -4,6 +4,7 @@ using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
+using Polly.Registry;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.EventSourcing

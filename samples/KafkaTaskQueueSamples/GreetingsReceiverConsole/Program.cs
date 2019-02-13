@@ -32,6 +32,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
+using Polly.Registry;
 using Serilog;
 
 namespace KafkaTaskQueueSamples.GreetingsReceiverConsole

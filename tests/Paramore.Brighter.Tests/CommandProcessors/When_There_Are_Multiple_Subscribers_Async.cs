@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Polly.Registry;
 using TinyIoC;
 using Xunit;
 

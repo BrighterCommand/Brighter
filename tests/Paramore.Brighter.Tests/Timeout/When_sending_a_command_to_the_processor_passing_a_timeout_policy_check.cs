@@ -26,6 +26,7 @@ using System;
 using Xunit;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Timeout.Test_Doubles;
+using Polly.Registry;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.Timeout

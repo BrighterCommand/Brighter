@@ -5,6 +5,7 @@ using Xunit;
 using Paramore.Brighter.Logging.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.Logging.TestDoubles;
+using Polly.Registry;
 using Serilog;
 using Serilog.Sinks.TestCorrelator;
 using TinyIoC;

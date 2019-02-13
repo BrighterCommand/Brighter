@@ -3,6 +3,7 @@ using FluentAssertions;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors

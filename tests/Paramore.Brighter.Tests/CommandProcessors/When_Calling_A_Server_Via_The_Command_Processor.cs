@@ -4,6 +4,7 @@ using Newtonsoft.Json.Linq;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Polly.Registry;
 using ServiceStack.DataAnnotations;
 using Xunit;
 

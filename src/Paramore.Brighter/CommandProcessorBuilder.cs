@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Fallback;
+using Polly.Registry;
 
 namespace Paramore.Brighter
 {
@@ -40,8 +41,8 @@ namespace Paramore.Brighter
     ///     </item>
     ///     <item>
     ///         <description>
-    ///             A <see cref="IAmAPolicyRegistry"/> containing a list of policies that you want to be accessible to the <see cref="CommandProcessor"/>. You can use
-    ///             <see cref="PolicyRegistry"/> to provide the <see cref="IAmAPolicyRegistry"/>. Policies are expected to be Polly <see cref="!:https://github.com/michael-wolfenden/Polly"/> 
+    ///             A <see cref="IPolicyRegistry{TKey}"/> containing a list of policies that you want to be accessible to the <see cref="CommandProcessor"/>. You can use
+    ///             <see cref="PolicyRegistry"/> to provide the <see cref="IPolicyRegistry{TKey}"/>. Policies are expected to be Polly <see cref="!:https://github.com/michael-wolfenden/Polly"/> 
     ///             <see cref="Paramore.Brighter.Policies"/> references.
     ///             If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for 
     ///             QoS concerns - you can use <see cref="DefaultPolicy"/> to indicate you do not need them or just want a simple retry.
@@ -78,7 +79,7 @@ namespace Paramore.Brighter
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
         private IAmAHandlerFactoryAsync _asyncHandlerFactory;
-        private IAmAPolicyRegistry _policyRegistry;
+        private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private IAmAChannelFactory _responseChannelFactory;
         private int _messageStoreWriteTimeout;
@@ -121,12 +122,12 @@ namespace Paramore.Brighter
         /// <returns>INeedLogging.</returns>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required</exception>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
-        public INeedMessaging Policies(IAmAPolicyRegistry thePolicyRegistry)
+        public INeedMessaging Policies(IPolicyRegistry<string> thePolicyRegistry)
         {
-            if (!thePolicyRegistry.Has(CommandProcessor.RETRYPOLICY))
+            if (!thePolicyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
                 
-            if (!thePolicyRegistry.Has(CommandProcessor.CIRCUITBREAKER))
+            if (!thePolicyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
             
             _policyRegistry = thePolicyRegistry;
@@ -276,7 +277,7 @@ namespace Paramore.Brighter
     public interface INeedAHandlers
     {
         /// <summary>
-        /// Handlerses the specified the registry.
+        /// Handlers the specified the registry.
         /// </summary>
         /// <param name="theRegistry">The registry.</param>
         /// <returns>INeedPolicy.</returns>
@@ -289,15 +290,15 @@ namespace Paramore.Brighter
     public interface INeedPolicy
     {
         /// <summary>
-        /// Policieses the specified policy registry.
+        /// Policies the specified policy registry.
         /// </summary>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
-        INeedMessaging Policies(IAmAPolicyRegistry policyRegistry);
+        INeedMessaging Policies(IPolicyRegistry<string> policyRegistry);
         /// <summary>
-        /// Noes the policy.
+        /// Knows the policy.
         /// </summary>
-        /// <returns>INeedLogging.</returns>
+        /// <returns>INeedMessaging.</returns>
         INeedMessaging DefaultPolicy();
     }
 

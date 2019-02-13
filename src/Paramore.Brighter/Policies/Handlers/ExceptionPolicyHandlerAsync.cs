@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Policies.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandlerAsync<TRequest> : RequestHandlerAsync<TRequest> where TRequest : class, IRequest
     {
-        private Polly.Policy _policy;
+        private AsyncPolicy _policy;
 
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="IAmAPolicyRegistry" /> from the <see cref="IRequestContext" /> and query it for the
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Policies.Handlers
         {
             //we expect the first and only parameter to be a string
             var policyName = (string)initializerList[0];
-            _policy = Context.Policies.Get(policyName);
+            _policy = Context.Policies.Get<AsyncPolicy>(policyName);
         }
 
         /// <summary>

@@ -8,6 +8,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
+using Polly.Registry;
 using Serilog;
 
 namespace CompetingReceiverConsole

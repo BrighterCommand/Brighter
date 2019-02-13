@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,12 +23,14 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.ExceptionPolicy.TestDoubles;
+using Polly.Registry;
 using TinyIoC;
 
 namespace Paramore.Brighter.Tests.ExceptionPolicy
@@ -61,10 +63,10 @@ namespace Paramore.Brighter.Tests.ExceptionPolicy
             _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
 
             //_should_throw_an_exception
-            _exception.Should().BeOfType<ArgumentException>();
+            _exception.Should().BeOfType<KeyNotFoundException>();
             //_should_give_the_name_of_the_missing_policy
             _exception.Should().NotBeNull();
-            _exception.Message.Should().Contain("There is no policy for MyDivideByZeroPolicy");
+            _exception.Message.Should().Contain("The given key 'MyDivideByZeroPolicy' was not present in the dictionary");
         }
     }
 }

@@ -8,6 +8,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
+using Polly.Registry;
 using Serilog;
 
 namespace Greetings

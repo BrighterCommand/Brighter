@@ -28,6 +28,7 @@ using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.FeatureSwitch.Providers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.FeatureSwitch.TestDoubles;
+using Polly.Registry;
 using TinyIoC;
 using Xunit;
 

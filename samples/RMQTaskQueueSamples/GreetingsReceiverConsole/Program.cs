@@ -32,6 +32,7 @@ using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
+using Polly.Registry;
 using Serilog;
 
 namespace GreetingsReceiverConsole

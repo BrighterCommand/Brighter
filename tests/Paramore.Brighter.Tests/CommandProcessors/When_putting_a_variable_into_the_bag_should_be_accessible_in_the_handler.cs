@@ -1,6 +1,7 @@
-using FakeItEasy;
+﻿using FakeItEasy;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Polly.Registry;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
