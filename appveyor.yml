@@ -1,4 +1,4 @@
-version: 7.4.{build}
+version: 8.0.{build}
 image: Ubuntu1804
 configuration: Release
 stack: jdk 11
