@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
 {
     [Collection("AWS")]
     [Trait("Category", "AWS")]
-    public class SqsMessageProeducerSendTests : IDisposable
+    public class SqsMessageProducerSendTests : IDisposable
     {
         private readonly Message _message;
         private readonly IAmAChannel _channel;
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
         private readonly string _contentType;
         private readonly string _topicName;
 
-        public SqsMessageProeducerSendTests()
+        public SqsMessageProducerSendTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
             _correlationId = Guid.NewGuid();
