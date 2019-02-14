@@ -7,8 +7,6 @@
     <PackageIconUrl>https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png</PackageIconUrl>
     <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
     <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
-    <RepositoryType>git</RepositoryType>
-    <RepositoryUrl>https://github.com/BrighterCommand/Brighter/tree/master/src/Paramore.Brighter</RepositoryUrl>
     <AssemblyVersion>8.0.0.0</AssemblyVersion>
     <FileVersion>8.0.0.0</FileVersion>
     <InformationalVersion>8.0.0</InformationalVersion>
