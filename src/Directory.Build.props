@@ -1,5 +1,8 @@
 <Project>
   <PropertyGroup>
+    <SignAssembly>true</SignAssembly>
+    <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
+
     <!-- including PDB files in NuGet for source link because symbolsource.org does not support portable PDBs -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
