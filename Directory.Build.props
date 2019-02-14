@@ -13,5 +13,6 @@
     <FileVersion>8.0.0.0</FileVersion>
     <InformationalVersion>8.0.0</InformationalVersion>
     <Version>8.0.0</Version>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 </Project>

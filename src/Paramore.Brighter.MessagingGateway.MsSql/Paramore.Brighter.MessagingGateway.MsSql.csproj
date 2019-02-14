@@ -4,12 +4,10 @@
     <AssemblyTitle>Paramore.Brighter.MessagingGateway.MsSql</AssemblyTitle>
     <Authors>Fred Hoogduin</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <DebugType>full</DebugType>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <AssemblyName>Paramore.Brighter.MessagingGateway.MsSql</AssemblyName>
     <PackageId>Paramore.Brighter.MessagingGateway.MsSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

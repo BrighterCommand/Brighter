@@ -5,11 +5,9 @@
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
-    <DebugType>full</DebugType>
     <AssemblyName>Paramore.Brighter.ServiceActivator</AssemblyName>
     <PackageId>Paramore.Brighter.ServiceActivator</PackageId>
     <PackageTags>Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

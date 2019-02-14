@@ -1,7 +1,6 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFrameworks>netcoreapp2.1</TargetFrameworks>
-    <LangVersion>7.1</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Paramore.Brighter.CommandStore.DynamoDB\Paramore.Brighter.CommandStore.DynamoDB.csproj" />
