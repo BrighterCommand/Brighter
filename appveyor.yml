@@ -51,6 +51,9 @@ test:
     - RESTMS
     - Kafka
 
+artifacts:
+  - path: '**\{configuration}\*.nupkg'
+
 notifications:
   - provider: Webhook
     url: https://webhooks.gitter.im/e/c3a7c308c675e3e655d0
