@@ -10,6 +10,9 @@
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
     <!-- including PDB files in NuGet for source link because symbolsource.org does not support portable PDBs -->
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+
     <!-- Version numbers have to be included at the same level as source link otherwise versions are reset to 1.0.0 -->
     <AssemblyVersion>8.0.0.0</AssemblyVersion>
     <FileVersion>8.0.0.0</FileVersion>
