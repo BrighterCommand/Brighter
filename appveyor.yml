@@ -52,7 +52,7 @@ test:
     - Kafka
 
 artifacts:
-  - path: '**\{configuration}\*.nupkg'
+  - path: '**\*.nupkg'
 
 notifications:
   - provider: Webhook
