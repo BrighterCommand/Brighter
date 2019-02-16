@@ -6,6 +6,12 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+
+## Release 8.0.* ##
+  - Added SourceLink debugging and are shipping .pdb files in the nuget package.
+  - Strong Name in line with Open Source guidance https://docs.microsoft.com/en-us/dotnet/standard/library-guidance/strong-naming. Where libraries we rely on are not strong named we don't strong name our code.
+  - Removed `IAmAPolicyRegistry` and replaced it with `IPolicyRegistry<string>` from Polly, it is a drop in replacement but in a the Polly namespace.
+  - Removed our `PolicyRegistry` and now use the `PolicyRegistry` from Polly, it is a drop in replacement but in a the Polly namespace.
   - Support for Feature Switches on handlers
   - Switch Command Sourcing Handler to using an Exists method when checking for duplicate messages
   - Rewritten AWS SQS + SNS transport
@@ -23,7 +29,6 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
   - Fixed https://github.com/BrighterCommand/Brighter/issues/156 to allow different exchange types to be set (was broken by support of delayed exchange)
   
    
-
 ## Release 7.4.0 ##
   - Updated to signed version of Polly, works with netcore2.1.
   - Fix for Sql CommandStore.
