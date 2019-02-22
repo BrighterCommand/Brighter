@@ -108,8 +108,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                 CreateSqlParameter("ContextKey", contextKey)
             };
 
-            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds,
-                parameters);
+            return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
         }
 
         /// <summary>
@@ -129,8 +128,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
                 CreateSqlParameter("ContextKey", contextKey)
             };
 
-            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds,
-                parameters);
+            return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds, parameters);
         }
 
         /// <summary>
@@ -242,7 +240,7 @@ namespace Paramore.Brighter.CommandStore.MsSql
 
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {
-            return new SqlParameter(parameterName, value);
+            return new SqlParameter(parameterName, value ?? DBNull.Value);
         }
 
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,

@@ -26,6 +26,7 @@ using System;
 using FluentAssertions;
 using Xunit;
 using Paramore.Brighter.CommandStore.MsSql;
+using Paramore.Brighter.Eventsourcing.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.CommandStore.MsSsql
@@ -63,6 +64,15 @@ namespace Paramore.Brighter.Tests.CommandStore.MsSsql
             //_should_read_the_command_id
             _storedCommand.Id.Should().Be(_raisedCommand.Id);
         }
+
+        [Fact]
+        public void When_Reading_A_Message_From_The_Command_Store_And_ContextKey_IsNull()
+        {
+            var exception = Catch.Exception(() => _storedCommand = _sqlCommandStore.Get<MyCommand>(_raisedCommand.Id, null));
+            //should_not_read_message
+            exception.Should().BeOfType<CommandNotFoundException<MyCommand>>();
+        }
+
 
         public void Dispose()
         {

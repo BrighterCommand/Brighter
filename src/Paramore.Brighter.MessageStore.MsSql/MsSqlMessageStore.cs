@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -104,8 +104,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         /// <returns>Task&lt;Message&gt;.</returns>
         public Message Get(Guid messageId, int messageStoreTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.MessageStoreTableName);
+            var sql = $"SELECT * FROM {_configuration.MessageStoreTableName} WHERE MessageId = @MessageId";
             var parameters = new[]
             {
                 CreateSqlParameter("MessageId", messageId)
@@ -163,7 +162,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int messageStoreTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+            var sql = $"SELECT * FROM {_configuration.MessageStoreTableName} WHERE MessageId = @MessageId";
 
             var parameters = new[]
             {
@@ -234,7 +233,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         //Fold this code back in as there is only one choice
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {
-            return new SqlParameter(parameterName, value);
+            return new SqlParameter(parameterName, value ?? DBNull.Value);
 
         }
 
@@ -281,10 +280,7 @@ namespace Paramore.Brighter.MessageStore.MsSql
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
         {
             var command = connection.CreateCommand();
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.MessageStoreTableName);
+            var sql = $"INSERT INTO {_configuration.MessageStoreTableName} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)";
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
             return command;
