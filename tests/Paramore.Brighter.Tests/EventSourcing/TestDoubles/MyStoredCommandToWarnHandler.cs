@@ -22,8 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.Eventsourcing;
-using Paramore.Brighter.Eventsourcing.Attributes;
+using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
     {
         public static int ReceivedCount { get; private set; }
         
-        [UseCommandSourcing(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Warn, contextKey: typeof(MyStoredCommandToWarnHandler))]
+        [UseInbox(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Warn, contextKey: typeof(MyStoredCommandToWarnHandler))]
         public override MyCommand Handle(MyCommand command)
         {
             ReceivedCount++;

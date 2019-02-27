@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// <param name="logger">The logger to use</param>
         /// <param name="messageStore">The message store for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create(IAmAMessageStore<Message> messageStore, IAmAMessageProducer gateway)
+        public IAmAControlBusSender Create(IAmAnOutbox<Message> messageStore, IAmAMessageProducer gateway)
         {
             var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();

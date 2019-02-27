@@ -2,7 +2,9 @@ using System;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
 using Paramore.Brighter.CommandStore.MySql;
+using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.MessageStore.MySql;
+using Paramore.Brighter.Outbox.MySql;
 
 namespace Paramore.Brighter.Tests
 {
@@ -38,18 +40,18 @@ namespace Paramore.Brighter.Tests
         public void SetupMessageDb()
         {
             CreateDatabase();
-            CreateMessageStoreTable();
+            CreateOutboxTable();
         }
 
         public void SetupCommandDb()
         {
             CreateDatabase();
-            CreateCommandStoreTable();
+            CreateInboxTable();
         }
 
-        public MySqlCommandStoreConfiguration CommandStoreConfiguration => new MySqlCommandStoreConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
+        public MySqlInboxConfiguration InboxConfiguration => new MySqlInboxConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
 
-        public MySqlMessageStoreConfiguration MessageStoreConfiguration => new MySqlMessageStoreConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
+        public MySqlOutboxConfiguration OutboxConfiguration => new MySqlOutboxConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
 
         public void CleanUpDb()
         {
@@ -64,12 +66,12 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        public void CreateMessageStoreTable()
+        public void CreateOutboxTable()
         {
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"`message_{_tableName}`";
-                var createTableSql = MySqlMessageStoreBuilder.GetDDL(_tableName);
+                var createTableSql = MySqlOutboxBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -80,7 +82,7 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        public void CreateCommandStoreTable()
+        public void CreateInboxTable()
         {
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {

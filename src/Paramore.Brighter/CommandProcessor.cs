@@ -50,8 +50,8 @@ namespace Paramore.Brighter
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string>  _policyRegistry;
         private readonly int _messageStoreTimeout;
-        private readonly IAmAMessageStore<Message> _messageStore;
-        private readonly IAmAMessageStoreAsync<Message> _asyncMessageStore;
+        private readonly IAmAnOutbox<Message> _outBox;
+        private readonly IAmAnOutboxAsync<Message> _asyncOutbox;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
@@ -164,7 +164,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="messageStore">The message store.</param>
+        /// <param name="outBox">The outbox.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -172,7 +172,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
+            IAmAnOutbox<Message> outBox,
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
@@ -181,7 +181,7 @@ namespace Paramore.Brighter
             _policyRegistry = policyRegistry;
             _messageStoreTimeout = messageStoreTimeout;
             _mapperRegistry = mapperRegistry;
-            _messageStore = messageStore;
+            _outBox = outBox;
             _messageProducer = messageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
         }
@@ -193,7 +193,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="asyncMessageStore">The message store supporting async/await.</param>
+        /// <param name="asyncOutbox">The outbox supporting async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -201,7 +201,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStoreAsync<Message> asyncMessageStore,
+            IAmAnOutboxAsync<Message> asyncOutbox,
             IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
@@ -210,7 +210,7 @@ namespace Paramore.Brighter
             _policyRegistry = policyRegistry;
             _messageStoreTimeout = messageStoreTimeout;
             _mapperRegistry = mapperRegistry;
-            _asyncMessageStore = asyncMessageStore;
+            _asyncOutbox = asyncOutbox;
             _asyncMessageProducer = asyncMessageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
         }
@@ -256,7 +256,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="asyncMessageStore">The message store supporting async/await.</param>
+        /// <param name="asyncOutbox">The outbox supporting async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -266,14 +266,14 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStoreAsync<Message> asyncMessageStore,
+            IAmAnOutboxAsync<Message> asyncOutbox,
             IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
             : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _asyncMessageStore = asyncMessageStore;
+            _asyncOutbox = asyncOutbox;
             _asyncMessageProducer = asyncMessageProducer;
             _messageStoreTimeout = messageStoreTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -289,8 +289,8 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="messageStore">The message store.</param>
-        /// <param name="asyncMessageStore">The message store supporting async/await.</param>
+        /// <param name="outBox">The outbox.</param>
+        /// <param name="asyncOutbox">The message store supporting async/await.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
@@ -302,8 +302,8 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
-            IAmAMessageStore<Message> messageStore,
-            IAmAMessageStoreAsync<Message> asyncMessageStore,
+            IAmAnOutbox<Message> outBox,
+            IAmAnOutboxAsync<Message> asyncOutbox,
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
@@ -311,8 +311,8 @@ namespace Paramore.Brighter
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _messageStore = messageStore;
-            _asyncMessageStore = asyncMessageStore;
+            _outBox = outBox;
+            _asyncOutbox = asyncOutbox;
             _messageProducer = messageProducer;
             _asyncMessageProducer = asyncMessageProducer;
             _messageStoreTimeout = messageStoreTimeout;
@@ -519,7 +519,7 @@ namespace Paramore.Brighter
         {
             _logger.Value.InfoFormat("Save request: {0} {1}", request.GetType(), request.Id);
 
-            if (_messageStore == null)
+            if (_outBox == null)
                 throw new InvalidOperationException("No message store defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
@@ -530,7 +530,7 @@ namespace Paramore.Brighter
 
             RetryAndBreakCircuit(() =>
             {
-                _messageStore.Add(message, _messageStoreTimeout);
+                _outBox.Add(message, _messageStoreTimeout);
             });
 
             return message.Id;
@@ -550,7 +550,7 @@ namespace Paramore.Brighter
         {
             _logger.Value.InfoFormat("Save request: {0} {1}", request.GetType(), request.Id);
 
-            if (_asyncMessageStore == null)
+            if (_asyncOutbox == null)
                 throw new InvalidOperationException("No async message store defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
@@ -561,7 +561,7 @@ namespace Paramore.Brighter
 
             await RetryAndBreakCircuitAsync(async ct =>
             {
-                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout, ct).ConfigureAwait(continueOnCapturedContext);
+                await _asyncOutbox.AddAsync(message, _messageStoreTimeout, ct).ConfigureAwait(continueOnCapturedContext);
             }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
             return message.Id;
@@ -575,7 +575,7 @@ namespace Paramore.Brighter
         /// <param name="posts">The posts to flush</param>
         public void ClearPostBox(params Guid[] posts)
         {
-            if (_messageStore == null)
+            if (_outBox == null)
                 throw new InvalidOperationException("No message store defined.");
             if (_messageProducer == null)
                 throw new InvalidOperationException("No message producer defined.");
@@ -583,7 +583,7 @@ namespace Paramore.Brighter
 
             foreach (var messageId in posts)
             {
-                var message = _messageStore.Get(messageId);
+                var message = _outBox.Get(messageId);
                 if (message == null)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Message Store");
                 
@@ -602,14 +602,14 @@ namespace Paramore.Brighter
          public async Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
 
-            if (_asyncMessageStore == null)
+            if (_asyncOutbox == null)
                 throw new InvalidOperationException("No async message store defined.");
             if (_asyncMessageProducer == null)
                 throw new InvalidOperationException("No async message producer defined.");
 
             foreach (var messageId in posts)
             {
-                var message = await _asyncMessageStore.GetAsync(messageId, _messageStoreTimeout, cancellationToken);
+                var message = await _asyncOutbox.GetAsync(messageId, _messageStoreTimeout, cancellationToken);
                 if (message == null)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Message Store");
                 

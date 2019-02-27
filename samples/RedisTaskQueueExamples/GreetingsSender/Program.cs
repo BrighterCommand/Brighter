@@ -44,7 +44,7 @@ namespace GreetingsSender
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryMessageStore();
+            var messageStore = new InMemoryOutbox();
             var redisConnection = new RedisMessagingGatewayConfiguration
             {
                 RedisConnectionString = "localhost:6379?connectTimeout=1&sendTImeout=1000&",

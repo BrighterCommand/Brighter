@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessageStore.DynamoDB
+namespace Paramore.Brighter.Outbox.DynamoDB
 {
     /// <summary>
     /// Class DynamoDbStoreConfiguration

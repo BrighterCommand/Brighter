@@ -25,7 +25,7 @@ namespace GreetingsPumper
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryMessageStore();
+            var messageStore = new InMemoryOutbox();
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);

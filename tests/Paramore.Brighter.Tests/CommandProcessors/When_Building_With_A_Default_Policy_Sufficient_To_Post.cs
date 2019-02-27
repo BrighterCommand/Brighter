@@ -36,14 +36,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public PostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeMessageStore = new FakeMessageStore();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>)_fakeMessageStore, (IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>)_fakeOutbox, (IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -69,11 +69,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _commandProcessor.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
+            _fakeOutbox.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            _fakeMessageStore.Get().First().Should().Be(_message);
+            _fakeOutbox.Get().First().Should().Be(_message);
         }
 
         internal class EmptyHandlerFactory : IAmAHandlerFactory

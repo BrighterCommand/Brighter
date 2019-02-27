@@ -34,12 +34,12 @@ namespace Paramore.Brighter.Tests.EventSourcing
     public class OnceOnlyAttributeWithWarnExceptionTests
     {
         private readonly MyCommand _command;
-        private readonly IAmACommandStore _commandStore;
+        private readonly IAmAnInbox _commandStore;
         private readonly IAmACommandProcessor _commandProcessor;
 
         public OnceOnlyAttributeWithWarnExceptionTests()
         {
-            _commandStore = new InMemoryCommandStore();
+            _commandStore = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandToWarnHandler>();

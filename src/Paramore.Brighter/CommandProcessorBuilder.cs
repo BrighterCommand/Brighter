@@ -50,7 +50,7 @@ namespace Paramore.Brighter
     ///      </item>
     ///     <item>
     ///         <description>
-    ///             A <see cref="MessagingConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAMessageStore"/>
+    ///             A <see cref="MessagingConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAnOutbox{T}"/>
     ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAMessageProducer"/> and we  want to know how
     ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using 
     ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
@@ -70,8 +70,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAmAMessageStore<Message> _messageStore;
-        private IAmAMessageStoreAsync<Message> _asyncMessageStore;
+        private IAmAnOutbox<Message> _messageStore;
+        private IAmAnOutboxAsync<Message> _asyncOutbox;
         private IAmAMessageProducer _messagingGateway;
         private IAmAMessageProducerAsync _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
@@ -155,8 +155,8 @@ namespace Paramore.Brighter
         public INeedARequestContext TaskQueues(MessagingConfiguration configuration)
         {
             _useTaskQueues = true;
-            _messageStore = configuration.MessageStore;
-            _asyncMessageStore = configuration.AsyncMessageStore;
+            _messageStore = configuration.OutBox;
+            _asyncOutbox = configuration.AsyncOutbox;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.AsyncMessageProducer;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
@@ -182,8 +182,8 @@ namespace Paramore.Brighter
         public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
         {
             _useRequestReplyQueues = true;
-            _messageStore = configuration.MessageStore;
-            _asyncMessageStore = configuration.AsyncMessageStore;
+            _messageStore = configuration.OutBox;
+            _asyncOutbox = configuration.AsyncOutbox;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.AsyncMessageProducer;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
@@ -243,8 +243,8 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
-                    messageStore: _messageStore,
-                    asyncMessageStore: _asyncMessageStore,
+                    outBox: _messageStore,
+                    asyncOutbox: _asyncOutbox,
                     messageProducer: _messagingGateway,
                     asyncMessageProducer: _asyncMessagingGateway,
                     messageStoreTimeout: _messageStoreWriteTimeout,

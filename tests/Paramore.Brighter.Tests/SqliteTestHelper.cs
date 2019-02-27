@@ -19,14 +19,14 @@ namespace Paramore.Brighter.Tests
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteCommandStoreBuilder.GetDDL(TableName));
+            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(TableName));
         }
 
         public void SetupMessageDb()
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteMessageStoreBuilder.GetDDL(TableName_Messages));
+            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableName_Messages));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()

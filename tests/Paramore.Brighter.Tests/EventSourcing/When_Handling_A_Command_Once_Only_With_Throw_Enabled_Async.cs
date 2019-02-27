@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Paramore.Brighter.Eventsourcing.Exceptions;
-using Paramore.Brighter.Eventsourcing.Handlers;
+using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Polly.Registry;
@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Tests.EventSourcing
     public class OnceOnlyAttributeWithThrowExceptionAsyncTests
     {
         private readonly MyCommand _command;
-        private readonly IAmACommandStoreAsync _commandStore;
+        private readonly IAmAnInboxAsync _commandStore;
         private readonly IAmACommandProcessor _commandProcessor;
 
         public OnceOnlyAttributeWithThrowExceptionAsyncTests()
         {
-            _commandStore = new InMemoryCommandStore();
+            _commandStore = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToThrowHandlerAsync>();
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Tests.EventSourcing
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
-            container.Register<CommandSourcingHandlerAsync<MyCommand>>();
+            container.Register<UseInboxHandlerAsync<MyCommand>>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandToThrowHandlerAsync>();
             container.Register(_commandStore);
 

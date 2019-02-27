@@ -22,9 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessageStore.PostgreSql
+namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlMessageStoreBulder
+    public class PostgreSqlOutboxBulder
     {
         const string MessageStoreDdl = @"
        CREATE TABLE {0}
