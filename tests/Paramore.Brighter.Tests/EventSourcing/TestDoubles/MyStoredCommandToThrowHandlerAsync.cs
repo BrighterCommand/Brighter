@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.Eventsourcing;
-using Paramore.Brighter.Eventsourcing.Attributes;
+using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
     {
         public static bool CommandReceived { get; set; }
         
-        [UseCommandSourcingAsync(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandlerAsync))]
+        [UseInboxAsync(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandlerAsync))]
         public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             CommandReceived = true;

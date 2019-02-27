@@ -1,8 +1,8 @@
 using System;
 using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
-using Paramore.Brighter.CommandStore.MsSql;
-using Paramore.Brighter.MessageStore.MsSql;
+using Paramore.Brighter.Inbox.MsSql;
+using Paramore.Brighter.Outbox.MsSql;
 
 namespace Paramore.Brighter.Tests
 {
@@ -43,18 +43,18 @@ namespace Paramore.Brighter.Tests
         public void SetupMessageDb()
         {
             CreateDatabase();
-            CreateMessageStoreTable();
+            CreateOutboxTable();
         }
 
         public void SetupCommandDb()
         {
             CreateDatabase();
-            CreateCommandStoreTable();
+            CreateInboxTable();
         }
 
-        public MsSqlCommandStoreConfiguration CommandStoreConfiguration => new MsSqlCommandStoreConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
+        public MsSqlInboxConfiguration InboxConfiguration => new MsSqlInboxConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
 
-        public MsSqlMessageStoreConfiguration MessageStoreConfiguration => new MsSqlMessageStoreConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
+        public MsSqlOutboxConfiguration OutboxConfiguration => new MsSqlOutboxConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
 
         public void CleanUpDb()
         {
@@ -73,12 +73,12 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        public void CreateMessageStoreTable()
+        public void CreateOutboxTable()
         {
             using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"[message_{_tableName}]";
-                var createTableSql = SqlMessageStoreBuilder.GetDDL(_tableName);
+                var createTableSql = SqlOutboxBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -89,12 +89,12 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        public void CreateCommandStoreTable()
+        public void CreateInboxTable()
         {
             using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"[command_{_tableName}]";
-                var createTableSql = SqlCommandStoreBuilder.GetDDL(_tableName);
+                var createTableSql = SqlInboxBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())

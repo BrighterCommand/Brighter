@@ -37,14 +37,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
-        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorPostBoxClearTests()
         {
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _fakeMessageStore = new FakeMessageStore();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -67,14 +67,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStore<Message>)_fakeMessageStore,
+                (IAmAnOutbox<Message>)_fakeOutbox,
                 (IAmAMessageProducer)_fakeMessageProducer);
         }
 
         [Fact]
         public void When_Clearing_The_PostBox_On_The_Command_Processor()
         {
-            _fakeMessageStore.Add(_message);
+            _fakeOutbox.Add(_message);
             
             _commandProcessor.ClearPostBox(_message.Id);
 

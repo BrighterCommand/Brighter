@@ -35,7 +35,7 @@ namespace CompetingSender
                 {typeof(CompetingConsumerCommand), typeof(CompetingConsumerCommandMessageMapper)}
             };
 
-            var messageStore = new InMemoryMessageStore();
+            var messageStore = new InMemoryOutbox();
 
             var messagingConfiguration =
                 new MsSqlMessagingGatewayConfiguration(
@@ -45,7 +45,7 @@ namespace CompetingSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAMessageStore<Message>) messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) messageStore, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

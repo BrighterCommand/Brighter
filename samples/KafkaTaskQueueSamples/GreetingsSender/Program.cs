@@ -70,7 +70,7 @@ namespace KafkaTaskQueueSamples.GreetingsSender
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryMessageStore();
+            var messageStore = new InMemoryOutbox();
             var producer = new KafkaMessageProducerFactory(kafkaMessagingGatewayConfiguration)
                                .Create();
 

@@ -23,7 +23,7 @@ namespace GreetingsPumper
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryMessageStore();
+            var messageStore = new InMemoryOutbox();
             var rmqConnnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@localhost:5672/%2f")),

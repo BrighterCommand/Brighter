@@ -25,20 +25,20 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Amazon;
+
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
-using Paramore.Brighter.CommandStore.DynamoDB;
-using Paramore.Brighter.MessageStore.DynamoDB;
+using Paramore.Brighter.Inbox.DynamoDB;
+using Paramore.Brighter.Outbox.DynamoDB;
 
 namespace Paramore.Brighter.Tests
 {
     public class DynamoDbTestHelper
     {
         public DynamoDBContext DynamoDbContext { get; }
-        public DynamoDbCommandStoreConfiguration DynamoDbCommandStoreTestConfiguration { get; }
+        public DynamoDbInboxConfiguration DynamoDbInboxTestConfiguration { get; }
         public DynamoDbMessageStoreConfiguration DynamoDbMessageStoreTestConfiguration { get; }
         
         public AmazonDynamoDBClient Client { get; }
@@ -59,22 +59,22 @@ namespace Paramore.Brighter.Tests
             var tableName = $"test_{Guid.NewGuid()}";            
 
             DynamoDbContext = new DynamoDBContext(Client);
-            DynamoDbCommandStoreTestConfiguration = new DynamoDbCommandStoreConfiguration($"command_{tableName}", true, "CommandId", "ContextKey");
+            DynamoDbInboxTestConfiguration = new DynamoDbInboxConfiguration($"command_{tableName}", true, "CommandId", "ContextKey");
             DynamoDbMessageStoreTestConfiguration = new DynamoDbMessageStoreConfiguration($"message_{tableName}", true, "MessageId");
         }
 
-        public void CreateMessageStoreTable(CreateTableRequest request)
+        public void CreateOutboxTable(CreateTableRequest request)
         {           
             Client.CreateTableAsync(request).GetAwaiter().GetResult();
 
             WaitUntilTableReady(DynamoDbMessageStoreTestConfiguration.TableName);
         }
 
-        public void CreateCommandStoreTable(CreateTableRequest request)
+        public void CreateInboxTable(CreateTableRequest request)
         {
             Client.CreateTableAsync(request).GetAwaiter().GetResult();
 
-            WaitUntilTableReady(DynamoDbCommandStoreTestConfiguration.TableName);
+            WaitUntilTableReady(DynamoDbInboxTestConfiguration.TableName);
         }
 
         public async Task<IEnumerable<DynamoDbMessage>> Scan()
@@ -105,10 +105,10 @@ namespace Paramore.Brighter.Tests
 
         public void CleanUpCommandDb()
         {
-            Client.DeleteTableAsync(DynamoDbCommandStoreTestConfiguration.TableName).GetAwaiter().GetResult();
+            Client.DeleteTableAsync(DynamoDbInboxTestConfiguration.TableName).GetAwaiter().GetResult();
         }
 
-        public void CleanUpMessageDb()
+        public void CleanUpOutboxDb()
         {
             Client.DeleteTableAsync(DynamoDbMessageStoreTestConfiguration.TableName).Wait();
         }

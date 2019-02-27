@@ -38,6 +38,6 @@ namespace Paramore.Brighter
         /// <param name="logger">The logger to use</param>
         /// <param name="messageStore">The message store to record outbound messages on the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create(IAmAMessageStore<Message> messageStore, IAmAMessageProducer gateway);
+        IAmAControlBusSender Create(IAmAnOutbox<Message> messageStore, IAmAMessageProducer gateway);
     }
 }

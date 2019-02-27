@@ -39,14 +39,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public ControlBusSenderPostMessageTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeMessageStore = new FakeMessageStore();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStore<Message>)_fakeMessageStore,
+                (IAmAnOutbox<Message>)_fakeOutbox,
                 (IAmAMessageProducer)_fakeMessageProducer);
 
             _controlBusSender = new ControlBusSender(_commandProcessor);
@@ -81,11 +81,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _controlBusSender.Post(_myCommand);
 
             //_should_store_the_message_in_the_sent_command_message_repository
-            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
+            _fakeOutbox.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
-            _fakeMessageStore.Get().First().Should().Be(_message);
+            _fakeOutbox.Get().First().Should().Be(_message);
         }
 
         public void Dispose()

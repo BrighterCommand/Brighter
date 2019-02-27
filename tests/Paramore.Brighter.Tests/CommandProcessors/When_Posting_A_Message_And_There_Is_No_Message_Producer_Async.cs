@@ -38,14 +38,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
-        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeOutbox _fakeOutbox;
         private Exception _exception;
 
         public CommandProcessorPostMissingMessageProducerAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeMessageStore = new FakeMessageStore();
+            _fakeOutbox = new FakeOutbox();
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStoreAsync<Message>)_fakeMessageStore,
+                (IAmAnOutboxAsync<Message>)_fakeOutbox,
                 (IAmAMessageProducerAsync)null);
         }
 

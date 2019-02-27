@@ -22,9 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.CommandStore.MsSql
+namespace Paramore.Brighter.Inbox.MsSql
 {
-    public class SqlCommandStoreBuilder
+    public class SqlInboxBuilder
     {
         private const string _messageStoreDDL = @"
                     CREATE TABLE {0}

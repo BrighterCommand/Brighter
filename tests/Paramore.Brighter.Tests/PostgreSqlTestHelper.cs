@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using Paramore.Brighter.MessageStore.PostgreSql;
+using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.Tests
 {
@@ -21,7 +22,7 @@ namespace Paramore.Brighter.Tests
             _tableName = $"test_{Guid.NewGuid():N}";
         }
 
-        public PostgreSqlMessageStoreConfiguration MessageStoreConfiguration => new PostgreSqlMessageStoreConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
+        public PostgreSqlOutboxConfiguration OutboxConfiguration => new PostgreSqlOutboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
 
         public void SetupMessageDb()
         {
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.Tests
             using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"message_{_tableName}";
-                var createTableSql = PostgreSqlMessageStoreBulder.GetDDL(_tableName);
+                var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())

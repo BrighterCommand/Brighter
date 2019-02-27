@@ -35,13 +35,13 @@ namespace Paramore.Brighter.Tests.EventSourcing
     public class CommandProcessorUsingCommandStoreTests
     {
         private readonly MyCommand _command;
-        private readonly IAmACommandStore _commandstore;
+        private readonly IAmAnInbox _commandstore;
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly string _contextKey;
 
         public CommandProcessorUsingCommandStoreTests()
         {
-            _commandstore = new InMemoryCommandStore();
+            _commandstore = new InMemoryInbox();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();

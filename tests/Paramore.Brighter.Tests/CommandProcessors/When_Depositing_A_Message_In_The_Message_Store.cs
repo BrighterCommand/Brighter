@@ -14,14 +14,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeMessageStore _fakeMessageStore;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorDepositPostTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeMessageStore = new FakeMessageStore();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageStore<Message>)_fakeMessageStore,
+                (IAmAnOutbox<Message>)_fakeOutbox,
                 (IAmAMessageProducer)_fakeMessageProducer);
         }
 
@@ -57,12 +57,12 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             
             //assert
             //message should be in the store
-            _fakeMessageStore.MessageWasAdded.Should().BeTrue();
+            _fakeOutbox.MessageWasAdded.Should().BeTrue();
             //message should not be posted
             _fakeMessageProducer.MessageWasSent.Should().BeFalse();
             
             //message should correspond to the command
-            var depositedPost = _fakeMessageStore.Get(postedMessageId);
+            var depositedPost = _fakeOutbox.Get(postedMessageId);
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);

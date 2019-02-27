@@ -77,7 +77,7 @@ namespace GreetingsServer
               {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
             
-            var messageStore = new InMemoryMessageStore();
+            var messageStore = new InMemoryOutbox();
  
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)

@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.CommandStore.MySql
+namespace Paramore.Brighter.Inbox.MySql
 {
     public class MySqlCommandStoreBuilder
     {

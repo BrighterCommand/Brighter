@@ -1,5 +1,5 @@
 ﻿using System;
-using Paramore.Brighter.Eventsourcing.Exceptions;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
 using Polly.Registry;
@@ -11,12 +11,12 @@ namespace Paramore.Brighter.Tests.EventSourcing
     public class OnceOnlyAttributeTests 
     {
         private readonly MyCommand _command;
-        private readonly IAmACommandStore _commandstore;
+        private readonly IAmAnInbox _commandstore;
         private readonly IAmACommandProcessor _commandProcessor;
         
         public OnceOnlyAttributeTests()
         {
-            _commandstore = new InMemoryCommandStore();
+            _commandstore = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();

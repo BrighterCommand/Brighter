@@ -187,14 +187,14 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkMessageStore : IAmAMessageStore<Message>
+        private class SinkMessageStore : IAmAnOutbox<Message>
         {
-            public void Add(Message message, int messageStoreTimeout = -1)
+            public void Add(Message message, int outBoxTimeout = -1)
             {
                 //discard message
             }
 
-            public Message Get(Guid messageId, int messageStoreTimeout = -1)
+            public Message Get(Guid messageId, int outBoxTimeout = -1)
             {
                  return null;
             }
