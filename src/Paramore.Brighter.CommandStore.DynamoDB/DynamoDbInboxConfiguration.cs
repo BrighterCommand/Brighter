@@ -50,6 +50,6 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
         /// <param name="requestIdIndex">Name of Command Id index for Scan operations</param>
         public DynamoDbInboxConfiguration(string tableName, bool useStronglyConsistentRead, string requestIdIndex, string contextKeyIndex)
-            => (TableName, UseStronglyConsistentRead, RequestIdIndex, ContextKeyIndex) = (tableName, useStronglyConsistentRead, requestIdIndex: requestIdIndex, contextKeyIndex);
+            => (TableName, UseStronglyConsistentRead, RequestIdIndex, ContextKeyIndex) = (tableName, useStronglyConsistentRead, requestIdIndex, contextKeyIndex);
     }     
 }
