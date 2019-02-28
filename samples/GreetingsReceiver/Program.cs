@@ -7,9 +7,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 using Paramore.Brighter.Policies.Handlers;
-using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -45,18 +43,18 @@ namespace HostedServiceTest
                             highAvailability: true)
                     };
 
-                    var rmqConnnection = new RmqMessagingGatewayConnection
+                    var rmqConnection = new RmqMessagingGatewayConnection
                     {
                         AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                         Exchange = new Exchange("paramore.brighter.exchange")
                     };
 
-                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
+                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
                     services.AddServiceActivator(options =>
                     {
                         options.Connections = connections;
-                        options.ChannelFactory = new InputChannelFactory(rmqMessageConsumerFactory);
+                        options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     })
                     .MapperRegistryFromAssemblies(typeof(GreetingEventHandler).Assembly)
                     .HandlersFromAssemblies(typeof(GreetingEventHandler).Assembly, typeof(ExceptionPolicyHandler<>).Assembly);

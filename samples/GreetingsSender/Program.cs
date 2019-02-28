@@ -23,13 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MessagingGateway.RMQ.MessagingGatewayConfiguration;
 
 namespace GreetingsSender
 {
@@ -37,15 +35,7 @@ namespace GreetingsSender
     {
         static void Main(string[] args)
         {
-            var container = new TinyIoCContainer();
-
-
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
+            var serviceCollection = new ServiceCollection();
 
             var messageStore = new InMemoryMessageStore();
             var gatewayConnection = new RmqMessagingGatewayConnection
@@ -55,13 +45,11 @@ namespace GreetingsSender
             };
             var producer = new RmqMessageProducer(gatewayConnection);
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            serviceCollection.AddBrighter(options => options.BrighterMessaging = new BrighterMessaging(messageStore, producer)).HandlersFromAssemblies(typeof(GreetingEvent).Assembly);
 
-            var commandProcessor = builder.Build();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             for (int i = 0; i < 1000; i++)
             {
@@ -70,4 +58,6 @@ namespace GreetingsSender
            
         }
     }
+
+
 }

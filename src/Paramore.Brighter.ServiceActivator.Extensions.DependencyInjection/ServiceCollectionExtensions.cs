@@ -4,9 +4,9 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
-    public static class ServiceActivatorServiceCollectionExtensions
+    public static class ServiceActivatorServiceCollectionExtensions 
     {
-        public static IServiceActivatorBuilder AddServiceActivator(
+        public static IBrighterHandlerBuilder AddServiceActivator(
             this IServiceCollection services,
             Action<ServiceActivatorOptions> configure = null)
         {
@@ -16,48 +16,13 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             var options = new ServiceActivatorOptions();
             configure?.Invoke(options);
             services.AddSingleton(options);
+            services.AddSingleton<IBrighterOptions>(options);
 
-            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
-            services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
-
-            if (options.HandlerLifetime == ServiceLifetime.Scoped)
-                services.AddScoped<IAmACommandProcessor>(BuildCommandProcessor);
-            else
-                services.AddSingleton<IAmACommandProcessor>(BuildCommandProcessor);
-
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
-            services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
-            
+            var brighterHandlerBuilder = ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
 
             services.AddSingleton<IDispatcher>(BuildDispatcher);
 
-            return new ServiceCollectionServiceActivatorBuilder(services, subscriberRegistry, mapperRegistry);
-        }
-
-        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
-        {
-            var options = provider.GetService<ServiceActivatorOptions>();
-            var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
-
-            var handlerFactory = new ServiceProviderHandlerFactory(provider);
-            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
-
-            var policyBuilder = CommandProcessorBuilder.With()
-                .Handlers(handlerConfiguration);
-
-            var messagingBuilder = options.PolicyRegistry == null
-                ? policyBuilder.DefaultPolicy()
-                : policyBuilder.Policies(options.PolicyRegistry);
-
-            var builder = options.MessagingConfiguration == null
-                ? messagingBuilder.NoTaskQueues()
-                : messagingBuilder.TaskQueues(options.MessagingConfiguration);
-
-            var commandProcessor = builder
-                .RequestContextFactory(options.RequestContextFactory)
-                .Build();
-
-            return commandProcessor;
+            return brighterHandlerBuilder;
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)

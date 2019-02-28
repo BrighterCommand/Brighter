@@ -6,11 +6,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Paramore.Brighter" Version="7.4.2" />
-      <PackageReference Include="Paramore.Brighter.MessagingGateway.RMQ" Version="7.4.2" />
+      <PackageReference Include="Paramore.Brighter" Version="8.0.37" />
+      <PackageReference Include="Paramore.Brighter.MessagingGateway.RMQ" Version="8.0.37" />
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
       <ProjectReference Include="..\Greetings\Greetings.csproj" />
     </ItemGroup>
 
