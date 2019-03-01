@@ -19,7 +19,6 @@ namespace HostedServiceTest
     {
         private static async Task Main(string[] args)
         {
-
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
@@ -29,7 +28,7 @@ namespace HostedServiceTest
 
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
-               
+
                 {
                     var connections = new Connection[]
                     {
@@ -54,7 +53,8 @@ namespace HostedServiceTest
                     {
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                        options.BrighterMessaging = new BrighterMessaging(new InMemoryMessageStore(), new RmqMessageProducer(rmqConnection));
+                        options.BrighterMessaging = new BrighterMessaging(new InMemoryMessageStore(),
+                            new RmqMessageProducer(rmqConnection));
                     }).AutoFromAssemblies();
 
                     services.AddSingleton<ILoggerFactory>(x => new SerilogLoggerFactory());
@@ -62,7 +62,7 @@ namespace HostedServiceTest
                 })
                 .UseConsoleLifetime()
                 .Build();
-            
+
             await host.RunAsync();
         }
     }

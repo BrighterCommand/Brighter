@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -54,7 +55,10 @@ namespace GreetingsSender
             };
             var producer = new RmqMessageProducer(gatewayConnection);
 
-            serviceCollection.AddBrighter(options => options.BrighterMessaging = new BrighterMessaging(messageStore, producer)).AutoFromAssemblies();
+            serviceCollection
+                .AddBrighter(options => 
+                    options.BrighterMessaging = new BrighterMessaging(messageStore, producer))
+                .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -64,9 +68,6 @@ namespace GreetingsSender
             {
                 commandProcessor.Post(new GreetingEvent("Ian"));
             }
-           
         }
     }
-
-
 }
