@@ -1,13 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -55,9 +54,8 @@ namespace HostedServiceTest
                     {
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                    })
-                    .MapperRegistryFromAssemblies(typeof(GreetingEventHandler).Assembly)
-                    .HandlersFromAssemblies(typeof(GreetingEventHandler).Assembly, typeof(ExceptionPolicyHandler<>).Assembly);
+                        options.BrighterMessaging = new BrighterMessaging(new InMemoryMessageStore(), new RmqMessageProducer(rmqConnection));
+                    }).AutoFromAssemblies();
 
                     services.AddSingleton<ILoggerFactory>(x => new SerilogLoggerFactory());
                     services.AddHostedService<ServiceActivatorHostedService>();

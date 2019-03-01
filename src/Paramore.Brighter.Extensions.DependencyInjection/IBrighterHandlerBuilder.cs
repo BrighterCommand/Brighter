@@ -6,6 +6,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public interface IBrighterHandlerBuilder
     {
+        IBrighterHandlerBuilder AutoFromAssemblies();
         IBrighterHandlerBuilder Handlers(Action<IAmASubscriberRegistry> registerHandlers);
         IBrighterHandlerBuilder HandlersFromAssemblies(params Assembly[] assemblies);
         IBrighterHandlerBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers);

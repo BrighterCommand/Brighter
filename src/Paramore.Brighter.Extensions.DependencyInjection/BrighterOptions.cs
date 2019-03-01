@@ -16,14 +16,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IPolicyRegistry<string> PolicyRegistry { get; set; } = new DefaultPolicy();
 
         /// <summary>
-        ///     Configures task queues. 
+        ///     Configures task queues to send messages.  
         /// </summary>
         public BrighterMessaging BrighterMessaging { get; set; }  
 
         /// <summary>
-        ///     Configures how the services are injected. Defaults to Transient.
+        ///     Configures the life time of the Command Processor. Defaults to Singleton.
         /// </summary>
-        public ServiceLifetime HandlerLifetime { get; set; } = ServiceLifetime.Transient;
+        public ServiceLifetime CommandProcessorLifetime { get; set; } = ServiceLifetime.Singleton;
     }
 
     public interface IBrighterOptions
@@ -39,13 +39,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IPolicyRegistry<string> PolicyRegistry { get; set; }
 
         /// <summary>
-        ///     Configures task queues. 
+        ///     Configures task queues to send messages. 
         /// </summary>
         BrighterMessaging BrighterMessaging { get; set; }
 
         /// <summary>
-        ///     Configures how the services are injected. Defaults to Transient.
+        ///     Configures the life time of the Command Processor. Defaults to Singleton
         /// </summary>
-        ServiceLifetime HandlerLifetime { get; set; }
+        ServiceLifetime CommandProcessorLifetime { get; set; }
     }
 }

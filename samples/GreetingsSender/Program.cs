@@ -28,6 +28,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Serilog;
+using Serilog.Events;
 
 namespace GreetingsSender
 {
@@ -35,6 +37,13 @@ namespace GreetingsSender
     {
         static void Main(string[] args)
         {
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
+
             var serviceCollection = new ServiceCollection();
 
             var messageStore = new InMemoryMessageStore();
@@ -45,7 +54,7 @@ namespace GreetingsSender
             };
             var producer = new RmqMessageProducer(gatewayConnection);
 
-            serviceCollection.AddBrighter(options => options.BrighterMessaging = new BrighterMessaging(messageStore, producer)).HandlersFromAssemblies(typeof(GreetingEvent).Assembly);
+            serviceCollection.AddBrighter(options => options.BrighterMessaging = new BrighterMessaging(messageStore, producer)).AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 

@@ -8,14 +8,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceCollectionMessageMapperRegistry: IEnumerable<KeyValuePair<Type, Type>>
     {
         private readonly IServiceCollection _serviceCollection;
-        //private readonly ServiceLifetime _serviceLifetime;
         private readonly Dictionary<Type, Type> _mapperCollection = new Dictionary<Type, Type>();
 
         public ServiceCollectionMessageMapperRegistry(
             IServiceCollection serviceCollection)
         {
             _serviceCollection = serviceCollection;
-           // _serviceLifetime = serviceLifetime;
         }
         
 

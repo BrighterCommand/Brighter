@@ -20,6 +20,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         public IServiceCollection Services { get; }
 
+        public IBrighterHandlerBuilder AutoFromAssemblies()
+        {
+            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic).ToArray();
+
+            MapperRegistryFromAssemblies(assemblies);
+            HandlersFromAssemblies(assemblies);
+            AsyncHandlersFromAssemblies(assemblies);
+
+            return this;
+        }
+
         public IBrighterHandlerBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
         {
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));

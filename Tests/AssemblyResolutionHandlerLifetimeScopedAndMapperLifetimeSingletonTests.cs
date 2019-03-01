@@ -21,21 +21,10 @@ namespace Tests
         {
             _services = new ServiceCollection();
 
-            _services.AddServiceActivator(options =>
-                {
-                    options.HandlerLifetime = ServiceLifetime.Scoped;
-                    options.MapperLifetime = ServiceLifetime.Singleton;
-                })
-                .MapperRegistryFromAssemblies(typeof(TestEventHandler).Assembly)
-                .HandlersFromAssemblies(typeof(TestEventHandler).Assembly, typeof(ExceptionPolicyHandler<>).Assembly);
+            _services.AddServiceActivator(options => { options.CommandProcessorLifetime = ServiceLifetime.Scoped; })
+                .AutoFromAssemblies();
 
             _provider = _services.BuildServiceProvider();
-        }
-
-        [Fact]
-        public void ShouldHaveRegistered12Correctly()
-        {
-            Assert.Equal(13, _services.Count);
         }
 
         [Fact]
@@ -86,19 +75,18 @@ namespace Tests
         public void ShouldHaveCommandProcessor()
         {
             Assert.Equal(typeof(CommandProcessor), _provider.GetService<IAmACommandProcessor>().GetType());
-        } 
+        }
 
-        //[Fact]
-        //public void ShouldHaveHandler()
-        //{
-        //    Assert.NotNull(_provider.GetService<IAmAMessageMapper<GreetingEvent>>());
-        //    Assert.NotNull(_provider.GetService<IHandleRequests<GreetingEvent>>());
-        //}
+        [Fact]
+        public void ShouldHaveHandler()
+        {
+            Assert.NotNull(_provider.GetService<TestEventHandler>());
+        }
 
-        //        [Fact]
-        //public void ShouldHaveMapper()
-        //{
-        //    Assert.NotNull(_provider.GetService<IAmAMessageMapper<GreetingEvent>>());
-        //}
+        [Fact]
+        public void ShouldHaveMapper()
+        {
+            Assert.NotNull(_provider.GetService<TestEventMessageMapper>());
+        }
     }
 }

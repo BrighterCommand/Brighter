@@ -4,7 +4,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
-    public static class ServiceActivatorServiceCollectionExtensions 
+    public static class  ServiceActivatorServiceCollectionExtensions 
     {
         public static IBrighterHandlerBuilder AddServiceActivator(
             this IServiceCollection services,
@@ -18,11 +18,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             services.AddSingleton(options);
             services.AddSingleton<IBrighterOptions>(options);
 
-            var brighterHandlerBuilder = ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
-
             services.AddSingleton<IDispatcher>(BuildDispatcher);
 
-            return brighterHandlerBuilder;
+            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
@@ -32,18 +30,12 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var dispatcherBuilder = DispatchBuilder.With().CommandProcessor(commandProcessor);
 
-            var serviceCollectionMessageMapperRegistry = serviceProvider.GetService<ServiceCollectionMessageMapperRegistry>();
-            
-            var messageMapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(serviceProvider));
-
-            foreach (var messageMapper in serviceCollectionMessageMapperRegistry)
-            {
-                messageMapperRegistry.Add(messageMapper.Key, messageMapper.Value);
-            }
+            var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             
             return dispatcherBuilder.MessageMappers(messageMapperRegistry)
                 .DefaultChannelFactory(options.ChannelFactory)
                 .Connections(options.Connections).Build();
         }
     }
+   
 }

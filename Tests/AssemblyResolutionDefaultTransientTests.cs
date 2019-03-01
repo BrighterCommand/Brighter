@@ -21,17 +21,9 @@ namespace Tests
         {
             _services = new ServiceCollection();
 
-            _services.AddServiceActivator()
-                .MapperRegistryFromAssemblies(typeof(TestEventHandler).Assembly)
-                .HandlersFromAssemblies(typeof(TestEventHandler).Assembly, typeof(ExceptionPolicyHandler<>).Assembly);
-
+            _services.AddServiceActivator().AutoFromAssemblies();
+              
             _provider = _services.BuildServiceProvider();
-        }
-
-        [Fact]
-        public void ShouldHaveRegistered12Correctly()
-        {
-            Assert.Equal(13, _services.Count);
         }
 
         [Fact]
@@ -55,7 +47,7 @@ namespace Tests
         [Fact]
         public void ShouldHaveTestMapperRegisteredCorrectly()
         {
-            TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Transient);
+            TestRegistration(typeof(TestEventMessageMapper), ServiceLifetime.Singleton);
         }
 
         [Fact]

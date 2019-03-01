@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public class ServiceProviderMapperFactory : IAmAMessageMapperFactory
     {

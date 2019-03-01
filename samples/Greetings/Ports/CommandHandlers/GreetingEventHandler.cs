@@ -25,13 +25,15 @@ THE SOFTWARE. */
 using System;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 
 namespace Greetings.Ports.CommandHandlers
 {
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
-        [UsePolicy(Paramore.Brighter.CommandProcessor.RETRYPOLICY, 0)]
+        [RequestLogging(0, HandlerTiming.Before)]
+        [UsePolicy(CommandProcessor.RETRYPOLICY, 0)]
         public override GreetingEvent Handle(GreetingEvent @event)
         {
             Console.WriteLine("Received Greeting. Message Follows");
