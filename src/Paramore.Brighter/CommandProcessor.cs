@@ -52,7 +52,9 @@ namespace Paramore.Brighter
         private readonly int _messageStoreTimeout;
         private readonly IAmAnOutbox<Message> _outBox;
         private readonly IAmAnOutboxAsync<Message> _asyncOutbox;
+        private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
+
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
         private IAmAChannelFactory _responseChannelFactory;
@@ -95,13 +97,15 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _handlerFactory = handlerFactory;
@@ -109,6 +113,7 @@ namespace Paramore.Brighter
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -120,18 +125,22 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null
+            )
         {
             _subscriberRegistry = subscriberRegistry;
             _handlerFactory = handlerFactory;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -143,18 +152,21 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null)
         {
             _subscriberRegistry = subscriberRegistry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -168,6 +180,7 @@ namespace Paramore.Brighter
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
@@ -175,7 +188,8 @@ namespace Paramore.Brighter
             IAmAnOutbox<Message> outBox,
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
@@ -184,6 +198,7 @@ namespace Paramore.Brighter
             _outBox = outBox;
             _messageProducer = messageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -197,6 +212,7 @@ namespace Paramore.Brighter
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string>  policyRegistry,
@@ -204,7 +220,8 @@ namespace Paramore.Brighter
             IAmAnOutboxAsync<Message> asyncOutbox,
             IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
@@ -213,6 +230,7 @@ namespace Paramore.Brighter
             _asyncOutbox = asyncOutbox;
             _asyncMessageProducer = asyncMessageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -228,6 +246,7 @@ namespace Paramore.Brighter
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -237,7 +256,8 @@ namespace Paramore.Brighter
             IAmAMessageProducer messageProducer,
             int messageStoreTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
-            IAmAChannelFactory responseChannelFactory = null)
+            IAmAChannelFactory responseChannelFactory = null,
+            InboxConfiguration inboxConfiguration = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
@@ -245,6 +265,7 @@ namespace Paramore.Brighter
             _messageStoreTimeout = messageStoreTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -260,6 +281,7 @@ namespace Paramore.Brighter
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+           /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
@@ -269,7 +291,8 @@ namespace Paramore.Brighter
             IAmAnOutboxAsync<Message> asyncOutbox,
             IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null)
             : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
@@ -277,6 +300,7 @@ namespace Paramore.Brighter
             _asyncMessageProducer = asyncMessageProducer;
             _messageStoreTimeout = messageStoreTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
@@ -295,7 +319,8 @@ namespace Paramore.Brighter
         /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="messageStoreTimeout">How long should we wait to write to the message store</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
-        public CommandProcessor(
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
+         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmAHandlerFactoryAsync asyncHandlerFactory,

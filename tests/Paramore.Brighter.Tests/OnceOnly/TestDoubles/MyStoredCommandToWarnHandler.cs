@@ -26,23 +26,18 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.OnceOnly.TestDoubles
 {
-    internal class MyStoredCommandToThrowHandler : RequestHandler<MyCommand>
+    internal class MyStoredCommandToWarnHandler : RequestHandler<MyCommand>
     {
-        public static bool CommandReceived { get; set; }
+        public static int ReceivedCount { get; private set; }
         
-        [UseInbox(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandler))]
+        [UseInbox(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Warn, contextKey: typeof(MyStoredCommandToWarnHandler))]
         public override MyCommand Handle(MyCommand command)
         {
-            CommandReceived = true;
+            ReceivedCount++;
 
             return base.Handle(command);
-        }
-
-        public static bool DidReceive(MyCommand command)
-        {
-            return CommandReceived;
         }
     }
 }

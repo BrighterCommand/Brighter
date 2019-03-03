@@ -37,15 +37,12 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly InMemoryOutbox _outbox;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly InMemoryOutbox _outbox = new InMemoryOutbox();
+        private readonly FakeMessageProducer _fakeMessageProducer = new FakeMessageProducer();
 
         public CommandProcessorWithInMemoryMessageStoreTests()
         {
             _myCommand.Value = "Hello World";
-
-            _outbox = new InMemoryOutbox();
-            _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),

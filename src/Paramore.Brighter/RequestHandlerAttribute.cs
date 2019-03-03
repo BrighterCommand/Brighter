@@ -36,7 +36,7 @@ namespace Paramore.Brighter
     [AttributeUsage(AttributeTargets.Method)]
     public abstract class RequestHandlerAttribute : Attribute
     {
-        private readonly int _step;
+        private int _step;
 
         private readonly HandlerTiming _timing;
 
@@ -70,6 +70,7 @@ namespace Paramore.Brighter
         public int Step
         {
             get { return _step; }
+            set { _step = value; }
         }
 
         //Should we run this before or after the main target?

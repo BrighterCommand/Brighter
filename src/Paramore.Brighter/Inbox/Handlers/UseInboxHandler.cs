@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<UseInboxHandler<T>>);
 
-        private readonly IAmAnInbox _commandStore;
+        private readonly IAmAnInbox _inbox;
         private bool _onceOnly;
         private string _contextKey;
         private OnceOnlyAction _onceOnlyAction;
@@ -50,10 +50,10 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
         /// </summary>
-        /// <param name="commandStore">The store for commands that pass into the system</param>
-        public UseInboxHandler(IAmAnInbox commandStore)
+        /// <param name="inbox">The store for commands that pass into the system</param>
+        public UseInboxHandler(IAmAnInbox inbox)
         {
-            _commandStore = commandStore;
+            _inbox = inbox;
         }
         
         public override void InitializeFromAttributeParams(params object[] initializerList)
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             {
                  _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
 
-                 var exists = _commandStore.Exists<T>(command.Id, _contextKey); 
+                 var exists = _inbox.Exists<T>(command.Id, _contextKey); 
                  
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {                    
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
 
-            _commandStore.Add(command, _contextKey);
+            _inbox.Add(command, _contextKey);
 
             return handledCommand;
         }

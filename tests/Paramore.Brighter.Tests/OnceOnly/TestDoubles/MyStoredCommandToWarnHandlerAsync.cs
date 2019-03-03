@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,17 +22,24 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
+using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.OnceOnly.TestDoubles
 {
-    internal class MyStoredCommandHandler : RequestHandler<MyCommand>
+    internal class MyStoredCommandToWarnHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        [UseInbox(1, onceOnly:true, contextKey: typeof(MyStoredCommandHandler), timing: HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand command)
+        public static int ReceivedCount { get; private set; }
+        
+        [UseInboxAsync(1, onceOnly: true, contextKey: typeof(MyStoredCommandToWarnHandlerAsync), onceOnlyAction: OnceOnlyAction.Warn)]
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return base.Handle(command);
+            ReceivedCount++;
+
+            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
     }
 }

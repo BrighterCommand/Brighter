@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.OnceOnly.TestDoubles
 {
     internal class MyStoredCommandHandlerAsync : RequestHandlerAsync<MyCommand> 
     {
