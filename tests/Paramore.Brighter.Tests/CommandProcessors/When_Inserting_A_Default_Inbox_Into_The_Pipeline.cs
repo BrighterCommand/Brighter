@@ -4,17 +4,14 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.Registry;
+using TinyIoC;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
     //TODO:
     //Publish as opposed to Send
-    //Already has an Inbox attribute, with different defaults frx throws
-    //Has a NoInbox attribute that opts out of any global (or does nothing if no global i.e. marker not handler attribute)
-    //Respects different global choices i.e. throw, what to capture, context
-    //allow a lambda for the context, to override, and pass in a default of typeof() ????
-    
+   
     
     public class CommandProcessorBuildDefaultInboxTests : IDisposable
     {
@@ -28,17 +25,21 @@ namespace Paramore.Brighter.Tests.CommandProcessors
              //This handler has no Inbox attribute
              subscriberRegistry.Add(typeof(MyCommand), typeof(MyCommandHandler));
              
-             var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
-             
+             var container = new TinyIoCContainer();
+             var handlerFactory = new TinyIocHandlerFactory(container);
+
+             container.Register<IHandleRequests<MyCommand>, MyCommandHandler>();
+             container.Register<IAmAnInbox>(_inbox);
+              
              var retryPolicy = Policy
                 .Handle<Exception>()
                 .Retry();
 
-            var circuitBreakerPolicy = Policy
+             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            var inboxConfiguration = new InboxConfiguration(
+             var inboxConfiguration = new InboxConfiguration(
                 InboxScope.All, //grab all the events
                 true, //grab the context from the handler name
                 true, //only allow once
@@ -64,7 +65,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _commandProcessor.Send(command);
             
             //assert we are in, and auto-context added us under our name
-            var boxed = _inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).Name, 100);
+            var boxed = _inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, 100);
             boxed.Should().BeTrue();
         }
         

@@ -99,7 +99,7 @@ namespace Paramore.Brighter
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step);
 
-            AddGlobalPreAttributes(ref preAttributes);
+            AddGlobalPreAttributes(ref preAttributes, implicitHandler);
             
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
 
@@ -152,7 +152,7 @@ namespace Paramore.Brighter
             return firstInPipeline;
         }
 
-        private void AddGlobalPreAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes)
+        private void AddGlobalPreAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
         {
             if (_inboxConfiguration == null)
                 return;
@@ -160,7 +160,7 @@ namespace Paramore.Brighter
 
             var useInboxAttribute = new UseInboxAttribute(
                 step: 0,
-                contextKey: _inboxConfiguration.UseAutoContext ? typeof(TRequest): null,
+                contextKey: _inboxConfiguration.UseAutoContext ? implicitHandler.GetType().FullName: null,
                 onceOnly: _inboxConfiguration.OnceOnly,
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);

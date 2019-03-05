@@ -359,7 +359,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
             {
                 _logger.Value.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
@@ -387,7 +387,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
             {
                 _logger.Value.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
@@ -416,7 +416,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration ))
             {
                 _logger.Value.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(requestContext);
@@ -466,7 +466,7 @@ namespace Paramore.Brighter
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
             {
                 _logger.Value.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
 
