@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -8,26 +9,26 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class PipelineGlobalInboxNoInboxAttributeTests
+    public class PipelineGlobalInboxNoInboxAttributeAsyncTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private Pipelines<MyCommand> _chainOfResponsibility;
+        private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
         private readonly InboxConfiguration _inboxConfiguration;
         private IAmAnInbox _inbox;
 
 
-        public PipelineGlobalInboxNoInboxAttributeTests()
+        public PipelineGlobalInboxNoInboxAttributeAsyncTests()
         {
             _inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyNoInboxCommandHandler>();
+            registry.RegisterAsync<MyCommand, MyNoInboxCommandHandlerAsync>();
             
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
+            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
-            container.Register<IHandleRequests<MyCommand>, MyNoInboxCommandHandler>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyNoInboxCommandHandlerAsync>();
             container.Register<IAmAnInbox>(_inbox);
  
             _requestContext = new RequestContext();
@@ -39,18 +40,18 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Building_A_Pipeline_With_Global_Inbox()
+        public void When_Building_A_Pipeline_With_Global_Inbox_Async()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
             
             //assert
-            var tracer = TracePipeline(_chainOfResponsibility.First());
-            tracer.ToString().Should().NotContain("UseInboxHandler");
+            var tracer = TracePipelineAsync(_chainOfResponsibility.First());
+            tracer.ToString().Should().NotContain("UseInboxHandlerAsync");
 
         }
         
-        private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
+        private PipelineTracer TracePipelineAsync(IHandleRequestsAsync<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
