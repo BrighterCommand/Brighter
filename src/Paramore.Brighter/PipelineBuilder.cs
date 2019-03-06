@@ -99,7 +99,7 @@ namespace Paramore.Brighter
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step);
 
-            AddGlobalPreAttributes(ref preAttributes, implicitHandler);
+            AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
             
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
 
@@ -139,7 +139,7 @@ namespace Paramore.Brighter
                 .OrderByDescending(attribute => attribute.Step);
 
 
-            AddGlobalPreAttributesAsync(ref preAttributes, implicitHandler);
+            AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
             
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
@@ -154,9 +154,9 @@ namespace Paramore.Brighter
             return firstInPipeline;
         }
 
-        private void AddGlobalPreAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
+        private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
         {
-            if (_inboxConfiguration == null)
+            if (_inboxConfiguration == null || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline())
                 return;
 
             var useInboxAttribute = new UseInboxAttribute(
@@ -170,9 +170,9 @@ namespace Paramore.Brighter
         }
 
 
-        private void AddGlobalPreAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
+        private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
-            if (_inboxConfiguration == null)
+            if (_inboxConfiguration == null || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline())
                 return;
 
             var useInboxAttribute = new UseInboxAsyncAttribute(

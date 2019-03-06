@@ -8,14 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    //TODO:
-    
-    //Already has an Inbox attribute, with different defaults frx throws (CP level, can we interrogate settings?)
-    //Respects different global choices i.e. throw, what to capture, context (see above ????)
-    //allow a lambda for the context, to override, and pass in a default of typeof() ????
- 
-    
-    public class PipelineGlobalInboxTests
+    public class PipelineGlobalInboxNoInboxAttributeTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
@@ -24,17 +17,17 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private IAmAnInbox _inbox;
 
 
-        public PipelineGlobalInboxTests()
+        public PipelineGlobalInboxNoInboxAttributeTests()
         {
             _inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandHandler>();
+            registry.Register<MyCommand, MyNoInboxCommandHandler>();
             
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
 
-            container.Register<IHandleRequests<MyCommand>, MyCommandHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyNoInboxCommandHandler>();
             container.Register<IAmAnInbox>(_inbox);
  
             _requestContext = new RequestContext();
@@ -53,7 +46,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());
-            tracer.ToString().Should().Contain("UseInboxHandler");
+            tracer.ToString().Should().NotContain("UseInboxHandler");
 
         }
         

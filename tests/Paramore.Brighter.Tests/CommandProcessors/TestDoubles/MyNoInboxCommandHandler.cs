@@ -22,32 +22,34 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reflection;
 using Paramore.Brighter.Inbox.Attributes;
 
-namespace Paramore.Brighter.Extensions
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal static class ReflectionExtensions
+    internal class MyNoInboxCommandHandler : RequestHandler<MyCommand>
     {
-        internal static IEnumerable<RequestHandlerAttribute> GetOtherHandlersInPipeline(this MethodInfo targetMethod)
+        private static MyCommand s_command;
+
+        public MyNoInboxCommandHandler()
         {
-            var customAttributes = targetMethod.GetCustomAttributes(true);
-            return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().GetTypeInfo().BaseType == typeof (RequestHandlerAttribute))
-                .Cast<RequestHandlerAttribute>()
-                .ToList();
+            s_command = null;
         }
 
-        internal static bool HasNoInboxAttributesInPipeline(this MethodInfo targetMethod)
+        [NoGlobalInbox]
+        public override MyCommand Handle(MyCommand command)
         {
-             var customAttributes = targetMethod.GetCustomAttributes(true);
-             return customAttributes
-                .Select(attr => (Attribute) attr)
-                .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (NoGlobalInboxAttribute));
+            LogCommand(command);
+            return base.Handle(command);
+        }
+
+        public static bool ShouldReceive(MyCommand expectedCommand)
+        {
+            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+        }
+
+        private void LogCommand(MyCommand request)
+        {
+            s_command = request;
         }
     }
 }
