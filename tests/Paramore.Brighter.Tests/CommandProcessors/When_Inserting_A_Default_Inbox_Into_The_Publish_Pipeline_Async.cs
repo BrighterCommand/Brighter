@@ -11,23 +11,23 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorBuildDefaultInboxSendAsyncTests : IDisposable
+    public class CommandProcessorBuildDefaultInboxPublishAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly InMemoryInbox _inbox = new InMemoryInbox();
 
-        public CommandProcessorBuildDefaultInboxSendAsyncTests()
+        public CommandProcessorBuildDefaultInboxPublishAsyncTests()
         {
-             var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
+             var handler = new MyEventHandlerAsync(new Dictionary<string, Guid>());
             
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
-             subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
+             subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsync>();
              
              var container = new TinyIoCContainer();
              var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
-             container.Register<MyCommandHandlerAsync>(handler);
+             container.Register<MyEventHandlerAsync>(handler);
              container.Register<IAmAnInboxAsync>(_inbox);
               
              var retryPolicy = Policy
@@ -64,11 +64,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         public async Task WhenInsertingADefaultInboxIntoTheSendPipeline()
         {
             //act
-            var command = new MyCommand(){Value = "Inbox Capture"};
-            await _commandProcessor.SendAsync(command);
+            var @event = new MyEvent();
+            await _commandProcessor.SendAsync(@event);
             
             //assert we are in, and auto-context added us under our name
-            var boxed = await _inbox.ExistsAsync<MyCommand>(command.Id, typeof(MyCommandHandlerAsync).FullName, 100);
+            var boxed = await _inbox.ExistsAsync<MyCommand>(@event.Id, typeof(MyEventHandlerAsync).FullName, 100);
             boxed.Should().BeTrue();
         }
         

@@ -13,7 +13,6 @@ namespace Paramore.Brighter.Tests.CommandProcessors
     public class CommandProcessorBuildDefaultInboxPublishTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly MyCommand _myCommand = new MyCommand(); 
         private readonly InMemoryInbox _inbox = new InMemoryInbox();
 
         public CommandProcessorBuildDefaultInboxPublishTests()
