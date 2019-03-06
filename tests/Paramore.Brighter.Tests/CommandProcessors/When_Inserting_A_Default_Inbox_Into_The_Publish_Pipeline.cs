@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -11,37 +10,33 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    //TODO:
-    //Publish as opposed to Send
-   
-    
-    public class CommandProcessorBuildDefaultInboxAsyncTests : IDisposable
+    public class CommandProcessorBuildDefaultInboxPublishTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand(); 
         private readonly InMemoryInbox _inbox = new InMemoryInbox();
 
-        public CommandProcessorBuildDefaultInboxAsyncTests()
+        public CommandProcessorBuildDefaultInboxPublishTests()
         {
-             var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
+            var handler = new MyEventHandler(new Dictionary<string, Guid>());
             
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
-             subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
+             subscriberRegistry.Add(typeof(MyEvent), typeof(MyEventHandler));
              
              var container = new TinyIoCContainer();
-             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
+             var handlerFactory = new TinyIocHandlerFactory(container);
 
-             container.Register<MyCommandHandlerAsync>(handler);
-             container.Register<IAmAnInboxAsync>(_inbox);
+             container.Register<MyEventHandler>(handler);
+             container.Register<IAmAnInbox>(_inbox);
               
              var retryPolicy = Policy
                 .Handle<Exception>()
-                .RetryAsync();
+                .Retry();
 
              var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
              var inboxConfiguration = new InboxConfiguration(
                 InboxScope.All, //grab all the events
@@ -54,11 +49,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 subscriberRegistry, 
                 handlerFactory, 
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry
-                {
-                    { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, 
-                    { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
-                },
+                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 inboxConfiguration: inboxConfiguration
                 );
             
@@ -66,14 +57,14 @@ namespace Paramore.Brighter.Tests.CommandProcessors
  
         
         [Fact]
-        public async Task WhenInsertingADefaultInboxIntoThePipeline()
+        public void WhenInsertingADefaultInboxIntoThePublishPipeline()
         {
             //act
-            var command = new MyCommand(){Value = "Inbox Capture"};
-            await _commandProcessor.SendAsync(command);
+            var @event = new MyEvent();
+            _commandProcessor.Publish(@event);
             
             //assert we are in, and auto-context added us under our name
-            var boxed = await _inbox.ExistsAsync<MyCommand>(command.Id, typeof(MyCommandHandlerAsync).FullName, 100);
+            var boxed = _inbox.Exists<MyEvent>(@event.Id, typeof(MyEventHandler).FullName, 100);
             boxed.Should().BeTrue();
         }
         
