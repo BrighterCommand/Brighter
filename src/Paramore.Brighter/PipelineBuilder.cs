@@ -139,6 +139,8 @@ namespace Paramore.Brighter
                 .OrderByDescending(attribute => attribute.Step);
 
 
+            AddGlobalPreAttributesAsync(ref preAttributes, implicitHandler);
+            
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
             var postAttributes =
@@ -177,9 +179,34 @@ namespace Paramore.Brighter
 
              preAttributes = attributeList.OrderByDescending(handler => handler.Step);
 
-
         }
-        
+
+        private void AddGlobalPreAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
+        {
+            if (_inboxConfiguration == null)
+                return;
+
+
+            var useInboxAttribute = new UseInboxAsyncAttribute(
+                step: 0,
+                contextKey: _inboxConfiguration.UseAutoContext ? implicitHandler.GetType().FullName : null,
+                onceOnly: _inboxConfiguration.OnceOnly,
+                timing: HandlerTiming.Before,
+                onceOnlyAction: _inboxConfiguration.ActionOnExists);
+
+            var attributeList = new List<RequestHandlerAttribute>();
+
+            attributeList.Add(useInboxAttribute);
+
+            preAttributes.Each(handler =>
+            {
+                handler.Step++;
+                attributeList.Add(handler);
+            });
+
+            preAttributes = attributeList.OrderByDescending(handler => handler.Step);
+        }
+
         private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
         {
             IHandleRequests<TRequest> lastInPipeline = implicitHandler;

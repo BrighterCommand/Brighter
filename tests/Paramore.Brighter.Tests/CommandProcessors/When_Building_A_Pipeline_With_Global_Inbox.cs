@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
     public class PipelineGlobalInboxTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private IHandleRequests<MyCommand> _chainOfResponsibility;
+        private Pipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
         private readonly InboxConfiguration _inboxConfiguration;
         private IAmAnInbox _inbox;
@@ -49,10 +49,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         public void When_Building_A_Pipeline_With_Global_inbox()
         {
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext).First();
+            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
             
             //assert
-            var tracer = TracePipeline(_chainOfResponsibility);
+            var tracer = TracePipeline(_chainOfResponsibility.First());
             tracer.ToString().Should().Contain("UseInboxHandler");
 
         }
