@@ -159,7 +159,6 @@ namespace Paramore.Brighter
             if (_inboxConfiguration == null)
                 return;
 
-
             var useInboxAttribute = new UseInboxAttribute(
                 step: 0,
                 contextKey: _inboxConfiguration.UseAutoContext ? implicitHandler.GetType().FullName: null,
@@ -167,25 +166,14 @@ namespace Paramore.Brighter
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
             
-             var attributeList = new List<RequestHandlerAttribute>();
-             
-             attributeList.Add(useInboxAttribute);
-
-             preAttributes.Each(handler =>
-             {
-                 handler.Step++;
-                 attributeList.Add(handler);
-             });
-
-             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
-
+             PushOntoAttributeList(ref preAttributes, useInboxAttribute);
         }
+
 
         private void AddGlobalPreAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
             if (_inboxConfiguration == null)
                 return;
-
 
             var useInboxAttribute = new UseInboxAsyncAttribute(
                 step: 0,
@@ -194,17 +182,7 @@ namespace Paramore.Brighter
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
 
-            var attributeList = new List<RequestHandlerAttribute>();
-
-            attributeList.Add(useInboxAttribute);
-
-            preAttributes.Each(handler =>
-            {
-                handler.Step++;
-                attributeList.Add(handler);
-            });
-
-            preAttributes = attributeList.OrderByDescending(handler => handler.Step);
+             PushOntoAttributeList(ref preAttributes, useInboxAttribute);
         }
 
         private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
@@ -248,6 +226,21 @@ namespace Paramore.Brighter
             });
         }
         
+        private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
+        {
+            var attributeList = new List<RequestHandlerAttribute>();
+
+            attributeList.Add(requestHandlerAttribute);
+
+            preAttributes.Each(handler =>
+            {
+                handler.Step++;
+                attributeList.Add(handler);
+            });
+
+            preAttributes = attributeList.OrderByDescending(handler => handler.Step);
+        }
+     
         private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             attributes.Each(attribute =>
