@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -9,27 +10,27 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class PipelineGlobalInboxWhenUseInboxTests
+    public class PipelineGlobalInboxWhenUseInboxAsyncTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
-        private Pipelines<MyCommand> _chainOfResponsibility;
+        private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
         private readonly InboxConfiguration _inboxConfiguration;
         private IAmAnInbox _inbox;
 
 
-        public PipelineGlobalInboxWhenUseInboxTests()
+        public PipelineGlobalInboxWhenUseInboxAsyncTests()
         {
             _inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandInboxedHandler>();
+            registry.RegisterAsync<MyCommand, MyCommandInboxedHandlerAsync>();
             
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
+            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
 
-            container.Register<IHandleRequests<MyCommand>, MyCommandInboxedHandler>();
-            container.Register<IAmAnInbox>(_inbox);
+            container.Register<IHandleRequestsAsync<MyCommand>, MyCommandInboxedHandlerAsync>();
+            container.Register<IAmAnInboxAsync>((IAmAnInboxAsync)_inbox);
  
             _requestContext = new RequestContext();
             
@@ -44,7 +45,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Building_A_Pipeline_With_Global_Inbox()
+        public async Task When_Building_A_Pipeline_With_Global_Inbox()
         {
             // Settings for UseInbox on MyCommandInboxedHandler
             // [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
@@ -54,18 +55,18 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
             
             //act
-            _chainOfResponsibility = _chainBuilder.Build(_requestContext);
+            _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
 
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();
             
             //First pass not impacted by UseInbox Handler
-            chain.Handle(myCommand);
+            await chain.HandleAsync(myCommand);
 
             bool noException = true;
             try
             {
-                chain.Handle(myCommand);
+                await chain.HandleAsync(myCommand);
             }
             catch (OnceOnlyException)
             {

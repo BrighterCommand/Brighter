@@ -10,7 +10,6 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 {
     //TODO:
     
-    //Already has an Inbox attribute, with different defaults frx throws (CP level, can we interrogate settings?)
     //Respects different global choices i.e. throw, what to capture, context (see above ????)
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
  
