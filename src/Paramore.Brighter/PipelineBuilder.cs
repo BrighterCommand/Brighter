@@ -156,7 +156,10 @@ namespace Paramore.Brighter
 
         private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
         {
-            if (_inboxConfiguration == null || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline())
+            if (
+                _inboxConfiguration == null 
+                || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
+                || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline())
                 return;
 
             var useInboxAttribute = new UseInboxAttribute(

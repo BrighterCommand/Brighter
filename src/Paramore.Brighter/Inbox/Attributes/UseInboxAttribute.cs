@@ -28,11 +28,9 @@ using Paramore.Brighter.Inbox.Handlers;
 namespace Paramore.Brighter.Inbox.Attributes
 {
     /// <summary>
-    /// Class UseCommandSourcingAttribute.
-    /// We use this attribute to indicate that we want to use Event Sourcing, where the application state is the system of record
-    /// but we want to store the commands that led to the current application state, so that we can rebuild application state
-    /// or recreate commands
-    /// See  <a href="http://martinfowler.com/eaaDev/EventSourcing.html">Martin Fowler Event Sourcing</a> for more on this approach.
+    /// Class UseInboxAttribute.
+    /// Use this class to indicate that we wish to store requests entering the pipeline, this can help us to de-duplicate requests
+    /// that may need to be resent for reliability reasons, or replay the commands that led to current state
     /// </summary>
     public class UseInboxAttribute : RequestHandlerAttribute
     {

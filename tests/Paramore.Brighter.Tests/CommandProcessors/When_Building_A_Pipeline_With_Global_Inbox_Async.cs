@@ -12,8 +12,6 @@ using Xunit;
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
     //TODO:
-    //Already has an Inbox attribute, with different defaults frx throws
-    //Has a NoInbox attribute that opts out of any global (or does nothing if no global i.e. marker not handler attribute)
     //Respects different global choices i.e. throw, what to capture, context
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
  
@@ -31,7 +29,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         {
             _inbox = new InMemoryInbox();
             var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
-            
+           
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
             
@@ -52,7 +50,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         [Fact]
         public void When_Building_A_Pipeline_With_Global_Inbox()
         {
-            //act
+           //act
             _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
             
             //assert

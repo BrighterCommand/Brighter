@@ -49,5 +49,14 @@ namespace Paramore.Brighter.Extensions
                 .Select(attr => (Attribute) attr)
                 .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (NoGlobalInboxAttribute));
         }
+
+        internal static bool HasExistingUseInboxAttributesInPipeline(this MethodInfo targetMethod)
+        {
+              var customAttributes = targetMethod.GetCustomAttributes(true);
+              return customAttributes
+                .Select(attr => (Attribute) attr)
+                .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (UseInboxAttribute)
+                          || IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (UseInboxAsyncAttribute));
+        }
     }
 }
