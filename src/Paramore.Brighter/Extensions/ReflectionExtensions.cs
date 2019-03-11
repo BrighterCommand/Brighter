@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter.Extensions
 {
@@ -39,6 +40,23 @@ namespace Paramore.Brighter.Extensions
                 .Where(a => a.GetType().GetTypeInfo().BaseType == typeof (RequestHandlerAttribute))
                 .Cast<RequestHandlerAttribute>()
                 .ToList();
+        }
+
+        internal static bool HasNoInboxAttributesInPipeline(this MethodInfo targetMethod)
+        {
+             var customAttributes = targetMethod.GetCustomAttributes(true);
+             return customAttributes
+                .Select(attr => (Attribute) attr)
+                .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (NoGlobalInboxAttribute));
+        }
+
+        internal static bool HasExistingUseInboxAttributesInPipeline(this MethodInfo targetMethod)
+        {
+              var customAttributes = targetMethod.GetCustomAttributes(true);
+              return customAttributes
+                .Select(attr => (Attribute) attr)
+                .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (UseInboxAttribute)
+                          || IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (UseInboxAsyncAttribute));
         }
     }
 }

@@ -22,24 +22,28 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Threading;
-using System.Threading.Tasks;
-using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Attributes;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyStoredCommandToWarnHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyNoInboxCommandHandler : RequestHandler<MyCommand>
     {
-        public static int ReceivedCount { get; private set; }
-        
-        [UseInboxAsync(1, onceOnly: true, contextKey: typeof(MyStoredCommandToWarnHandlerAsync), onceOnlyAction: OnceOnlyAction.Warn)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            ReceivedCount++;
+        private static MyCommand s_command;
 
-            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        public MyNoInboxCommandHandler()
+        {
+        }
+
+        [NoGlobalInbox]
+        public override MyCommand Handle(MyCommand command)
+        {
+            LogCommand(command);
+            return base.Handle(command);
+        }
+
+        private void LogCommand(MyCommand request)
+        {
+            s_command = request;
         }
     }
 }

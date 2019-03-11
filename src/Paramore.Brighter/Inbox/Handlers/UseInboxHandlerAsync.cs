@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<UseInboxHandlerAsync<T>>);
 
-        private readonly IAmAnInboxAsync _commandStore;
+        private readonly IAmAnInboxAsync _inbox;
         private bool _onceOnly;
         private string _contextKey;
         private OnceOnlyAction _onceOnlyAction;
@@ -51,10 +51,10 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <summary>
         /// Initializes a new instance of the <see cref="UseInboxHandlerAsync{T}" /> class.
         /// </summary>
-        /// <param name="commandStore">The store for commands that pass into the system</param>
-        public UseInboxHandlerAsync(IAmAnInboxAsync commandStore)
+        /// <param name="inbox">The store for commands that pass into the system</param>
+        public UseInboxHandlerAsync(IAmAnInboxAsync inbox)
         {
-            _commandStore = commandStore;
+            _inbox = inbox;
         }
         
         
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             {
                 _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
-                var exists = await _commandStore.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                var exists = await _inbox.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             //TODO: We should not use an infinite timeout here - how to configure
-            await _commandStore.AddAsync(command, _contextKey, - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            await _inbox.AddAsync(command, _contextKey, - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             return handledCommand;
         }

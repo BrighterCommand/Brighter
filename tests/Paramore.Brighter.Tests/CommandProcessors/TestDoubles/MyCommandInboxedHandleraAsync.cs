@@ -24,27 +24,34 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.Attributes;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyStoredCommandToThrowHandlerAsync : RequestHandlerAsync<MyCommand>
+    internal class MyCommandInboxedHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public static bool CommandReceived { get; set; }
-        
-        [UseInboxAsync(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandlerAsync))]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            CommandReceived = true;
+        private static MyCommand s_command;
 
-            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+        public MyCommandInboxedHandlerAsync()
+        {
+            s_command = null;
         }
 
-        public static bool DidReceive(MyCommand command)
+        [UseInboxAsync(step:0, contextKey: typeof(MyCommandInboxedHandlerAsync), onceOnly: false)]
+        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return CommandReceived;
+            LogCommand(command);
+            return base.HandleAsync(command, cancellationToken);
+        }
+
+        public static bool ShouldReceive(MyCommand expectedCommand)
+        {
+            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+        }
+
+        private void LogCommand(MyCommand request)
+        {
+            s_command = request;
         }
     }
 }

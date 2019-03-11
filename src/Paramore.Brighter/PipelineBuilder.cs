@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using System.Reflection;
+using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter
 {
@@ -37,20 +38,36 @@ namespace Paramore.Brighter
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PipelineBuilder<TRequest>>);
 
         private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly InboxConfiguration _inboxConfiguration;
         private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory) 
+        /// <summary>
+        /// Used to build a pipeline of handlers from the target handler and the attributes on that
+        /// target handler which represent other filter steps in the pipeline
+        /// </summary>
+        /// <param name="registry">What handler services this request</param>
+        /// <param name="handlerFactory">Callback to the user code to create instances of handlers</param>
+        /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
+        public PipelineBuilder(
+            IAmASubscriberRegistry registry, 
+            IAmAHandlerFactory handlerFactory,
+            InboxConfiguration inboxConfiguration = null) 
         {
             _handlerFactory = handlerFactory;
+            _inboxConfiguration = inboxConfiguration;
             _instanceScope = new LifetimeScope(handlerFactory);
             _interpreter = new Interpreter<TRequest>(registry, handlerFactory);
         }
 
-        public PipelineBuilder(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
+        public PipelineBuilder(
+            IAmASubscriberRegistry registry, 
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
+            InboxConfiguration inboxConfiguration = null)
         {
             _asyncHandlerFactory = asyncHandlerFactory;
+            _inboxConfiguration = inboxConfiguration;
             _instanceScope = new LifetimeScope(asyncHandlerFactory);
             _interpreter = new Interpreter<TRequest>(registry, asyncHandlerFactory);
         }
@@ -82,6 +99,8 @@ namespace Paramore.Brighter
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step);
 
+            AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
+            
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
 
             var postAttributes =
@@ -95,47 +114,6 @@ namespace Paramore.Brighter
             return firstInPipeline;
         }
 
-        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
-        {
-            IHandleRequests<TRequest> lastInPipeline = implicitHandler;
-            attributes.Each(attribute =>
-            {
-                var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
-                {
-                    var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
-                    lastInPipeline.SetSuccessor(decorator);
-                    lastInPipeline = decorator;
-                }
-                else
-                {
-                    var message = string.Format("All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
-                    throw new ConfigurationException(message);
-                }
-            });
-        }
-
-        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
-        {
-            attributes.Each(attribute =>
-            {
-                var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
-                {
-                    var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
-                    decorator.SetSuccessor(lastInPipeline);
-                    lastInPipeline = decorator;
-                }
-                else
-                {
-                    var message = string.Format("All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
-                    throw new ConfigurationException(message);
-                }
-            });
-            return lastInPipeline;
-        }
 
         public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
         {
@@ -160,6 +138,9 @@ namespace Paramore.Brighter
                 .Where(attribute => attribute.Timing == HandlerTiming.Before)
                 .OrderByDescending(attribute => attribute.Step);
 
+
+            AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
+            
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
             var postAttributes =
@@ -171,6 +152,66 @@ namespace Paramore.Brighter
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
             _logger.Value.DebugFormat("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
+        }
+
+        private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
+        {
+            if (
+                _inboxConfiguration == null 
+                || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
+                || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
+            )
+                return;
+
+            var useInboxAttribute = new UseInboxAttribute(
+                step: 0,
+                contextKey: _inboxConfiguration.Context(implicitHandler.GetType()),
+                onceOnly: _inboxConfiguration.OnceOnly,
+                timing: HandlerTiming.Before,
+                onceOnlyAction: _inboxConfiguration.ActionOnExists);
+            
+             PushOntoAttributeList(ref preAttributes, useInboxAttribute);
+        }
+
+
+        private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
+        {
+            if (_inboxConfiguration == null 
+                || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
+                || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
+     
+            )
+                return;
+
+            var useInboxAttribute = new UseInboxAsyncAttribute(
+                step: 0,
+                contextKey: _inboxConfiguration.Context(implicitHandler.GetType()),
+                onceOnly: _inboxConfiguration.OnceOnly,
+                timing: HandlerTiming.Before,
+                onceOnlyAction: _inboxConfiguration.ActionOnExists);
+
+             PushOntoAttributeList(ref preAttributes, useInboxAttribute);
+        }
+
+        private void AppendToPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> implicitHandler, IRequestContext requestContext)
+        {
+            IHandleRequests<TRequest> lastInPipeline = implicitHandler;
+            attributes.Each(attribute =>
+            {
+                var handlerType = attribute.GetHandlerType();
+                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
+                {
+                    var decorator =
+                        new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
+                    lastInPipeline.SetSuccessor(decorator);
+                    lastInPipeline = decorator;
+                }
+                else
+                {
+                    var message = string.Format("All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    throw new ConfigurationException(message);
+                }
+            });
         }
 
         private void AppendToAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> implicitHandler, IRequestContext requestContext)
@@ -191,6 +232,42 @@ namespace Paramore.Brighter
                     throw new ConfigurationException(message);
                 }
             });
+        }
+        
+        private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
+        {
+            var attributeList = new List<RequestHandlerAttribute>();
+
+            attributeList.Add(requestHandlerAttribute);
+
+            preAttributes.Each(handler =>
+            {
+                handler.Step++;
+                attributeList.Add(handler);
+            });
+
+            preAttributes = attributeList.OrderByDescending(handler => handler.Step);
+        }
+     
+        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
+        {
+            attributes.Each(attribute =>
+            {
+                var handlerType = attribute.GetHandlerType();
+                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
+                {
+                    var decorator =
+                        new HandlerFactory<TRequest>(attribute, _handlerFactory, requestContext).CreateRequestHandler();
+                    decorator.SetSuccessor(lastInPipeline);
+                    lastInPipeline = decorator;
+                }
+                else
+                {
+                    var message = string.Format("All handlers in a pipeline must derive from IHandleRequests. You cannot have a mixed pipeline by including handler {0}", handlerType.Name);
+                    throw new ConfigurationException(message);
+                }
+            });
+            return lastInPipeline;
         }
 
         private IHandleRequestsAsync<TRequest> PushOntoAsyncPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequestsAsync<TRequest> lastInPipeline, IRequestContext requestContext, bool continueOnCapturedContext)

@@ -22,32 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
+using Paramore.Brighter.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
 using TinyIoC;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.EventSourcing
+namespace Paramore.Brighter.Tests.OnceOnly
 {
-    public class OnceOnlyAttributeWithWarnExceptionTests
+    public class OnceOnlyAttributeWithWarnExceptionAsyncTests
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInbox _commandStore;
+        private readonly IAmAnInboxAsync _commandStore;
         private readonly IAmACommandProcessor _commandProcessor;
 
-        public OnceOnlyAttributeWithWarnExceptionTests()
+        public OnceOnlyAttributeWithWarnExceptionAsyncTests()
         {
             _commandStore = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyStoredCommandToWarnHandler>();
+            registry.RegisterAsync<MyCommand, MyStoredCommandToWarnHandlerAsync>();
 
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
+            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             
-            container.Register<IHandleRequests<MyCommand>, MyStoredCommandToWarnHandler>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandToWarnHandlerAsync>();
             container.Register(_commandStore);
 
             _command = new MyCommand {Value = "My Test String"};
@@ -56,12 +57,12 @@ namespace Paramore.Brighter.Tests.EventSourcing
         }
 
         [Fact]
-        public void When_Handling_A_Command_Once_Only_With_Warn_Enabled()
+        public async Task When_Handling_A_Command_Once_Only_With_Warn_Enabled()
         {
-            _commandProcessor.Send(_command);            
-            _commandProcessor.Send(_command);
-
-            MyStoredCommandToWarnHandler.ReceivedCount.Should().Be(1);
+            await _commandProcessor.SendAsync(_command);
+            await _commandProcessor.SendAsync(_command);
+            
+            MyStoredCommandToWarnHandlerAsync.ReceivedCount.Should().Be(1);
         }
     }
 }

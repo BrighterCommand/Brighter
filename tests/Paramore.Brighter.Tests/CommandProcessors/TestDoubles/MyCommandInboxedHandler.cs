@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,16 +23,33 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.Inbox.Attributes;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 
-namespace Paramore.Brighter.Tests.EventSourcing.TestDoubles
+namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyStoredCommandHandler : RequestHandler<MyCommand>
+    internal class MyCommandInboxedHandler : RequestHandler<MyCommand>
     {
-        [UseInbox(1, onceOnly:true, contextKey: typeof(MyStoredCommandHandler), timing: HandlerTiming.Before)]
+        private static MyCommand s_command;
+
+        public MyCommandInboxedHandler()
+        {
+            s_command = null;
+        }
+
+        [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
         public override MyCommand Handle(MyCommand command)
         {
+            LogCommand(command);
             return base.Handle(command);
+        }
+
+        public static bool ShouldReceive(MyCommand expectedCommand)
+        {
+            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+        }
+
+        private void LogCommand(MyCommand request)
+        {
+            s_command = request;
         }
     }
 }

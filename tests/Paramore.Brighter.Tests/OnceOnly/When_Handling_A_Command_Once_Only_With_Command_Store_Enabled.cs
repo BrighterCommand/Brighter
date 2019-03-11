@@ -1,12 +1,12 @@
 ﻿using System;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
+using Paramore.Brighter.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
 using TinyIoC;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.EventSourcing
+namespace Paramore.Brighter.Tests.OnceOnly
 {
     public class OnceOnlyAttributeTests 
     {

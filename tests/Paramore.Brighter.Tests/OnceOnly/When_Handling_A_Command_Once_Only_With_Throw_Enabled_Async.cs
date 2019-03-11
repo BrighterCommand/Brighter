@@ -22,33 +22,36 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
-using FluentAssertions;
+using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Tests.EventSourcing.TestDoubles;
+using Paramore.Brighter.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
 using TinyIoC;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.EventSourcing
+namespace Paramore.Brighter.Tests.OnceOnly
 {
-    public class OnceOnlyAttributeWithWarnExceptionAsyncTests
+    public class OnceOnlyAttributeWithThrowExceptionAsyncTests
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxAsync _commandStore;
         private readonly IAmACommandProcessor _commandProcessor;
 
-        public OnceOnlyAttributeWithWarnExceptionAsyncTests()
+        public OnceOnlyAttributeWithThrowExceptionAsyncTests()
         {
             _commandStore = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyStoredCommandToWarnHandlerAsync>();
+            registry.RegisterAsync<MyCommand, MyStoredCommandToThrowHandlerAsync>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            
-            container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandToWarnHandlerAsync>();
+
+            container.Register<UseInboxHandlerAsync<MyCommand>>();
+            container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandToThrowHandlerAsync>();
             container.Register(_commandStore);
 
             _command = new MyCommand {Value = "My Test String"};
@@ -57,12 +60,13 @@ namespace Paramore.Brighter.Tests.EventSourcing
         }
 
         [Fact]
-        public async Task When_Handling_A_Command_Once_Only_With_Warn_Enabled()
+        public async Task When_Handling_A_Command_Once_Only_With_Throw_Enabled()
         {
             await _commandProcessor.SendAsync(_command);
-            await _commandProcessor.SendAsync(_command);
             
-            MyStoredCommandToWarnHandlerAsync.ReceivedCount.Should().Be(1);
+            Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(() => _commandProcessor.SendAsync(_command));
+            
+            Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }
     }
 }

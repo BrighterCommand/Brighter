@@ -156,9 +156,9 @@ namespace Paramore.Brighter
         {
             _useTaskQueues = true;
             _messageStore = configuration.OutBox;
-            _asyncOutbox = configuration.AsyncOutbox;
+            _asyncOutbox = configuration.OutboxAsync;
             _messagingGateway = configuration.MessageProducer;
-            _asyncMessagingGateway = configuration.AsyncMessageProducer;
+            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
             _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
@@ -183,9 +183,9 @@ namespace Paramore.Brighter
         {
             _useRequestReplyQueues = true;
             _messageStore = configuration.OutBox;
-            _asyncOutbox = configuration.AsyncOutbox;
+            _asyncOutbox = configuration.OutboxAsync;
             _messagingGateway = configuration.MessageProducer;
-            _asyncMessagingGateway = configuration.AsyncMessageProducer;
+            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
             _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
