@@ -36,7 +36,6 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             
             _inboxConfiguration = new InboxConfiguration(
                 scope: InboxScope.All, 
-                useAutoContext: true, 
                 onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
@@ -50,7 +49,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             // Settings for UseInbox on MyCommandInboxedHandler
             // [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
             // Settings for InboxConfifguration as above
-            // _inboxConfiguration = new InboxConfiguration(InboxScope.All, useAutoContext: true, onceOnly: true);
+            // _inboxConfiguration = new InboxConfiguration(InboxScope.All, context: true, onceOnly: true);
             // so global will not allow repeated requests ans calls, but local should override this and allow
 
             

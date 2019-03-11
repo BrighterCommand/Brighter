@@ -13,8 +13,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
  
     
-    public class PipelineGlobalInboxTests
+    public class PipelineGlobalInboxContextTests
     {
+        private const string CONTEXT_KEY = "TestHandlerNameOverride";
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
@@ -22,7 +23,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private IAmAnInbox _inbox;
 
 
-        public PipelineGlobalInboxTests()
+        public PipelineGlobalInboxContextTests()
         {
             _inbox = new InMemoryInbox();
             
@@ -37,7 +38,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors
  
             _requestContext = new RequestContext();
             
-            _inboxConfiguration = new InboxConfiguration();
+            _inboxConfiguration = new InboxConfiguration(
+                scope: InboxScope.All, 
+                context: (handlerType) => CONTEXT_KEY);
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, _inboxConfiguration);
             
@@ -49,18 +52,15 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             //act
             _chainOfResponsibility = _chainBuilder.Build(_requestContext);
             
-            //assert
-            var tracer = TracePipeline(_chainOfResponsibility.First());
-            tracer.ToString().Should().Contain("UseInboxHandler");
+            var firstHandler = _chainOfResponsibility.First();
+            var myCommmand = new MyCommand();
+            firstHandler.Handle(myCommmand);
 
+            //assert
+            var exists = _inbox.Exists<MyCommand>(myCommmand.Id, CONTEXT_KEY, 500);
+            exists.Should().BeTrue();
         }
         
-        private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
-        {
-            var pipelineTracer = new PipelineTracer();
-            firstInPipeline.DescribePath(pipelineTracer);
-            return pipelineTracer;
-        }
- 
+
     }
 }

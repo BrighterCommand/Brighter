@@ -30,17 +30,27 @@ namespace Paramore.Brighter
         /// </summary>
          public InboxScope Scope { get; }
         /// <summary>
-        /// If true, the context to pass to the Inbox will be auto-generated from the handler class name. If false
-        /// we will not use a context, which is not recommended, unless you only use a scope of Commands. 
+        /// If null, the context to pass to the Inbox will be auto-generated from the handler class name. Otherwise
+        /// override with a function that takes a type name - the target handler, and returns a string, the context key
+        /// to use in the inbox to disambiguate requests (such as when an event is raised). 
         /// </summary>
-        public bool UseAutoContext { get; }
+        public Func<Type, string> Context { get; set; }
 
-        public InboxConfiguration(InboxScope scope = InboxScope.All, bool useAutoContext = true, bool onceOnly = true, OnceOnlyAction actionOnExists = OnceOnlyAction.Throw)
+        public InboxConfiguration(
+            InboxScope scope = InboxScope.All, 
+            bool onceOnly = true,
+            OnceOnlyAction actionOnExists = OnceOnlyAction.Throw, 
+            Func<Type, string> context = null)
         {
             Scope = scope;
-            UseAutoContext = useAutoContext;
+            Context = context;
             OnceOnly = onceOnly;
             ActionOnExists = actionOnExists;
+
+            if (context == null)
+            {
+                Context = (handlerType) => handlerType.FullName;
+            }
         }
     }
 }

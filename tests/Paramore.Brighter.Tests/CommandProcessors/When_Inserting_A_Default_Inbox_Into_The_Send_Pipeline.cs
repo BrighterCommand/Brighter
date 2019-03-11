@@ -36,9 +36,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
              var inboxConfiguration = new InboxConfiguration(
                 InboxScope.All, //grab all the events
-                true, //grab the context from the handler name
-                true, //only allow once
-                OnceOnlyAction.Throw //throw on duplicates (we should  be the only entry after)
+                onceOnly: true, //only allow once
+                actionOnExists: OnceOnlyAction.Throw //throw on duplicates (we should  be the only entry after)
             );
 
            _commandProcessor = new CommandProcessor(

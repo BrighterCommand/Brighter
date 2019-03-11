@@ -165,7 +165,7 @@ namespace Paramore.Brighter
 
             var useInboxAttribute = new UseInboxAttribute(
                 step: 0,
-                contextKey: _inboxConfiguration.UseAutoContext ? implicitHandler.GetType().FullName: null,
+                contextKey: _inboxConfiguration.Context(implicitHandler.GetType()),
                 onceOnly: _inboxConfiguration.OnceOnly,
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
@@ -185,7 +185,7 @@ namespace Paramore.Brighter
 
             var useInboxAttribute = new UseInboxAsyncAttribute(
                 step: 0,
-                contextKey: _inboxConfiguration.UseAutoContext ? implicitHandler.GetType().FullName : null,
+                contextKey: _inboxConfiguration.Context(implicitHandler.GetType()),
                 onceOnly: _inboxConfiguration.OnceOnly,
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
