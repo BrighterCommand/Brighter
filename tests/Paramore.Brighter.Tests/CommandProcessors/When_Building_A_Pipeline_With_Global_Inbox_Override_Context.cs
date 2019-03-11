@@ -8,11 +8,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    //TODO:
-    
-    //allow a lambda for the context, to override, and pass in a default of typeof() ????
- 
-    
     public class PipelineGlobalInboxContextTests
     {
         private const string CONTEXT_KEY = "TestHandlerNameOverride";
