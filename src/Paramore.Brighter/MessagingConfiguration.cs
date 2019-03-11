@@ -30,6 +30,28 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessagingConfiguration
     {
+        /// When do we timeout talking to the message oriented middleware
+        /// </summary>
+        public int MessagingGatewaySendTimeout { get; }
+        /// <summary>
+        /// Gets the message producer.
+        /// </summary>
+        /// <value>The message producer.</value>
+        public IAmAMessageProducer MessageProducer { get; }
+        /// <summary>
+        /// Gets the message producer that supports async/await.
+        /// </summary>
+        /// <value>The message producer.</value>
+        public IAmAMessageProducerAsync MessageProducerAsync { get; }
+        /// <summary>
+        /// Gets the message mapper registry.
+        /// </summary>
+        /// <value>The message mapper registry.</value>
+        public IAmAMessageMapperRegistry MessageMapperRegistry { get; }
+        /// <summary>
+        /// When do we timeout writing to the message store
+        /// </summary>
+        public int MessageStoreWriteTimeout { get; }
         /// <summary>
         /// Gets the outbox.
         /// </summary>
@@ -40,36 +62,17 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The message store.</value>
         public IAmAnOutboxAsync<Message> OutboxAsync { get; }
-        /// <summary>
-        /// Gets the messaging gateway.
-        /// </summary>
-        /// <value>The messaging gateway.</value>
-        public IAmAMessageProducer MessageProducer { get; }
-        /// <summary>
-        /// Gets the messaging gateway that supports async/await.
-        /// </summary>
-        /// <value>The messaging gateway.</value>
-        public IAmAMessageProducerAsync MessageProducerAsync { get; }
-        /// <summary>
-        /// Gets the message mapper registry.
-        /// </summary>
-        /// <value>The message mapper registry.</value>
-        public IAmAMessageMapperRegistry MessageMapperRegistry { get; }
-        /// <summary>
+         /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; }
-        /// <summary>
-        /// When do we timeout writing to the message store
-        /// </summary>
-        public int MessageStoreWriteTimeout { get; }
-        /// <summary>
-        /// When do we timeout talking to the message oriented middleware
-        /// </summary>
-        public int MessagingGatewaySendTimeout { get; }
 
-        public InboxConfiguration UseInbox { get;}
+        /// <summary>
+        /// The configuration of our inbox
+        /// </summary>
+         public InboxConfiguration UseInbox { get;}
+        
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.

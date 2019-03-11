@@ -332,7 +332,8 @@ namespace Paramore.Brighter
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
             int messageStoreTimeout = 300,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null)
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null)
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
@@ -341,6 +342,7 @@ namespace Paramore.Brighter
             _messageProducer = messageProducer;
             _asyncMessageProducer = asyncMessageProducer;
             _messageStoreTimeout = messageStoreTimeout;
+            _inboxConfiguration = inboxConfiguration;
         }
 
         /// <summary>
