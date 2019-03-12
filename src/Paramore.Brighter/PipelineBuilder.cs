@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Linq;
 using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
@@ -42,6 +43,8 @@ namespace Paramore.Brighter
         private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
+        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> _preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
+        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> _postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
 
         /// <summary>
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
@@ -84,6 +87,18 @@ namespace Paramore.Brighter
             return pipelines;
         }
 
+        /// <summary>
+        /// Clears any cached pipeline definitions. Mainly intended as a helper for testing where the
+        /// use of a static creates a shared fixture across tests (although in a production environment, shared
+        /// is what we are after). If your pipeline tests don't respond as expected to manipulation, this may be your
+        /// ally.
+        /// </summary>
+        public static void ClearPipelineCache()
+        {
+            _preAttributesMemento.Clear();
+            _postAttributesMemento.Clear();
+        }
+
         public void Dispose()
         {
             _instanceScope.Dispose();
@@ -93,21 +108,31 @@ namespace Paramore.Brighter
         {
             implicitHandler.Context = requestContext;
 
-            var preAttributes =
-                implicitHandler.FindHandlerMethod()
-                .GetOtherHandlersInPipeline()
-                .Where(attribute => attribute.Timing == HandlerTiming.Before)
-                .OrderByDescending(attribute => attribute.Step);
+            if (!_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
+            {
+                preAttributes =
+                    implicitHandler.FindHandlerMethod()
+                        .GetOtherHandlersInPipeline()
+                        .Where(attribute => attribute.Timing == HandlerTiming.Before)
+                        .OrderByDescending(attribute => attribute.Step);
 
-            AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
-            
+                AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
+
+                _preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+
+            }
+
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
 
-            var postAttributes =
-                implicitHandler.FindHandlerMethod()
-                .GetOtherHandlersInPipeline()
-                .Where(attribute => attribute.Timing == HandlerTiming.After)
-                .OrderByDescending(attribute => attribute.Step);
+
+            if (!_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
+            {
+                postAttributes =
+                    implicitHandler.FindHandlerMethod()
+                        .GetOtherHandlersInPipeline()
+                        .Where(attribute => attribute.Timing == HandlerTiming.After)
+                        .OrderByDescending(attribute => attribute.Step);
+            }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
             _logger.Value.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
@@ -132,22 +157,33 @@ namespace Paramore.Brighter
             implicitHandler.Context = requestContext;
             implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;
 
-            var preAttributes =
-                implicitHandler.FindHandlerMethod()
-                .GetOtherHandlersInPipeline()
-                .Where(attribute => attribute.Timing == HandlerTiming.Before)
-                .OrderByDescending(attribute => attribute.Step);
+            if (!_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
+            {
+                preAttributes =
+                    implicitHandler.FindHandlerMethod()
+                        .GetOtherHandlersInPipeline()
+                        .Where(attribute => attribute.Timing == HandlerTiming.Before)
+                        .OrderByDescending(attribute => attribute.Step);
+
+                AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
+
+                _preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+
+            }
 
 
             AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
             
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
-            var postAttributes =
-                implicitHandler.FindHandlerMethod()
-                .GetOtherHandlersInPipeline()
-                .Where(attribute => attribute.Timing == HandlerTiming.After)
-                .OrderByDescending(attribute => attribute.Step);
+            if (!_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
+            {
+                postAttributes =
+                    implicitHandler.FindHandlerMethod()
+                        .GetOtherHandlersInPipeline()
+                        .Where(attribute => attribute.Timing == HandlerTiming.After)
+                        .OrderByDescending(attribute => attribute.Step);
+            }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
             _logger.Value.DebugFormat("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));

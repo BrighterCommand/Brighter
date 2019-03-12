@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _inboxConfiguration = new InboxConfiguration();
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, _inboxConfiguration);
-            
+            PipelineBuilder<MyCommand>.ClearPipelineCache(); 
         }
 
         [Fact]

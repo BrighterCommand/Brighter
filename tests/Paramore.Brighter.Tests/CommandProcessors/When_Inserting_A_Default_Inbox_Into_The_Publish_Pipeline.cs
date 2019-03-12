@@ -50,6 +50,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 inboxConfiguration: inboxConfiguration
                 );
+           PipelineBuilder<MyEvent>.ClearPipelineCache();
             
         }
  

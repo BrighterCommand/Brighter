@@ -48,6 +48,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 inboxConfiguration: inboxConfiguration
                 );
             
+           PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
  
         
