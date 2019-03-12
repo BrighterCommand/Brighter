@@ -45,6 +45,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         // Ignore any errors about adding System.Runtime from the IDE.

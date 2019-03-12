@@ -43,6 +43,7 @@ namespace Paramore.Brighter
         private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
+        //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> _preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> _postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
 
