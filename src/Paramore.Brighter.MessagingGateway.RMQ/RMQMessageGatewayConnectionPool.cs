@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
 
@@ -39,6 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
+        private static readonly Random jitter = new Random();
 
         public RMQMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
         {
@@ -82,6 +84,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 var connection = s_connectionPool[connectionId];
                 TryRemoveConnection(connectionId);
+                
+                DelayReconnecting();
+                
                 CreateConnection(connectionFactory);
             }
         }
@@ -133,6 +138,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             return string.Concat(connectionFactory.UserName, ".", connectionFactory.Password, ".", connectionFactory.HostName, ".", connectionFactory.Port, ".", connectionFactory.VirtualHost).ToLowerInvariant();
         }
+
+        private static void DelayReconnecting()
+        {
+            Task.Delay(jitter.Next(5, 100));
+        }
+
 
         class PooledConnection
         {
