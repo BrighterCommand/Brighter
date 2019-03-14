@@ -5,10 +5,10 @@
     <Authors>George Ayris</Authors>
     <TargetFramework>netstandard2.0</TargetFramework>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <AssemblyName>Paramore.Brighter.MessageStore.EventStore</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.EventStore</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <SignAssembly>false</SignAssembly>
+    <RootNamespace>Paramore.Brighter.MessageStore.EventStore</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

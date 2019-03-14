@@ -5,9 +5,9 @@
     <Authors>Francesco Pighi</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <AssemblyName>Paramore.Brighter.MessageStore.MsSql</AssemblyName>
     <PackageId>Paramore.Brighter.MessageStore.MsSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <RootNamespace>Paramore.Brighter.MessageStore.MsSql</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

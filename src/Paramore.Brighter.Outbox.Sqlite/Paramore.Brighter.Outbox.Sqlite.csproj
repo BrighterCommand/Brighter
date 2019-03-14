@@ -1,13 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>This is an implementation of the command store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
-    <AssemblyTitle>Paramore.Brighter.CommandStore.Sqlite</AssemblyTitle>
-    <Authors>Ian Cooper</Authors>
+    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using Sqlite</Description>
+    <AssemblyTitle>Paramore.Brighter.MessageStore.Sqlite</AssemblyTitle>
+    <Authors>Francesco Pighi</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <AssemblyName>Paramore.Brighter.CommandStore.Sqlite</AssemblyName>
-    <PackageId>Paramore.Brighter.CommandStore.Sqlite</PackageId>
+    <PackageId>Paramore.Brighter.MessageStore.Sqlite</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <RootNamespace>Paramore.Brighter.MessageStore.Sqlite</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />

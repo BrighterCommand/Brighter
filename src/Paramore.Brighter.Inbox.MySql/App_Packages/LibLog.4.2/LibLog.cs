@@ -41,13 +41,13 @@
 using System.Diagnostics.CodeAnalysis;
 using Paramore.Brighter.CommandStore.MySql.Logging.LogProviders;
 
-[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.CommandStore.MySql.Logging")]
-[assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.CommandStore.MySql.Logging.Logger.#Invoke(Paramore.Brighter.CommandStore.MySql.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.Inbox.MySql.Logging")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.Inbox.MySql.Logging.Logger.#Invoke(Paramore.Brighter.Inbox.MySql.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
 
 // If you copied this file manually, you need to change all "YourRootNameSpace" so not to clash with other libraries
 // that use LibLog
 #if LIBLOG_PROVIDERS_ONLY
-namespace Paramore.Brighter.CommandStore.MySql.LibLog
+namespace Paramore.Brighter.Inbox.MySql.LibLog
 #else
 namespace Paramore.Brighter.CommandStore.MySql.Logging
 #endif
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.CommandStore.MySql.Logging
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
 #if LIBLOG_PROVIDERS_ONLY
-    using Paramore.Brighter.CommandStore.MySql.LibLog.LogProviders;
+    using Paramore.Brighter.Inbox.MySql.LibLog.LogProviders;
 #else
     using CommandStore.MySql.Logging.LogProviders;
 #endif
@@ -715,7 +715,7 @@ namespace Paramore.Brighter.CommandStore.MySql.Logging
 }
 
 #if LIBLOG_PROVIDERS_ONLY
-namespace Paramore.Brighter.CommandStore.MySql.LibLog.LogProviders
+namespace Paramore.Brighter.Inbox.MySql.LibLog.LogProviders
 #else
 namespace Paramore.Brighter.CommandStore.MySql.Logging.LogProviders
 #endif

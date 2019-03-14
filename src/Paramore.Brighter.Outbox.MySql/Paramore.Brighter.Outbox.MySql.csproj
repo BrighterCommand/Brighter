@@ -1,19 +1,18 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
-    <AssemblyTitle>Paramore.Brighter.MessageStore.PostgreSql</AssemblyTitle>
-    <Authors>Tarun Pothulapati</Authors>
+    <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MySql</Description>
+    <AssemblyTitle>Paramore.Brighter.MessageStore.MySql</AssemblyTitle>
+    <Authors>Derek Comartin</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <AssemblyName>Paramore.Brighter.MessageStore.PostgreSql</AssemblyName>
-    <PackageId>Paramore.Brighter.MessageStore.PostgreSql</PackageId>
+    <PackageId>Paramore.Brighter.MessageStore.MySql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+    <RootNamespace>Paramore.Brighter.MessageStore.MySql</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="4.0.4" />
-    <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
+    <PackageReference Include="MySqlConnector" Version="0.49.3" />
   </ItemGroup>
 </Project>
