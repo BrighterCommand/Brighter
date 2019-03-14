@@ -6,6 +6,18 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+ - Renamed MessageStore to Outbox and CommandStore to Inbox for clarity with well-known pattern names outside this team
+ --- Impact is wide, namespaces, class names and project names, so this is a ***BREAKING CHANGE***
+ --- Mostly you can search and replace to fix
+ --- Added support for a global inbox via a UseInbox configuration parameter to the Command Processor
+ ------ Will insert an Inbox in all pipelines
+ ------ Can be overriden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
+ --- The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
+ - Added caching of attributes on target handlers in the pipeline build step
+ --- This means we don't do reflection every time we build the pipeline for a request
+ --- We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
+ --- We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
+  
 
 ## Release 8.0.* ##
   - Added SourceLink debugging and are shipping .pdb files in the nuget package.
