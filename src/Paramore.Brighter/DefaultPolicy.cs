@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter.Policies.Attributes;
+using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.Registry;
 
@@ -41,9 +42,9 @@ namespace Paramore.Brighter
     ///     to respectively determine retry attempts for putting onto and popping off the queue and for breaking the circuit if
     ///     we cannot
     ///     You can register additional policies (or reuse these) to provide QoS for individual handlers. The
-    ///     <see cref="UsePolicyAttribute" /> and <see cref="ExceptionPolicyHandler" />
+    ///     <see cref="UsePolicyAttribute" /> and <see cref="ExceptionPolicyHandler{TRequest}" />
     ///     provide an easy way to do this using the policies that you add to this registry
-    ///     This is a default implementation of <see cref="IAmAPolicyRegistry" />
+    ///     This is a default implementation of <see cref="PolicyRegistry" />
     /// </summary>
     public class DefaultPolicy : PolicyRegistry
     {
