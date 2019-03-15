@@ -15,7 +15,7 @@
     </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
-    <PackageReference Include="Paramore.Brighter.ServiceActivator" Version="8.0.37" />
+    <PackageReference Include="Paramore.Brighter.ServiceActivator" Version="8.0.71" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />

@@ -18,10 +18,10 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" Version="2.2.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="2.2.0" />
-    <PackageReference Include="Paramore.Brighter" Version="8.0.37" />
+    <PackageReference Include="Paramore.Brighter" Version="8.0.71" />
     <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="2.2.0" />
-    <PackageReference Include="Paramore.Brighter.MessagingGateway.RMQ" Version="8.0.37" />
-    <PackageReference Include="Paramore.Brighter.ServiceActivator" Version="8.0.37" />
+    <PackageReference Include="Paramore.Brighter.MessagingGateway.RMQ" Version="8.0.71" />
+    <PackageReference Include="Paramore.Brighter.ServiceActivator" Version="8.0.71" />
     <PackageReference Include="Serilog" Version="2.8.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="2.0.2" />
     <PackageReference Include="Serilog.Extensions.Logging.File" Version="1.1.0" />
