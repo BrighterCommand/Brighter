@@ -4,10 +4,10 @@ configuration: Release
 
 dotnet_csproj:
   patch: true
-  file: 'Directory.Build.Props'
+  file: '**\*.props'
   version: '{version}'
   package_version: '{version}'
-  assembly_version: '1.0.0.0'
+  assembly_version: '2.0.0.0'
   file_version: '{version}'
   informational_version: '{version}'
 
