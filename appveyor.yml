@@ -3,14 +3,6 @@ image: Ubuntu1804
 configuration: Release
 stack: jdk 11
 
-branches:
-  only:
-  - master
-  - testappveyor
-  # blacklist
-  except:
-    - gh-pages
-
 skip_commits:
   files:
     - '**/*.md'
