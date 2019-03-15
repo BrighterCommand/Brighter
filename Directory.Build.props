@@ -1,16 +1,5 @@
 <Project>
   <PropertyGroup>
-    <Company>Brighter Command</Company>
-    <Authors>Ian Cooper</Authors>
-    <Copyright>Copyright © Ian Cooper 2014</Copyright>
-    <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
-    <PackageIconUrl>https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png</PackageIconUrl>
-    <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
-    <PackageLicenseUrl>http://ianhammondcooper.mit-license.org</PackageLicenseUrl>
-    <AssemblyVersion>8.0.0.0</AssemblyVersion>
-    <FileVersion>8.0.0.0</FileVersion>
-    <InformationalVersion>8.0.0</InformationalVersion>
-    <Version>8.0.0</Version>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
 </Project>
