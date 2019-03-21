@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
             return tcs.Task.Result;
         }
 
-        public void ClearPostBox(params Guid[] posts)
+        public void ClearOutbox(params Guid[] posts)
         {
             foreach (var messageId in posts)
             {
@@ -126,10 +126,10 @@ namespace Paramore.Brighter.Tests.MessageDispatch.TestDoubles
             }
         }
 
-        public async Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+        public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            ClearPostBox(posts.ToArray());
+            ClearOutbox(posts.ToArray());
             await Task.Delay(0);
         }
 

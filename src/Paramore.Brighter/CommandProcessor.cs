@@ -509,7 +509,7 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            ClearPostBox(DepositPost(request));
+            ClearOutbox(DepositPost(request));
         }
 
         /// <summary>
@@ -529,7 +529,7 @@ namespace Paramore.Brighter
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var messageId = await DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
-            await ClearPostBoxAsync(new Guid[]{messageId}, continueOnCapturedContext, cancellationToken);
+            await ClearOutboxAsync(new Guid[]{messageId}, continueOnCapturedContext, cancellationToken);
         }
 
         /// <summary>
@@ -537,7 +537,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearPostBox"/> 
+        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the message store</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -568,7 +568,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearPostBoxAsync"/> 
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="request">The request to save to the message store</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -600,7 +600,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
         /// </summary>
         /// <param name="posts">The posts to flush</param>
-        public void ClearPostBox(params Guid[] posts)
+        public void ClearOutbox(params Guid[] posts)
         {
             if (_outBox == null)
                 throw new InvalidOperationException("No message store defined.");
@@ -626,7 +626,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The posts to flush</param>
-         public async Task ClearPostBoxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+         public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
 
             if (_asyncOutbox == null)
