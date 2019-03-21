@@ -1,5 +1,13 @@
 <Project>
   <PropertyGroup>
+    <Company>Brighter Command</Company>
+    <Authors>Ian Cooper</Authors>
+    <Copyright>Copyright © Ian Cooper 2014</Copyright>
+    <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
+    <PackageIconUrl>https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 

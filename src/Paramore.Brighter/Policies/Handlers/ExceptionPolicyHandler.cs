@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Policies.Handlers
 {
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.Policies.Handlers
     /// Class ExceptionPolicyHandler.
     /// The <see cref="UsePolicyAttribute"/> supports the use of <a href="https://github.com/michael-wolfenden/Polly">Polly</a> to provide quality of service around exceptions
     /// thrown from subsequent steps in the handler pipeline. A Polly Policy can be used to support a Retry or Circuit Breaker approach to exception handling
-    /// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="IAmAPolicyRegistry"/> and it is 
+    /// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="PolicyRegistry"/> and it is 
     /// assumed that you have registered required policies with a Policy Registry such as <see cref="PolicyRegistry"/> and configured that as a 
     /// dependency of the <see cref="CommandProcessor"/> using the <see cref="CommandProcessorBuilder"/>
     /// The ExceptionPolicyHandler is instantiated by the pipeline when the <see cref="UsePolicyAttribute"/> is added to the <see cref="IHandleRequests{T}.Handle"/> method
@@ -43,7 +44,7 @@ namespace Paramore.Brighter.Policies.Handlers
         private Policy _policy;
 
         /// <summary>
-        /// Initializes from attribute parameters. This will get the <see cref="IAmAPolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
+        /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
         /// policy identified in <see cref="UsePolicyAttribute"/>
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
