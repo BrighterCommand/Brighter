@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Tests
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"`command_{_tableName}`";
-                var createTableSql = MySqlCommandStoreBuilder.GetDDL(_tableName);
+                var createTableSql = MySqlInboxBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())

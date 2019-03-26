@@ -147,9 +147,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
         ///     synchronization context.
         ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
+        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
+        ///     thread specific storage such as HTTPContext
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 

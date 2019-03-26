@@ -2,7 +2,7 @@
 -- Number of tables: 1
 -- Commands: 0 row(s)
 
-PRINT 'Creating Commands table'
+PRINT 'Creating Inbox table'
 CREATE TABLE [Commands] (
   [Id] [BIGINT] NOT NULL IDENTITY
 , [CommandId] uniqueidentifier NOT NULL

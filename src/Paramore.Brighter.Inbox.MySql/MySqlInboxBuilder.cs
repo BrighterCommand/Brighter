@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Inbox.MySql
 {
-    public class MySqlCommandStoreBuilder
+    public class MySqlInboxBuilder
     {
         private const string _messageStoreDDL = @"CREATE TABLE {0} 
             ( 
