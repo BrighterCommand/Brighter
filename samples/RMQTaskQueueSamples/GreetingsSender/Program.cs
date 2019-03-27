@@ -43,7 +43,8 @@ namespace GreetingsSender
 
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
             {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
+                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)},
+                {typeof(FarewellEvent), typeof(FarewellEventMessageMapper) }
             };
 
             var messageStore = new InMemoryOutbox();
@@ -62,7 +63,8 @@ namespace GreetingsSender
 
             var commandProcessor = builder.Build();
 
-            commandProcessor.Post(new GreetingEvent("Ian"));
+            commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
+            commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));
         }
     }
 }
