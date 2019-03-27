@@ -39,83 +39,96 @@ namespace GreetingsReceiverConsole
 {
     public class Program
     {
-      public static void Main(string[] args)
-      {
-        Log.Logger = new LoggerConfiguration()
-          .MinimumLevel.Debug()
-          .WriteTo.Console()
-          .CreateLogger();
+        public static void Main(string[] args)
+        {
+            Log.Logger = new LoggerConfiguration()
+              .MinimumLevel.Debug()
+              .WriteTo.Console()
+              .CreateLogger();
 
-        var container = new TinyIoCContainer();
+            var container = new TinyIoCContainer();
 
-        var handlerFactory = new TinyIocHandlerFactory(container);
-        var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-        container.Register<IHandleRequests<GreetingEvent>, GreetingEventHandler>();
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+            container.Register<IHandleRequests<GreetingEvent>, GreetingEventHandler>();
+            container.Register<IHandleRequests<FarewellEvent>, FarewellEventHandler>();
 
-        var subscriberRegistry = new SubscriberRegistry();
-        subscriberRegistry.Register<GreetingEvent, GreetingEventHandler>();
 
-        //create policies
-        var retryPolicy = Policy
-          .Handle<Exception>()
-          .WaitAndRetry(new[]
-          {
+            var subscriberRegistry = new SubscriberRegistry()
+        {
+            {typeof(GreetingEvent), typeof(GreetingEventHandler)},
+            {typeof(FarewellEvent), typeof(FarewellEventHandler)}
+        };
+
+            //create policies
+            var retryPolicy = Policy
+              .Handle<Exception>()
+              .WaitAndRetry(new[]
+              {
             TimeSpan.FromMilliseconds(50),
             TimeSpan.FromMilliseconds(100),
             TimeSpan.FromMilliseconds(150)
-          });
+              });
 
-        var circuitBreakerPolicy = Policy
-          .Handle<Exception>()
-          .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+            var circuitBreakerPolicy = Policy
+              .Handle<Exception>()
+              .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-        var policyRegistry = new PolicyRegistry
+            var policyRegistry = new PolicyRegistry
         {
           {CommandProcessor.RETRYPOLICY, retryPolicy},
           {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
         };
 
-        //create message mappers
-        var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+            //create message mappers
+            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
         {
-          {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
+          {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)},
+          {typeof(FarewellEvent), typeof(FarewellEventMessageMapper) }
         };
 
-        //create the gateway
-        var rmqConnnection = new RmqMessagingGatewayConnection
-        {
-          AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-          Exchange = new Exchange("paramore.brighter.exchange"),
-        };
+            //create the gateway
+            var rmqConnnection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+            };
 
-        var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
 
-        var dispatcher = DispatchBuilder.With()
-          .CommandProcessor(CommandProcessorBuilder.With()
-            .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-            .Policies(policyRegistry)
-            .NoTaskQueues()
-            .RequestContextFactory(new InMemoryRequestContextFactory())
-            .Build())
-          .MessageMappers(messageMapperRegistry)
-          .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-          .Connections(new Connection[]
-          {
+            var dispatcher = DispatchBuilder.With()
+              .CommandProcessor(CommandProcessorBuilder.With()
+                .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
+                .Policies(policyRegistry)
+                .NoTaskQueues()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build())
+              .MessageMappers(messageMapperRegistry)
+              .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
+              .Connections(new Connection[]
+              {
             new Connection<GreetingEvent>(
               new ConnectionName("paramore.example.greeting"),
               new ChannelName("greeting.event"),
               new RoutingKey("greeting.event"),
               timeoutInMilliseconds: 200,
               isDurable: true,
-              highAvailability: true)
-          }).Build();
+              highAvailability: true),
+            new Connection<FarewellEvent>(
+                new ConnectionName("paramore.example.farewell"),
+                new ChannelName("farewell.event"),
+                new RoutingKey("farewell.event"),
+                timeoutInMilliseconds: 200,
+                isDurable: true,
+                highAvailability: true)
+              }).Build();
 
-        dispatcher.Receive();
+            dispatcher.Receive();
 
-        Console.WriteLine("Press Enter to stop ...");
-        Console.ReadLine();
+            Console.WriteLine("Press Enter to stop ...");
+            Console.ReadLine();
 
-        dispatcher.End().Wait();
-      }
+            dispatcher.End().Wait();
+        }
     }
 }
