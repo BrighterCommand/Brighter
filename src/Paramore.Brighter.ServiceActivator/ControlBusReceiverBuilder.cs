@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -197,6 +198,16 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             public Message Get(Guid messageId, int outBoxTimeout = -1)
             {
                  return null;
+            }
+
+            public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+            {
+                //ignore
+            }
+
+            public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
+            {
+               return new Message[0]; 
             }
         }
     }

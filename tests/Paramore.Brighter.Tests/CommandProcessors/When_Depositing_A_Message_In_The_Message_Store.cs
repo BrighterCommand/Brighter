@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -56,8 +58,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             var postedMessageId = _commandProcessor.DepositPost(_myCommand);
             
             //assert
-            //message should be in the store
-            _fakeOutbox.MessageWasAdded.Should().BeTrue();
+            
             //message should not be posted
             _fakeMessageProducer.MessageWasSent.Should().BeFalse();
             
@@ -67,6 +68,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
+            
+            //message should be marked as outstanding if not sent
+            var outstandingMessages = _fakeOutbox.OutstandingMessages(1000);
+            var outstandingMessage = outstandingMessages.Single();
+            outstandingMessage.Id.Should().Be(_message.Id);
         }
         
         [Fact]

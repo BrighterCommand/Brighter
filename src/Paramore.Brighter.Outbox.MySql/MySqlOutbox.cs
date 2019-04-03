@@ -54,6 +54,18 @@ namespace Paramore.Brighter.Outbox.MySql
         ///     Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
+
+
+        /// <summary>
+        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
+        ///     synchronization context.
+        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
+        ///     thread specific storage
+        ///     such as HTTPContext
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; set; }
+        
         public MySqlOutbox(MySqlOutboxConfiguration configuration)
         {
             _configuration = configuration;
@@ -98,37 +110,6 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)
-        {
-            return sqlException.Number == MySqlDuplicateKeyError;
-        }
-
-        private string GetAddSql()
-        {
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.OutBoxTableName);
-            return sql;
-        }
-
-        /// <summary>
-        ///     Gets the specified message identifier.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.OutBoxTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("@MessageId", messageId.ToString())
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
-        }
-
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var parameters = InitAddDbParameters(message);
@@ -160,18 +141,30 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
             }
         }
-
+        
         /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
+        ///     Gets the specified message identifier.
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        /// <param name="messageId">The message identifier.</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
+       public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+       {
+           //TODO: Implement dispatched messages
+           throw new NotImplementedException();
+       }
+       public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
+                _configuration.OutBoxTableName);
+            var parameters = new[]
+            {
+                CreateSqlParameter("@MessageId", messageId.ToString())
+            };
 
-        /// <summary>
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+        }
+
+       /// <summary>
         /// get as an asynchronous operation.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
@@ -194,6 +187,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 parameters)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
+
 
         /// <summary>
         ///     Returns all messages in the store
@@ -250,6 +244,40 @@ namespace Paramore.Brighter.Outbox.MySql
                 return messages;
             }
         }
+        
+         /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+         
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+          
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <returns>Outstanding Messages</returns>
+        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        {
+            //TODO: Implement getting outstanding messages
+            throw new NotImplementedException();
+        }
 
         private MySqlParameter CreateSqlParameter(string parameterName, object value)
         {
@@ -295,6 +323,15 @@ namespace Paramore.Brighter.Outbox.MySql
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
+        }
+
+        private string GetAddSql()
+        {
+            var sql =
+                string.Format(
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    _configuration.OutBoxTableName);
+            return sql;
         }
 
         private MySqlConnection GetConnection()
@@ -344,6 +381,11 @@ namespace Paramore.Brighter.Outbox.MySql
                     Value = message.Body.Value
                 }
             };
+        }
+
+        private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)
+        {
+            return sqlException.Number == MySqlDuplicateKeyError;
         }
 
         private Message MapAMessage(IDataReader dr)

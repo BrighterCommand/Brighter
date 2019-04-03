@@ -110,6 +110,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
+        /// <summary>
+        /// Returns messages that have been successfully dispatched
+        /// </summary>
+        /// <param name="millisecondsDispatchedAgo">How long ago was the message dispatched?</param>
+        /// <param name="pageSize">How many messages returned at once?</param>
+        /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
+        /// <returns>A list of dispatched messages</returns>
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        {
+            //TODO: Implement dispatched messages
+            throw new NotImplementedException();
+        }
+
         /// <inheritdoc />
         /// <summary>
         ///     Finds a command with the specified identifier.
@@ -152,7 +165,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.FirstOrDefault()?.ConvertToMessage() ?? new Message();
         }
 
-        /// <summary>
+       /// <summary>
         /// Get paginated list of Messages. Not supported by DynamoDB
         /// </summary>
         /// <param name="pageSize"></param>
@@ -200,6 +213,42 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return results.Select(r => r.ConvertToMessage()).ToList();            
         }
         
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+          
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Returns messages that have yet to be dispatched
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
+        /// <param name="pageSize">How many messages to return at once?</param>
+        /// <param name="pageNumber">Which page number of messages</param>
+        /// <returns>A list of messages that are outstanding for dispatch</returns>
+        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        {
+            //TODO: implement outstanding messages
+            throw new NotImplementedException();
+        }
+
         private static Filter GenerateFilter(DateTime? startTime, DateTime? endTime)
         {
             var start = $"{startTime?.Ticks ?? DateTime.MinValue.Ticks}";

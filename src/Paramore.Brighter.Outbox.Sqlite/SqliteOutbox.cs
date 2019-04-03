@@ -51,6 +51,16 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         private readonly SqliteMessageStoreConfiguration _configuration;
 
         /// <summary>
+        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
+        ///     synchronization context.
+        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
+        ///     thread specific storage
+        ///     such as HTTPContext
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; set; }
+
+        /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
@@ -95,42 +105,17 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
                         throw;
                     }
-                };
+                }
+
+                ;
             }
         }
 
-        private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
-        {
-            return sqlException.SqliteErrorCode == SqliteDuplicateKeyError ||
-                   sqlException.SqliteErrorCode == SqliteUniqueKeyError;
-        }
-
-        private string GetAddSql()
-        {
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.MessageStoreTableName);
-            return sql;
-        }
-
         /// <summary>
-        ///     Gets the specified message identifier.
+        /// Adds the specified message.
         /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.MessageStoreTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("@MessageId", messageId.ToString())
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
-        }
-
+        /// <param name="message">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var parameters = InitAddDbParameters(message);
@@ -152,7 +137,8 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat(
+                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -164,14 +150,66 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         }
 
         /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
+        /// Get the messages that have been marked as flushed in the store
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        /// <param name="millisecondsDispatchedAgo">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="pageSize">How many messages in a page</param>
+        /// <param name="pageNumber">Which page of messages to get</param>
+        /// <returns>A list of dispatched messages</returns>
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        {
+            //TODO: Implement dispatched message lookup
+            throw new NotImplementedException();
+        }
+
+        private string GetAddSql()
+        {
+            var sql =
+                string.Format(
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    _configuration.OutboxTableName);
+            return sql;
+        }
+
+        /// <summary>
+        ///     Gets the specified message identifier.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
+            var parameters = new[]
+            {
+                CreateSqlParameter("@MessageId", messageId.ToString())
+            };
+
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+        }
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+
 
         /// <summary>
         /// get as an asynchronous operation.
@@ -182,20 +220,22 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("@MessageId", messageId.ToString())
             };
 
             return await ExecuteCommandAsync(
-                async command => MapFunction(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
-                sql,
-                outBoxTimeout,
-                cancellationToken,
-                parameters)
+                    async command => MapFunction(await command.ExecuteReaderAsync(cancellationToken)
+                        .ConfigureAwait(ContinueOnCapturedContext)),
+                    sql,
+                    outBoxTimeout,
+                    cancellationToken,
+                    parameters)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
+
 
         /// <summary>
         ///     Returns all messages in the store
@@ -219,6 +259,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                     {
                         messages.Add(MapAMessage(dbDataReader));
                     }
+
                     return messages;
                 }
             }
@@ -231,7 +272,8 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -241,19 +283,28 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
-                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext))
                 {
                     while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                     {
                         messages.Add(MapAMessage(dbDataReader));
                     }
-                };
+                }
+
+                ;
                 return messages;
             }
         }
 
+        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int page = 1)
+        {
+            throw new NotImplementedException();
+        }
+
         private SqliteParameter CreateSqlParameter(string parameterName, object value)
         {
+            //TODO: Implement Outstanding message search
             return new SqliteParameter(parameterName, value);
         }
 
@@ -304,13 +355,20 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             var bagJson = JsonConvert.SerializeObject(message.Header.Bag);
             return new[]
             {
-                new SqliteParameter("@MessageId", SqliteType.Text) { Value = message.Id.ToString()},
-                new SqliteParameter("@MessageType", SqliteType.Text) { Value = message.Header.MessageType.ToString()},
-                new SqliteParameter("@Topic", SqliteType.Text) { Value =message.Header.Topic},
-                new SqliteParameter("@Timestamp", SqliteType.Text) { Value =message.Header.TimeStamp.ToString("s")},
-                new SqliteParameter("@HeaderBag",SqliteType.Text) { Value = bagJson},
-                new SqliteParameter("@Body", SqliteType.Text) { Value = message.Body.Value}
+                new SqliteParameter("@MessageId", SqliteType.Text) {Value = message.Id.ToString()},
+                new SqliteParameter("@MessageType", SqliteType.Text) {Value = message.Header.MessageType.ToString()},
+                new SqliteParameter("@Topic", SqliteType.Text) {Value = message.Header.Topic},
+                new SqliteParameter("@Timestamp", SqliteType.Text) {Value = message.Header.TimeStamp.ToString("s")},
+                new SqliteParameter("@HeaderBag", SqliteType.Text) {Value = bagJson},
+                new SqliteParameter("@Body", SqliteType.Text) {Value = message.Body.Value}
             };
+        }
+
+
+        private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
+        {
+            return sqlException.SqliteErrorCode == SqliteDuplicateKeyError ||
+                   sqlException.SqliteErrorCode == SqliteUniqueKeyError;
         }
 
         private Message MapAMessage(IDataReader dr)
@@ -318,7 +376,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             //var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
             var id = Guid.Parse(dr.GetString(0));
             var messageType =
-                (MessageType) Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+                (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
             var topic = dr.GetString(dr.GetOrdinal("Topic"));
 
             var header = new MessageHeader(id, topic, messageType);
@@ -366,11 +424,12 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         {
             SqliteParameter[] parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber-1),
+                CreateSqlParameter("PageNumber", pageNumber - 1),
                 CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber",
+                _configuration.OutboxTableName);
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);

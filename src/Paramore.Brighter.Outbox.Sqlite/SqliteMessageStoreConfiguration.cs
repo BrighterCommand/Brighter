@@ -33,10 +33,10 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// Initializes a new instance of the <see cref="SqliteMessageStoreConfiguration"/> class.
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
-        /// <param name="messageStoreTableName">Name of the message store table.</param>
-        public SqliteMessageStoreConfiguration(string connectionString, string messageStoreTableName)
+        /// <param name="outboxTableName">Name of the message store table.</param>
+        public SqliteMessageStoreConfiguration(string connectionString, string outboxTableName)
         {
-            MessageStoreTableName = messageStoreTableName;
+            OutboxTableName = outboxTableName;
             ConnectionString = connectionString;
         }
 
@@ -49,6 +49,6 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// Gets the name of the message store table.
         /// </summary>
         /// <value>The name of the message store table.</value>
-        public string MessageStoreTableName { get; private set; }
+        public string OutboxTableName { get; private set; }
     }
 }

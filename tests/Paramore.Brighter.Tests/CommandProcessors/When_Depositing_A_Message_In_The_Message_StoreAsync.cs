@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -59,7 +60,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             
             //assert
             //message should be in the store
-            _fakeOutbox.MessageWasAdded.Should().BeTrue();
+            _fakeOutbox
+                .DispatchedMessages(3000)
+                .SingleOrDefault(msg => msg.Id == _message.Id)
+                .Should().NotBe(null);
             //message should not be posted
             _fakeMessageProducer.MessageWasSent.Should().BeFalse();
             

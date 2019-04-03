@@ -37,6 +37,10 @@ namespace Paramore.Brighter
         IAmAnOutboxViewer<Message>, IAmAnOutboxViewerAsync<Message>
     {
         /// <summary>
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; set; }
+
+        /// <summary>
         /// Stub for adding a Message to the message store. No action is taken
         /// </summary>
         /// <param name="message">Message to add. Will be ignored.</param>
@@ -45,18 +49,7 @@ namespace Paramore.Brighter
         {
         }
 
-        /// <summary>
-        /// Stub for Getting a message. 
-        /// </summary>
-        /// <param name="messageId">If of the Message to Get</param>
-        /// <param name="outBoxTimeout">Timeout for operation</param>
-        /// <returns>Always returns NULL</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            return null;
-        }
-
-        /// <summary>
+       /// <summary>
         /// Stub for adding a Message to the Message Store async
         /// </summary>
         /// <param name="message">Message to add. Will be ignored. </param>
@@ -66,6 +59,18 @@ namespace Paramore.Brighter
         public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             return Task.FromResult<object>(null);
+        }
+
+       /// <summary>
+       /// Get the messages that have been marked as flushed in the store
+       /// </summary>
+       /// <param name="millisecondsDispatchedAgo">How long ago would the message have been dispatched in milliseconds</param>
+       /// <param name="pageSize">How many messages in a page</param>
+       /// <param name="pageNumber">Which page of messages to get</param>
+       /// <returns>A list of dispatched messages</returns>
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        {
+            return new List<Message>();
         }
 
         /// <summary>
@@ -81,9 +86,16 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// 
+        /// Update a message to show it is dispatched
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+ 
+        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+           return Task.FromResult<object>(null);
+        }
 
         /// <summary>
         /// Stub for retrieving a pages list fo Messages
@@ -107,5 +119,38 @@ namespace Paramore.Brighter
         {
             return Task.FromResult<IList<Message>>(new List<Message>());
         }
-    }
+        
+        /// <summary>
+        /// Stub for Getting a message. 
+        /// </summary>
+        /// <param name="messageId">If of the Message to Get</param>
+        /// <param name="outBoxTimeout">Timeout for operation</param>
+        /// <returns>Always returns NULL</returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Mark the message as dispatched
+        /// </summary>
+        /// <param name="messageId">The message to mark as dispatched</param>
+        /// <exception cref="NotImplementedException"></exception>
+        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        {
+            return;
+        }
+
+       /// <summary>
+        /// Get the outstanding message int the outbox
+        /// </summary>
+        /// <param name="millSecondsSinceSent"></param>
+        /// <returns></returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        {
+            return new List<Message>();
+        }
+
+     }
 }

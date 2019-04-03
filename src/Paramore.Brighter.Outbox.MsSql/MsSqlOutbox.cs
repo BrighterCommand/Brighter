@@ -51,6 +51,15 @@ namespace Paramore.Brighter.Outbox.MsSql
         private readonly MsSqlOutboxConfiguration _configuration;
 
         /// <summary>
+        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
+        ///     synchronization context.
+        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
+        ///     thread specific storage such as HTTPContext
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; set; }
+        
+        /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
@@ -102,17 +111,6 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout"></param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
-            var parameters = new[]
-            {
-                CreateSqlParameter("MessageId", messageId)
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
-        }
-
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var parameters = InitAddDbParameters(message);
@@ -144,13 +142,34 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage such as HTTPContext
+        /// Get the messages that have been marked as flushed in the store
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        /// <param name="millisecondsDispatchedAgo">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="pageSize">How many messages in a page</param>
+        /// <param name="pageNumber">Which page of messages to get</param>
+        /// <returns>A list of dispatched messages</returns>
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        {
+            //TODO: Implement dispatched messages
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Gets the specified message
+        /// </summary>
+        /// <param name="messageId">The id of the message to get</param>
+        /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
+        /// <returns>The message</returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
+            var parameters = new[]
+            {
+                CreateSqlParameter("MessageId", messageId)
+            };
+
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+        }
 
         /// <summary>
         /// get as an asynchronous operation.
@@ -178,11 +197,11 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        ///     Returns all messages in the store
+        /// Returns all messages in the store
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <returns></returns>
+        /// <returns>A list of messages</returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
         {
             using (var connection = GetConnection())
@@ -228,7 +247,42 @@ namespace Paramore.Brighter.Outbox.MsSql
                 return messages;
             }
         }
-
+        
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+ 
+        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+ 
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        {
+            //TODO: Implement mark dispatched
+            throw new NotImplementedException();
+        }
+          
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <returns>Outstanding Messages</returns>
+         public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int page = 1)
+         {
+            //TODO: implement outstanding messages
+             throw new NotImplementedException();
+         }
+              
         //Fold this code back in as there is only one choice
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {

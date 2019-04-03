@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter
 {
@@ -30,8 +31,7 @@ namespace Paramore.Brighter
     /// Interface IAmAnOutbox
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into an OutBox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
-    /// We provide implementations of <see cref="IAmAnOutbox{T}"/> for various databases. Users using other databases should consider a Pull
-    /// request
+    /// We provide implementations of <see cref="IAmAnOutbox{T}"/> for various databases. Users using other databases should consider a Pull Request
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public interface IAmAnOutbox<in T> where T : Message
@@ -41,7 +41,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <returns>Task.</returns>
         void Add(T message, int outBoxTimeout = -1);
 
         /// <summary>
@@ -51,5 +50,12 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <returns>Task&lt;Message&gt;.</returns>
         Message Get(Guid messageId, int outBoxTimeout = -1);
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null);
     }
 }

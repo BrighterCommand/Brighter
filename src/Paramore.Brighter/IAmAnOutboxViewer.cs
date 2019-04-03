@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 
 namespace Paramore.Brighter
@@ -36,13 +37,28 @@ namespace Paramore.Brighter
     public interface IAmAnOutboxViewer<T> where T : Message
     {
         /// <summary>
+        /// Retrieves messages that have been sent within the window
+        /// </summary>
+        /// <param name="millisecondsDispatchedAgo"></param>
+        /// <param name="millisecondsDisspatchedAgo">How far back in time to look for the dispatched time</param>
+        /// <returns></returns>
+        IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1);
+
+        /// <summary>
         /// Gets all messages in the OutBox, LIFO
         /// </summary>
         /// <param name="pageSize">number of items on the page, default is 100</param>
         /// <param name="pageNumber">page number of results to return, default is first</param>
         /// <returns></returns>
         IList<T> Get(int pageSize = 100, int pageNumber = 1);
-    }
+        
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <returns>Outstanding Messages</returns>
+        IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1);
+ }
 
     public enum MessageStoreType
     {

@@ -617,6 +617,7 @@ namespace Paramore.Brighter
                 _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
 
                 RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+                Retry(() => _outBox.MarkDispatched(messageId));
             }
 
         }
@@ -645,6 +646,8 @@ namespace Paramore.Brighter
                 await RetryAndBreakCircuitAsync(
                     async ct => await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext), 
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+
+                await RetryAsync(async ct => _asyncOutbox.MarkDispatchedAsync(messageId));
             }
 
 
