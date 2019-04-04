@@ -24,6 +24,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]

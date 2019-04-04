@@ -26,6 +26,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             A.CallTo(() => requestContextFactory.Create()).Returns(_request_context);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, requestContextFactory, new PolicyRegistry());
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
 
             _request_context.Bag["TestString"] = I_AM_A_TEST_OF_THE_CONTEXT_BAG;
         }

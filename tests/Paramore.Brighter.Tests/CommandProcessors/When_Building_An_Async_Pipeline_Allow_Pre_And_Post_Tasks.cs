@@ -22,6 +22,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         private void When_Building_An_Async_Pipeline_Allow_Pre_And_Post_Tasks()
