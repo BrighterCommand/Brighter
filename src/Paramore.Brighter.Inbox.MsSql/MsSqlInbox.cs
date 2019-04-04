@@ -30,8 +30,8 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Paramore.Brighter.CommandStore.MsSql.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Inbox.MsSql.Logging;
 
 namespace Paramore.Brighter.Inbox.MsSql
 {

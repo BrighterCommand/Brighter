@@ -1,21 +1,21 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>This is an implementation of the message store used for decoupled invocation of commands by Paramore.Brighter, using MS Sql Server</Description>
-    <AssemblyTitle>Paramore.Brighter.MessageStore.MsSql</AssemblyTitle>
     <Authors>Francesco Pighi</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <PackageId>Paramore.Brighter.MessageStore.MsSql</PackageId>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <RootNamespace>Paramore.Brighter.MessageStore.MsSql</RootNamespace>
   </PropertyGroup>
+  <ItemGroup>
+    <None Remove="DDL_SCRIPTS\MSSQL\Outbox.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="DDL_SCRIPTS\MSSQL\Outbox.sql" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="System.Data.SqlClient" Version="4.6.0" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Configuration)' == 'Release' ">
-    <EmbeddedResource Include=".\DDL Scripts\MSSQL\MessageStore.sql" Exclude="bin\**;obj\**;**\*.xproj;packages\**;@(EmbeddedResource)" />
   </ItemGroup>
 </Project>
