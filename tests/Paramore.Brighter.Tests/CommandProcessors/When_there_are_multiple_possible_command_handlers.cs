@@ -53,6 +53,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             container.Register(_receivedMessages);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]
