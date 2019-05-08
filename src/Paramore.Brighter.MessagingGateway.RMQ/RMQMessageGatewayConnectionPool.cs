@@ -78,13 +78,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         public void ResetConnection(ConnectionFactory connectionFactory)
         {
-            var connectionId = GetConnectionId(connectionFactory);
-
             lock (s_lock)
             {
-                var connection = s_connectionPool[connectionId];
-                TryRemoveConnection(connectionId);
-                
                 DelayReconnecting();
                 
                 CreateConnection(connectionFactory);
