@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,7 +39,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
-        private static readonly Random jitter = new Random();
 
         public RMQMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
         {
