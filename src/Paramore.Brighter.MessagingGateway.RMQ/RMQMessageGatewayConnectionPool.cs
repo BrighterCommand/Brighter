@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
 
@@ -78,11 +77,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         public void ResetConnection(ConnectionFactory connectionFactory)
         {
+            var connectionId = GetConnectionId(connectionFactory);
+
             lock (s_lock)
             {
-                DelayReconnecting();
-                
-                CreateConnection(connectionFactory);
+                TryRemoveConnection(connectionId);
             }
         }
 
@@ -133,12 +132,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             return string.Concat(connectionFactory.UserName, ".", connectionFactory.Password, ".", connectionFactory.HostName, ".", connectionFactory.Port, ".", connectionFactory.VirtualHost).ToLowerInvariant();
         }
-
-        private static void DelayReconnecting()
-        {
-            Task.Delay(jitter.Next(5, 100)).Wait();
-        }
-
 
         class PooledConnection
         {

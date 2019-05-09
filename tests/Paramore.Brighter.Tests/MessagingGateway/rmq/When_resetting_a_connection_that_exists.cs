@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using FluentAssertions;
+using FakeItEasy;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 using Xunit;
@@ -34,24 +34,30 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
     public class RMQMessageGatewayConnectionPoolResetConnectionExists
     {
         private readonly RMQMessageGatewayConnectionPool _connectionPool;
-        private readonly IConnection _originalConnection;
+        private readonly IEndpointResolver _endpointResolver;
 
         public RMQMessageGatewayConnectionPoolResetConnectionExists()
         {
             _connectionPool = new RMQMessageGatewayConnectionPool("MyConnectionName", 7);
+            _endpointResolver = A.Fake<IEndpointResolver>();
 
             var connectionFactory = new ConnectionFactory { HostName = "localhost" };
-            _originalConnection = _connectionPool.GetConnection(connectionFactory);
+
+            _connectionPool.GetConnection(connectionFactory);
         }
 
         [Fact]
         public void When_resetting_a_connection_that_exists()
         {
-            var connectionFactory = new ConnectionFactory { HostName = "localhost" };
+            var connectionFactory = new ConnectionFactory
+            {
+                HostName = "localhost",
+                EndpointResolverFactory = _ => _endpointResolver
+            };
 
             _connectionPool.ResetConnection(connectionFactory);
 
-            _connectionPool.GetConnection(connectionFactory).Should().NotBeSameAs(_originalConnection);
+            A.CallTo(() => _endpointResolver.All()).MustNotHaveHappened();
         }
     }
 }
