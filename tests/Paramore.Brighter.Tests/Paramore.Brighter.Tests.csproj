@@ -28,7 +28,7 @@
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.101.7" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.2.4" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="2.2.4" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.0.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.1.0" />
     <PackageReference Include="Microsoft.TestPlatform.TestHost" Version="16.0.1" />
     <PackageReference Include="MySqlConnector" Version="0.53.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="2.2.4" />
