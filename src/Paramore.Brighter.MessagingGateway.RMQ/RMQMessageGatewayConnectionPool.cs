@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.RMQ.Logging;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -80,9 +81,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             lock (s_lock)
             {
-                var connection = s_connectionPool[connectionId];
                 TryRemoveConnection(connectionId);
-                CreateConnection(connectionFactory);
+
+                try
+                {
+                    CreateConnection(connectionFactory);
+                }
+                catch (BrokerUnreachableException exception)
+                {
+                    s_logger.Value.ErrorException(
+                        "RMQMessagingGateway: Failed to reset connection to Rabbit MQ endpoint {0}",
+                        exception,
+                        connectionFactory.Endpoint);
+                }
             }
         }
 
