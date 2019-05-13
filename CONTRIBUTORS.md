@@ -30,6 +30,9 @@ Brighter contributors (sorted alphabeticaly)
  
 **[Jamie Clayton](https://github.com/mit-jamie-clayton)**
 * Documentation fixes
+
+**[ACraven](https://github.com/acraven)**
+  * Various fixes
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
