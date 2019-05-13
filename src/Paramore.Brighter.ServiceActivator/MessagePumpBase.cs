@@ -62,13 +62,13 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
                     _logger.Value.WarnFormat("MessagePump: BrokenCircuitException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
-                    await Task.Delay(1000);
+                    Task.Delay(1000).Wait();
                     continue;
                 }
                 catch (ChannelFailureException)
                 {
                     _logger.Value.WarnFormat("MessagePump: ChannelFailureException messages from {1} on thread # {0}", Thread.CurrentThread.ManagedThreadId, Channel.Name);
-                    await Task.Delay(1000);
+                    Task.Delay(1000).Wait();
                     continue;
                 }
                 catch (Exception exception)
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    await Task.Delay(500);
+                    Task.Delay(500).Wait();
                     continue;
                 }
 
