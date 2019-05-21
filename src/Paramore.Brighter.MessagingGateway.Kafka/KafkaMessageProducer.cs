@@ -23,27 +23,37 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using System.Text;
 using Confluent.Kafka;
-using Confluent.Kafka.Serialization;
 using Paramore.Brighter.MessagingGateway.Kafka.Logging;
-using System.Linq;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
-        private Producer<Null, string> _producer;
+        private IProducer<Null, string> _producer;
         private bool _disposedValue = false; 
 
         public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingProducerConfiguration producerConfiguration)
         {
-            var serialiser = new StringSerializer(Encoding.UTF8);
-            var config = globalConfiguration.ToConfig();
-            config = config.Concat(producerConfiguration.ToConfig());
-            _producer = new Producer<Null, string>(config, null, serialiser);
+            ProducerConfig producerConfig = new ProducerConfig
+            {
+                BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
+                ClientId = globalConfiguration.Name,
+                MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
+                QueueBufferingMaxMessages = producerConfiguration.QueueBufferingMaxMessages,
+                Acks = producerConfiguration.Acks,
+                QueueBufferingMaxKbytes = producerConfiguration.QueueBufferingMaxKbytes,
+                MessageSendMaxRetries = producerConfiguration.MessageSendMaxRetries,
+                BatchNumMessages = producerConfiguration.BatchNumberMessages,
+                LingerMs = producerConfiguration.QueueBufferingMax?.Milliseconds,
+                RequestTimeoutMs = producerConfiguration.RequestTimeout?.Milliseconds,
+                MessageTimeoutMs = producerConfiguration.MessageTimeout?.Milliseconds,
+                RetryBackoffMs = producerConfiguration.RetryBackoff?.Milliseconds
+            };
+
+            _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
         }
 
         public void Send(Message message)
@@ -63,7 +73,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
-            return _producer.ProduceAsync(message.Header.Topic, null, message.Body.Value);
+
+            return _producer.ProduceAsync(message.Header.Topic, new Message<Null, string>(){ Value = message.Body.Value});
         }
 
         protected virtual void Dispose(bool disposing)

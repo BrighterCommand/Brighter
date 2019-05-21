@@ -22,52 +22,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
+using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public enum AcksEnum
-    {
-        /// <summary>
-        /// The producer will not wait for a reply from 
-        /// the broker before assuming the message was 
-        /// sent successfully.
-        /// </summary>
-        None,
-
-        /// <summary>
-        /// The producer will receive a success response 
-        /// from the broker the moment the leader replica 
-        /// received the message
-        /// </summary>
-        Leader,
-
-        /// <summary>
-        /// The producer will receive a success response 
-        /// from the broker once all in-sync replicas received 
-        /// the message
-        /// </summary>
-        All
-    }
-
-    internal static class AcksEnumExt
-    {
-        public static string ToConfigString(this AcksEnum acksEnum)
-        {
-            switch (acksEnum)
-            {
-                case AcksEnum.None:
-                    return "0";
-                case AcksEnum.Leader:
-                    return "1";
-                case AcksEnum.All:
-                    return "all";
-                default:
-                    return "0";
-            }
-        }
-    }
-
     public class KafkaMessagingProducerConfiguration
     {
         /// <summary>
@@ -94,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// record before the producer can consider 
         /// the write successful.
         /// </summary>
-        public AcksEnum? Acks { get; set; }
+        public Acks? Acks { get; set; }
 
         /// <summary>
         /// How many times to retry sending a failing MessageSet.
@@ -132,28 +90,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
         }
 
-        public IEnumerable<KeyValuePair<string, object>> ToConfig()
-        {
-            var config = new Dictionary<string, object>();
-            if (QueueBufferingMaxMessages.HasValue)
-                config["queue.buffering.max.messages"] = QueueBufferingMaxMessages.Value;
-            if (Acks.HasValue)
-                config["acks"] = Acks.Value.ToConfigString();
-            if (QueueBufferingMaxKbytes.HasValue)
-                config["queue.buffering.max.kbytes"] = QueueBufferingMaxKbytes.Value;
-            if (MessageSendMaxRetries.HasValue)
-                config["message.send.max.retries"] = MessageSendMaxRetries.Value;
-            if (BatchNumberMessages.HasValue)
-                config["batch.num.messages"] = BatchNumberMessages.Value;
-            if (QueueBufferingMax.HasValue)
-                config["queue.buffering.max.ms"] = QueueBufferingMax.Value.TotalMilliseconds;
-            if (RequestTimeout.HasValue)
-                config["request.timeout.ms"] = RequestTimeout.Value.TotalMilliseconds;
-            if (MessageTimeout.HasValue)
-                config["message.timeout.ms"] = MessageTimeout.Value;
-            if (RetryBackoff.HasValue)
-                config["retry.backoff.ms"] = RetryBackoff.Value.TotalMilliseconds;
-            return config;
-        }
     }
 }
