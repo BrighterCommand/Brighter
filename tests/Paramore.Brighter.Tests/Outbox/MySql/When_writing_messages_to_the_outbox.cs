@@ -62,11 +62,11 @@ namespace Paramore.Brighter.Tests.Outbox.MySql
         {
             _retrievedMessages = _mySqlOutbox.Get();
 
-            // _should_read_first_message_last_from_the__message_store
+            // _should_read_first_message_last_from_the__outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //_should_read_last_message_first_from_the__message_store
+            //_should_read_last_message_first_from_the__outbox
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //_should_read_the_messages_from_the__message_store
+            //_should_read_the_messages_from_the__outbox
             _retrievedMessages.Should().HaveCount(3);
         }
 

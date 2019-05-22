@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Inteface IAmAMessageStoreViewerAsync{T}
+    /// Inteface IAmAOutboxViewerAsync{T}
     /// Used to retrieve messages from an <see cref="IAmAnOutbox{T}"/>
     /// </summary>
     /// <typeparam name="T"></typeparam>

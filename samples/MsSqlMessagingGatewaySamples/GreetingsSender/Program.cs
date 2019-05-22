@@ -21,7 +21,7 @@ namespace GreetingsSender
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
 
             var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
             var producer = new MsSqlMessageProducer(messagingConfiguration);
@@ -29,7 +29,7 @@ namespace GreetingsSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) outbox, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

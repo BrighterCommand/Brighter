@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     /// <summary>
     /// Class DynamoDbStoreConfiguration
     /// </summary>
-    public class DynamoDbMessageStoreConfiguration
+    public class DynamoDbOutboxConfiguration
     {
         /// <summary>
         /// Gets the table name
@@ -43,12 +43,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string MessageIdIndex { get; }
 
         /// <summary>
-        /// Initalises a new instance of the <see cref="DynamoDbMessageStoreConfiguration"/> class.
+        /// Initalises a new instance of the <see cref="DynamoDbOutboxConfiguration"/> class.
         /// </summary>
         /// <param name="tableName">The table name.</param>
         /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
         /// <param name="messageIdIndex">Name of Message Id index for scan operations</param>
-        public DynamoDbMessageStoreConfiguration(string tableName, bool useStronglyConsistentRead, string messageIdIndex)
+        public DynamoDbOutboxConfiguration(string tableName, bool useStronglyConsistentRead, string messageIdIndex)
             => (TableName, UseStronglyConsistentRead, MessageIdIndex) = (tableName, useStronglyConsistentRead, messageIdIndex);
     }     
 }

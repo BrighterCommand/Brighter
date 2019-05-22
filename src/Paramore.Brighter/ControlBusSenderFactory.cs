@@ -38,9 +38,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="gateway">The gateway to the control bus to send messages</param>
         /// <param name="logger">The logger to use</param>
-        /// <param name="messageStore">The message store for outgoing messages to the control bus</param>
+        /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create(IAmAnOutbox<Message> messageStore, IAmAMessageProducer gateway)
+        public IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAMessageProducer gateway)
         {
             var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
@@ -48,7 +48,7 @@ namespace Paramore.Brighter
             return new ControlBusSender(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(messageStore, gateway, mapper))
+                    .TaskQueues(new MessagingConfiguration(outbox, gateway, mapper))
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

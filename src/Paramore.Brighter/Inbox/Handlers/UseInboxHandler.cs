@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         }
 
         /// <summary>
-        /// Logs the command we received to the command store.
+        /// Logs the command we received to the inbox.
         /// If the Once Only flag is set, it will reject commands that it has already seen from the pipeline
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             T handledCommand = base.Handle(command);
 
-            _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
+            _logger.Value.DebugFormat("Writing command {0} to the Inbox", command.Id);
 
             _inbox.Add(command, _contextKey);
 

@@ -31,12 +31,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessageStore.Sqlite.Logging;
+using Paramore.Brighter.Outbox.Sqlite.Logging;
 
-namespace Paramore.Brighter.MessageStore.Sqlite
+namespace Paramore.Brighter.Outbox.Sqlite
 {
     /// <summary>
-    ///     Class SqliteMessageStore.
+    ///     Class SqliteOutbox.
     /// </summary>
     public class SqliteOutbox :
         IAmAnOutbox<Message>,
@@ -48,13 +48,13 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteMessageStoreConfiguration _configuration;
+        private readonly SqliteOutboxConfiguration _configuration;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public SqliteOutbox(SqliteMessageStoreConfiguration configuration)
+        public SqliteOutbox(SqliteOutboxConfiguration configuration)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             var sql =
                 string.Format(
                     "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.MessageStoreTableName);
+                    _configuration.OutboxTableName);
             return sql;
         }
 
@@ -122,7 +122,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.MessageStoreTableName);
+                _configuration.OutboxTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("@MessageId", messageId.ToString())
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -182,7 +182,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <returns><see cref="Task{Message}" />.</returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("@MessageId", messageId.ToString())
@@ -257,7 +257,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             return new SqliteParameter(parameterName, value);
         }
 
-        private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int messageStoreTimeout,
+        private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int outboxTimeout,
             params SqliteParameter[] parameters)
         {
             using (var connection = GetConnection())
@@ -266,7 +266,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
+                if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 connection.Open();
                 var item = execute(command);
@@ -370,7 +370,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                 CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.MessageStoreTableName);
+            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.OutboxTableName);
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbOutbox>);
 
         private readonly DynamoDBContext _context;
-        private readonly DynamoDbMessageStoreConfiguration _messageStoreConfiguration;
+        private readonly DynamoDbOutboxConfiguration _outboxConfiguration;
         private readonly DynamoDBOperationConfig _operationConfig;
         private readonly DynamoDBOperationConfig _queryOperationConfig;
 
@@ -55,10 +55,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="context">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbMessageStoreConfiguration configuration)
+        public DynamoDbOutbox(DynamoDBContext context, DynamoDbOutboxConfiguration configuration)
         {
             _context = context;
-            _messageStoreConfiguration = configuration;
+            _outboxConfiguration = configuration;
 
             _operationConfig = new DynamoDBOperationConfig
             {
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             };
         }
 
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbMessageStoreConfiguration configuration, DynamoDBOperationConfig queryOperationConfig)
+        public DynamoDbOutbox(DynamoDBContext context, DynamoDbOutboxConfiguration configuration, DynamoDBOperationConfig queryOperationConfig)
         {
             _context = context;
             _operationConfig = new DynamoDBOperationConfig
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             _queryOperationConfig.QueryFilter = new List<ScanCondition>
             {
-                new ScanCondition(_messageStoreConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
+                new ScanCondition(_outboxConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
             };
 
             var messages =
@@ -179,8 +179,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         ///     Get list of messages based on date and time
         /// </summary>
-        /// <param name="topic">The topic of the message. First part of the partition key for Message Store.</param>
-        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Message Store.</param>
+        /// <param name="topic">The topic of the message. First part of the partition key for Outbox.</param>
+        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Outbox.</param>
         /// <param name="startTime">Time to retrieve messages from on given date.</param>
         /// <param name="endTime">Time to retrieve message until on given date.</param>
         /// <param name="cancellationToken"></param>

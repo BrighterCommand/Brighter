@@ -201,7 +201,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <summary>
         ///     Get list of commands based on date and time
         /// </summary>
-        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Message Store.</param>
+        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Outbox.</param>
         /// <param name="startTime">Time to retrieve messages from on given date.</param>
         /// <param name="endTime">Time to retrieve message until on given date.</param>
         /// <typeparam name="T"></typeparam>

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
-    public class DynamoDbCommandStoreAddMessageAsyncTests : IDisposable
+    public class DynamoDbInboxAddMessageAsyncTests : IDisposable
     {
         private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         private readonly DynamoDbInbox _dynamoDbInbox;
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         private readonly string _contextKey;
         private MyCommand _storedCommand;
 
-        public DynamoDbCommandStoreAddMessageAsyncTests()
+        public DynamoDbInboxAddMessageAsyncTests()
         {
             _dynamoDbTestHelper = new DynamoDbTestHelper();
             _dynamoDbTestHelper.CreateInboxTable(new DynamoDbInboxBuilder(_dynamoDbTestHelper.DynamoDbInboxTestConfiguration.TableName).CreateInboxTableRequest(readCapacityUnits: 2, writeCapacityUnits: 1));
@@ -53,11 +53,11 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         }
 
         [Fact]
-        public async Task When_writing_a_message_to_the_command_store()
+        public async Task When_writing_a_message_to_the_inbox()
         {
             _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__dynamo_db_command_store
+            //_should_read_the_command_from_the__dynamo_db_inbox
             _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
             _storedCommand.Value.Should().Be(_raisedCommand.Value);

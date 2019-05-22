@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,17 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 using FluentAssertions;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MsSsql
+namespace Paramore.Brighter.Tests.Inbox.MsSql
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL Inbox")]
-    public class SqlInboxAddMessageAsyncTests : IDisposable
+    public class SqlInboxAddMessageTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlInbox _sqlInbox;
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Tests.Inbox.MsSsql
         private readonly string _contextKey;
         private MyCommand _storedCommand;
 
-        public SqlInboxAddMessageAsyncTests()
+        public SqlInboxAddMessageTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
@@ -49,22 +49,30 @@ namespace Paramore.Brighter.Tests.Inbox.MsSsql
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
+            _sqlInbox.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
-        public async Task When_Writing_A_Message_To_The_Inbox_Async()
+        public void When_Writing_A_Message_To_The_Inbox()
         {
-            await _sqlInbox.AddAsync(_raisedCommand, _contextKey);
+            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
-
-            //_should_read_the_command_from_the__sql_command_store
+            //_should_read_the_command_from_the__sql_inbox
             _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
             _storedCommand.Value.Should().Be(_raisedCommand.Value);
             //_should_read_the_command_id
             _storedCommand.Id.Should().Be(_raisedCommand.Id);
         }
+
+        [Fact]
+        public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
+        {
+            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null));
+            //should_not_read_message
+            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+        }
+
 
         public void Dispose()
         {

@@ -39,25 +39,25 @@
 #pragma warning disable 1591
 
 using System.Diagnostics.CodeAnalysis;
-using Paramore.Brighter.MessageStore.Sqlite.Logging.LogProviders;
+using Paramore.Brighter.Outbox.Sqlite.Logging.LogProviders;
 
-[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.Messagestore.Sqlite.Logging")]
-[assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.Messagestore.Sqlite.Logging.Logger.#Invoke(Paramore.Brighter.Messagestore.Sqlite.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.Outbox.Sqlite.Logging")]
+[assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.Outbox.Sqlite.Logging.Logger.#Invoke(Paramore.Brighter.Outbox.Sqlite.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
 
 // If you copied this file manually, you need to change all "YourRootNameSpace" so not to clash with other libraries
 // that use LibLog
 #if LIBLOG_PROVIDERS_ONLY
-namespace Paramore.Brighter.Messagestore.Sqlite.LibLog
+namespace Paramore.Brighter.Outbox.Sqlite.LibLog
 #else
-namespace Paramore.Brighter.MessageStore.Sqlite.Logging
+namespace Paramore.Brighter.Outbox.Sqlite.Logging
 #endif
 {
     using System.Collections.Generic;
     using System.Diagnostics.CodeAnalysis;
 #if LIBLOG_PROVIDERS_ONLY
-    using Paramore.Brighter.Messagestore.Sqlite.LibLog.LogProviders;
+    using Paramore.Brighter.Outbox.Sqlite.LibLog.LogProviders;
 #else
-    using MessageStore.Sqlite.Logging.LogProviders;
+    using Outbox.Sqlite.Logging.LogProviders;
 #endif
     using System;
 #if !LIBLOG_PROVIDERS_ONLY
@@ -715,9 +715,9 @@ namespace Paramore.Brighter.MessageStore.Sqlite.Logging
 }
 
 #if LIBLOG_PROVIDERS_ONLY
-namespace Paramore.Brighter.Messagestore.Sqlite.LibLog.LogProviders
+namespace Paramore.Brighter.Outbox.Sqlite.LibLog.LogProviders
 #else
-namespace Paramore.Brighter.MessageStore.Sqlite.Logging.LogProviders
+namespace Paramore.Brighter.Outbox.Sqlite.Logging.LogProviders
 #endif
 {
     using System;

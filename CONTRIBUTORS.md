@@ -19,14 +19,14 @@ Brighter contributors (sorted alphabeticaly)
  * Documentation fixes
  
 **[Ian Cooper](https://github.com/iancooper)**
-  * Wrote first version of Command Processor, Policy, RavenDb Message Store, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
+  * Wrote first version of Command Processor, Policy, RavenDb Outbox, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
   * Various fixes
   * Project Technical Lead
   * Committer
   * Redis Messaging Gateway
   
 **[Derek Comartin](https://github.com/dcomartin)**
- * MySQL message store and command store
+ * MySQL outbox and inbox
  
 **[Jamie Clayton](https://github.com/mit-jamie-clayton)**
 * Documentation fixes
@@ -108,11 +108,11 @@ Brighter contributors (sorted alphabeticaly)
  * Gateway connection pooling
 
 **[Francesco Pighi](https://github.com/fpighi)**
-  * SQL Message Store
+  * SQL Outbox
   * Various fixes
 
 **[Tarun Pothulapati](https://github.com/Pothulapati)**
-  * PostgreSQL MessageStore
+  * PostgreSQL Outbox
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
@@ -128,7 +128,7 @@ Brighter contributors (sorted alphabeticaly)
 **[Richard Tappenden](https://github.com/tapmantwo)**
   * Various fixes
   * Command Sourcing Once-Only improvements
-  * Command Store improvements
+  * Inbox improvements
 
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes

@@ -7,7 +7,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbOutboxBuilder
     {
-        private readonly string _tableName = "brighter_message_store";
+        private readonly string _tableName = "brighter_outbox";
 
         public DynamoDbOutboxBuilder() { }
 

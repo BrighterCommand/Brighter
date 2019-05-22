@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
 
         [Fact]
-        public async Task When_depositing_a_message_in_the_message_store()
+        public async Task When_depositing_a_message_in_the_outbox()
         {
             //act
             var postedMessageId = await _commandProcessor.DepositPostAsync(_myCommand);

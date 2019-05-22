@@ -36,7 +36,7 @@ using Paramore.Brighter.Outbox.MsSql.Logging;
 namespace Paramore.Brighter.Outbox.MsSql
 {
     /// <summary>
-    ///     Class MsSqlMessageStore.
+    ///     Class MsSqlOutbox.
     /// </summary>
     public class MsSqlOutbox :
         IAmAnOutbox<Message>, 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                             sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                             sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -236,7 +236,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout, params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int outboxTimeout, params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -244,7 +244,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
+                if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 connection.Open();
                 return execute(command);

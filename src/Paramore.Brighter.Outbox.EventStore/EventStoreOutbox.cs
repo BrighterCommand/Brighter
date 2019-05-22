@@ -32,12 +32,12 @@ using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Paramore.Brighter.MessageStore.EventStore.Logging;
+using Paramore.Brighter.Outbox.EventStore.Logging;
 
-namespace Paramore.Brighter.MessageStore.EventStore
+namespace Paramore.Brighter.Outbox.EventStore
 {
     /// <summary>
-    ///     Class EventStoreMessageStore.
+    ///     Class EventStoreOutbox.
     /// </summary>
     public class EventStoreOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>
     {
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <returns>Task.</returns>
         public void Add(Message message, int outBoxTimeout = -1)
         {
-            _logger.Value.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonConvert.SerializeObject(message));
 
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <returns><see cref="Task"/>.</returns>
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            _logger.Value.DebugFormat("Adding message to Event Store Message Store: {0}", JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonConvert.SerializeObject(message));
 
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);

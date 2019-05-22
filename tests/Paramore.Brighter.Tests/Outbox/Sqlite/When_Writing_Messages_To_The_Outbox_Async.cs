@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.MessageStore.Sqlite;
+using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.Sqlite
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.Outbox.Sqlite
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlOutbox = new SqliteOutbox(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sSqlOutbox = new SqliteOutbox(new SqliteOutboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
         }
 
         [Fact]
@@ -58,11 +58,11 @@ namespace Paramore.Brighter.Tests.Outbox.Sqlite
 
             _retrievedMessages = await _sSqlOutbox.GetAsync();
 
-            //_should_read_first_message_last_from_the__message_store
+            //_should_read_first_message_last_from_the__outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //_should_read_last_message_first_from_the__message_store
+            //_should_read_last_message_first_from_the__outbox
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //_should_read_the_messages_from_the__message_store
+            //_should_read_the_messages_from_the__outbox
             _retrievedMessages.Should().HaveCount(3);
         }
 

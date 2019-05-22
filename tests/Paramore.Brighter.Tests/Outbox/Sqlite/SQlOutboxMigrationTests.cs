@@ -26,7 +26,7 @@ using System;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessageStore.Sqlite;
+using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.Sqlite
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Tests.Outbox.Sqlite
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutbox  = new SqliteOutbox(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox  = new SqliteOutbox(new SqliteOutboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
             _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             AddHistoricMessage(_message);
@@ -83,15 +83,15 @@ namespace Paramore.Brighter.Tests.Outbox.Sqlite
         {
             _storedMessage = _sqlOutbox.Get(_message.Id);
 
-            //_should_read_the_message_from_the__sql_message_store
+            //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);
-            //_should_read_the_message_header_type_from_the__sql_message_store
+            //_should_read_the_message_header_type_from_the__sql_outbox
             _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
-            //_should_read_the_message_header_topic_from_the__sql_message_store
+            //_should_read_the_message_header_topic_from_the__sql_outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
-            //_should_default_the_timestamp_from_the__sql_message_store
+            //_should_default_the_timestamp_from_the__sql_outbox
             _storedMessage.Header.TimeStamp.Should().BeOnOrAfter(_message.Header.TimeStamp);
-            //_should_read_empty_header_bag_from_the__sql_message_store
+            //_should_read_empty_header_bag_from_the__sql_outbox
             _storedMessage.Header.Bag.Keys.Should().BeEmpty();
         }
 

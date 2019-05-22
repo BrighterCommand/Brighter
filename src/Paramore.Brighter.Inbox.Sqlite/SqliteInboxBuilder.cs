@@ -22,11 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.CommandStore.Sqlite
+namespace Paramore.Brighter.Inbox.Sqlite
 {
     public class SqliteInboxBuilder
     {
-        const string _messageStoreDDL = "CREATE TABLE {0} (" +
+        const string _outboxDDL = "CREATE TABLE {0} (" +
                 "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                 "CommandType nvarchar(256)," +
                 "CommandBody ntext," +
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.CommandStore.Sqlite
 
         public static string GetDDL(string tableName)
         {
-            return string.Format(_messageStoreDDL, tableName);
+            return string.Format(_outboxDDL, tableName);
         }
     }
 }

@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
         }
 
         [Fact]
-        public async Task When_the_message_is_already_in_the_message_store_async()
+        public async Task When_the_message_is_already_in_the_outbox_async()
         {
             await DynamoDbOutbox.AddAsync(_messageEarliest);
 

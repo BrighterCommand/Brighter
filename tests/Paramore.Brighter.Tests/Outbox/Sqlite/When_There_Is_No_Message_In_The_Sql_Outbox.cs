@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
-using Paramore.Brighter.MessageStore.Sqlite;
+using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.Sqlite
@@ -43,13 +43,13 @@ namespace Paramore.Brighter.Tests.Outbox.Sqlite
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutbox = new SqliteOutbox(new SqliteMessageStoreConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(new SqliteOutboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Message_Store()
+        public void When_There_Is_No_Message_In_The_Sql_Outbox()
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 

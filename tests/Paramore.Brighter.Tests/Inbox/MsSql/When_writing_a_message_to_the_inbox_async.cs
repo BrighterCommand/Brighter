@@ -25,42 +25,45 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MsSsql
+namespace Paramore.Brighter.Tests.Inbox.MsSql
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL Inbox")]
-    public class  SqlCommandStoreEmptyWhenSearchedAsyncTests : IDisposable
+    public class SqlInboxAddMessageAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlInbox _sqlInbox;
+        private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
+        private MyCommand _storedCommand;
 
-        public SqlCommandStoreEmptyWhenSearchedAsyncTests()
+        public SqlInboxAddMessageAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
+            _raisedCommand = new MyCommand { Value = "Test" };
+            _contextKey = "context-key";
         }
 
         [Fact]
-        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_And_I_Get_Async()
+        public async Task When_Writing_A_Message_To_The_Inbox_Async()
         {
-            Guid commandId = Guid.NewGuid();
-            var exception = await Catch.ExceptionAsync(() => _sqlInbox.GetAsync<MyCommand>(commandId, "some-key"));
-            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
-        }
+            await _sqlInbox.AddAsync(_raisedCommand, _contextKey);
 
-        [Fact]
-        public async Task When_There_Is_No_Message_In_The_Sql_Command_Store_And_I_Check_Exists_Async()
-        {
-            Guid commandId = Guid.NewGuid();
-            bool exists = await _sqlInbox.ExistsAsync<MyCommand>(commandId, "some-key");
-            exists.Should().BeFalse();
+            _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+
+            //_should_read_the_command_from_the__sql_inbox
+            _storedCommand.Should().NotBeNull();
+            //_should_read_the_command_value
+            _storedCommand.Value.Should().Be(_raisedCommand.Value);
+            //_should_read_the_command_id
+            _storedCommand.Id.Should().Be(_raisedCommand.Id);
         }
 
         public void Dispose()

@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
 
         [Fact]
-        public void When_depositing_a_message_in_the_message_store()
+        public void When_depositing_a_message_in_the_outbox()
         {
             //act
             var postedMessageId = _commandProcessor.DepositPost(_myCommand);

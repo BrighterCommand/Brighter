@@ -30,8 +30,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using Paramore.Brighter.CommandStore.Sqlite.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Inbox.Sqlite.Logging;
 
 namespace Paramore.Brighter.Inbox.Sqlite
 {
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                         if (IsExceptionUnqiueOrDuplicateIssue(sqliteException))
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                                 command.Id);
                         }
                     }
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
 
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"select * from {this.MessageStoreTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
+            var sql = $"select * from {this.OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id),
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// <returns>True if it exists, False otherwise</returns>
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
+            var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id),
@@ -131,7 +131,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// <returns>True if it exists, False otherwise</returns>
         public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"SELECT CommandId FROM {MessageStoreTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
+            var sql = $"SELECT CommandId FROM {OutboxTableName} WHERE CommandId = @CommandId and ContextKey = @ContextKey LIMIT 1";
             var parameters = new[]
             {
                 CreateSqlParameter("CommandId", id),
@@ -170,7 +170,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                     {
                         if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
                         _logger.Value.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                     }
                 }
@@ -179,7 +179,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
 
         public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"select * from {MessageStoreTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
+            var sql = $"select * from {OutboxTableName} where CommandId = @CommandId and ContextKey = @ContextKey";
             var parameters = new[]
             {
                 CreateSqlParameter("@CommandId", id),
@@ -211,7 +211,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
 
         public SqliteInboxConfiguration Configuration { get; }
 
-        public string MessageStoreTableName => Configuration.InBoxTableName;
+        public string OutboxTableName => Configuration.InBoxTableName;
 
         public DbParameter CreateSqlParameter(string parameterName, object value)
         {
@@ -264,7 +264,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
 
         private string GetAddSql()
         {
-            var sqlAdd = $"insert into {MessageStoreTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
+            var sqlAdd = $"insert into {OutboxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
             return sqlAdd;
         }
 

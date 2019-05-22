@@ -1,8 +1,8 @@
 using System;
 using System.IO;
 using Microsoft.Data.Sqlite;
-using Paramore.Brighter.CommandStore.Sqlite;
-using Paramore.Brighter.MessageStore.Sqlite;
+using Paramore.Brighter.Inbox.Sqlite;
+using Paramore.Brighter.Outbox.Sqlite;
 
 namespace Paramore.Brighter.Tests
 {

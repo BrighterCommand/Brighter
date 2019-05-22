@@ -70,7 +70,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAmAnOutbox<Message> _messageStore;
+        private IAmAnOutbox<Message> _outbox;
         private IAmAnOutboxAsync<Message> _asyncOutbox;
         private IAmAMessageProducer _messagingGateway;
         private IAmAMessageProducerAsync _asyncMessagingGateway;
@@ -82,7 +82,7 @@ namespace Paramore.Brighter
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private IAmAChannelFactory _responseChannelFactory;
-        private int _messageStoreWriteTimeout;
+        private int _outboxWriteTimeout;
         private int _messagingGatewaySendTimeout;
         private bool _useTaskQueues = false;
         private bool _useRequestReplyQueues = false;
@@ -155,12 +155,12 @@ namespace Paramore.Brighter
         public INeedARequestContext TaskQueues(MessagingConfiguration configuration)
         {
             _useTaskQueues = true;
-            _messageStore = configuration.OutBox;
+            _outbox = configuration.OutBox;
             _asyncOutbox = configuration.OutboxAsync;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
+            _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             return this;
         }
@@ -182,12 +182,12 @@ namespace Paramore.Brighter
         public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
         {
             _useRequestReplyQueues = true;
-            _messageStore = configuration.OutBox;
+            _outbox = configuration.OutBox;
             _asyncOutbox = configuration.OutboxAsync;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _messageStoreWriteTimeout = configuration.MessageStoreWriteTimeout;
+            _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
              
@@ -243,11 +243,11 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
-                    outBox: _messageStore,
+                    outBox: _outbox,
                     asyncOutbox: _asyncOutbox,
                     messageProducer: _messagingGateway,
                     asyncMessageProducer: _asyncMessagingGateway,
-                    messageStoreTimeout: _messageStoreWriteTimeout,
+                    outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry
                     );
             }

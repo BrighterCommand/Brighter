@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         }
 
         /// <summary>
-        /// Awaitably logs the command we received to the command store.
+        /// Awaitably logs the command we received to the inbox.
         /// </summary>
         /// <param name="command">The command that we want to store.</param>
         /// <param name="cancellationToken">Allows the caller to cancel the pipeline if desired</param>
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Inbox.Handlers
                 }
             }
             
-            _logger.Value.DebugFormat("Writing command {0} to the Command Store", command.Id);
+            _logger.Value.DebugFormat("Writing command {0} to the Inbox", command.Id);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 

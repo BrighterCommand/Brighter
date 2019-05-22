@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Tests.Inbox.Sqlite
 {
     [Trait("Category", "Sqlite")]
-    [Collection("Sqlite CommandStore")]
+    [Collection("Sqlite Inbox")]
     public class SqliteInboxAddMessageAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Tests.Inbox.Sqlite
 
             _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__sql_command_store
+            //_should_read_the_command_from_the__sql_inbox
             _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
             _storedCommand.Value.Should().Be(_raisedCommand.Value);

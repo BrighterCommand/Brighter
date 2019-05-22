@@ -91,25 +91,25 @@ namespace Paramore.Brighter
         Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
 
         /// <summary>
-        /// Adds a message into the message store, and returns the id of the saved message.
+        /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
         /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutbox"/> 
         /// </summary>
-        /// <param name="request">The request to save to the message store</param>
+        /// <param name="request">The request to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
         Guid DepositPost<T>(T request) where T : class, IRequest;
 
         /// <summary>
-        /// Adds a message into the message store, and returns the id of the saved message.
+        /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
         /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutboxAsync"/> 
         /// </summary>
-        /// <param name="request">The request to save to the message store</param>
+        /// <param name="request">The request to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
         Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
@@ -128,7 +128,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
-        /// The message is placed into a message queue but not into the message store.
+        /// The message is placed into a message queue but not into the outbox.
         /// An ephemeral reply queue is created, and its name used to set the reply address for the response. We produce
         /// a queue per exchange, to simplify correlating send and receive.
         /// The response is directed to a registered handler.

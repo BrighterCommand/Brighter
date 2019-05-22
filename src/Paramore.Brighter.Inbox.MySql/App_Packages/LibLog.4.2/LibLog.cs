@@ -1,4 +1,4 @@
-//===============================================================================
+﻿//===============================================================================
 // LibLog
 //
 // https://github.com/damianh/LibLog
@@ -39,7 +39,7 @@
 #pragma warning disable 1591
 
 using System.Diagnostics.CodeAnalysis;
-using Paramore.Brighter.CommandStore.MySql.Logging.LogProviders;
+using Paramore.Brighter.Inbox.MySql.Logging.LogProviders;
 
 [assembly: SuppressMessage("Microsoft.Design", "CA1020:AvoidNamespacesWithFewTypes", Scope = "namespace", Target = "Paramore.Brighter.Inbox.MySql.Logging")]
 [assembly: SuppressMessage("Microsoft.Design", "CA1026:DefaultParametersShouldNotBeUsed", Scope = "member", Target = "Paramore.Brighter.Inbox.MySql.Logging.Logger.#Invoke(Paramore.Brighter.Inbox.MySql.Logging.LogLevel,System.Func`1<System.String>,System.Exception,System.Object[])")]
@@ -49,7 +49,7 @@ using Paramore.Brighter.CommandStore.MySql.Logging.LogProviders;
 #if LIBLOG_PROVIDERS_ONLY
 namespace Paramore.Brighter.Inbox.MySql.LibLog
 #else
-namespace Paramore.Brighter.CommandStore.MySql.Logging
+namespace Paramore.Brighter.Inbox.MySql.Logging
 #endif
 {
     using System.Collections.Generic;
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.CommandStore.MySql.Logging
 #if LIBLOG_PROVIDERS_ONLY
     using Paramore.Brighter.Inbox.MySql.LibLog.LogProviders;
 #else
-    using CommandStore.MySql.Logging.LogProviders;
+    using Paramore.Brighter.Inbox.MySql.Logging.LogProviders;
 #endif
     using System;
 #if !LIBLOG_PROVIDERS_ONLY
@@ -717,7 +717,7 @@ namespace Paramore.Brighter.CommandStore.MySql.Logging
 #if LIBLOG_PROVIDERS_ONLY
 namespace Paramore.Brighter.Inbox.MySql.LibLog.LogProviders
 #else
-namespace Paramore.Brighter.CommandStore.MySql.Logging.LogProviders
+namespace Paramore.Brighter.Inbox.MySql.Logging.LogProviders
 #endif
 {
     using System;

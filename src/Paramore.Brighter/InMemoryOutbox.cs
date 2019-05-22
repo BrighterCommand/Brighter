@@ -32,7 +32,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
-    /// store the message into a Message Store to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
+    /// store the message into a Outbox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// </summary>
     public class InMemoryOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>
     {

@@ -22,21 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessageStore.Sqlite
+namespace Paramore.Brighter.Outbox.Sqlite
 {
     /// <summary>
-    /// Class SqliteMessageStoreConfiguration.
+    /// Class SqliteOutboxConfiguration.
     /// </summary>
-    public class SqliteMessageStoreConfiguration
+    public class SqliteOutboxConfiguration
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="SqliteMessageStoreConfiguration"/> class.
+        /// Initializes a new instance of the <see cref="SqliteOutboxConfiguration"/> class.
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
-        /// <param name="messageStoreTableName">Name of the message store table.</param>
-        public SqliteMessageStoreConfiguration(string connectionString, string messageStoreTableName)
+        /// <param name="outboxTableName">Name of the outbox table.</param>
+        public SqliteOutboxConfiguration(string connectionString, string outboxTableName)
         {
-            MessageStoreTableName = messageStoreTableName;
+            OutboxTableName = outboxTableName;
             ConnectionString = connectionString;
         }
 
@@ -46,9 +46,9 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <value>The connection string.</value>
         public string ConnectionString { get; private set; }
         /// <summary>
-        /// Gets the name of the message store table.
+        /// Gets the name of the outbox table.
         /// </summary>
-        /// <value>The name of the message store table.</value>
-        public string MessageStoreTableName { get; private set; }
+        /// <value>The name of the outbox table.</value>
+        public string OutboxTableName { get; private set; }
     }
 }

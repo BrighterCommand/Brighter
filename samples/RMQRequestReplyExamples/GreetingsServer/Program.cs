@@ -77,7 +77,7 @@ namespace GreetingsServer
               {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
             };
             
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
  
             //create message mappers
             var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
@@ -100,7 +100,7 @@ namespace GreetingsServer
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
                 .Policies(policyRegistry)
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 

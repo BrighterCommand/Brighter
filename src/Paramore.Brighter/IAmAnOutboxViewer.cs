@@ -27,9 +27,9 @@ using System.Collections.Generic;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAMessageStoreViewer
+    /// Interface IAmAOutboxViewer
     /// In order to provide monitoring of messages in an OutBox  to allow later replay of those messages in the event of failure. 
-    /// We provide an implementation of <see cref="IAmAnOutboxViewer{T}"/> for Raven <see cref="RavenMessageStore"/>. Clients using other message stores should consider a Pull
+    /// We provide an implementation of <see cref="IAmAnOutboxViewer{T}"/> for Raven <see cref="RavenOutbox"/>. Clients using other outboxs should consider a Pull
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         IList<T> Get(int pageSize = 100, int pageNumber = 1);
     }
 
-    public enum MessageStoreType
+    public enum OutboxType
     {
         SqlCe,
         RavenRemote,

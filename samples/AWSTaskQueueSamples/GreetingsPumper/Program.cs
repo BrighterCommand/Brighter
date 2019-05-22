@@ -25,7 +25,7 @@ namespace GreetingsPumper
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
@@ -34,7 +34,7 @@ namespace GreetingsPumper
                 var builder = CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                    .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
                     .RequestContextFactory(new InMemoryRequestContextFactory());
 
                 var commandProcessor = builder.Build();

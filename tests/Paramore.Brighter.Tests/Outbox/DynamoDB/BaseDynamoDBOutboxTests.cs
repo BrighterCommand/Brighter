@@ -15,12 +15,12 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
         {           
             _dynamoDbTestHelper = new DynamoDbTestHelper();
 
-            var createTableRequest = new DynamoDbOutboxBuilder(_dynamoDbTestHelper.DynamoDbMessageStoreTestConfiguration.TableName)
+            var createTableRequest = new DynamoDbOutboxBuilder(_dynamoDbTestHelper.DynamoDbOutboxTestConfiguration.TableName)
                 .CreateOutboxTableRequest(_throughput, _throughput);
 
             _dynamoDbTestHelper.CreateOutboxTable(createTableRequest);
 
-            DynamoDbOutbox = new DynamoDbOutbox(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbMessageStoreTestConfiguration);
+            DynamoDbOutbox = new DynamoDbOutbox(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbOutboxTestConfiguration);
         }
 
         public void Dispose()

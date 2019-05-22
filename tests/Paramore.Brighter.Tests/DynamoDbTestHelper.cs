@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Tests
     {
         public DynamoDBContext DynamoDbContext { get; }
         public DynamoDbInboxConfiguration DynamoDbInboxTestConfiguration { get; }
-        public DynamoDbMessageStoreConfiguration DynamoDbMessageStoreTestConfiguration { get; }
+        public DynamoDbOutboxConfiguration DynamoDbOutboxTestConfiguration { get; }
         
         public AmazonDynamoDBClient Client { get; }
 
@@ -60,14 +60,14 @@ namespace Paramore.Brighter.Tests
 
             DynamoDbContext = new DynamoDBContext(Client);
             DynamoDbInboxTestConfiguration = new DynamoDbInboxConfiguration($"command_{tableName}", true, "CommandId", "ContextKey");
-            DynamoDbMessageStoreTestConfiguration = new DynamoDbMessageStoreConfiguration($"message_{tableName}", true, "MessageId");
+            DynamoDbOutboxTestConfiguration = new DynamoDbOutboxConfiguration($"message_{tableName}", true, "MessageId");
         }
 
         public void CreateOutboxTable(CreateTableRequest request)
         {           
             Client.CreateTableAsync(request).GetAwaiter().GetResult();
 
-            WaitUntilTableReady(DynamoDbMessageStoreTestConfiguration.TableName);
+            WaitUntilTableReady(DynamoDbOutboxTestConfiguration.TableName);
         }
 
         public void CreateInboxTable(CreateTableRequest request)
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Tests
 
         public async Task<IEnumerable<DynamoDbMessage>> Scan()
         {
-            return await DynamoDbContext.ScanAsync<DynamoDbMessage>(new List<ScanCondition>(), new DynamoDBOperationConfig {OverrideTableName = DynamoDbMessageStoreTestConfiguration.TableName})
+            return await DynamoDbContext.ScanAsync<DynamoDbMessage>(new List<ScanCondition>(), new DynamoDBOperationConfig {OverrideTableName = DynamoDbOutboxTestConfiguration.TableName})
                                         .GetNextSetAsync()
                                         .ConfigureAwait(false);
         }
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Tests
 
         public void CleanUpOutboxDb()
         {
-            Client.DeleteTableAsync(DynamoDbMessageStoreTestConfiguration.TableName).Wait();
+            Client.DeleteTableAsync(DynamoDbOutboxTestConfiguration.TableName).Wait();
         }
     }     
 }

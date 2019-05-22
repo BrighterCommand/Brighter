@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
-using Paramore.Brighter.MessageStore.PostgreSql;
+using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.Tests
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Tests
         public void SetupMessageDb()
         {
             CreateDatabase();
-            CreateMessageStoreTable();
+            CreateOutboxTable();
         }
 
         private void CreateDatabase()
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Tests
             }
         }
 
-        private void CreateMessageStoreTable()
+        private void CreateOutboxTable()
         {
             using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
             {

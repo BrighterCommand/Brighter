@@ -62,19 +62,19 @@ namespace Paramore.Brighter.Tests.Outbox.MySql
         {
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id);
 
-            //_should_read_the_message_from_the__sql_message_store
+            //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
-            //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
+            //_should_read_the_message_header_first_bag_item_from_the__sql_outbox
             _storedMessage.Header.Bag.ContainsKey(key1).Should().BeTrue();
             _storedMessage.Header.Bag[key1].Should().Be(value1);
-            //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
+            //_should_read_the_message_header_second_bag_item_from_the__sql_outbox
             _storedMessage.Header.Bag.ContainsKey(key2).Should().BeTrue();
             _storedMessage.Header.Bag[key2].Should().Be(value2);
-            //_should_read_the_message_header_timestamp_from_the__sql_message_store
+            //_should_read_the_message_header_timestamp_from_the__sql_outbox
             _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
-            //_should_read_the_message_header_topic_from_the__sql_message_store
+            //_should_read_the_message_header_topic_from_the__sql_outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            //_should_read_the_message_header_type_from_the__sql_message_store
+            //_should_read_the_message_header_type_from_the__sql_outbox
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
         }
 

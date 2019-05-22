@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
 
             var retrievedMessages = (await _dynamoDbTestHelper.Scan()).ToList();
             
-            //_should_read_the_messages_from_the__message_store 
+            //_should_read_the_messages_from_the__outbox 
             retrievedMessages.Should().HaveCount(3);            
             retrievedMessages.Single(m => m.MessageId == guids[0].ToString()).Should().NotBeNull();
             retrievedMessages.Single(m => m.MessageId == guids[1].ToString()).Should().NotBeNull();

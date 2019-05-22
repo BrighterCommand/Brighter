@@ -1,9 +1,7 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.Configuration;
 using MySql.Data.MySqlClient;
-using Paramore.Brighter.CommandStore.MySql;
 using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.MessageStore.MySql;
 using Paramore.Brighter.Outbox.MySql;
 
 namespace Paramore.Brighter.Tests

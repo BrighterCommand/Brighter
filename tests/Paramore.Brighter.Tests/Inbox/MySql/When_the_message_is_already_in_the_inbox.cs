@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Command_Store_Different_Context()
+        public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
             _mysqlInbox.Add(_raisedCommand, "some other key");
 

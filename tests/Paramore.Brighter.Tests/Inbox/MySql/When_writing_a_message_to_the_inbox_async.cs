@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Tests.Inbox.MySql
 {
     [Trait("Category", "MySql")]
-    [Collection("MySql CommandStore")]
+    [Collection("MySql Inbox")]
     public class MySqlInboxAddMessageAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mysqlTestHelper;
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
 
             _storedCommand = await _mysqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__sql_command_store
+            //_should_read_the_command_from_the__sql_inbox
             _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
             _storedCommand.Value.Should().Be(_raisedCommand.Value);

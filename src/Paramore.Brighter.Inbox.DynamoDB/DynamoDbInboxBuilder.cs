@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 {
     public class DynamoDbInboxBuilder
     {
-        private readonly string _tableName = "brighter_command_store";
+        private readonly string _tableName = "brighter_inbox";
 
         public DynamoDbInboxBuilder() { }
 

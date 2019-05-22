@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Inbox.MySql
         /// Initializes a new instance of the <see cref="MySqlInboxConfiguration"/> class.
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
-        /// <param name="inBoxTableName">Name of the message store table.</param>
+        /// <param name="inBoxTableName">Name of the outbox table.</param>
         public MySqlInboxConfiguration(string connectionString, string inBoxTableName)
         {
             InBoxTableName = inBoxTableName;
@@ -46,9 +46,9 @@ namespace Paramore.Brighter.Inbox.MySql
         /// <value>The connection string.</value>
         public string ConnectionString { get; private set; }
         /// <summary>
-        /// Gets the name of the message store table.
+        /// Gets the name of the outbox table.
         /// </summary>
-        /// <value>The name of the message store table.</value>
+        /// <value>The name of the outbox table.</value>
         public string InBoxTableName { get; private set; }
     }
 }

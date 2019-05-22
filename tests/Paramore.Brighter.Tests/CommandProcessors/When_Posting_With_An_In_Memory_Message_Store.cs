@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorWithInMemoryMessageStoreTests : IDisposable
+    public class CommandProcessorWithInMemoryOutboxTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly InMemoryOutbox _outbox = new InMemoryOutbox();
         private readonly FakeMessageProducer _fakeMessageProducer = new FakeMessageProducer();
 
-        public CommandProcessorWithInMemoryMessageStoreTests()
+        public CommandProcessorWithInMemoryOutboxTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Posting_With_An_In_Memory_Message_Store()
+        public void When_Posting_With_An_In_Memory_Outbox()
         {
             _commandProcessor.Post(_myCommand);
 

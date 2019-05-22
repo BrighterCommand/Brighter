@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 {
     public class PostgreSqlOutboxBulder
     {
-        const string MessageStoreDdl = @"
+        const string OutboxDdl = @"
        CREATE TABLE {0}
             (
                 Id BIGSERIAL PRIMARY KEY,
@@ -39,9 +39,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             );
         ";
 
-        public static string GetDDL(string MessageStoreTableName)
+        public static string GetDDL(string OutboxTableName)
         {
-            return string.Format(MessageStoreDdl, MessageStoreTableName);
+            return string.Format(OutboxDdl, OutboxTableName);
         }
     }
 }

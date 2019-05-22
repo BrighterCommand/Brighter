@@ -70,7 +70,7 @@ The following is an example of how to specify the configuration for the SQL Serv
         var builder = CommandProcessorBuilder.With()
             .Handlers(new HandlerConfiguration())
             .DefaultPolicy()
-            .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+            .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
             .RequestContextFactory(new InMemoryRequestContextFactory());
 
         var commandProcessor = builder.Build();

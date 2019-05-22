@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Tests.OutBox.EventStore
             s_eventStore.Connected += (sender, e) => { s_eventStoreClientConnected = true; };
             s_eventStore.ConnectAsync().Wait();
 
-            s_eventStoreOutbox = new EventStoreMessageStore(s_eventStore);
+            s_eventStoreOutbox = new EventStoreOutbox(s_eventStore);
 
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
         }
