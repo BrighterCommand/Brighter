@@ -26,9 +26,9 @@ using System;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using TinyIoC;
 
 namespace GreetingsSender
 {

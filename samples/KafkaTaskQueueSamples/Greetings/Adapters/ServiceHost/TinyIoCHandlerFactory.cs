@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using KafkaTaskQueueSamples.Greetings.TinyIoc;
 using Paramore.Brighter;
+using TinyIoC;
 
 namespace KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost
 {

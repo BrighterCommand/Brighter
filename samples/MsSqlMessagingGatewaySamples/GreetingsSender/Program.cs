@@ -1,9 +1,9 @@
-﻿using Events;
-using Events.Adapters.ServiceHost;
+﻿using Events.Adapters.ServiceHost;
 using Events.Ports.Commands;
 using Events.Ports.Mappers;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using TinyIoC;
 
 namespace GreetingsSender
 {

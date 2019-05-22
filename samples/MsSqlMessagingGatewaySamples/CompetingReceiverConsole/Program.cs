@@ -10,6 +10,7 @@ using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
 using Serilog;
+using TinyIoC;
 
 namespace CompetingReceiverConsole
 {

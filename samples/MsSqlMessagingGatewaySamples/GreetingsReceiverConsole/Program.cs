@@ -24,7 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Events;
 using Events.Adapters.ServiceHost;
 using Events.Ports.CommandHandlers;
 using Events.Ports.Commands;
@@ -35,6 +34,7 @@ using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
 using Serilog;
+using TinyIoC;
 
 namespace GreetingsReceiverConsole
 {

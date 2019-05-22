@@ -25,9 +25,9 @@ using System;
 using Greetings.Adapters;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Redis;
+using TinyIoC;
 
 namespace GreetingsSender
 {

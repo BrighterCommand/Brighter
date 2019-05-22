@@ -27,10 +27,10 @@ using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Serilog;
+using TinyIoC;
 
 namespace GreetingsSender
 {

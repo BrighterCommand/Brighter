@@ -1,6 +1,6 @@
-using System;
-using HelloAsyncListeners.TinyIoc;
+﻿using System;
 using Paramore.Brighter;
+using TinyIoC;
 
 namespace HelloAsyncListeners
 {

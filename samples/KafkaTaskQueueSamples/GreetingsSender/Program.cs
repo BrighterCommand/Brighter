@@ -22,14 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Linq;
-using KafkaTaskQueueSamples.Greetings.TinyIoc;
 using KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost;
 using KafkaTaskQueueSamples.Greetings.Ports.Commands;
 using KafkaTaskQueueSamples.Greetings.Ports.Mappers;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using TinyIoC;
 
 namespace KafkaTaskQueueSamples.GreetingsSender
 {

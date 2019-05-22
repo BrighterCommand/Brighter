@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using Paramore.Brighter;
+using TinyIoC;
 
 namespace Events.Adapters.ServiceHost
 {
