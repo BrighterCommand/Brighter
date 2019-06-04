@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 {
     [Collection("RMQ")]
     [Trait("Category", "RMQ")]
-    public class RmqMessageConsumerChannelFailureTests
+    public class RmqMessageConsumerChannelFailureTests : IDisposable
     {
         private readonly IAmAMessageProducer _sender;
         private readonly IAmAMessageConsumer _receiver;

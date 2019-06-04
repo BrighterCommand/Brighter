@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Configuration;
 using Npgsql;
 using Paramore.Brighter.Outbox.PostgreSql;
-using Paramore.Brighter.Outbox.PostgreSql;
 
 namespace Paramore.Brighter.Tests
 {
