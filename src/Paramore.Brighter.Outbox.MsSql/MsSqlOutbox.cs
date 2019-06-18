@@ -31,7 +31,7 @@ using System.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Paramore.Brighter.Outbox.MsSql.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.MsSql
 {

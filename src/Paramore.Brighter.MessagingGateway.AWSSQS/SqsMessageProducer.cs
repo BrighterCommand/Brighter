@@ -16,8 +16,7 @@ using System;
 using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
-using Newtonsoft.Json;
-using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {

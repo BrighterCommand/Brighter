@@ -3,7 +3,6 @@
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using restms</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>

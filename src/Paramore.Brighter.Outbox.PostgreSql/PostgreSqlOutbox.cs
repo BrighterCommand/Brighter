@@ -28,7 +28,7 @@ using Npgsql;
 using Newtonsoft.Json;
 using System.Data;
 using NpgsqlTypes;
-using Paramore.Brighter.Outbox.PostgreSql.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {

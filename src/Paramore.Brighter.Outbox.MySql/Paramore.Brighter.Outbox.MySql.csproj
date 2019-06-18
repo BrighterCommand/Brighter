@@ -3,7 +3,6 @@
     <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using MySql</Description>
     <Authors>Derek Comartin</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>

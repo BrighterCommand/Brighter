@@ -31,7 +31,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Inbox.Sqlite.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.Sqlite
 {

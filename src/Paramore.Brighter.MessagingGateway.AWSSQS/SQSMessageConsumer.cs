@@ -18,7 +18,7 @@ using System.Linq;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {

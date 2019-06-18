@@ -30,8 +30,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
-using Paramore.Brighter.Inbox.MySql.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.MySql
 {

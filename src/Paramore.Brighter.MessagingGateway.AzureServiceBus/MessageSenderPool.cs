@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Yiannis Triantafyllopoulos <yiannis.triantafyllopoulos@gmail.com>
 
@@ -25,7 +25,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using Amqp;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {

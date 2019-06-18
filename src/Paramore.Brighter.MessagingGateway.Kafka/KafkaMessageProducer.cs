@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using Paramore.Brighter.MessagingGateway.Kafka.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {

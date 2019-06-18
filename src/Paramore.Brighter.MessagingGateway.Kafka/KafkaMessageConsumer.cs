@@ -23,8 +23,8 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 using Confluent.Kafka;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {

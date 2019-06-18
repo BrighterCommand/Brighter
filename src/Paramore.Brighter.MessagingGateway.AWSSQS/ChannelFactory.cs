@@ -5,7 +5,7 @@ using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using Paramore.Brighter.MessagingGateway.AWSSQS.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {

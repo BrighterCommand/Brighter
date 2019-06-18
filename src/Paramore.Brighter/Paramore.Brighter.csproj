@@ -3,10 +3,14 @@
     <Description>The Command Dispatcher pattern is an addition to the Command design pattern that decouples the dispatcher for a service from its execution. A Command Dispatcher component maps commands to handlers. A Command Processor pattern provides a  framework for handling orthogonal concerns such as logging, timeouts, or circuit breakers</Description>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC;LIBLOG_PORTABLE</DefineConstants>
+    <DefineConstants>$(DefineConstants);LIBLOG_PUBLIC</DefineConstants>
     <PackageTags>Command;Event;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="LibLog" Version="5.0.6">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.CSharp" Version="4.5.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="Polly" Version="7.1.0" />

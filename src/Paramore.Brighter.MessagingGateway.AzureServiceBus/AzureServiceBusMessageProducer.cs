@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Yiannis Triantafyllopoulos <yiannis.triantafyllopoulos@gmail.com>
 
@@ -23,7 +23,7 @@ THE SOFTWARE. */
 
 using System;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {

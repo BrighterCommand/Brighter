@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ

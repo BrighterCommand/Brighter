@@ -3,7 +3,6 @@
     <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using Event Store</Description>
     <Authors>George Ayris</Authors>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>

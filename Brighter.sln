@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2027
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28922.388
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 	ProjectSection(SolutionItems) = preProject
@@ -143,13 +143,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsServer", "samples\
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AWSTaskQueueExamples", "AWSTaskQueueExamples", "{033A8626-4BD0-40B7-9A04-5E278BEB9FD6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\AWSTaskQueueSamples\Greetings\Greetings.csproj", "{6E9F8C61-7F0E-4CA1-9602-EA8B85E3CF03}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\AWSTaskQueueSamples\Greetings\Greetings.csproj", "{6E9F8C61-7F0E-4CA1-9602-EA8B85E3CF03}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\AWSTaskQueueSamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{DE96C916-44F8-4634-BC6D-67678C224931}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\AWSTaskQueueSamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{DE96C916-44F8-4634-BC6D-67678C224931}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\AWSTaskQueueSamples\GreetingsSender\GreetingsSender.csproj", "{9F0A56E6-292E-4613-AD0C-92495C50BEDD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\AWSTaskQueueSamples\GreetingsSender\GreetingsSender.csproj", "{9F0A56E6-292E-4613-AD0C-92495C50BEDD}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPumper", "samples\AWSTaskQueueSamples\GreetingsPumper\GreetingsPumper.csproj", "{396D88BA-4BF3-4521-8017-D6EEF3D96337}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\AWSTaskQueueSamples\GreetingsPumper\GreetingsPumper.csproj", "{396D88BA-4BF3-4521-8017-D6EEF3D96337}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

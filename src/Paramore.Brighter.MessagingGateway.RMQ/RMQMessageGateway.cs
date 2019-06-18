@@ -25,7 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.Logging;
 using Polly;
 using RabbitMQ.Client;
 

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -31,7 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using Paramore.Brighter.Outbox.Sqlite.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.Sqlite
 {

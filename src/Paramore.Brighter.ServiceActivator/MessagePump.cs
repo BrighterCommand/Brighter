@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System.Threading;
 using System.Threading.Tasks;
-using Paramore.Brighter.ServiceActivator.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.ServiceActivator
 {

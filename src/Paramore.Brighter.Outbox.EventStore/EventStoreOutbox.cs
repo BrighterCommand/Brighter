@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 George Ayris <george.ayris@gmail.com>
@@ -32,7 +32,7 @@ using System.Threading.Tasks;
 using EventStore.ClientAPI;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
-using Paramore.Brighter.Outbox.EventStore.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.EventStore
 {
