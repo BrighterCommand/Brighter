@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using Amazon.SimpleNotificationService;
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                                     {
                                         var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
                                         //We need to support raw messages to allow the use of message attributes
-                                        snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true"));
+                                        snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
                                     }
                                 }
                             }

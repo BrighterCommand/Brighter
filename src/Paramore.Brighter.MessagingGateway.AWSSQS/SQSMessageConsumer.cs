@@ -1,4 +1,4 @@
-// ***********************************************************************
+﻿// ***********************************************************************
 // Assembly         : paramore.brighter.messaginggateway.awssqs
 // Author           : ian
 // Created          : 08-17-2015
@@ -133,7 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 using (var client = new AmazonSQSClient(_connection.Credentials, _connection.Region))
                 {
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle));
+                    client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
 
                     _logger.Value.InfoFormat("SqsMessageConsumer: Deleted the message {0} with receipt handle {1} on the queue {2}", message.Id, receiptHandle, urlResponse.QueueUrl);
                 }
@@ -227,12 +227,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 Reject(message, false);
 
-                    _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
+                _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
 
-                    if (message.Header.Bag.ContainsKey("ReceiptHandle"))
-                        message.Header.Bag.Remove("ReceiptHandle");
-                    var sqsMessageProducer = new SqsMessageProducer(_connection);
-                    sqsMessageProducer.Send(message);
+                if (message.Header.Bag.ContainsKey("ReceiptHandle"))
+                    message.Header.Bag.Remove("ReceiptHandle");
+                var sqsMessageProducer = new SqsMessageProducer(_connection);
+                sqsMessageProducer.Send(message);
 
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeued the message {0}", message.Id);
             }
