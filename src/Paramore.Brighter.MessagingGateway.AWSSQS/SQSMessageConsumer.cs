@@ -1,4 +1,4 @@
-﻿// ***********************************************************************
+// ***********************************************************************
 // Assembly         : paramore.brighter.messaginggateway.awssqs
 // Author           : ian
 // Created          : 08-17-2015
@@ -227,15 +227,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 Reject(message, false);
 
-                using (var client = new AmazonSQSClient(_connection.Credentials, _connection.Region))
-                {
                     _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
 
                     if (message.Header.Bag.ContainsKey("ReceiptHandle"))
                         message.Header.Bag.Remove("ReceiptHandle");
                     var sqsMessageProducer = new SqsMessageProducer(_connection);
                     sqsMessageProducer.Send(message);
-                }
 
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeued the message {0}", message.Id);
             }
