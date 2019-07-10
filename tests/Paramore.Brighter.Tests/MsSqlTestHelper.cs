@@ -109,9 +109,9 @@ namespace Paramore.Brighter.Tests
     internal class SqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } =
-            "Server=.;Database=BrighterTests;Integrated Security=True;Application Name=BrighterTests";
+            "Server=.;Database=BrighterTests;User Id=sa;Password=Password123!;Application Name=BrighterTests";
 
         public string TestsMasterConnectionString { get; set; } =
-            "Server=.;Database=master;Integrated Security=True;Application Name=BrighterTests";
+            "Server=.;Database=master;User Id=sa;Password=Password123!;Application Name=BrighterTests";
     }
 }

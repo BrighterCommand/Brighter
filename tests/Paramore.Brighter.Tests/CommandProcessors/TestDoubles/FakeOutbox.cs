@@ -54,9 +54,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(0);
         }
 
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
         {
-            var messagesSince = DateTime.UtcNow.AddMilliseconds(millisecondsDispatchedAgo * -1);
+            var messagesSince = DateTime.UtcNow.AddMilliseconds(millisecondsDispatchedSince * -1);
             return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
         }
 

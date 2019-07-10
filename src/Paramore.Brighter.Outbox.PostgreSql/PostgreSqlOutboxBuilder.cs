@@ -34,6 +34,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Topic VARCHAR(255) NULL,
                 MessageType VARCHAR(32) NULL,
                 Timestamp timestamptz NULL,
+                Dispatched timestamptz NULL,
                 HeaderBag TEXT NULL,
                 Body TEXT NULL
             );

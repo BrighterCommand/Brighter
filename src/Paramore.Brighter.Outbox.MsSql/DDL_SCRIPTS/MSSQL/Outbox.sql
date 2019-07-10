@@ -10,6 +10,7 @@ CREATE TABLE [Messages]
       [Topic] NVARCHAR(255) NULL ,
       [MessageType] NVARCHAR(32) NULL ,
       [Timestamp] DATETIME NULL ,
+      [Dispatched] DATETIME NULL ,
       [HeaderBag] NTEXT NULL ,
       [Body] NTEXT NULL ,
       PRIMARY KEY ( [Id] )

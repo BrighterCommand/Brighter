@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
                         throw;
                     }
-                };
+                }
             }
         }
 
@@ -141,16 +141,34 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
             }
         }
-        
+
         /// <summary>
         ///     Gets the specified message identifier.
         /// </summary>
+        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <param name="outboxTimeout"></param>
         /// <param name="messageId">The message identifier.</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-       public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
        {
-           //TODO: Implement dispatched messages
-           throw new NotImplementedException();
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
        }
        public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
@@ -200,7 +218,7 @@ namespace Paramore.Brighter.Outbox.MySql
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, pageSize, pageNumber);
+                CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 connection.Open();
 
@@ -228,7 +246,7 @@ namespace Paramore.Brighter.Outbox.MySql
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, pageSize, pageNumber);
+                CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -251,10 +269,16 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <param name="messageId">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+           using (var connection = GetConnection())
+           {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                {
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+           }
         }
          
         /// <summary>
@@ -264,8 +288,14 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+           using (var connection = GetConnection())
+           {
+                connection.Open();
+                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                {
+                    command.ExecuteNonQuery();
+                }
+           }
         }
           
         /// <summary>
@@ -275,8 +305,22 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <returns>Outstanding Messages</returns>
         public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
         {
-            //TODO: Implement getting outstanding messages
-            throw new NotImplementedException();
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
         }
 
         private MySqlParameter CreateSqlParameter(string parameterName, object value)
@@ -287,9 +331,55 @@ namespace Paramore.Brighter.Outbox.MySql
                 Value = value
             };
         }
+        
+        private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+            };
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout,
-            params MySqlParameter[] parameters)
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+                
+        private void CreatePagedReadCommand(DbCommand command, int pageSize, int pageNumber)
+        {
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize)
+            };
+
+            var sql = string.Format("SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC", _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            AddParamtersParamArrayToCollection(parameters, command);
+        }
+         
+        private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+                
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout, params MySqlParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -383,6 +473,16 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
+        {
+            var command = connection.CreateCommand();
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            return command;
+        }
+        
         private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)
         {
             return sqlException.Number == MySqlDuplicateKeyError;
@@ -439,19 +539,6 @@ namespace Paramore.Brighter.Outbox.MySql
             return new Message();
         }
 
-        private void SetPagingCommandFor(DbCommand command, int pageSize, int pageNumber)
-        {
-            var parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format("SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC", _configuration.OutBoxTableName, pageNumber, pageSize);
-
-            command.CommandText = sql;
-            AddParamtersParamArrayToCollection(parameters, command);
-        }
 
         public void AddParamtersParamArrayToCollection(MySqlParameter[] parameters, DbCommand command)
         {

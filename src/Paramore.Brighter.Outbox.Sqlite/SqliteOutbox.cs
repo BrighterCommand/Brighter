@@ -152,14 +152,29 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <summary>
         /// Get the messages that have been marked as flushed in the store
         /// </summary>
-        /// <param name="millisecondsDispatchedAgo">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
+        /// <param name="outboxTimeout"></param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
         {
-            //TODO: Implement dispatched message lookup
-            throw new NotImplementedException();
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
         }
 
         private string GetAddSql()
@@ -175,6 +190,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         ///     Gets the specified message identifier.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
+        /// <param name="outBoxTimeout">Timeout for the outbox read, defaults to library default timeout</param>
         /// <returns>Task&lt;Message&gt;.</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
@@ -193,10 +209,16 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <param name="messageId">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+           using (var connection = GetConnection())
+           {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                {
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+           }
         }
 
         /// <summary>
@@ -206,8 +228,14 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+           using (var connection = GetConnection())
+           {
+                connection.Open();
+                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                {
+                    command.ExecuteNonQuery();
+                }
+           }
         }
 
 
@@ -248,7 +276,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, pageSize, pageNumber);
+                CreatePagedRead(command, pageSize, pageNumber);
 
                 connection.Open();
 
@@ -278,7 +306,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, pageSize, pageNumber);
+                CreatePagedRead(command, pageSize, pageNumber);
 
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -299,12 +327,78 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
         public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int page = 1)
         {
-            throw new NotImplementedException();
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, page);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
+
+        private void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
+        {
+            command.Parameters.AddRange(parameters);
+        }
+        
+        private void CreatePagedDispatchedCommand(SqliteCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+        
+        private void CreatePagedRead(SqliteCommand command, int pageSize, int pageNumber)
+        {
+            SqliteParameter[] parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber - 1),
+                CreateSqlParameter("PageSize", pageSize)
+            };
+
+            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber",
+                _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            AddParamtersParamArrayToCollection(parameters, command);
+        }
+
+        private void CreatePagedOutstandingCommand(SqliteCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
         }
 
         private SqliteParameter CreateSqlParameter(string parameterName, object value)
         {
-            //TODO: Implement Outstanding message search
             return new SqliteParameter(parameterName, value);
         }
 
@@ -364,7 +458,17 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             };
         }
 
-
+        private SqliteCommand InitMarkDispatchedCommand(SqliteConnection connection, Guid messageId, DateTime? dispatchedAt)
+        {
+            var command = connection.CreateCommand();
+            var sql = $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            return command;
+         }
+        
+ 
         private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
         {
             return sqlException.SqliteErrorCode == SqliteDuplicateKeyError ||
@@ -418,26 +522,6 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
                 return new Message();
             }
-        }
-
-        private void SetPagingCommandFor(SqliteCommand command, int pageSize, int pageNumber)
-        {
-            SqliteParameter[] parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber - 1),
-                CreateSqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber",
-                _configuration.OutboxTableName);
-
-            command.CommandText = sql;
-            AddParamtersParamArrayToCollection(parameters, command);
-        }
-
-        public void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
-        {
-            command.Parameters.AddRange(parameters);
         }
     }
 }

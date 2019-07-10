@@ -39,10 +39,13 @@ namespace Paramore.Brighter
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
-        /// <param name="millisecondsDispatchedAgo"></param>
+        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <param name="outboxTimeout"></param>
         /// <param name="millisecondsDisspatchedAgo">How far back in time to look for the dispatched time</param>
         /// <returns></returns>
-        IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1);
+        IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1);
 
         /// <summary>
         /// Gets all messages in the OutBox, LIFO

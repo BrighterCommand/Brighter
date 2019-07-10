@@ -111,11 +111,12 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <summary>
         /// Get the messages that have been marked as flushed in the store
         /// </summary>
-        /// <param name="millisecondsDispatchedAgo">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
+        /// <param name="outboxTimeout"></param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
         {
             throw new NotImplementedException();
         }

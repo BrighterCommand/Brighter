@@ -9,29 +9,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     {
         private readonly string _tableName = "brighter_message_store";
 
-        public DynamoDbOutboxBuilder() { }
-
-        public DynamoDbOutboxBuilder(string tableName)
+        public CreateTableRequest CreateOutboxTableRequest(DynamoDbConfiguration dbConfiguration)
         {
-            _tableName = tableName;
-        }
-
-        public CreateTableRequest CreateOutboxTableRequest(ProvisionedThroughput tableProvisionedThroughput, ProvisionedThroughput idGlobalIndexThroughput)
-        {
-            if (tableProvisionedThroughput is null)
-            {
-                throw new ArgumentNullException(nameof(tableProvisionedThroughput));
-            }
-
-            if (idGlobalIndexThroughput is null)
-            {
-                idGlobalIndexThroughput = tableProvisionedThroughput;                
-            }
-
             return new CreateTableRequest
             {
                 TableName = _tableName,
-                ProvisionedThroughput = tableProvisionedThroughput,
+                ProvisionedThroughput = dbConfiguration.TableProvisionedThroughput,
                 AttributeDefinitions = new List<AttributeDefinition>
                 {
                     new AttributeDefinition
@@ -41,14 +24,20 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     },
                     new AttributeDefinition
                     {
-                        AttributeName = "Time",
+                        AttributeName = "CreatedTime",
                         AttributeType = ScalarAttributeType.S
                     },
                     new AttributeDefinition
                     {
                         AttributeName = "MessageId",
                         AttributeType = ScalarAttributeType.S
+                    },
+                    new AttributeDefinition
+                    {
+                        AttributeName = "DeliveryTime",
+                        AttributeType = ScalarAttributeType.S
                     }
+                    
 
                 },
                 KeySchema = new List<KeySchemaElement>
@@ -60,7 +49,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     },
                     new KeySchemaElement
                     {
-                        AttributeName = "Time",
+                        AttributeName = "CreatedTime",
                         KeyType = KeyType.RANGE
                     }
                 },
@@ -68,8 +57,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 {
                     new GlobalSecondaryIndex
                     {
-                        ProvisionedThroughput = idGlobalIndexThroughput,                        
-                        IndexName = "MessageId",
+                        ProvisionedThroughput = dbConfiguration.MessageIdIndexThroughput,                        
+                        IndexName = dbConfiguration.MessageIdIndexName,
                         KeySchema = new List<KeySchemaElement>
                         {
                             new KeySchemaElement
@@ -82,9 +71,31 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                         {
                             ProjectionType = ProjectionType.ALL
                         }
-                    }
+                    },
+                    new GlobalSecondaryIndex
+                    {
+                        ProvisionedThroughput = dbConfiguration.DeliveredIndexThroughput,
+                        IndexName = dbConfiguration.DeliveredIndexName,
+                        KeySchema = new List<KeySchemaElement>
+                        {
+                            new KeySchemaElement
+                            {
+                                AttributeName = "Topic",
+                                KeyType = KeyType.HASH
+                            },
+                            new KeySchemaElement
+                            {
+                                AttributeName = "DeliveryTime",
+                                KeyType = KeyType.RANGE
+                            }
+                        },
+                        Projection = new Projection
+                        {
+                            ProjectionType = ProjectionType.ALL
+                        }
+                 }
                 }
-            };
+           };
         }
     }
 }

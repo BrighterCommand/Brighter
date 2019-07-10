@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             _configuration = configuration;
         }
-        
+
         /// <summary>
         /// Adds the specified message.
         /// </summary>
@@ -90,15 +90,31 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <summary>
         /// Returns messages that have been successfully dispatched
         /// </summary>
-        /// <param name="millisecondsDispatchedAgo">How long ago was the message dispatched?</param>
+        /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
+        /// <param name="outboxTimeout"></param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100,
-            int pageNumber = 1)
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100,
+            int pageNumber = 1, int outboxTimeout = -1)
         {
-            //TODO: Implement dispatched messages
-            throw new NotImplementedException();
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+
+                return messages;
+            }
         }
 
         /// <summary>
@@ -112,7 +128,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
+                CreatePagedReadCommand(command, _configuration, pageSize, pageNumber);
 
                 connection.Open();
 
@@ -138,11 +154,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             var sql = string.Format(
-                "SELECT Id, MessageId, Topic, MessageType, Timestamp, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
-            var parameters = new[]
-            {
-                CreateNpgsqlParameter("MessageId", messageId)
-            };
+                "SELECT Id, MessageId, Topic, MessageType, Timestamp, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId",
+                _configuration.OutboxTableName);
+            var parameters = new[] {CreateNpgsqlParameter("MessageId", messageId)};
 
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
         }
@@ -154,8 +168,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+            using (var connection = GetConnection())
+            {
+                connection.Open();
+                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                {
+                    command.ExecuteNonQuery();
+                }
+            }
         }
 
         /// <summary>
@@ -165,10 +185,102 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100,
+            int pageNumber = 1)
         {
-            //TODO: Implement outstanding messages
-            throw new NotImplementedException();
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+
+                return messages;
+            }
+        }
+
+        private NpgsqlParameter CreateNpgsqlParameter(string parametername, object value)
+        {
+            return new NpgsqlParameter(parametername, value);
+        }
+
+        private void CreatePagedDispatchedCommand(NpgsqlCommand command, double millisecondsDispatchedSince,
+            int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat =
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize),
+                CreateNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+        private void CreatePagedReadCommand(NpgsqlCommand command, PostgreSqlOutboxConfiguration configuration,
+            int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat =
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+        private void CreatePagedOutstandingCommand(NpgsqlCommand command, double milliSecondsSinceAdded, int pageSize,
+            int pageNumber)
+        {
+            var pagingSqlFormat =
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize),
+                CreateNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+        private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
+            NpgsqlParameter[] parameters)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
+
+                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
+
+                connection.Open();
+                return execute(command);
+            }
+        }
+
+        private NpgsqlConnection GetConnection()
+        {
+            return new NpgsqlConnection(_configuration.ConnectionString);
         }
 
         private NpgsqlCommand InitAddDbCommand(NpgsqlConnection connection, NpgsqlParameter[] parameters)
@@ -191,16 +303,23 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 CreateNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateNpgsqlParameter("Topic", message.Header.Topic),
                 new NpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz) {Value = message.Header.TimeStamp},
-                CreateNpgsqlParameter("HeaderBag", bagjson),
-                CreateNpgsqlParameter("Body", message.Body.Value)
+                CreateNpgsqlParameter("HeaderBag", bagjson), CreateNpgsqlParameter("Body", message.Body.Value)
             };
             return parameters;
         }
 
-        private NpgsqlParameter CreateNpgsqlParameter(string parametername, object value)
+        private NpgsqlCommand InitMarkDispatchedCommand(NpgsqlConnection connection, Guid messageId,
+            DateTime? dispatchedAt)
         {
-            return new NpgsqlParameter(parametername, value);
+            var command = connection.CreateCommand();
+            var sql =
+                $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            command.CommandText = sql;
+            command.Parameters.Add(CreateNpgsqlParameter("MessageId", messageId));
+            command.Parameters.Add(CreateNpgsqlParameter("DispatchedAt", dispatchedAt));
+            return command;
         }
+
 
         private Message MapFunction(IDataReader reader)
         {
@@ -238,43 +357,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             return new Message(header, body);
         }
-
-        private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
-            NpgsqlParameter[] parameters)
-        {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
-
-                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
-
-                connection.Open();
-                return execute(command);
-            }
-        }
-
-        private NpgsqlConnection GetConnection()
-        {
-            return new NpgsqlConnection(_configuration.ConnectionString);
-        }
-
-        private void SetPagingCommandFor(NpgsqlCommand command, PostgreSqlOutboxConfiguration configuration,
-            int pageSize, int pageNumber)
-        {
-            var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            var parameters = new[]
-            {
-                CreateNpgsqlParameter("PageNumber", pageNumber),
-                CreateNpgsqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-        }
     }
 }
+

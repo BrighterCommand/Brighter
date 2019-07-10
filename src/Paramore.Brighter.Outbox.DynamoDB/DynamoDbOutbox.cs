@@ -28,9 +28,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
-using Newtonsoft.Json;
+using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
@@ -42,46 +43,23 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         IAmAnOutboxViewerAsync<Message>
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbOutbox>);
-
+        
+        private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
-        private readonly DynamoDbMessageStoreConfiguration _messageStoreConfiguration;
-        private readonly DynamoDBOperationConfig _operationConfig;
-        private readonly DynamoDBOperationConfig _queryOperationConfig;
+        private AmazonDynamoDBClient _client;
 
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
         ///     Initialises a new instance of the <see cref="DynamoDbOutbox"/> class.
         /// </summary>
-        /// <param name="context">The DynamoDBContext</param>
+        /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbMessageStoreConfiguration configuration)
+        public DynamoDbOutbox(DynamoDbConfiguration configuration)
         {
-            _context = context;
-            _messageStoreConfiguration = configuration;
-
-            _operationConfig = new DynamoDBOperationConfig
-            {
-                OverrideTableName = configuration.TableName, 
-                ConsistentRead = configuration.UseStronglyConsistentRead
-            };
-
-            _queryOperationConfig = new DynamoDBOperationConfig
-            {
-                OverrideTableName = configuration.TableName, 
-                IndexName = configuration.MessageIdIndex
-            };
-        }
-
-        public DynamoDbOutbox(DynamoDBContext context, DynamoDbMessageStoreConfiguration configuration, DynamoDBOperationConfig queryOperationConfig)
-        {
-            _context = context;
-            _operationConfig = new DynamoDBOperationConfig
-            {
-                OverrideTableName = configuration.TableName, 
-                ConsistentRead = configuration.UseStronglyConsistentRead
-            };
-            _queryOperationConfig = queryOperationConfig;
+            _configuration = configuration;
+            _client = new AmazonDynamoDBClient(configuration.Credentials, configuration.Region);
+            _context = new DynamoDBContext(_client); 
         }
 
         /// <inheritdoc />
@@ -106,21 +84,44 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var messageToStore = new DynamoDbMessage(message);
 
-            await _context.SaveAsync(messageToStore, _operationConfig, cancellationToken)
+            await _context.SaveAsync(
+                    messageToStore, 
+                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead}, 
+                    cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
         /// Returns messages that have been successfully dispatched
         /// </summary>
-        /// <param name="millisecondsDispatchedAgo">How long ago was the message dispatched?</param>
+        /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
+        /// <param name="outboxTimeout"></param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedAgo, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
         {
-            //TODO: Implement dispatched messages
-            throw new NotImplementedException();
+            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            var queryConfig = new QueryOperationConfig
+            {
+                IndexName = _configuration.DeliveredIndexName,
+                KeyExpression = GenerateTimeSinceExpression(sinceTime),
+                ConsistentRead = true
+            };
+           
+            //in theory this is all values on that index that have a Delivered data (sparse index) starting at
+            //a value, but what we actually need is all values in a date range on global secondary.
+
+            var messages = _context.FromQueryAsync<DynamoDbMessage>(
+                    queryConfig, 
+                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName})
+               .GetNextSetAsync()
+               .ConfigureAwait(ContinueOnCapturedContext)
+               .GetAwaiter()
+               .GetResult();
+
+            return messages.Select(msg => msg.ConvertToMessage());
         }
 
         /// <inheritdoc />
@@ -132,7 +133,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            return GetMessageFromDynamo(messageId).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+            return GetMessage(messageId).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
 
         /// <inheritdoc />
@@ -145,27 +146,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await GetMessageFromDynamo(messageId, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await GetMessage(messageId, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private async Task<Message> GetMessageFromDynamo(Guid id, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var storedId = id.ToString();
-
-            _queryOperationConfig.QueryFilter = new List<ScanCondition>
-            {
-                new ScanCondition(_messageStoreConfiguration.MessageIdIndex, ScanOperator.Equal, storedId)
-            };
-
-            var messages =
-                await _context.QueryAsync<DynamoDbMessage>(storedId, _queryOperationConfig)
-                    .GetNextSetAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-
-            return messages.FirstOrDefault()?.ConvertToMessage() ?? new Message();
-        }
-
-       /// <summary>
+        /// <summary>
         /// Get paginated list of Messages. Not supported by DynamoDB
         /// </summary>
         /// <param name="pageSize"></param>
@@ -202,8 +186,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var primaryKey = $"{topic}+{date:yyyy-MM-dd}";
 
-            var filter = GenerateFilter(startTime, endTime);
-            var query = _context.QueryAsync<DynamoDbMessage>(primaryKey, filter.Operator, filter.Values, _operationConfig)
+            var filter = GenerateTimeRangeFilter(startTime, endTime);
+            var query = _context.QueryAsync<DynamoDbMessage>(
+                                    primaryKey, 
+                                    filter.Operator, 
+                                    filter.Values, 
+                                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead})
                                 .GetRemainingAsync(cancellationToken)
                                 .GetAwaiter()
                                 .GetResult();
@@ -219,11 +207,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="messageId">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
-        }
+            var message = await GetDynamoDbMessage(messageId);
+            message.MarkMessageDelivered(dispatchedAt.HasValue ? dispatchedAt.Value : DateTime.UtcNow);
+
+            await _context.SaveAsync(
+                message, 
+                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead},
+                cancellationToken);
+       }
           
         /// <summary>
         /// Update a message to show it is dispatched
@@ -232,8 +225,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+            var message = GetDynamoDbMessage(messageId).Result;
+            message.DeliveryTime = $"{dispatchedAt:yyyy-MM-dd}";
+
+            _context.SaveAsync(
+                message, 
+                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead})
+                .Wait(_configuration.Timeout);
+
         }
 
         /// <summary>
@@ -245,11 +244,62 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
         {
-            //TODO: implement outstanding messages
-            throw new NotImplementedException();
+            /*
+            var primaryKey = $"{topic}+{date:yyyy-MM-dd}";
+
+            var filter = GenerateTimeRangeFilter(startTime, endTime);
+            var query = _context.QueryAsync<DynamoDbMessage>(
+                                    primaryKey, 
+                                    filter.Operator, 
+                                    filter.Values, 
+                                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead})
+                                .GetRemainingAsync(cancellationToken)
+                                .GetAwaiter()
+                                .GetResult();
+
+            var results = query;
+
+            return results.Select(r => r.ConvertToMessage()).ToList();     
+            */
+            return null;
+        }
+        
+        private async Task<DynamoDbMessage> GetDynamoDbMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
+        {
+           var operationConfig = new DynamoDBOperationConfig
+           {
+               OverrideTableName = _configuration.TableName, 
+               IndexName = _configuration.MessageIdIndexName,
+               ConsistentRead = true
+           };
+
+           var messages = await _context.QueryAsync<DynamoDbMessage>(id.ToString(), operationConfig)
+               .GetNextSetAsync(cancellationToken)
+               .ConfigureAwait(ContinueOnCapturedContext);
+
+           return messages.FirstOrDefault();
         }
 
-        private static Filter GenerateFilter(DateTime? startTime, DateTime? endTime)
+        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            DynamoDbMessage dynamoDbMessage = await GetDynamoDbMessage(id, cancellationToken);
+            return dynamoDbMessage?.ConvertToMessage() ?? new Message();
+        }
+
+        private static Expression GenerateTimeSinceExpression(DateTime sinceTime)
+        {
+            var expression = new Expression();
+            expression.ExpressionStatement = "DeliveryTime >= :v_SinceTime";
+            
+            var values = new Dictionary<string, DynamoDBEntry>();
+            values.Add(":v_SinceTime", sinceTime.Ticks);
+
+            expression.ExpressionAttributeValues = values;
+
+            return expression;
+        }
+
+        private static Filter GenerateTimeRangeFilter(DateTime? startTime, DateTime? endTime)
         {
             var start = $"{startTime?.Ticks ?? DateTime.MinValue.Ticks}";
             var end = $"{endTime?.Ticks ?? DateTime.MaxValue.Ticks}";
@@ -270,72 +320,5 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 => (Operator, Values) = (@operator, values);
         }
         
-    }
-
-    public class DynamoDbMessage
-    {
-        [DynamoDBHashKey("Topic+Date")]
-        public string TopicDate { get; set; }
-
-        [DynamoDBRangeKey]
-        public string Time { get; set; }
-
-        [DynamoDBGlobalSecondaryIndexHashKey("MessageId")]
-        public string MessageId { get; set; }
-
-        [DynamoDBProperty]
-        public string Topic { get; set; }
-
-        [DynamoDBProperty]
-        public string MessageType { get; set; }
-
-        [DynamoDBProperty]
-        public string TimeStamp { get; set; }
-
-        [DynamoDBProperty]
-        public string HeaderBag { get; set; }
-
-        [DynamoDBProperty]
-        public string Body { get; set; }
-
-        [DynamoDBIgnore]
-        public DateTime Date { get; set; }
-
-        public DynamoDbMessage()
-        {
-        }
-
-        public DynamoDbMessage(Message message)
-        {
-            Date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
-
-            TopicDate = $"{message.Header.Topic}+{Date:yyyy-MM-dd}";
-            Time = $"{Date.Ticks}";
-            MessageId = message.Id.ToString();
-            Topic = message.Header.Topic;
-            MessageType = message.Header.MessageType.ToString();
-            TimeStamp = $"{Date}";
-            HeaderBag = JsonConvert.SerializeObject(message.Header.Bag);
-            Body = message.Body.Value;
-        }
-
-        public Message ConvertToMessage()
-        {
-            var messageId = Guid.Parse(MessageId);
-            var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
-            var timestamp = DateTime.Parse(TimeStamp);
-            var bag = JsonConvert.DeserializeObject<Dictionary<string, string>>(HeaderBag);
-
-            var header = new MessageHeader(messageId, Topic, messageType, timestamp);
-
-            foreach (var key in bag.Keys)
-            {
-                header.Bag.Add(key, bag[key]);
-            }
-
-            var body = new MessageBody(Body);
-
-            return new Message(header, body);
-        }
     }
 }

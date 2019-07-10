@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _fakeOutbox
-              .DispatchedMessages(3000)
+              .DispatchedMessages(3000, -1)
               .SingleOrDefault();
               
               
