@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
+    [DynamoDBTable("brighter_outbox")]
     public class DynamoDbMessage
     {
        /// <summary>
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The Id of the Message. Used as a Global Secondary Index
         /// </summary>
-        [DynamoDBGlobalSecondaryIndexHashKey("MessageId")]
+        [DynamoDBHashKey]
         public string MessageId { get; set; }
        
         /// <summary>
@@ -60,13 +61,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         [DynamoDBProperty]
         public string Topic { get; set; }
 
-        /// <summary>
-        /// A Composite Key consisting of the Topic the message has been sent to and the Date it was sent on
-        /// </summary>
-        [DynamoDBHashKey("Topic+Date")]
-        public string TopicDate { get; set; }
-
-         public DynamoDbMessage()
+        public DynamoDbMessage()
         {
         }
 
@@ -74,7 +69,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 
-            TopicDate = $"{message.Header.Topic}+{date:yyyy-MM-dd}";
             CreatedTime = $"{date.Ticks}";
             MessageId = message.Id.ToString();
             Topic = message.Header.Topic;

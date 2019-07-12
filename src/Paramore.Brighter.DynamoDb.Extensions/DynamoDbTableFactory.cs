@@ -38,17 +38,156 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     /// </summary>
     public class DynamoDbTableFactory
     {
-        public CreateTableRequest GenerateCreateTableMapper<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput = null)
+        public CreateTableRequest GenerateCreateTableMapper<T>(
+            DynamoDbCreateProvisionedThroughput provisonedThroughput = null,
+            DynamoGSIProjections gsiProjections = null )
         {
             var docType = typeof(T);
-            var tableAttribute = docType.GetCustomAttributesData().FirstOrDefault(attr => attr.AttributeType == typeof(DynamoDBTableAttribute));
-            if (tableAttribute == null)
-                throw new InvalidOperationException("Types to be mapped must have the DynamoDbTableAttribute");
+            string tableName = GetTableName<T>(docType);
 
-            string tableName = tableAttribute.ConstructorArguments.Count == 0 ? 
-                docType.Name : (string)tableAttribute.ConstructorArguments.FirstOrDefault().Value;
-;
+            var createTableRequest = new CreateTableRequest(tableName, GetPrimaryKey<T>(docType).ToList());
+            AddTableProvisionedThrougput<T>(provisonedThroughput, createTableRequest);
+            createTableRequest.AttributeDefinitions.AddRange(GetAttributeDefinitions<T>(docType));
+            createTableRequest.GlobalSecondaryIndexes.AddRange(GetGlobalSecondaryIndices<T>(docType).Select(entry => entry.Value));
+            AddGSIProvisionedThroughput<T>(provisonedThroughput, createTableRequest);
+            AddGSIProjections(gsiProjections, createTableRequest);
+            createTableRequest.LocalSecondaryIndexes.AddRange(GetLocalSecondaryIndices<T>(docType));
+            return createTableRequest;
+        }
 
+        private void AddGSIProjections(DynamoGSIProjections gsiProjections, CreateTableRequest createTableRequest)
+        {
+            if (gsiProjections != null)
+            {
+                foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
+                {
+                    if (gsiProjections.Projections.TryGetValue(globalSecondaryIndex.IndexName,
+                        out Projection projection))
+                    {
+                        globalSecondaryIndex.Projection = projection;
+                    }
+                }  
+            }
+        }
+
+        private void AddGSIProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
+            CreateTableRequest createTableRequest)
+        {
+            if (provisonedThroughput != null)
+            {
+                foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
+                {
+                    if (provisonedThroughput.GSIThroughputs.TryGetValue(globalSecondaryIndex.IndexName,
+                        out ProvisionedThroughput gsiProvisonedThroughput))
+                    {
+                        globalSecondaryIndex.ProvisionedThroughput = gsiProvisonedThroughput;
+                    }
+                }
+            }
+        }
+
+        private void AddTableProvisionedThrougput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
+            CreateTableRequest createTableRequest)
+        {
+            if (provisonedThroughput != null)
+            {
+                createTableRequest.ProvisionedThroughput = provisonedThroughput.Table;
+            }
+        }
+
+        private List<AttributeDefinition> GetAttributeDefinitions<T>(Type docType)
+        {
+            //attributes
+            var fields = from prop in docType.GetProperties()
+                from attribute in prop.GetCustomAttributesData()
+                where attribute.AttributeType == typeof(DynamoDBPropertyAttribute)
+                select new {prop, attribute};
+
+            var attributeDefinitions = new List<AttributeDefinition>();
+            foreach (var item in fields)
+            {
+                string attributeName = item.attribute.ConstructorArguments.Count == 0
+                    ? item.prop.Name
+                    : (string) item.attribute.ConstructorArguments.FirstOrDefault().Value;
+
+                attributeDefinitions.Add(new AttributeDefinition(attributeName, GetDynamoDbType(item.prop.PropertyType)));
+            }
+
+            return attributeDefinitions;
+        }
+
+        private Dictionary<string, GlobalSecondaryIndex> GetGlobalSecondaryIndices<T>(Type docType)
+        {
+            //global secondary indexes
+            var gsiMap = new Dictionary<string, GlobalSecondaryIndex>();
+
+            var gsiHashKeyResults = from prop in docType.GetProperties()
+                from attribute in prop.GetCustomAttributesData()
+                where attribute.AttributeType == typeof(DynamoDBGlobalSecondaryIndexHashKeyAttribute)
+                select new {prop, attribute};
+
+            foreach (var gsiHashKeyResult in gsiHashKeyResults)
+            {
+                var gsi = new GlobalSecondaryIndex();
+                gsi.IndexName = gsiHashKeyResult.attribute.ConstructorArguments.Count == 0
+                    ? gsiHashKeyResult.prop.Name
+                    : (string) gsiHashKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+
+                var gsiHashKey = new KeySchemaElement(gsiHashKeyResult.prop.Name, KeyType.HASH);
+                gsi.KeySchema.Add(gsiHashKey);
+
+                gsiMap.Add(gsi.IndexName, gsi);
+            }
+
+            var gsiRangeKeyResults = from prop in docType.GetProperties()
+                from attribute in prop.GetCustomAttributesData()
+                where attribute.AttributeType == typeof(DynamoDBGlobalSecondaryIndexRangeKeyAttribute)
+                select new {prop, attribute};
+
+            foreach (var gsiRangeKeyResult in gsiRangeKeyResults)
+            {
+                var indexName = gsiRangeKeyResult.attribute.ConstructorArguments.Count == 0
+                    ? gsiRangeKeyResult.prop.Name
+                    : (string) gsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+
+                if (!gsiMap.TryGetValue(indexName, out GlobalSecondaryIndex entry))
+                    throw new InvalidOperationException(
+                        $"The global secondary index {gsiRangeKeyResult.prop.Name} lacks a hash key");
+
+                var gsiRangeKey = new KeySchemaElement(gsiRangeKeyResult.prop.Name, KeyType.RANGE);
+                entry.KeySchema.Add(gsiRangeKey);
+            }
+
+            return gsiMap;
+        }
+
+        private static List<LocalSecondaryIndex> GetLocalSecondaryIndices<T>(Type docType)
+        {
+            //local secondary indexes
+            var lsiList = new List<LocalSecondaryIndex>();
+
+            var lsiRangeKeyResults = from prop in docType.GetProperties()
+                from attribute in prop.GetCustomAttributesData()
+                where attribute.AttributeType == typeof(DynamoDBLocalSecondaryIndexRangeKeyAttribute)
+                select new {prop, attribute};
+
+            foreach (var lsiRangeKeyResult in lsiRangeKeyResults)
+            {
+                var indexName = lsiRangeKeyResult.attribute.ConstructorArguments.Count == 0
+                    ? lsiRangeKeyResult.prop.Name
+                    : (string) lsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+
+                var lsi = new LocalSecondaryIndex();
+                lsi.IndexName = indexName;
+                lsi.KeySchema.Add(new KeySchemaElement(lsiRangeKeyResult.prop.Name, KeyType.RANGE));
+                lsiList.Add(lsi);
+            }
+
+            return lsiList;
+        }
+        
+        private IEnumerable<KeySchemaElement> GetPrimaryKey<T>(Type docType)
+        {
             //hash key
             var hashKey = (from prop in docType.GetProperties()
                 from attribute in prop.GetCustomAttributesData()
@@ -65,101 +204,21 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 where attribute.AttributeType == typeof(DynamoDBRangeKeyAttribute)
                 select new KeySchemaElement(prop.Name, KeyType.RANGE);
 
-            var index = new List<KeySchemaElement>{hashKey}.Concat(rangeKey);
-            
-            //global secondary indexes
-            var gsiMap = new Dictionary<string, GlobalSecondaryIndex>();
+            var index = new List<KeySchemaElement> {hashKey}.Concat(rangeKey);
+            return index;
+        }
 
-            var gsiHashKeyResults = from prop in docType.GetProperties()
-                from attribute in prop.GetCustomAttributesData()
-                where attribute.AttributeType == typeof(DynamoDBGlobalSecondaryIndexHashKeyAttribute)
-                select new {prop, attribute};
-            
-            foreach (var gsiHashKeyResult in gsiHashKeyResults)
-            {
-                var gsi = new GlobalSecondaryIndex();
-                gsi.IndexName = gsiHashKeyResult.attribute.ConstructorArguments.Count == 0
-                    ? gsiHashKeyResult.prop.Name
-                    : (string)gsiHashKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+        private string GetTableName<T>(Type docType)
+        {
+            var tableAttribute = docType.GetCustomAttributesData()
+                .FirstOrDefault(attr => attr.AttributeType == typeof(DynamoDBTableAttribute));
+            if (tableAttribute == null)
+                throw new InvalidOperationException("Types to be mapped must have the DynamoDbTableAttribute");
 
-                var gsiHashKey = new KeySchemaElement(gsiHashKeyResult.prop.Name, KeyType.HASH);
-                gsi.KeySchema.Add(gsiHashKey);
-                
-                gsiMap.Add(gsi.IndexName, gsi);
-            }
-
-            var gsiRangeKeyResults = from prop in docType.GetProperties()
-                from attribute in prop.GetCustomAttributesData()
-                where attribute.AttributeType == typeof(DynamoDBGlobalSecondaryIndexRangeKeyAttribute)
-                select new {prop, attribute};
-
-            foreach (var gsiRangeKeyResult in gsiRangeKeyResults)
-            {
-                var indexName = gsiRangeKeyResult.attribute.ConstructorArguments.Count == 0
-                    ? gsiRangeKeyResult.prop.Name
-                    : (string)gsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
-                
-                if (!gsiMap.TryGetValue(indexName, out GlobalSecondaryIndex entry))
-                    throw new InvalidOperationException($"The global secondary index {gsiRangeKeyResult.prop.Name} lacks a hash key");
-
-                var gsiRangeKey = new KeySchemaElement(gsiRangeKeyResult.prop.Name, KeyType.RANGE);
-                entry.KeySchema.Add(gsiRangeKey);
-            }
-
-            //local secondary indexes
-            var lsiList = new List<LocalSecondaryIndex>();
-
-            var lsiRangeKeyResults = from prop in docType.GetProperties()
-                from attribute in prop.GetCustomAttributesData()
-                where attribute.AttributeType == typeof(DynamoDBLocalSecondaryIndexRangeKeyAttribute)
-                select new {prop, attribute};
-
-            foreach (var lsiRangeKeyResult in lsiRangeKeyResults)
-            {
-                var indexName = lsiRangeKeyResult.attribute.ConstructorArguments.Count == 0
-                    ? lsiRangeKeyResult.prop.Name
-                    : (string)lsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
-                
-                var lsi = new LocalSecondaryIndex();
-                lsi.IndexName = indexName;
-                lsi.KeySchema.Add(new KeySchemaElement(lsiRangeKeyResult.prop.Name, KeyType.RANGE));
-                lsiList.Add(lsi);
-            }
-            
-            //attributes
-            var fields = from prop in docType.GetProperties()
-                from attribute in prop.GetCustomAttributesData()
-                where attribute.AttributeType == typeof(DynamoDBPropertyAttribute)
-                select new {prop, attribute};
-
-            var attributeDefinitions = new List<AttributeDefinition>();
-            foreach (var item in fields)
-            {
-                string attributeName = item.attribute.ConstructorArguments.Count == 0 ? 
-                    item.prop.Name : (string)item.attribute.ConstructorArguments.FirstOrDefault().Value;
-                    
-                attributeDefinitions.Add(new AttributeDefinition(attributeName, GetDynamoDbType(item.prop.PropertyType)));
-            }
-                
-            var createTableRequest = new CreateTableRequest(tableName, index.ToList());
-            if (provisonedThroughput != null)
-            {
-                createTableRequest.ProvisionedThroughput = provisonedThroughput.Table;
-            }
-            createTableRequest.AttributeDefinitions.AddRange(attributeDefinitions);
-            createTableRequest.GlobalSecondaryIndexes.AddRange(gsiMap.Select(entry => entry.Value));
-            if (provisonedThroughput != null)
-            {
-                foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
-                {
-                    if (provisonedThroughput.GSIThroughputs.TryGetValue(globalSecondaryIndex.IndexName, out ProvisionedThroughput gsiProvisonedThroughput))
-                    {
-                        globalSecondaryIndex.ProvisionedThroughput = gsiProvisonedThroughput;
-                    }
-                }
-            }
-            createTableRequest.LocalSecondaryIndexes.AddRange(lsiList);
-            return createTableRequest;
+            string tableName = tableAttribute.ConstructorArguments.Count == 0
+                ? docType.Name
+                : (string) tableAttribute.ConstructorArguments.FirstOrDefault().Value;
+            return tableName;
         }
 
         // We treat all primitive types as a number

@@ -26,6 +26,8 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(provisonedThroughput);
+            
+            //assert
             Assert.Equal(10, tableRequest.ProvisionedThroughput.ReadCapacityUnits);
             Assert.Equal(10, tableRequest.ProvisionedThroughput.WriteCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.ReadCapacityUnits);
