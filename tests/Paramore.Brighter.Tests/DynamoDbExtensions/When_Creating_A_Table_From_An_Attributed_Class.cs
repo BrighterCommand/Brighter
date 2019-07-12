@@ -42,8 +42,7 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
-            //Required
-           [DynamoDBProperty]
+            [DynamoDBProperty]
             public string StringProperty { get; set; }
 
             [DynamoDBProperty]
@@ -61,6 +60,7 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             [DynamoDBIgnore]
             public string IgnoredProperty { get; set; }
             
+            //Required
             [DynamoDBHashKey]
             public string Id { get; set; }
 
@@ -78,8 +78,6 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             
             [DynamoDBLocalSecondaryIndexRangeKey(indexName:"LocalSecondaryIndex")]
             public string LocalSecondaryRangeKey { get; set; }
-
-           
-       }
+        }
     }
 }

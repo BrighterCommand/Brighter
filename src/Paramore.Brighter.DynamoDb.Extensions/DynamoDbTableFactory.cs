@@ -26,6 +26,7 @@ using System.Linq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.DynamoDb.Extensions;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     /// </summary>
     public class DynamoDbTableFactory
     {
-        public CreateTableRequest GenerateCreateTableMapper<T>()
+        public CreateTableRequest GenerateCreateTableMapper<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput = null)
         {
             var docType = typeof(T);
             var tableAttribute = docType.GetCustomAttributesData().FirstOrDefault(attr => attr.AttributeType == typeof(DynamoDBTableAttribute));
@@ -93,10 +94,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     ? gsiRangeKeyResult.prop.Name
                     : (string)gsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
                 
-                if (!gsiMap.ContainsKey(indexName))
+                if (!gsiMap.TryGetValue(indexName, out GlobalSecondaryIndex entry))
                     throw new InvalidOperationException($"The global secondary index {gsiRangeKeyResult.prop.Name} lacks a hash key");
 
-                var entry = gsiMap[indexName];
                 var gsiRangeKey = new KeySchemaElement(gsiRangeKeyResult.prop.Name, KeyType.RANGE);
                 entry.KeySchema.Add(gsiRangeKey);
             }
@@ -137,8 +137,22 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
                 
             var createTableRequest = new CreateTableRequest(tableName, index.ToList());
+            if (provisonedThroughput != null)
+            {
+                createTableRequest.ProvisionedThroughput = provisonedThroughput.Table;
+            }
             createTableRequest.AttributeDefinitions.AddRange(attributeDefinitions);
             createTableRequest.GlobalSecondaryIndexes.AddRange(gsiMap.Select(entry => entry.Value));
+            if (provisonedThroughput != null)
+            {
+                foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
+                {
+                    if (provisonedThroughput.GSIThroughputs.TryGetValue(globalSecondaryIndex.IndexName, out ProvisionedThroughput gsiProvisonedThroughput))
+                    {
+                        globalSecondaryIndex.ProvisionedThroughput = gsiProvisonedThroughput;
+                    }
+                }
+            }
             createTableRequest.LocalSecondaryIndexes.AddRange(lsiList);
             return createTableRequest;
         }
