@@ -647,7 +647,7 @@ namespace Paramore.Brighter
                     async ct => await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext), 
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
-                await RetryAsync(async ct => _asyncOutbox.MarkDispatchedAsync(messageId));
+                await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId));
             }
 
 

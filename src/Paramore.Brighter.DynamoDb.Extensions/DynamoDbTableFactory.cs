@@ -50,17 +50,22 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 ;
 
             //hash key
-            var hashKey = from prop in docType.GetProperties()
+            var hashKey = (from prop in docType.GetProperties()
                 from attribute in prop.GetCustomAttributesData()
                 where attribute.AttributeType == typeof(DynamoDBHashKeyAttribute)
-                select new KeySchemaElement(prop.Name, KeyType.HASH);
+                select new KeySchemaElement(prop.Name, KeyType.HASH)).FirstOrDefault();
+
+            if (hashKey == null)
+            {
+                throw new InvalidOperationException("The type myst have a primary key mapped with DynamoDBHashKey");
+            }
 
             var rangeKey = from prop in docType.GetProperties()
                 from attribute in prop.GetCustomAttributesData()
                 where attribute.AttributeType == typeof(DynamoDBRangeKeyAttribute)
                 select new KeySchemaElement(prop.Name, KeyType.RANGE);
 
-            var index = hashKey.Concat(rangeKey);
+            var index = new List<KeySchemaElement>{hashKey}.Concat(rangeKey);
             
             //global secondary indexes
             var gsiMap = new Dictionary<string, GlobalSecondaryIndex>();

@@ -5,19 +5,23 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.DynamoDbExtensions
 {
-    public class DynamoDbFactoryMissingTableAttributeTests 
+    public class DynanmoDbnMissingHashKeyTests 
     {
         [Fact]
-        public void When_Creating_A_Table_From_A_Class_Missing_Table_Attribute()
+        public void When_Creating_A_Table_From_A_Class_Missing_A_Hash_Key()
         {
-            //arrange, act, assert
+             //arrange, act, assert
             Assert.Throws<InvalidOperationException>(() =>
             {
                 var tableRequestFactory = new DynamoDbTableFactory();
                 tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>();
             });
+            
         }
         
+        
+        [DynamoDBTable("DnyamoDbEntity")]
         private class DynamoDbEntity{}
+ 
     }
 }
