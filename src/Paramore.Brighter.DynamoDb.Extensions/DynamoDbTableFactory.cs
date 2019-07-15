@@ -38,9 +38,26 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     /// </summary>
     public class DynamoDbTableFactory
     {
+        /// <summary>
+        /// Builds a CreateTableRequest object from an entity type marked up with the object model; other parameters
+        /// set table properties from that. Only supports string, number and byte array properties, others should
+        /// be unmarked
+        /// </summary>
+        /// <param name="provisonedThroughput">What is the provisioned throughput for the table. Defaults to 10 read and write units</param>
+        /// <param name="gsiProjections">How are global secondary indexes projected; defaults to all</param>
+        /// <param name="billingMode">What billing mode (provisioned or request)</param>
+        /// <param name="sseSpecification"></param>
+        /// <param name="streamSpecification"></param>
+        /// <param name="tags"></param>
+        /// <typeparam name="T"></typeparam>
+        /// <returns></returns>
         public CreateTableRequest GenerateCreateTableMapper<T>(
             DynamoDbCreateProvisionedThroughput provisonedThroughput = null,
-            DynamoGSIProjections gsiProjections = null )
+            DynamoGSIProjections gsiProjections = null,
+            BillingMode billingMode = null,
+            SSESpecification sseSpecification = null,
+            StreamSpecification streamSpecification = null,
+            IEnumerable<Tag> tags = null)
         {
             var docType = typeof(T);
             string tableName = GetTableName<T>(docType);
@@ -52,6 +69,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             AddGSIProvisionedThroughput<T>(provisonedThroughput, createTableRequest);
             AddGSIProjections(gsiProjections, createTableRequest);
             createTableRequest.LocalSecondaryIndexes.AddRange(GetLocalSecondaryIndices<T>(docType));
+            createTableRequest.BillingMode = billingMode ?? BillingMode.PROVISIONED;
+            createTableRequest.SSESpecification = sseSpecification ?? new SSESpecification {Enabled = true};
+            createTableRequest.StreamSpecification = streamSpecification ?? new StreamSpecification{StreamEnabled = true, StreamViewType = StreamViewType.NEW_IMAGE};
+            createTableRequest.Tags = tags.Any() ? tags.ToList() : new List<Tag> {new Tag{Key="outbox", Value = "brighter_outbox"}};
             return createTableRequest;
         }
 
@@ -65,6 +86,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                         out Projection projection))
                     {
                         globalSecondaryIndex.Projection = projection;
+                    }
+                    else
+                    {
+                        globalSecondaryIndex.Projection = new Projection {ProjectionType = ProjectionType.ALL};
                     }
                 }  
             }
@@ -81,6 +106,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                         out ProvisionedThroughput gsiProvisonedThroughput))
                     {
                         globalSecondaryIndex.ProvisionedThroughput = gsiProvisonedThroughput;
+                    }
+                    else
+                    {
+                        globalSecondaryIndex.ProvisionedThroughput = new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10};
                     }
                 }
             }

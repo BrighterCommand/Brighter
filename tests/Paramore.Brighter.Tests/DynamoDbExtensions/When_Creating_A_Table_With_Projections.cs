@@ -50,9 +50,6 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
 
             [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")] 
             public string GlobalSecondaryRangeKey { get; set; }
-            
-            [DynamoDBLocalSecondaryIndexRangeKey(indexName:"LocalSecondaryIndex")]
-            public string LocalSecondaryRangeKey { get; set; }
         }
     
     }
