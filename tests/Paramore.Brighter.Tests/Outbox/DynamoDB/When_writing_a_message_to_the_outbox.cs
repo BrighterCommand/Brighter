@@ -23,37 +23,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Amazon;
 using FluentAssertions;
+using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB OutBox")]
-    public class DynamoDbOutboxWritingMessageTests : BaseDynamoDBOutboxTests
+    public class DynamoDbOutboxWritingMessageTests : DynamoDBOutboxBaseTest
     {
         private readonly Message _messageEarliest;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
-
         private Message _storedMessage;
+        private DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxWritingMessageTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
-
+            _dynamoDbOutbox = new DynamoDbOutbox(new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+ 
             _messageEarliest = new Message(messageHeader, new MessageBody("Body"));
-            DynamoDbOutbox.Add(_messageEarliest);
+           _dynamoDbOutbox.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_writing_a_message_to_the_dynamo_db_outbox()
         {
-            _storedMessage = DynamoDbOutbox.Get(_messageEarliest.Id);
+            _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_message_store
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

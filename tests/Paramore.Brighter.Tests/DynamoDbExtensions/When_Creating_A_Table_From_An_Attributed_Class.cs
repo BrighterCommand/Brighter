@@ -4,6 +4,7 @@ using System.Linq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -18,7 +19,7 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             var tableRequestFactory = new DynamoDbTableFactory();
             
             //act
-            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>();
+            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(new DynamoDbCreateProvisionedThroughput());
             
             //assert
             Assert.Equal("MyEntity", tableRequest.TableName);

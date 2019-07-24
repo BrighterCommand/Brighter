@@ -143,15 +143,20 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         /// <summary>
-        ///     Gets the specified message identifier.
+        /// Which messages have been dispatched from the Outbox, within the specified time window
         /// </summary>
-        /// <param name="millisecondsDispatchedSince"></param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
-        /// <param name="outboxTimeout"></param>
-        /// <param name="messageId">The message identifier.</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
+        /// <param name="millisecondsDispatchedSince">How long ago can the message have been dispatched</param>
+        /// <param name="pageSize">How many messages per page</param>
+        /// <param name="pageNumber">Which page number to return</param>
+        /// <param name="outboxTimeout">When do we give up?</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>Messages that have been dispatched from the Outbox to the broker</returns>
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
        {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -170,10 +175,15 @@ namespace Paramore.Brighter.Outbox.MySql
                 return messages;
             }
        }
-       public Message Get(Guid messageId, int outBoxTimeout = -1)
+       /// <summary>
+       /// Get a message
+       /// </summary>
+       /// <param name="messageId">The id of the message to retrieve</param>
+       /// <param name="outBoxTimeout">Timeout in milleseconds</param>
+       /// <returns></returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.OutBoxTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("@MessageId", messageId.ToString())
@@ -189,7 +199,10 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Message> GetAsync(
+           Guid messageId, 
+           int outBoxTimeout = -1, 
+           CancellationToken cancellationToken = default(CancellationToken))
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
             var parameters = new[]
@@ -208,12 +221,13 @@ namespace Paramore.Brighter.Outbox.MySql
 
 
         /// <summary>
-        ///     Returns all messages in the store
+        /// Returns all messages in the store
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -239,9 +253,14 @@ namespace Paramore.Brighter.Outbox.MySql
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken cancellationToken = default(CancellationToken))
+       public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -266,15 +285,15 @@ namespace Paramore.Brighter.Outbox.MySql
          /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
            using (var connection = GetConnection())
            {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
@@ -284,14 +303,14 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
            using (var connection = GetConnection())
            {
                 connection.Open();
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -302,8 +321,13 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+       public IEnumerable<Message> OutstandingMessages(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -544,5 +568,6 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             command.Parameters.AddRange(parameters);
         }
+
     }
 }

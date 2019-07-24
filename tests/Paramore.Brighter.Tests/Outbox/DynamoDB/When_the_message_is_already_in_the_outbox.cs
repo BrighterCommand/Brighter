@@ -23,29 +23,34 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Amazon;
 using FluentAssertions;
+using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB OutBox")]
-    public class DynamoDbOutboxMessageAlreadyExistsTests : BaseDynamoDBOutboxTests
+    public class DynamoDbOutboxMessageAlreadyExistsTests : DynamoDBOutboxBaseTest
     {
         private readonly Message _messageEarliest;
 
         private Exception _exception;
+        private DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxMessageAlreadyExistsTests()
         {            
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            DynamoDbOutbox.Add(_messageEarliest);
-        }
+            _dynamoDbOutbox = new DynamoDbOutbox(new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            
+            _dynamoDbOutbox.AddAsync(_messageEarliest).Wait();
+         }
 
         [Fact]
         public void When_the_message_is_already_in_the_outbox()
         {
-            _exception = Catch.Exception(() => DynamoDbOutbox.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest));
 
             //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();

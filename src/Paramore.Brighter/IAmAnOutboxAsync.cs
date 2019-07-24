@@ -67,9 +67,9 @@ namespace Paramore.Brighter
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-         Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken));        
+         Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken));        
    }
 }

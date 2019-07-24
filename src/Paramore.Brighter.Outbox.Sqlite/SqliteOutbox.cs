@@ -156,8 +156,14 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
         /// <param name="outboxTimeout"></param>
-        /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <returns>A list of dispatched messages</returns>
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -187,11 +193,11 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         }
 
         /// <summary>
-        ///     Gets the specified message identifier.
+        /// Gets the specified message.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">Timeout for the outbox read, defaults to library default timeout</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
+        /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
@@ -206,15 +212,15 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
            using (var connection = GetConnection())
            {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
@@ -224,14 +230,14 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
            using (var connection = GetConnection())
            {
                 connection.Open();
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -245,7 +251,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns><see cref="Task{Message}" />.</returns>
+        /// <returns>A Message.</returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
@@ -266,12 +272,13 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
 
         /// <summary>
-        ///     Returns all messages in the store
+        /// Returns all messages in the outbox
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <returns>A page of messages from the outbox</returns>
+       public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -299,8 +306,12 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,
+         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of messages</returns>
+        public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
@@ -325,12 +336,25 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             }
         }
 
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int page = 1)
+        /// <summary>
+        /// Retrieves those messages that have not been dispatched to the broker in a time period
+        /// since they were added to the outbox
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How long ago where they added to the outbox</param>
+        /// <param name="pageSize">How many messages per page</param>
+        /// <param name="pageNumber">How many pages</param>
+         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of outstanding messages</returns>
+        public IEnumerable<Message> OutstandingMessages(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+             Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, page);
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
                 connection.Open();
 
@@ -523,5 +547,5 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                 return new Message();
             }
         }
-    }
+   }
 }

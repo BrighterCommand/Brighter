@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -33,17 +34,13 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
-    public class DynamoDbInboxEmptyWhenSearchedAsyncTests : IDisposable
+    public class DynamoDbInboxEmptyWhenSearchedAsyncTests : DynamoDBInboxBaseTest
     {
-        private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         private readonly DynamoDbInbox _dynamoDbInbox;
 
         public DynamoDbInboxEmptyWhenSearchedAsyncTests()
         {
-            _dynamoDbTestHelper = new DynamoDbTestHelper();
-            _dynamoDbTestHelper.CreateInboxTable(new DynamoDbInboxBuilder(_dynamoDbTestHelper.DynamoDbInboxTestConfiguration.TableName).CreateInboxTableRequest(readCapacityUnits: 2, writeCapacityUnits: 1));
-
-            _dynamoDbInbox = new DynamoDbInbox(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbInboxTestConfiguration);
+            _dynamoDbInbox = new DynamoDbInbox(new DynamoDbInboxConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
         }
 
         [Fact]
@@ -51,11 +48,6 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         {
             var exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
             exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
-        }
-
-        public void Dispose()
-        {
-            _dynamoDbTestHelper.CleanUpCommandDb();
         }
     }
 }

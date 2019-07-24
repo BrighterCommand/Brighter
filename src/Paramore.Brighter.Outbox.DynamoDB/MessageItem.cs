@@ -6,30 +6,27 @@ using Newtonsoft.Json;
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
     [DynamoDBTable("brighter_outbox")]
-    public class DynamoDbMessage
+    public class MessageItem
     {
        /// <summary>
         /// The message body
         /// </summary>
-        [DynamoDBProperty]
         public string Body { get; set; }
         
         /// <summary>
         /// The time at which the message was created, formatted as a string yyyy-MM-dd
         /// </summary>
-        [DynamoDBProperty]
         public string CreatedAt { get; set; }
 
         /// <summary>
         /// The time at which the message was created, in ticks
         /// </summary>
-        [DynamoDBRangeKey]
+        [DynamoDBGlobalSecondaryIndexRangeKey(indexName:"Outstanding")]
         public string CreatedTime { get; set; }
         
         /// <summary>
         /// The time at which the message was delivered, formatted as a string yyyy-MM-dd
         /// </summary>
-        [DynamoDBProperty]
         public string DeliveredAt { get; set; }
         /// <summary>
         /// The time that the message was delivered to the broker, in ticks
@@ -38,9 +35,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string DeliveryTime { get; set; }
              
         /// <summary>
-        /// A JSON object representing a dictionary of additional properites set on the message
+        /// A JSON object representing a dictionary of additional properties set on the message
         /// </summary>
-        [DynamoDBProperty]
         public string HeaderBag { get; set; }
         
         /// <summary>
@@ -52,20 +48,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The type of message i.e. MT_COMMAND, MT_EVENT etc. An enumeration rendered as a string
         /// </summary>
-        [DynamoDBProperty]
         public string MessageType { get; set; }
 
        /// <summary>
         /// The Topic the message was published to
         /// </summary>
-        [DynamoDBProperty]
+        [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
         public string Topic { get; set; }
 
-        public DynamoDbMessage()
-        {
-        }
+        public MessageItem() {/*Deserialization*/}
 
-        public DynamoDbMessage(Message message)
+        public MessageItem(Message message)
         {
             var date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 

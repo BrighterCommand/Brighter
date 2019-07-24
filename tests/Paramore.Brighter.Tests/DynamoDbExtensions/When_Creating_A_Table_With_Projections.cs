@@ -3,6 +3,7 @@ using System.Linq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -23,7 +24,10 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             );
            
             //act
-            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(gsiProjections: gsiProjection);
+            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(
+                new DynamoDbCreateProvisionedThroughput(),
+                gsiProjection
+                );
             
             //assert
             Assert.Equal(ProjectionType.KEYS_ONLY, tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.ProjectionType);

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
@@ -33,9 +34,8 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
-    public class DynamoDbCommandStoreAddMessageAsyncTests : IDisposable
+    public class DynamoDbCommandStoreAddMessageAsyncTests : DynamoDBInboxBaseTest
     {
-        private readonly DynamoDbTestHelper _dynamoDbTestHelper;
         private readonly DynamoDbInbox _dynamoDbInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
@@ -43,10 +43,8 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 
         public DynamoDbCommandStoreAddMessageAsyncTests()
         {
-            _dynamoDbTestHelper = new DynamoDbTestHelper();
-            _dynamoDbTestHelper.CreateInboxTable(new DynamoDbInboxBuilder(_dynamoDbTestHelper.DynamoDbInboxTestConfiguration.TableName).CreateInboxTableRequest(readCapacityUnits: 2, writeCapacityUnits: 1));
-
-            _dynamoDbInbox = new DynamoDbInbox(_dynamoDbTestHelper.DynamoDbContext, _dynamoDbTestHelper.DynamoDbInboxTestConfiguration);
+            _dynamoDbInbox = new DynamoDbInbox(new DynamoDbInboxConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
             _dynamoDbInbox.Add(_raisedCommand, _contextKey);
@@ -63,11 +61,6 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             _storedCommand.Value.Should().Be(_raisedCommand.Value);
             //_should_read_the_command_id
             _storedCommand.Id.Should().Be(_raisedCommand.Id);
-        }
-
-        public void Dispose()
-        {
-            _dynamoDbTestHelper.CleanUpCommandDb();
         }
     }
 }

@@ -148,12 +148,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
         /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
             double millisecondsDispatchedSince, 
             int pageSize = 100, 
-            int pageNumber = 1, 
-            int outboxTimeout = -1)
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -220,8 +222,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <returns>A list of messages</returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <returns>A list of messages</returns>
+       public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -246,8 +249,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -270,16 +279,16 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
  
-        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
            using (var connection = GetConnection())
            {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
@@ -289,14 +298,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
            using (var connection = GetConnection())
            {
                 connection.Open();
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -307,9 +316,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <returns>Outstanding Messages</returns>
-         public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
-         {
+        /// <param name="args">Additional parameters required for search, if any</param>
+       /// <returns>Outstanding Messages</returns>
+       public IEnumerable<Message> OutstandingMessages(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+            Dictionary<string, object> args = null)
+        {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
@@ -326,7 +340,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 return messages;
             }
-         }
+        }
         
         private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
@@ -500,5 +514,5 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return new Message();
         }
-    }
+   }
 }

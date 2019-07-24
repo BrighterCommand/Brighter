@@ -200,7 +200,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                  return null;
             }
 
-            public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+            public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
             {
                 //ignore
             }

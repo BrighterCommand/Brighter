@@ -91,8 +91,14 @@ namespace Paramore.Brighter
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
         /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
         {
             DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
             return _post.Where(oe =>  oe.TimeDeposited > dispatchedSince)
@@ -115,6 +121,18 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns></returns>
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+        {
+            return _post.Select(oe => oe.Message).Take(pageSize).ToList();
+        }
+         
+       /// <summary>
         /// Gets the specified message
         /// </summary>
         /// <param name="messageId"></param>
@@ -140,12 +158,12 @@ namespace Paramore.Brighter
         /// <summary>
         /// Mark the message as dispatched
         /// </summary>
-        /// <param name="messageId">The message to mark as dispatched</param>
-        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        /// <param name="id">The message to mark as dispatched</param>
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<object>();
             
-            MarkDispatched(messageId, dispatchedAt);
+            MarkDispatched(id, dispatchedAt);
             
             tcs.SetResult(new object());
 
@@ -155,13 +173,13 @@ namespace Paramore.Brighter
         /// <summary>
         /// Mark the message as dispatched
         /// </summary>
-        /// <param name="messageId">The message to mark as dispatched</param>
-         public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        /// <param name="id">The message to mark as dispatched</param>
+         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
-             if (!_post.Exists((oe) => oe.Message.Id == messageId))
+             if (!_post.Exists((oe) => oe.Message.Id == id))
                return;
              
-           var post = _post.Find((entry) => entry.Message.Id == messageId);
+           var post = _post.Find((entry) => entry.Message.Id == id);
            post.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
 
         }
@@ -170,8 +188,10 @@ namespace Paramore.Brighter
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <returns>Outstanding Messages</returns>
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <returns>Outstanding Messages</returns>
+       public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
+            Dictionary<string, object> args = null)
         {
             DateTime sentAfter = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
             return _post.Where(oe =>  oe.TimeDeposited > sentAfter)
@@ -185,12 +205,5 @@ namespace Paramore.Brighter
             public DateTime TimeFlushed { get; set; }
             public Message Message { get; set; }
         }
-
-
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
-        {
-            return _post.Select(oe => oe.Message).Take(pageSize).ToList();
-        }
-
-    }
+   }
 }

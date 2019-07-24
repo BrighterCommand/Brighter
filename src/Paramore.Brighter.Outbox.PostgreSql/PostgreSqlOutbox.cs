@@ -94,9 +94,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
         /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100,
-            int pageNumber = 1, int outboxTimeout = -1)
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -122,8 +127,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of messages</returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -150,7 +156,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
+        /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             var sql = string.Format(
@@ -164,14 +170,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
             using (var connection = GetConnection())
             {
                 connection.Open();
-                using (var command = InitMarkDispatchedCommand(connection, messageId, dispatchedAt))
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     command.ExecuteNonQuery();
                 }
@@ -184,9 +190,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
-        /// <returns>A list of messages that are outstanding for dispatch</returns>
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100,
-            int pageNumber = 1)
+          /// <param name="args">Additional parameters required for search, if any</param>
+       /// <returns>A list of messages that are outstanding for dispatch</returns>
+       public IEnumerable<Message> OutstandingMessages(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -357,6 +367,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             return new Message(header, body);
         }
+
     }
 }
 

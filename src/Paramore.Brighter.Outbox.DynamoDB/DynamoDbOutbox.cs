@@ -31,7 +31,6 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
-using Amazon.DynamoDBv2.Model;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
@@ -82,49 +81,55 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>        
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var messageToStore = new DynamoDbMessage(message);
+            var messageToStore = new MessageItem(message);
 
             await _context.SaveAsync(
                     messageToStore, 
-                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead}, 
+                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName}, 
                     cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
-        /// Returns messages that have been successfully dispatched
+        /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
         /// <param name="pageSize">How many messages returned at once?</param>
         /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
         /// <param name="outboxTimeout"></param>
+        /// <param name="args">Used to pass through the topic we are searching for messages in. Use Key: "Topic"</param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            int outboxTimeout = -1,
+            Dictionary<string, object> args = null)
         {
+            if (args == null)
+            {
+                throw new ArgumentException("Missing required argument", nameof(args));
+            }
+            
             var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var topic = (string)args["Topic"];
 
+            //in theory this is all values on that index that have a Delivered data (sparse index)
+            //we just need to filter for ones in the right date range
+            //As it is a GSI it can't use a consistent read
             var queryConfig = new QueryOperationConfig
             {
                 IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = GenerateTimeSinceExpression(sinceTime),
-                ConsistentRead = true
+                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
+                ConsistentRead = false
             };
            
-            //in theory this is all values on that index that have a Delivered data (sparse index) starting at
-            //a value, but what we actually need is all values in a date range on global secondary.
-
-            var messages = _context.FromQueryAsync<DynamoDbMessage>(
-                    queryConfig, 
-                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName})
-               .GetNextSetAsync()
-               .ConfigureAwait(ContinueOnCapturedContext)
-               .GetAwaiter()
-               .GetResult();
-
+            //block async to make this sync
+            var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
-        /// <inheritdoc />
+       /// <inheritdoc />
         /// <summary>
         ///     Finds a command with the specified identifier.
         /// </summary>
@@ -133,7 +138,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            return GetMessage(messageId).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
+            return GetMessage(messageId)
+                .ConfigureAwait(ContinueOnCapturedContext)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <inheritdoc />
@@ -146,91 +154,71 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return await GetMessage(messageId, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await GetMessage(messageId, cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
-        /// Get paginated list of Messages. Not supported by DynamoDB
+        /// Get paginated list of Messages.
         /// </summary>
         /// <param name="pageSize"></param>
         /// <param name="pageNumber"></param>
-        /// <returns><exception cref="NotSupportedException"></exception></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
-        {
-            throw new NotSupportedException();
-        }
-
-        /// <inheritdoc />
-        /// <summary>
-        /// Get paginated list of Messages. Not supported by DynamoDB
-        /// </summary>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns><exception cref="T:System.NotSupportedException"></exception></returns>
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, CancellationToken cancellationToken = default(CancellationToken))
+        /// <returns>A list of messages</returns>
+        public IList<Message> Get(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
         {
             throw new NotSupportedException();
         }
 
         /// <summary>
-        ///     Get list of messages based on date and time
+        /// Get paginated list of Messages.
         /// </summary>
-        /// <param name="topic">The topic of the message. First part of the partition key for Message Store.</param>
-        /// <param name="date">The date you want to retireve messages for. Second part of the partition key for Message Store.</param>
-        /// <param name="startTime">Time to retrieve messages from on given date.</param>
-        /// <param name="endTime">Time to retrieve message until on given date.</param>
+        /// <param name="pageSize"></param>
+        /// <param name="pageNumber"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns><see cref="T:List Paramore.Brighter.Message"/></returns>
-        public IList<Message> Get(string topic, DateTime date, DateTime? startTime = null, DateTime? endTime = null, CancellationToken cancellationToken = default(CancellationToken))
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of messages</returns>
+        public Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
-            var primaryKey = $"{topic}+{date:yyyy-MM-dd}";
-
-            var filter = GenerateTimeRangeFilter(startTime, endTime);
-            var query = _context.QueryAsync<DynamoDbMessage>(
-                                    primaryKey, 
-                                    filter.Operator, 
-                                    filter.Values, 
-                                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead})
-                                .GetRemainingAsync(cancellationToken)
-                                .GetAwaiter()
-                                .GetResult();
-
-            var results = query;
-
-            return results.Select(r => r.ConvertToMessage()).ToList();            
+            throw new NotSupportedException();
         }
-        
+
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var message = await GetDynamoDbMessage(messageId);
+            var message = await _context.LoadAsync<MessageItem>(id, cancellationToken);
             message.MarkMessageDelivered(dispatchedAt.HasValue ? dispatchedAt.Value : DateTime.UtcNow);
 
             await _context.SaveAsync(
                 message, 
-                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead},
+                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName},
                 cancellationToken);
        }
           
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
-            var message = GetDynamoDbMessage(messageId).Result;
+            var message = _context.LoadAsync<MessageItem>(id).Result;
             message.DeliveryTime = $"{dispatchedAt:yyyy-MM-dd}";
 
             _context.SaveAsync(
                 message, 
-                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead})
+                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName})
                 .Wait(_configuration.Timeout);
 
         }
@@ -242,83 +230,53 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> OutstandingMessages(
+         double millisecondsDispatchedSince, 
+         int pageSize = 100, 
+         int pageNumber = 1, 
+         Dictionary<string, object> args = null)
         {
-            /*
-            var primaryKey = $"{topic}+{date:yyyy-MM-dd}";
+            if (args == null)
+            {
+                throw new ArgumentException("Missing required argument", nameof(args));
+            }
+            
+            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var topic = (string)args["Topic"];
 
-            var filter = GenerateTimeRangeFilter(startTime, endTime);
-            var query = _context.QueryAsync<DynamoDbMessage>(
-                                    primaryKey, 
-                                    filter.Operator, 
-                                    filter.Values, 
-                                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName, ConsistentRead = _configuration.UseStronglyConsistentRead})
-                                .GetRemainingAsync(cancellationToken)
-                                .GetAwaiter()
-                                .GetResult();
-
-            var results = query;
-
-            return results.Select(r => r.ConvertToMessage()).ToList();     
-            */
-            return null;
+            // We get all the messages for topic, added within a time range
+            // There should be few enough of those that we can efficiently filter for those
+            // that don't have a delivery date.
+            var queryConfig = new QueryOperationConfig
+            {
+                IndexName = _configuration.OutstandingIndexName,
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
+                FilterExpression = new NoDispatchTimeExpression().Generate(),
+                ConsistentRead = false
+            };
+           
+            //block async to make this sync
+            var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
+            return messages.Select(msg => msg.ConvertToMessage());
         }
         
-        private async Task<DynamoDbMessage> GetDynamoDbMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
-        {
-           var operationConfig = new DynamoDBOperationConfig
-           {
-               OverrideTableName = _configuration.TableName, 
-               IndexName = _configuration.MessageIdIndexName,
-               ConsistentRead = true
-           };
-
-           var messages = await _context.QueryAsync<DynamoDbMessage>(id.ToString(), operationConfig)
-               .GetNextSetAsync(cancellationToken)
-               .ConfigureAwait(ContinueOnCapturedContext);
-
-           return messages.FirstOrDefault();
-        }
-
         private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
-            DynamoDbMessage dynamoDbMessage = await GetDynamoDbMessage(id, cancellationToken);
-            return dynamoDbMessage?.ConvertToMessage() ?? new Message();
-        }
-
-        private static Expression GenerateTimeSinceExpression(DateTime sinceTime)
-        {
-            var expression = new Expression();
-            expression.ExpressionStatement = "DeliveryTime >= :v_SinceTime";
-            
-            var values = new Dictionary<string, DynamoDBEntry>();
-            values.Add(":v_SinceTime", sinceTime.Ticks);
-
-            expression.ExpressionAttributeValues = values;
-
-            return expression;
-        }
-
-        private static Filter GenerateTimeRangeFilter(DateTime? startTime, DateTime? endTime)
-        {
-            var start = $"{startTime?.Ticks ?? DateTime.MinValue.Ticks}";
-            var end = $"{endTime?.Ticks ?? DateTime.MaxValue.Ticks}";
-            
-            return startTime is null && endTime is null || startTime.HasValue && endTime.HasValue
-                ? new Filter(QueryOperator.Between, new[] { start, end })
-                : startTime is null
-                    ? new Filter(QueryOperator.LessThanOrEqual, new[] { end })
-                    : new Filter(QueryOperator.GreaterThanOrEqual, new[] { start });
-        }
-
-        private class Filter
-        {
-            public QueryOperator Operator { get; }
-            public IEnumerable<string> Values { get; }
-
-            public Filter(QueryOperator @operator, IEnumerable<string> values)
-                => (Operator, Values) = (@operator, values);
+            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id, cancellationToken);
+            return messageItem?.ConvertToMessage() ?? new Message();
         }
         
+        private async Task<IEnumerable<MessageItem>> PageAllMessagesAsync(QueryOperationConfig queryConfig)
+        {
+            var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig);
+            
+            var messages = new List<MessageItem>();
+            do
+            {
+              messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(ContinueOnCapturedContext));
+            } while (!asyncSearch.IsDone);
+
+            return messages;
+        }
     }
 }

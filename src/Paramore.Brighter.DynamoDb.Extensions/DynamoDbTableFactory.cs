@@ -23,6 +23,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
@@ -41,7 +43,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// Builds a CreateTableRequest object from an entity type marked up with the object model; other parameters
         /// set table properties from that. Only supports string, number and byte array properties, others should
-        /// be unmarked
+        /// be unmarked. Generally, don't create a DBProperty unless you need to use in a Filter, and rely on
+        /// DynamoDb client library to figure out how to store.
         /// </summary>
         /// <param name="provisonedThroughput">What is the provisioned throughput for the table. Defaults to 10 read and write units</param>
         /// <param name="gsiProjections">How are global secondary indexes projected; defaults to all</param>
@@ -52,7 +55,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
         public CreateTableRequest GenerateCreateTableMapper<T>(
-            DynamoDbCreateProvisionedThroughput provisonedThroughput = null,
+            DynamoDbCreateProvisionedThroughput provisonedThroughput,
             DynamoGSIProjections gsiProjections = null,
             BillingMode billingMode = null,
             SSESpecification sseSpecification = null,
@@ -72,9 +75,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             createTableRequest.BillingMode = billingMode ?? BillingMode.PROVISIONED;
             createTableRequest.SSESpecification = sseSpecification ?? new SSESpecification {Enabled = true};
             createTableRequest.StreamSpecification = streamSpecification ?? new StreamSpecification{StreamEnabled = true, StreamViewType = StreamViewType.NEW_IMAGE};
-            createTableRequest.Tags = tags.Any() ? tags.ToList() : new List<Tag> {new Tag{Key="outbox", Value = "brighter_outbox"}};
+            createTableRequest.Tags = tags  != null ? tags.ToList() : new List<Tag> {new Tag{Key="outbox", Value = "brighter_outbox"}};
             return createTableRequest;
         }
+
 
         private void AddGSIProjections(DynamoGSIProjections gsiProjections, CreateTableRequest createTableRequest)
         {
@@ -273,5 +277,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             throw new NotSupportedException($"We can't convert {propertyType.Name} to a DynamoDb type. Avoid marking as an attribute and see if the lib can figure it out");
         }
-    }
+
+   }
 }

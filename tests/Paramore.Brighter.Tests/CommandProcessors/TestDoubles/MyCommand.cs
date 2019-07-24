@@ -26,14 +26,12 @@ using System;
 
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommand : ICommand
+    internal class MyCommand : Command
     {
         public MyCommand()
-        {
-            Id = Guid.NewGuid();
-        }
-
-        public Guid Id { get; set; }
+            :base(Guid.NewGuid()) 
+            
+        {}
 
         public string Value { get; set; }
         public bool WasCancelled { get; set; }

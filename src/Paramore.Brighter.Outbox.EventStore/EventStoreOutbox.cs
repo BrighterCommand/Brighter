@@ -108,15 +108,21 @@ namespace Paramore.Brighter.MessageStore.EventStore
             await _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData);
         }
 
-        /// <summary>
+       /// <summary>
         /// Get the messages that have been marked as flushed in the store
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
         /// <param name="pageSize">How many messages in a page</param>
         /// <param name="pageNumber">Which page of messages to get</param>
         /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            int outboxTimeout = -1,
+            Dictionary<string, object> args = null)
         {
             throw new NotImplementedException();
         }
@@ -126,8 +132,9 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// </summary>
         /// <param name="pageSize">number of items on the page, default is 100</param>
         /// <param name="pageNumber">page number of results to return, default is first</param>
-        /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <returns></returns>
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             throw new NotImplementedException();
         }
@@ -165,7 +172,10 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<Message> GetAsync(
+            Guid messageId, 
+            int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             throw new NotImplementedException();
         }
@@ -188,10 +198,10 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             //TODO: Implement mark dispatched
             throw new NotImplementedException();
@@ -200,9 +210,9 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
             //TODO: Implement mark dispatched
             throw new NotImplementedException();
@@ -214,8 +224,13 @@ namespace Paramore.Brighter.MessageStore.EventStore
         /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
+         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1)
+        public IEnumerable<Message> OutstandingMessages(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
         {
             //TODO: Implement outstanding message support
             throw new NotImplementedException();

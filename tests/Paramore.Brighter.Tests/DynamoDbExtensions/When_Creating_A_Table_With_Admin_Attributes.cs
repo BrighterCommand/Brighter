@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -17,6 +18,7 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(
+                new DynamoDbCreateProvisionedThroughput(),
                 billingMode: new BillingMode(BillingMode.PAY_PER_REQUEST),
                 sseSpecification: new SSESpecification {Enabled = false},
                 streamSpecification: new StreamSpecification {StreamEnabled = false},

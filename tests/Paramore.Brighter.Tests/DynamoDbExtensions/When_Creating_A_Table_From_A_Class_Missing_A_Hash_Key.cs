@@ -1,5 +1,6 @@
 using System;
 using Amazon.DynamoDBv2.DataModel;
+using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -14,7 +15,7 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             Assert.Throws<InvalidOperationException>(() =>
             {
                 var tableRequestFactory = new DynamoDbTableFactory();
-                tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>();
+                tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(new DynamoDbCreateProvisionedThroughput());
             });
             
         }

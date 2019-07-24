@@ -54,7 +54,12 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(0);
         }
 
-        public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1, int outboxTimeout = -1)
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
+            int pageNumber = 1,
+            int outboxTimeout = -1,
+            Dictionary<string, object> args = null)
         {
             var messagesSince = DateTime.UtcNow.AddMilliseconds(millisecondsDispatchedSince * -1);
             return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
@@ -73,7 +78,10 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return null;
         }
 
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        public IList<Message> Get(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
         {
             return _posts.Select(outboxEntry => outboxEntry.Message).Take(pageSize).ToList();
         }
@@ -86,31 +94,35 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(Get(messageId, outBoxTimeout));
         }
 
-        public Task MarkDispatchedAsync(Guid messageId, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<object>();
             
-            MarkDispatched(messageId, dispatchedAt);
+            MarkDispatched(id, dispatchedAt);
             
             tcs.SetResult(new object());
 
             return tcs.Task;
         }
 
-        public void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
         {
-           var entry = _posts.SingleOrDefault(oe => oe.Message.Id == messageId);
+           var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);
            entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
 
         }
 
-        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSeize = 100, int pageNumber = 1)
+       public IEnumerable<Message> OutstandingMessages(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+           Dictionary<string, object> args = null)
         {
             var sentAfter = DateTime.UtcNow.AddMilliseconds(-1 * millSecondsSinceSent);
             return _posts
                 .Where(oe => oe.TimeDeposited.Value > sentAfter && oe.TimeFlushed == null)
                 .Select(oe => oe.Message)
-                .Take(pageSeize)
+                .Take(pageSize)
                 .ToArray();
         }
 

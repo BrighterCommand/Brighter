@@ -60,7 +60,7 @@ services:
       POSTGRES_PASSWORD: password
 
   dynamo:
-    image: dwmkerr/dynamodb
+    image: amazon/dynamodb-local
     ports:
       - "8000:8000"
 

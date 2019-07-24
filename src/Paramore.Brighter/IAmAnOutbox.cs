@@ -54,8 +54,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
-        /// <param name="messageId">The id of the message to update</param>
+        /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        void MarkDispatched(Guid messageId, DateTime? dispatchedAt = null);
+        void MarkDispatched(Guid id, DateTime? dispatchedAt = null);
     }
 }
