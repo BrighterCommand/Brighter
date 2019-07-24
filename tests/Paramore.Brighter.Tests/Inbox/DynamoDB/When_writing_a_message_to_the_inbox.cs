@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
-    public class DynamoDbCommandStoreAddMessageTests : DynamoDBInboxBaseTest
+    public class DynamoDbInboxAddMessageTests : DynamoDBInboxBaseTest
     {
         private readonly DynamoDbInbox _dynamoDbInbox;
         private readonly MyCommand _raisedCommand;

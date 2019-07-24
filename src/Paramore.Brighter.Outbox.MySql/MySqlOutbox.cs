@@ -403,7 +403,7 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
                 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int messageStoreTimeout, params MySqlParameter[] parameters)
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int outboxTimeout, params MySqlParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())

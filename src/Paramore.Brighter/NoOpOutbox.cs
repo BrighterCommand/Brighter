@@ -49,16 +49,6 @@ namespace Paramore.Brighter
         {
         }
 
-        /// Stub for Getting a message. 
-        /// </summary>
-        /// <param name="messageId">If of the Message to Get</param>
-        /// <param name="outBoxTimeout">Timeout for operation</param>
-        /// <returns>Always returns NULL</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            return null;
-        }
-
         /// <summary>
         /// Stub for adding a Message to the Outbox async
         /// </summary>

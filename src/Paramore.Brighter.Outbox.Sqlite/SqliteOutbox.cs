@@ -106,31 +106,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                         throw;
                     }
                 }
-
-        private string GetAddSql()
-        {
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.OutboxTableName);
-            return sql;
-        }
-
-        /// <summary>
-        /// Adds the specified message.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.OutboxTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("@MessageId", messageId.ToString())
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+            }
         }
 
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
@@ -577,10 +553,5 @@ namespace Paramore.Brighter.Outbox.Sqlite
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
         }
-
-        public void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
-        {
-            command.Parameters.AddRange(parameters);
-        }
-    }
+   }
 }
