@@ -14,14 +14,19 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 {
     public abstract class DynamoDBInboxBaseTest : IDisposable
     {
+        private bool _disposed;
         private DynamoDbTableBuilder _dynamoDbTableBuilder;
-        protected string TableName { get; }
         protected AWSCredentials Credentials { get; private set; }
+        protected string TableName { get; }
+        public IAmazonDynamoDB Client { get; }
 
         protected DynamoDBInboxBaseTest()
         {
-            var client = CreateClient();
-            _dynamoDbTableBuilder = new DynamoDbTableBuilder(client);
+            //required by AWS 2.2
+            Environment.SetEnvironmentVariable("AWS_ENABLE_ENDPOINT_DISCOVERY", "false");
+            
+            Client = CreateClient();
+            _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
             var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<CommandItem<MyCommand>>(
                 new DynamoDbCreateProvisionedThroughput(
@@ -36,16 +41,14 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
                 _dynamoDbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
             }
         }
-        
+
+
         private IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
-            
-            var clientConfig = new AmazonDynamoDBConfig
-            {
-                ServiceURL = "http://localhost:8000"
 
-            };
+            var clientConfig = new AmazonDynamoDBConfig();
+            clientConfig.ServiceURL = "http://localhost:8000";
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
  
@@ -53,9 +56,31 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 
         public void Dispose()
         {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        ~DynamoDBInboxBaseTest()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                // free other managed objects that implement
+                // IDisposable only
+            }
+
             var tableNames = new string[] {TableName};
             var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
             _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
-        }
+ 
+            _disposed = true;
+       }
     }
 }

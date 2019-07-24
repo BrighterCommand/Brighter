@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 
         public DynamoDbInboxDuplicateMessageAsyncTests()
         {
-            _dynamoDbInbox = new DynamoDbInbox(new DynamoDbInboxConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            _dynamoDbInbox = new DynamoDbInbox(Client);
  
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";

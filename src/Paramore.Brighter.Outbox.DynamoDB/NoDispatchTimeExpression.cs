@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public NoDispatchTimeExpression()
         {
             _expression = new Expression();
-            _expression.ExpressionStatement = "Delivery == NULL";
+            _expression.ExpressionStatement = "Delivery = NULL";
         }
 
 

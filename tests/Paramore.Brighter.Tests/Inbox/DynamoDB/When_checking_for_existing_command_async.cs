@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             _command = new MyCommand { Id = _guid, Value = "Test Earliest"};
             _contextKey = "test-context-key";
 
-            _dynamoDbInbox = new DynamoDbInbox(new DynamoDbInboxConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            _dynamoDbInbox = new DynamoDbInbox(Client);
             
             _dynamoDbInbox.Add(_command, _contextKey);
         }

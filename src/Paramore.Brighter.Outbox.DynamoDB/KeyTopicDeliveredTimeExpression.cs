@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public KeyTopicDeliveredTimeExpression()
         {
             _expression = new Expression();
-            _expression.ExpressionStatement = "Topic == :v_Topic and DeliveryTime >= :v_SinceTime";
+            _expression.ExpressionStatement = "Topic = :v_Topic and DeliveryTime >= :v_SinceTime";
  
         }
 

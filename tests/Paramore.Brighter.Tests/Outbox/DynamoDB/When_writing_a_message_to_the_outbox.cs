@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
-            _dynamoDbOutbox = new DynamoDbOutbox(new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
  
             _messageEarliest = new Message(messageHeader, new MessageBody("Body"));
            _dynamoDbOutbox.Add(_messageEarliest);

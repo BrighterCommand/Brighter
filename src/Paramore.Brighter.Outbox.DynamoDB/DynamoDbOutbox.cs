@@ -45,7 +45,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
-        private AmazonDynamoDBClient _client;
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -54,11 +53,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutbox(DynamoDbConfiguration configuration)
+        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
         {
             _configuration = configuration;
-            _client = new AmazonDynamoDBClient(configuration.Credentials, configuration.Region);
-            _context = new DynamoDBContext(_client); 
+            _context = new DynamoDBContext(client); 
         }
 
         /// <inheritdoc />

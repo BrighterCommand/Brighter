@@ -60,10 +60,15 @@ services:
       POSTGRES_PASSWORD: password
 
   dynamo:
-    image: amazon/dynamodb-local
+    image: dwmkerr/dynamodb
+    command: "-sharedDb"
+    hostname: dynamo
+    restart: always
+    volumes:
+      - dynamodb:/data
     ports:
       - "8000:8000"
-
+  
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     hostname: zookeeper

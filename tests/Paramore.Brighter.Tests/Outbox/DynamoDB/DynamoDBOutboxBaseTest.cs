@@ -14,10 +14,12 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
         private DynamoDbTableBuilder _dynamoDbTableBuilder;
         protected string TableName { get; }
         protected AWSCredentials Credentials { get; set; }
+        public IAmazonDynamoDB Client { get; }
+        
         protected DynamoDBOutboxBaseTest ()
         {
-            var client = CreateClient();
-            _dynamoDbTableBuilder = new DynamoDbTableBuilder(client);
+            Client = CreateClient();
+            _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
             var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<DynamoDbInbox>(
                     new DynamoDbCreateProvisionedThroughput(
@@ -32,7 +34,8 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
                 _dynamoDbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
             }
         }
-        
+
+
         protected IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");

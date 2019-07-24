@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         public KeyIdContextExpression()
         {
             _expression = new Expression();
-            _expression.ExpressionStatement = "CommandId == :v_CommandId and ContextKey == :v_ContextKey";
+            _expression.ExpressionStatement = "CommandId = :v_CommandId and ContextKey = :v_ContextKey";
         }
 
         public Expression Generate(Guid id, string contextKey)

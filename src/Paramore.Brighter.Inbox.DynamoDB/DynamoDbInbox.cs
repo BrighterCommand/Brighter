@@ -41,8 +41,6 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbInbox>);
        
         private readonly DynamoDBContext _context;
-        private readonly DynamoDbInboxConfiguration _configuration;
-        private IAmazonDynamoDB _client;
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -51,13 +49,11 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// </summary>
         /// <param name="context">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbInbox( DynamoDbInboxConfiguration configuration)
-        {            
-            _configuration = configuration;
-            _client = new AmazonDynamoDBClient(configuration.Credentials, configuration.Region);
-            _context = new DynamoDBContext(_client); 
-            _configuration = configuration;
-       }
+        /// <param name="client">The Amazon Dynamo Db client to use</param>
+        public DynamoDbInbox(IAmazonDynamoDB client )
+        {
+            _context = new DynamoDBContext(client);
+        }
 
         /// <summary>
         ///     Adds a command to the store
