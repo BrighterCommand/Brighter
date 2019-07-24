@@ -31,7 +31,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Inbox.MsSql.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.MsSql
 {
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
                         s_logger.Value.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }
@@ -158,7 +158,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
                         s_logger.Value.WarnFormat(
-                            "MsSqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }

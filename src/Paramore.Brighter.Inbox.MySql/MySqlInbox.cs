@@ -30,8 +30,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
-using Paramore.Brighter.CommandStore.MySql.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.MySql
 {
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Inbox.MySql
                     if (sqlException.Number == MySqlDuplicateKeyError)
                     {
                         _logger.Value.WarnFormat(
-                            "MySqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            "MySqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }
@@ -189,7 +189,7 @@ namespace Paramore.Brighter.Inbox.MySql
                     if (sqlException.Number == MySqlDuplicateKeyError)
                     {
                         _logger.Value.WarnFormat(
-                            "MySqlMessageStore: A duplicate Command with the CommandId {0} was inserted into the Message Store, ignoring and continuing",
+                            "MySqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Tests.Outbox.PostgreSql
 {
     [Trait("Category", "PostgreSql")]
     [Collection("PostgreSql OutBox")]
-    public class SqlMessageStoreWritngMessagesTests : IDisposable
+    public class SqlOutboxWritngMessagesTests : IDisposable
     {
         private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
         private readonly Message _messageEarliest;
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Tests.Outbox.PostgreSql
         private IEnumerable<Message> _retrievedMessages;
         private readonly PostgreSqlOutbox _sqlOutbox;
 
-        public SqlMessageStoreWritngMessagesTests()
+        public SqlOutboxWritngMessagesTests()
         {
             _PostgreSqlTestHelper = new PostgreSqlTestHelper();
             _PostgreSqlTestHelper.SetupMessageDb();
@@ -59,15 +59,15 @@ namespace Paramore.Brighter.Tests.Outbox.PostgreSql
         }
 
         [Fact]
-        public void When_Writing_Messages_To_The_Message_Store()
+        public void When_Writing_Messages_To_The_Outbox()
         {
             _retrievedMessages = _sqlOutbox.Get();
 
-            //_should_read_first_message_last_from_the__message_store
+            //_should_read_first_message_last_from_the__outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //_should_read_last_message_first_from_the__message_store
+            //_should_read_last_message_first_from_the__outbox
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //_should_read_the_messages_from_the__message_store
+            //_should_read_the_messages_from_the__outbox
             _retrievedMessages.Should().HaveCount(3);
         }
 
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.Tests.Outbox.PostgreSql
             Release();
         }
 
-        ~SqlMessageStoreWritngMessagesTests()
+        ~SqlOutboxWritngMessagesTests()
         {
             Release();
         }

@@ -31,14 +31,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorNoMessageStoreTests : IDisposable
+    public class CommandProcessorNoOutboxTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        public CommandProcessorNoMessageStoreTests()
+        public CommandProcessorNoOutboxTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Store()
+        public void When_Posting_A_Message_And_There_Is_No_Outbox()
         {
             _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
 

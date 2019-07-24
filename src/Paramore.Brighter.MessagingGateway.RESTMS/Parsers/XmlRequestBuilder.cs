@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,7 @@ using System;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
-using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RESTMS.Parsers
 {

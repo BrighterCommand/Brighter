@@ -45,17 +45,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public int? MaxInFlightRequestsPerConnection { get; set; }
 
-        public IEnumerable<KeyValuePair<string, object>> ToConfig()
-        {
-            var config = new Dictionary<string, object>()
-            {
-                {"client.id", Name },
-                {"bootstrap.servers", string.Join(", ", BootStrapServers)}
-            };
+        //public IEnumerable<KeyValuePair<string, object>> ToConfig()
+        //{
+        //    var config = new Dictionary<string, object>()
+        //    {
+        //        {"client.id", Name },
+        //        {"bootstrap.servers", string.Join(", ", BootStrapServers)}
+        //    };
 
-            if (MaxInFlightRequestsPerConnection.HasValue)
-                config["max.in.flight.requests.per.connection"] = MaxInFlightRequestsPerConnection.Value;
-            return config;
-        }
+        //    if (MaxInFlightRequestsPerConnection.HasValue)
+        //        config["max.in.flight.requests.per.connection"] = MaxInFlightRequestsPerConnection.Value;
+        //    return config;
+        //}
     }
 }

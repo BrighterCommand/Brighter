@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Tests.OnceOnly
     public class OnceOnlyAttributeWithThrowExceptionAsyncTests
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInboxAsync _commandStore;
+        private readonly IAmAnInboxAsync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
 
         public OnceOnlyAttributeWithThrowExceptionAsyncTests()
         {
-            _commandStore = new InMemoryInbox();
+            _inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToThrowHandlerAsync>();
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.OnceOnly
 
             container.Register<UseInboxHandlerAsync<MyCommand>>();
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandToThrowHandlerAsync>();
-            container.Register(_commandStore);
+            container.Register(_inbox);
 
             _command = new MyCommand {Value = "My Test String"};
             

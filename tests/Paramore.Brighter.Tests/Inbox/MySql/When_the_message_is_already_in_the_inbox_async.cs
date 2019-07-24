@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
 
             var storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
 
-            //_should_read_the_command_from_the__dynamo_db_command_store
+            //_should_read_the_command_from_the__dynamo_db_inbox
             storedCommand.Should().NotBeNull();
         }
 

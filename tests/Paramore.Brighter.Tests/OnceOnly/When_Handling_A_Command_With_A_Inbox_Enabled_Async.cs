@@ -9,16 +9,16 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.OnceOnly
 {
-    public class CommandProcessorUsingCommandStoreAsyncTests
+    public class CommandProcessorUsingInboxAsyncTests
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInboxAsync _commandStore;
+        private readonly IAmAnInboxAsync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly string _contextKey;
 
-        public CommandProcessorUsingCommandStoreAsyncTests()
+        public CommandProcessorUsingInboxAsyncTests()
         {
-            _commandStore = new InMemoryInbox();
+            _inbox = new InMemoryInbox();
 
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandHandlerAsync>();
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Tests.OnceOnly
             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
             container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
             container.Register<IHandleRequestsAsync<MyCommandToFail>, MyStoredCommandToFailHandlerAsync>();
-            container.Register(_commandStore);
+            container.Register(_inbox);
 
             _contextKey = typeof(MyStoredCommandHandlerAsync).FullName;
 
@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Tests.OnceOnly
         }
 
         [Fact]
-        public async Task When_Handling_A_Command_With_A_Command_Store_Enabled_Async()
+        public async Task When_Handling_A_Command_With_A_Inbox_Enabled_Async()
         {
             await _commandProcessor.SendAsync(_command);
 
-           // should_store_the_command_to_the_command_store
-            _commandStore.GetAsync<MyCommand>(_command.Id, _contextKey).Result.Value.Should().Be(_command.Value);
+           // should_store_the_command_to_the_inbox
+            _inbox.GetAsync<MyCommand>(_command.Id, _contextKey).Result.Value.Should().Be(_command.Value);
         }
 
         [Fact]
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Tests.OnceOnly
             Catch.Exception(() => _commandProcessor.Send(new MyCommandToFail() { Id = id }));
 
             var exists =
-                await _commandStore.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
+                await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
             exists.Should().BeFalse();
         }
     }

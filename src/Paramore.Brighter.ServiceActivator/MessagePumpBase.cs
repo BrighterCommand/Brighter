@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Actions;
-using Paramore.Brighter.ServiceActivator.Logging;
+using Paramore.Brighter.Logging;
 using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.ServiceActivator
     // Timeout on the handler should be provided by timeout policy using an attribute on the handler
     public abstract class MessagePumpBase<TRequest> where TRequest : class, IRequest
     {
-        protected static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessagePumpBase<TRequest>>);
+        internal static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessagePumpBase<TRequest>>);
 
         protected IAmACommandProcessor _commandProcessor;
 

@@ -52,11 +52,11 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
         }
 
         [Fact]
-        public void When_Writing_A_Message_To_The_Command_Store()
+        public void When_Writing_A_Message_To_The_Inbox()
         {
             _storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__sql_command_store
+            //_should_read_the_command_from_the__sql_inbox
             _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
             _storedCommand.Value.Should().Be(_raisedCommand.Value);

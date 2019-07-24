@@ -21,13 +21,10 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
-using Paramore.Brighter.MessagingGateway.Kafka.Logging;
 using Confluent.Kafka;
-using Confluent.Kafka.Serialization;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -40,43 +37,49 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageConsumer : IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
-        private Consumer<Null, string> _consumer;
+        private IConsumer<Null, string> _consumer;
         private bool _disposedValue = false; 
 
         public KafkaMessageConsumer(string groupId, string topic, 
             KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingConsumerConfiguration consumerConfiguration)
         {
-            var config = globalConfiguration.ToConfig();
-            config = config.Concat(consumerConfiguration.ToConfig());
-            config = config.Concat(new[] {new KeyValuePair<string, object>("group.id", groupId)});
-            _consumer = new Consumer<Null, string>(config, null, new StringDeserializer(Encoding.UTF8));
-
-            _consumer.OnPartitionsAssigned += (_, partitions) => OnPartionsAssigned(partitions);
-            _consumer.OnPartitionsRevoked += (_, partitions) => OnPartionsRevoked(partitions);
-
-            if (_logger.Value.IsErrorEnabled())
+            var consumerConfig = new ConsumerConfig()
             {
-                _consumer.OnError += (_, error) =>
-                    _logger.Value.Error($"BrokerError: Member id: {_consumer.MemberId}, error: {error}");
-                _consumer.OnConsumeError += (_, error) =>
-                    _logger.Value.Error($"ConsumeError: Member Id: {_consumer.MemberId}, error: {error}");
-            }
+                GroupId = groupId,
+                ClientId = globalConfiguration.Name,
+                BootstrapServers = string.Join(",",globalConfiguration.BootStrapServers),
+                MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
+                SessionTimeoutMs = 6000,
+                EnablePartitionEof = true,
+
+                AutoCommitIntervalMs = consumerConfiguration.AutoCommitInterval.Milliseconds,
+                EnableAutoCommit = consumerConfiguration.EnableAutoCommit,
+                AutoOffsetReset = consumerConfiguration.AutoResetOffset
+            };
+
+
+            _consumer = new ConsumerBuilder<Null, string>(consumerConfig)
+                .SetPartitionsAssignedHandler((consumer, list) =>
+                {
+                    _logger.Value.InfoFormat($"Assigned partitions: [{string.Join(", ", list)}], member id: {consumer.MemberId}");
+                })
+                .SetPartitionsRevokedHandler((consumer, list) =>
+                {
+                    _logger.Value.InfoFormat($"Revoked partitions: [{string.Join(", ", list)}], member id: {consumer.MemberId}");
+                })
+                .SetErrorHandler((consumer, error) =>
+                {
+                    if(error.IsBrokerError)
+                        _logger.Value.Error($"BrokerError: Member id: {consumer.MemberId}, error: {error}");
+                    else
+                        _logger.Value.Error($"ConsumeError: Member Id: {consumer.MemberId}, error: {error}");
+                })
+                .Build();
 
             _consumer.Subscribe(new []{ topic });
         }
 
-        private void OnPartionsAssigned(List<TopicPartition> partitions)
-        {
-            _logger.Value.InfoFormat($"Assigned partitions: [{string.Join(", ", partitions)}], member id: {_consumer.MemberId}");
-            _consumer.Assign(partitions);
-        }
-
-        private void OnPartionsRevoked(List<TopicPartition> partitions)
-        {
-            _logger.Value.InfoFormat($"Revoked partitions: [{string.Join(", ", partitions)}], member id: {_consumer.MemberId}");
-            _consumer.Unassign();
-        }
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -87,7 +90,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!message.Header.Bag.TryGetValue("TopicPartitionOffset", out var bagData))
                 return;
             var topicPartitionOffset = bagData as TopicPartitionOffset;
-            var deliveryReport = _consumer.CommitAsync(new[] {topicPartitionOffset}).Result;
+            _consumer.Commit(new[] {topicPartitionOffset});
         }
 
         /// <summary>
@@ -115,21 +118,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>Message.</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            if (!_consumer.Consume(out Message<Null, string> kafkaMsg, timeoutInMilliseconds))
+            var consumeResult = _consumer.Consume(new TimeSpan(0,0,0,0,timeoutInMilliseconds));
+
+            if(consumeResult == null)
                 return new Message[]{new Message()};
 
-            var messageType = kafkaMsg.Error.Code == ErrorCode.NoError
-                ? MessageType.MT_EVENT
-                : MessageType.MT_UNACCEPTABLE;
+            if (consumeResult.IsPartitionEOF)
+            {
+                _logger.Value.Info($"Consumer {_consumer.MemberId} has reached the end of the partition");
+                return new Message[]{new Message()};
+            }
+
             var messageHeader =
-                new MessageHeader(Guid.NewGuid(), kafkaMsg.Topic, messageType)
+                new MessageHeader(Guid.NewGuid(), consumeResult.Topic, MessageType.MT_EVENT)
                 {
                     Bag =
                     {
-                        ["TopicPartitionOffset"] = kafkaMsg.TopicPartitionOffset,
+                        ["TopicPartitionOffset"] = consumeResult.TopicPartitionOffset,
                     }
                 };
-            var messageBody = new MessageBody(kafkaMsg.Value);
+            var messageBody = new MessageBody(consumeResult.Value);
             return new Message[] {new Message(messageHeader, messageBody)}; 
         }
 

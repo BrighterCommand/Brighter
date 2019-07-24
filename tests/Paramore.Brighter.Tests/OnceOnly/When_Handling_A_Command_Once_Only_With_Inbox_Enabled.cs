@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Threading.Tasks;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Tests.OnceOnly.TestDoubles;
@@ -9,39 +8,39 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.OnceOnly
 {
-    public class OnceOnlyAttributeAsyncTests
+    public class OnceOnlyAttributeTests 
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInboxAsync _commandStore;
+        private readonly IAmAnInbox _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
         
-        public OnceOnlyAttributeAsyncTests()
+        public OnceOnlyAttributeTests()
         {
-            _commandStore = new InMemoryInbox();
-
+            _inbox = new InMemoryInbox();
+            
             var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyStoredCommandHandlerAsync>();
+            registry.Register<MyCommand, MyStoredCommandHandler>();
 
             var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyStoredCommandHandlerAsync>();
-            container.Register(_commandStore);
+            var handlerFactory = new TinyIocHandlerFactory(container);
+            container.Register<IHandleRequests<MyCommand>, MyStoredCommandHandler>();
+            container.Register(_inbox);
 
             _command = new MyCommand {Value = "My Test String"};
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-  
+ 
         }
 
         [Fact]
-        public async Task When_Handling_A_Command_Only_Once()
+        public void When_Handling_A_Command_Only_Once()
         {
-            await _commandProcessor.SendAsync(_command);
-            
-            Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(() => _commandProcessor.SendAsync(_command));
+            _commandProcessor.Send(_command);
+
+            Exception ex = Assert.Throws<OnceOnlyException>(() => _commandProcessor.Send(_command));
             
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
- 
         }
+        
     }
 }

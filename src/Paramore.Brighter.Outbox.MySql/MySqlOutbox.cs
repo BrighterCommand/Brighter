@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -32,12 +32,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using MySql.Data.MySqlClient;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessageStore.MySql.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.MySql
 {
     /// <summary>
-    ///     Class MySqlMessageStore.
+    ///     Class MySqlOutbox.
     /// </summary>
     public class MySqlOutbox :
         IAmAnOutbox<Message>,
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -131,7 +131,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat("MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -411,7 +411,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
+                if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 connection.Open();
                 var item = execute(command);

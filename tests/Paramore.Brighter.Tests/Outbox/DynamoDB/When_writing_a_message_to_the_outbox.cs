@@ -58,19 +58,19 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
         {
             _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
 
-            //_should_read_the_message_from_the__sql_message_store
+            //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
-            //_should_read_the_message_header_first_bag_item_from_the__sql_message_store
+            //_should_read_the_message_header_first_bag_item_from_the__sql_outbox
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            //_should_read_the_message_header_second_bag_item_from_the__sql_message_store
+            //_should_read_the_message_header_second_bag_item_from_the__sql_outbox
             _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
             _storedMessage.Header.Bag[_key2].Should().Be(_value2);
-            //_should_read_the_message_header_timestamp_from_the__sql_message_store
+            //_should_read_the_message_header_timestamp_from_the__sql_outbox
             _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
-            //_should_read_the_message_header_topic_from_the__sql_message_store
+            //_should_read_the_message_header_topic_from_the__sql_outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            //_should_read_the_message_header_type_from_the__sql_message_store
+            //_should_read_the_message_header_type_from_the__sql_outbox
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
         }
     }

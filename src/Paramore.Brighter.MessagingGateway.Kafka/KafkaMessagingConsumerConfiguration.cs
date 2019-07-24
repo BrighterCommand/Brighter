@@ -23,44 +23,23 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public enum AutoResetOffsetEnum
-    {
-        Beginning,
-        End,
-        Error
-    }
-
     public class KafkaMessagingConsumerConfiguration
     {
         public bool EnableAutoCommit { get; set; }
 
         public TimeSpan AutoCommitInterval { get; set; }
 
-        public AutoResetOffsetEnum AutoResetOffset{ get; set; }
+        public AutoOffsetReset? AutoResetOffset{ get; set; }
 
         public KafkaMessagingConsumerConfiguration()
         {
             EnableAutoCommit = true;
             AutoCommitInterval = new TimeSpan(0, 0, 0, 0, 5000);
-            AutoResetOffset = AutoResetOffsetEnum.End;
-        }
-
-        public IEnumerable<KeyValuePair<string, object>> ToConfig()
-        {
-            var config = new Dictionary<string, object>()
-            {
-                { "enable.auto.commit", EnableAutoCommit },
-                { "auto.commit.interval.ms", AutoCommitInterval.TotalMilliseconds },
-                { "default.topic.config", new Dictionary<string, object>()
-                    {
-                        { "auto.offset.reset", AutoResetOffset.ToString().ToLowerInvariant() }
-                    }
-                }
-            };
-            return config;
+            AutoResetOffset = AutoOffsetReset.Latest;
         }
     }
 }

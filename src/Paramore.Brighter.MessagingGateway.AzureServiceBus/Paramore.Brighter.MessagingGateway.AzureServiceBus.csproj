@@ -1,12 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using azureservicebus</Description>
-    <AssemblyTitle>Paramore.Brighter.MessagingGateway.AzureServicebus</AssemblyTitle>
     <Authors>Yiannis Triantafyllopoulos</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <AssemblyName>Paramore.Brighter.MessagingGateway.AzureServiceBus</AssemblyName>
-    <PackageId>Paramore.Brighter.MessagingGateway.AzureServiceBus</PackageId>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>

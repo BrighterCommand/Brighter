@@ -28,7 +28,7 @@ using Newtonsoft.Json;
 namespace Paramore.Brighter.Inbox.MsSql
 {
     /// <summary>
-    /// Class MsSqlMessageStoreConfiguration.
+    /// Class MsSqlOutboxConfiguration.
     /// </summary>
     public class MsSqlInboxConfiguration
     {
@@ -50,9 +50,9 @@ namespace Paramore.Brighter.Inbox.MsSql
         public string ConnectionString { get; private set; }
 
         /// <summary>
-        /// Gets the name of the message store table.
+        /// Gets the name of the outbox table.
         /// </summary>
-        /// <value>The name of the message store table.</value>
+        /// <value>The name of the outbox table.</value>
         public string InBoxTableName { get; private set; }
     }
 }

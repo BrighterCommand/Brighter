@@ -32,7 +32,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.CommandProcessors
 {
-    public class CommandProcessorNoMessageStoreAsyncTests : IDisposable
+    public class CommandProcessorNoOutboxAsyncTests : IDisposable
 
     {
         private readonly CommandProcessor _commandProcessor;
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         private readonly FakeMessageProducer _fakeMessageProducer;
         private Exception _exception;
 
-        public CommandProcessorNoMessageStoreAsyncTests()
+        public CommandProcessorNoOutboxAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         }
 
         [Fact]
-        public async Task When_Posting_A_Message_And_There_Is_No_Message_Store_Async()
+        public async Task When_Posting_A_Message_And_There_Is_No_Outbox_Async()
         {
             _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
         }

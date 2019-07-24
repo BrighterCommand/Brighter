@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Paramore.Brighter.ServiceActivator.Logging;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports.Handlers

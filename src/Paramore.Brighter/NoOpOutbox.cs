@@ -31,7 +31,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// NoOp Outbox- a pass-through class for the IAmAMessageStore interface(s)
+    /// NoOp Outbox- a pass-through class for the IAmAOutbox interface(s)
     /// </summary>
     public class NoOpOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>,
         IAmAnOutboxViewer<Message>, IAmAnOutboxViewerAsync<Message>
@@ -41,7 +41,7 @@ namespace Paramore.Brighter
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        /// Stub for adding a Message to the message store. No action is taken
+        /// Stub for adding a Message to the outbox. No action is taken
         /// </summary>
         /// <param name="message">Message to add. Will be ignored.</param>
         /// <param name="outBoxTimeout"></param>
@@ -49,8 +49,18 @@ namespace Paramore.Brighter
         {
         }
 
-       /// <summary>
-        /// Stub for adding a Message to the Message Store async
+        /// Stub for Getting a message. 
+        /// </summary>
+        /// <param name="messageId">If of the Message to Get</param>
+        /// <param name="outBoxTimeout">Timeout for operation</param>
+        /// <returns>Always returns NULL</returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            return null;
+        }
+
+        /// <summary>
+        /// Stub for adding a Message to the Outbox async
         /// </summary>
         /// <param name="message">Message to add. Will be ignored. </param>
         /// <param name="outBoxTimeout">Timeout</param>

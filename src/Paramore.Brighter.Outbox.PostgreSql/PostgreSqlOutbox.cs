@@ -29,7 +29,7 @@ using Npgsql;
 using Newtonsoft.Json;
 using System.Data;
 using NpgsqlTypes;
-using Paramore.Brighter.MessageStore.PostgreSql.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                         if (sqlException.SqlState == PostgreSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }

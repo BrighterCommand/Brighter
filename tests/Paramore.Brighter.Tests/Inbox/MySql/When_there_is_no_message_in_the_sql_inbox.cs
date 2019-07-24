@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Command_Store_Exists()
+        public void When_There_Is_No_Message_In_The_Sql_Inbox_Exists()
         {
             Guid commandId = Guid.NewGuid();
             _mysqlInBox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();

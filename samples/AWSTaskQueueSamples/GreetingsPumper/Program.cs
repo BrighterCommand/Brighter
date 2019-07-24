@@ -5,9 +5,9 @@ using Amazon.Runtime.CredentialManagement;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using TinyIoC;
 
 namespace GreetingsPumper
 {
@@ -25,7 +25,7 @@ namespace GreetingsPumper
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
@@ -34,7 +34,7 @@ namespace GreetingsPumper
                 var builder = CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                    .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
                     .RequestContextFactory(new InMemoryRequestContextFactory());
 
                 var commandProcessor = builder.Build();

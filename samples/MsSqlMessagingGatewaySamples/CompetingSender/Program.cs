@@ -6,6 +6,7 @@ using Events.Ports.Commands;
 using Events.Ports.Mappers;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using TinyIoC;
 
 namespace CompetingSender
 {
@@ -35,7 +36,7 @@ namespace CompetingSender
                 {typeof(CompetingConsumerCommand), typeof(CompetingConsumerCommandMessageMapper)}
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
 
             var messagingConfiguration =
                 new MsSqlMessagingGatewayConfiguration(
@@ -45,7 +46,7 @@ namespace CompetingSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) outbox, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

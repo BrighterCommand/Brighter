@@ -27,8 +27,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Paramore.Brighter.Logging;
 using ServiceStack.Redis;
-using Paramore.Brighter.MessagingGateway.Redis.LibLog;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {

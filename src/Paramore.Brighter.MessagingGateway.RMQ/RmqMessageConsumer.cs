@@ -28,7 +28,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.Logging;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;

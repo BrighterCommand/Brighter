@@ -22,16 +22,14 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Amazon;
-using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using TinyIoC;
 
 namespace GreetingsSender
 {

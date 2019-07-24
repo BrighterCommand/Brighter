@@ -1,15 +1,15 @@
-# Brighter Sqlite command store
+# Brighter Sqlite inbox
 
 ## Setup
 
-To setup Brighter with a Sqlite command store, some steps are required:
+To setup Brighter with a Sqlite inbox, some steps are required:
 
 #### Create a table with the schema in the example
 
 You can use the following example as a reference for SQL Server:
 
 ```sql
-        CREATE TABLE MyMessageStore (
+        CREATE TABLE MyOutbox (
             Id uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,
             Topic nvarchar(255),
             MessageType nvarchar(32),
@@ -20,13 +20,13 @@ If you're using SQL CE you have to replace `nvarchar(max)` with a supported type
 
 #### Configure the command processor
 
-The following is an example of how to configure a command processor with a SQL Server message store.
+The following is an example of how to configure a command processor with a SQL Server outbox.
 
 ```csharp
-var msSqlMessageStore = new MsSqlMessageStore(new MsSqlMessageStoreConfiguration(
+var msSqlOutbox = new MsSqlOutbox(new MsSqlOutboxConfiguration(
         "myconnectionstring", 
-        "MyMessageStoreTable", 
-        MsSqlMessageStoreConfiguration.DatabaseType.MsSqlServer
+        "MyOutboxTable", 
+        MsSqlOutboxConfiguration.DatabaseType.MsSqlServer
     ), myLogger),
 
 var commandProcessor = CommandProcessorBuilder.With()
@@ -34,7 +34,7 @@ var commandProcessor = CommandProcessorBuilder.With()
     .Policies(myPolicyRegistry)
     .Logger(myLogger)
     .TaskQueues(new MessagingConfiguration(
-        messageStore: msSqlMessageStore,
+        outbox: msSqlOutbox,
         messagingGateway: myGateway,
         messageMapperRegistry: myMessageMapperRegistry
         ))
@@ -42,6 +42,6 @@ var commandProcessor = CommandProcessorBuilder.With()
     .Build();
 ```
 
-> The values for the `MsSqlMessageStoreConfiguration.DatabaseType` enum are the following:  
+> The values for the `MsSqlOutboxConfiguration.DatabaseType` enum are the following:  
 > `MsSqlServer`  
 > `SqlCe`

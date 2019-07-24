@@ -3,9 +3,9 @@ using System.Threading.Tasks;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using TinyIoC;
 
 namespace GreetingsPumper
 {
@@ -23,7 +23,7 @@ namespace GreetingsPumper
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
             var rmqConnnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@localhost:5672/%2f")),
@@ -34,7 +34,7 @@ namespace GreetingsPumper
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

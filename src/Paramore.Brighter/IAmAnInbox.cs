@@ -28,7 +28,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAnInbox
-    /// A Command Store stores <see cref="Command"/>s for diagnostics or replay.
+    /// A Inbox stores <see cref="Command"/>s for diagnostics or replay.
     /// </summary>
     public interface IAmAnInbox
     {

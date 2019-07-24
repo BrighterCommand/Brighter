@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Tests.Outbox.MySql
 {
     [Trait("Category", "MySql")]
     [Collection("MySql OutBox")]
-    public class MySqlMessageStoreRangeRequestAsyncTests : IDisposable
+    public class MySqlOutboxRangeRequestAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Tests.Outbox.MySql
         private readonly Message _message2;
         private readonly Message _messageEarliest;
 
-        public MySqlMessageStoreRangeRequestAsyncTests()
+        public MySqlOutboxRangeRequestAsyncTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();

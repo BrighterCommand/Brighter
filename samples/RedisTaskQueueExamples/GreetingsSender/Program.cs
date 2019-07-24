@@ -25,9 +25,9 @@ using System;
 using Greetings.Adapters;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Redis;
+using TinyIoC;
 
 namespace GreetingsSender
 {
@@ -44,7 +44,7 @@ namespace GreetingsSender
                 {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
             var redisConnection = new RedisMessagingGatewayConfiguration
             {
                 RedisConnectionString = "localhost:6379?connectTimeout=1&sendTImeout=1000&",
@@ -57,7 +57,7 @@ namespace GreetingsSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

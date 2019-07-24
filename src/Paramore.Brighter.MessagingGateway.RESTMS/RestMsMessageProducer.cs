@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -27,8 +27,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
+using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
-using Paramore.Brighter.MessagingGateway.RESTMS.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;

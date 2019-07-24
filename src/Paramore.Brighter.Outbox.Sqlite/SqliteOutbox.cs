@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -31,12 +31,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Newtonsoft.Json;
-using Paramore.Brighter.MessageStore.Sqlite.Logging;
+using Paramore.Brighter.Logging;
 
-namespace Paramore.Brighter.MessageStore.Sqlite
+namespace Paramore.Brighter.Outbox.Sqlite
 {
     /// <summary>
-    ///     Class SqliteMessageStore.
+    ///     Class SqliteOutbox.
     /// </summary>
     public class SqliteOutbox :
         IAmAnOutbox<Message>,
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteMessageStoreConfiguration _configuration;
+        private readonly SqliteOutboxConfiguration _configuration;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
         ///     Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public SqliteOutbox(SqliteMessageStoreConfiguration configuration)
+        public SqliteOutbox(SqliteOutboxConfiguration configuration)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -107,15 +107,32 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                     }
                 }
 
-                ;
-            }
+        private string GetAddSql()
+        {
+            var sql =
+                string.Format(
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    _configuration.OutboxTableName);
+            return sql;
         }
 
         /// <summary>
         /// Adds the specified message.
         /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="messageId">The message identifier.</param>
+        /// <returns>Task&lt;Message&gt;.</returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
+                _configuration.OutboxTableName);
+            var parameters = new[]
+            {
+                CreateSqlParameter("@MessageId", messageId.ToString())
+            };
+
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+        }
+
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var parameters = InitAddDbParameters(message);
@@ -137,8 +154,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat(
-                                "MsSqlMessageStore: A duplicate Message with the MessageId {0} was inserted into the Message Store, ignoring and continuing",
+                            _logger.Value.WarnFormat("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -426,7 +442,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
             return new SqliteParameter(parameterName, value);
         }
 
-        private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int messageStoreTimeout,
+        private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int outboxTimeout,
             params SqliteParameter[] parameters)
         {
             using (var connection = GetConnection())
@@ -435,7 +451,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
+                if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 connection.Open();
                 var item = execute(command);
@@ -547,5 +563,24 @@ namespace Paramore.Brighter.MessageStore.Sqlite
                 return new Message();
             }
         }
-   }
+
+        private void SetPagingCommandFor(SqliteCommand command, int pageSize, int pageNumber)
+        {
+            SqliteParameter[] parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber-1),
+                CreateSqlParameter("PageSize", pageSize)
+            };
+
+            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.OutboxTableName);
+
+            command.CommandText = sql;
+            AddParamtersParamArrayToCollection(parameters, command);
+        }
+
+        public void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
+        {
+            command.Parameters.AddRange(parameters);
+        }
+    }
 }

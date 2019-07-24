@@ -34,11 +34,11 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class InMemoryInbox.
-    /// This is mainly intended to support developer tests where a persistent command store is not needed
+    /// This is mainly intended to support developer tests where a persistent inbox is not needed
     /// </summary>
     public class InMemoryInbox : IAmAnInbox, IAmAnInboxAsync
     {
-        private readonly Dictionary<string, CommandStoreItem> _commands = new Dictionary<string, CommandStoreItem>();
+        private readonly Dictionary<string, InboxItem> _commands = new Dictionary<string, InboxItem>();
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -61,7 +61,7 @@ namespace Paramore.Brighter
             string key = CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                _commands.Add(key, new CommandStoreItem(typeof (T), string.Empty, contextKey));
+                _commands.Add(key, new InboxItem(typeof (T), string.Empty, contextKey));
             }
 
             _commands[key].CommandBody = JsonConvert.SerializeObject(command);
@@ -109,11 +109,11 @@ namespace Paramore.Brighter
                throw new RequestNotFoundException<T>(id);
             }
 
-            var commandStoreItem = _commands[CreateKey(id, contextKey)];
-            if (commandStoreItem.CommandType != typeof (T))
-                throw new TypeLoadException(string.Format($"The type of item {id} is {commandStoreItem.CommandType.Name} not {typeof(T).Name}"));
+            var inboxItem = _commands[CreateKey(id, contextKey)];
+            if (inboxItem.CommandType != typeof (T))
+                throw new TypeLoadException(string.Format($"The type of item {id} is {inboxItem.CommandType.Name} not {typeof(T).Name}"));
 
-            return JsonConvert.DeserializeObject<T>(commandStoreItem.CommandBody);
+            return JsonConvert.DeserializeObject<T>(inboxItem.CommandBody);
         }
 
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
@@ -179,18 +179,18 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Class CommandStoreItem.
+        /// Class InboxItem.
         /// </summary>
-        private class CommandStoreItem
+        private class InboxItem
         {
             /// <summary>
-            /// Initializes a new instance of the <see cref="CommandStoreItem"/> class.
+            /// Initializes a new instance of the <see cref="InboxItem"/> class.
             /// </summary>
             /// <param name="commandType">Type of the command.</param>
             /// <param name="commandBody">The command body.</param>
             /// <param name="commandWhen">The command when.</param>
             /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-            private CommandStoreItem(Type commandType, string commandBody, DateTime commandWhen, string contextKey)
+            private InboxItem(Type commandType, string commandBody, DateTime commandWhen, string contextKey)
             {
                 CommandType = commandType;
                 CommandBody = commandBody;
@@ -199,11 +199,11 @@ namespace Paramore.Brighter
             }
 
             /// <summary>
-            /// Initializes a new instance of the <see cref="CommandStoreItem"/> class.
+            /// Initializes a new instance of the <see cref="InboxItem"/> class.
             /// </summary>
             /// <param name="commandType">Type of the command.</param>
             /// <param name="commandBody">The command body.</param>
-            public CommandStoreItem(Type commandType, string commandBody, string contextKey)
+            public InboxItem(Type commandType, string commandBody, string contextKey)
                 : this(commandType, commandBody, DateTime.UtcNow, contextKey) {}
 
             /// <summary>

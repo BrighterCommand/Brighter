@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Yiannis Triantafyllopoulos <yiannis.triantafyllopoulos@gmail.com>
 
@@ -28,7 +28,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             if (!response.IsSuccessStatusCode)
             {
-                throw new ConfigurationException(string.Format("Error creating topic on Azure Service BUS. Management API returned a {0) with {1}", response.StatusCode, response.Content.ReadAsStringAsync().Result));
+                throw new ConfigurationException($"Error creating topic on Azure Service BUS. Management API returned a {response.StatusCode} with {response.Content.ReadAsStringAsync().Result}");
             }
         }
 

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2018 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
+using TinyIoC;
 
 namespace Greetings.Adapters
 {

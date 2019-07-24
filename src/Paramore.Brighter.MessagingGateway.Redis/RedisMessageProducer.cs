@@ -25,8 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Paramore.Brighter.Logging;
 using ServiceStack.Redis;
-using Paramore.Brighter.MessagingGateway.Redis.LibLog;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {

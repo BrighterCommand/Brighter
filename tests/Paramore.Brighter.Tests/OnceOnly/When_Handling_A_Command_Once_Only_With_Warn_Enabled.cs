@@ -34,12 +34,12 @@ namespace Paramore.Brighter.Tests.OnceOnly
     public class OnceOnlyAttributeWithWarnExceptionTests
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInbox _commandStore;
+        private readonly IAmAnInbox _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
 
         public OnceOnlyAttributeWithWarnExceptionTests()
         {
-            _commandStore = new InMemoryInbox();
+            _inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandToWarnHandler>();
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.OnceOnly
             var handlerFactory = new TinyIocHandlerFactory(container);
             
             container.Register<IHandleRequests<MyCommand>, MyStoredCommandToWarnHandler>();
-            container.Register(_commandStore);
+            container.Register(_inbox);
 
             _command = new MyCommand {Value = "My Test String"};
             

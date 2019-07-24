@@ -24,52 +24,45 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MsSsql
+namespace Paramore.Brighter.Tests.Inbox.MsSql
 {
     [Trait("Category", "MSSQL")]
-    [Collection("MSSQL inbox")]
-    public class SqlInboxDuplicateMessageTests : IDisposable
+    [Collection("MSSQL Inbox")]
+    public class SqlInboxEmptyWhenSearchedTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlInbox _sqlInbox;
-        private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private Exception _exception;
+        private MyCommand _storedCommand;
 
-        public SqlInboxDuplicateMessageTests()
+        public SqlInboxEmptyWhenSearchedTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
 
             _sqlInbox = new MsSqlInbox(_msSqlTestHelper.InboxConfiguration);
-            _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
-            _sqlInbox.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox()
+        public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Get()
         {
-            _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey));
+            Guid commandId = Guid.NewGuid();
+            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
+        public void When_There_Is_No_Message_In_The_Sql_Inbox_And_Call_Exists()
         {
-            _sqlInbox.Add(_raisedCommand, "some other key");
-
-            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
-
-            //_should_read_the_command_from_the__dynamo_db_command_store
-            storedCommand.Should().NotBeNull();
+            Guid commandId = Guid.NewGuid();
+            _sqlInbox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
         }
 
         public void Dispose()

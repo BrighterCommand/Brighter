@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
         }
 
         [Fact]
-        public async Task When_there_is_no_message_in_the_dynamo_db_message_store()
+        public async Task When_there_is_no_message_in_the_dynamo_db_outbox()
         {
             _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
 

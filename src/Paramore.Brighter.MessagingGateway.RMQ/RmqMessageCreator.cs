@@ -27,7 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.MessagingGateway.RMQ.Logging;
+using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 

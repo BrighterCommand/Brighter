@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         private readonly string _contextKey;
         private MyCommand _storedCommand;
 
-        public DynamoDbCommandStoreAddMessageAsyncTests()
+        public DynamoDbInboxAddMessageAsyncTests()
         {
             _dynamoDbInbox = new DynamoDbInbox(new DynamoDbInboxConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
             
@@ -51,11 +51,11 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         }
 
         [Fact]
-        public async Task When_writing_a_message_to_the_command_store()
+        public async Task When_writing_a_message_to_the_inbox()
         {
             _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_read_the_command_from_the__dynamo_db_command_store
+            //_should_read_the_command_from_the__dynamo_db_inbox
             _storedCommand.Should().NotBeNull();
             //_should_read_the_command_value
             _storedCommand.Value.Should().Be(_raisedCommand.Value);

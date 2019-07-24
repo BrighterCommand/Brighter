@@ -22,11 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.MessageStore.Sqlite
+namespace Paramore.Brighter.Outbox.Sqlite
 {
     public class SqliteOutboxBuilder
     {
-        const string MessageStoreDdl = @"CREATE TABLE {0} (
+        const string OutboxDdl = @"CREATE TABLE {0} (
                                           [MessageId] uniqueidentifier NOT NULL
                                         , [Topic] nvarchar(255) NULL
                                         , [MessageType] nvarchar(32) NULL
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessageStore.Sqlite
 
         public static string GetDDL(string tableName)
         {
-            return string.Format(MessageStoreDdl, tableName);
+            return string.Format(OutboxDdl, tableName);
         }
     }
 }

@@ -26,9 +26,9 @@ using System;
 using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using TinyIoC;
 
 namespace GreetingsSender
 {
@@ -47,7 +47,7 @@ namespace GreetingsSender
                 {typeof(FarewellEvent), typeof(FarewellEventMessageMapper) }
             };
 
-            var messageStore = new InMemoryOutbox();
+            var outbox = new InMemoryOutbox();
             var rmqConnnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
@@ -58,7 +58,7 @@ namespace GreetingsSender
             var builder = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(messageStore, producer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
                 .RequestContextFactory(new InMemoryRequestContextFactory());
 
             var commandProcessor = builder.Build();

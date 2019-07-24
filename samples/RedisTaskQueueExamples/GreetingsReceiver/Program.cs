@@ -3,13 +3,13 @@ using Greetings.Adapters;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.Redis;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
 using Serilog;
+using TinyIoC;
 
 namespace Greetings
 {

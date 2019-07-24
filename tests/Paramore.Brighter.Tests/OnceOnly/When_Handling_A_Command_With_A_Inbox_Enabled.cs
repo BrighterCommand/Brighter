@@ -32,16 +32,16 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.OnceOnly
 {
-    public class CommandProcessorUsingCommandStoreTests
+    public class CommandProcessorUsingInboxTests
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInbox _commandstore;
+        private readonly IAmAnInbox _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly string _contextKey;
 
-        public CommandProcessorUsingCommandStoreTests()
+        public CommandProcessorUsingInboxTests()
         {
-            _commandstore = new InMemoryInbox();
+            _inbox = new InMemoryInbox();
 
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Tests.OnceOnly
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
             container.Register<IHandleRequests<MyCommand>, MyStoredCommandHandler>();
-            container.Register(_commandstore);
+            container.Register(_inbox);
 
             _command = new MyCommand {Value = "My Test String"};
 
@@ -60,12 +60,12 @@ namespace Paramore.Brighter.Tests.OnceOnly
         }
 
         [Fact]
-        public void When_Handling_A_Command_With_A_Command_Store_Enabled()
+        public void When_Handling_A_Command_With_A_Inbox_Enabled()
         {
             _commandProcessor.Send(_command);
 
-            //should_store_the_command_to_the_command_store
-            _commandstore.Get<MyCommand>(_command.Id, _contextKey).Value.Should().Be(_command.Value);
+            //should_store_the_command_to_the_inbox
+            _inbox.Get<MyCommand>(_command.Id, _contextKey).Value.Should().Be(_command.Value);
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Tests.OnceOnly
             Guid id = Guid.NewGuid();
             Catch.Exception(() => _commandProcessor.Send(new MyCommandToFail() { Id = id}));
 
-            _commandstore.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName).Should().BeFalse();
+            _inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName).Should().BeFalse();
         }
     }
 }

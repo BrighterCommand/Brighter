@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Inbox.MySql
 {
     public class MySqlInboxBuilder
     {
-        private const string _messageStoreDDL = @"CREATE TABLE {0} 
+        private const string _outboxDDL = @"CREATE TABLE {0} 
             ( 
                 `CommandId` CHAR(36) NOT NULL , 
                 `CommandType` VARCHAR(256) NOT NULL , 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Inbox.MySql
 
         public static string GetDDL(string tableName)
         {
-            return string.Format(_messageStoreDDL, tableName);
+            return string.Format(_outboxDDL, tableName);
         }
     }
 }

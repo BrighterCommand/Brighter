@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 {
     public class SqlOutboxBuilder
     {
-        const string MessageStoreDdl = @"
+        const string OutboxDdl = @"
         CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         public static string GetDDL(string tableName)
         {
-            return string.Format(MessageStoreDdl, tableName);
+            return string.Format(OutboxDdl, tableName);
         }
     }
 }

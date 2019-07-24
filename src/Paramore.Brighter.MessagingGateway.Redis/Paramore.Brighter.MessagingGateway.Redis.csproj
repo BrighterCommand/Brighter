@@ -1,12 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using Redis&lt;</Description>
-    <AssemblyTitle>Paramore.Brighter.MessagingGateway.Redis</AssemblyTitle>
     <Authors>Ian Cooper</Authors>
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
-    <DefineConstants>$(DefineConstants);LIBLOG_PORTABLE</DefineConstants>
-    <AssemblyName>Paramore.Brighter.MessagingGateway.Redis</AssemblyName>
-    <PackageId>Paramore.Brighter.MessagingGateway.Redis</PackageId>
     <PackageTags>Redis;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
@@ -14,7 +10,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="12.0.2" />
     <PackageReference Include="ServiceStack.Redis.Core" Version="5.5.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
   </ItemGroup>
