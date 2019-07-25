@@ -22,6 +22,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The time at which the message was created, in ticks
         /// </summary>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName:"Outstanding")]
+        [DynamoDBProperty]
         public string CreatedTime { get; set; }
         
         /// <summary>
@@ -32,6 +33,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The time that the message was delivered to the broker, in ticks
         /// </summary>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName:"Delivered")]
+        [DynamoDBProperty]
         public string DeliveryTime { get; set; }
              
         /// <summary>
@@ -43,6 +45,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The Id of the Message. Used as a Global Secondary Index
         /// </summary>
         [DynamoDBHashKey]
+        [DynamoDBProperty]
         public string MessageId { get; set; }
        
         /// <summary>
@@ -54,7 +57,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The Topic the message was published to
         /// </summary>
         [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
-        public string Topic { get; set; }
+        [DynamoDBProperty]
+         public string Topic { get; set; }
 
         public MessageItem() {/*Deserialization*/}
 

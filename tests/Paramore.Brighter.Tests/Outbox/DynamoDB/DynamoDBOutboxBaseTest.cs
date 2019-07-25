@@ -11,6 +11,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
 {
     public class DynamoDBOutboxBaseTest : IDisposable
     {
+        private bool _disposed;
         private DynamoDbTableBuilder _dynamoDbTableBuilder;
         protected string TableName { get; }
         protected AWSCredentials Credentials { get; set; }
@@ -21,7 +22,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
             Client = CreateClient();
             _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
-            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<DynamoDbInbox>(
+            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<MessageItem>(
                     new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                     new Dictionary<string, ProvisionedThroughput>()
@@ -52,9 +53,31 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
 
         public void Dispose()
         {
-            var tableNames = new string[] {TableName};
-            var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
-            _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
+            Dispose(true);
+            GC.SuppressFinalize(this);
         }
+
+        ~DynamoDBOutboxBaseTest()
+        {
+            Dispose(false);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (_disposed)
+                return;
+
+            if (disposing)
+            {
+                // free other managed objects that implement
+                // IDisposable only
+            }
+
+            var tableNames = new string[] {TableName};
+            //var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
+           // _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
+ 
+            _disposed = true;
+       }
     }
 }

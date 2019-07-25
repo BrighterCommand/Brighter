@@ -22,7 +22,9 @@ THE SOFTWARE. */
 #endregion
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -119,6 +121,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
         }
 
+        private static void AddGSIToMap(string indexName, GlobalSecondaryIndexDetails gsiHashKeyResult, Dictionary<string, GlobalSecondaryIndex> gsiMap)
+        {
+            var gsi = new GlobalSecondaryIndex();
+            gsi.IndexName = indexName;
+            var gsiHashKey = new KeySchemaElement(gsiHashKeyResult.Prop.Name, KeyType.HASH);
+            gsi.KeySchema.Add(gsiHashKey);
+            gsiMap.Add(gsi.IndexName, gsi);
+        }
+         
         private void AddTableProvisionedThrougput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
             CreateTableRequest createTableRequest)
         {
@@ -157,40 +168,69 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var gsiHashKeyResults = from prop in docType.GetProperties()
                 from attribute in prop.GetCustomAttributesData()
                 where attribute.AttributeType == typeof(DynamoDBGlobalSecondaryIndexHashKeyAttribute)
-                select new {prop, attribute};
+                select new GlobalSecondaryIndexDetails{Prop= prop, Attribute =attribute};
 
             foreach (var gsiHashKeyResult in gsiHashKeyResults)
             {
-                var gsi = new GlobalSecondaryIndex();
-                gsi.IndexName = gsiHashKeyResult.attribute.ConstructorArguments.Count == 0
-                    ? gsiHashKeyResult.prop.Name
-                    : (string) gsiHashKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+                if (gsiHashKeyResult.Attribute.ConstructorArguments.Count == 0)
+                {
+                    var indexName = gsiHashKeyResult.Prop.Name;
+                    AddGSIToMap(indexName, gsiHashKeyResult, gsiMap);
+                }
+                else
+                {
+                    IEnumerable<string> indexNames = null;
+                    var value = gsiHashKeyResult.Attribute.ConstructorArguments.First().Value;
 
-                var gsiHashKey = new KeySchemaElement(gsiHashKeyResult.prop.Name, KeyType.HASH);
-                gsi.KeySchema.Add(gsiHashKey);
-
-                gsiMap.Add(gsi.IndexName, gsi);
+                    if (value is string)
+                    {
+                        indexNames = new string[] {(string)value};
+                    }
+                    else if (value is ReadOnlyCollection<CustomAttributeTypedArgument>)
+                    {
+                         indexNames = ((ReadOnlyCollection<CustomAttributeTypedArgument>)value).Select(arg => (string)arg.Value);
+                    }
+                    
+                    foreach (var indexName in indexNames)
+                    {
+                        AddGSIToMap(indexName, gsiHashKeyResult, gsiMap);
+                    }
+                }
             }
 
             var gsiRangeKeyResults = from prop in docType.GetProperties()
                 from attribute in prop.GetCustomAttributesData()
                 where attribute.AttributeType == typeof(DynamoDBGlobalSecondaryIndexRangeKeyAttribute)
-                select new {prop, attribute};
+                select new GlobalSecondaryIndexDetails{Prop = prop, Attribute = attribute};
 
             foreach (var gsiRangeKeyResult in gsiRangeKeyResults)
             {
-                var indexName = gsiRangeKeyResult.attribute.ConstructorArguments.Count == 0
-                    ? gsiRangeKeyResult.prop.Name
-                    : (string) gsiRangeKeyResult.attribute.ConstructorArguments.FirstOrDefault().Value;
+                if (gsiRangeKeyResult.Attribute.ConstructorArguments.Count == 0) 
+                {
+                    var indexName = gsiRangeKeyResult.Prop.Name;
+                    UpdateGSIMapWithRangeKey(gsiMap, indexName, gsiRangeKeyResult);
+                }
+                else
+                {
+                    IEnumerable<string> indexNames = null;
+                    var value = gsiRangeKeyResult.Attribute.ConstructorArguments.First().Value;
 
-                if (!gsiMap.TryGetValue(indexName, out GlobalSecondaryIndex entry))
-                    throw new InvalidOperationException(
-                        $"The global secondary index {gsiRangeKeyResult.prop.Name} lacks a hash key");
-
-                var gsiRangeKey = new KeySchemaElement(gsiRangeKeyResult.prop.Name, KeyType.RANGE);
-                entry.KeySchema.Add(gsiRangeKey);
+                    if (value is string)
+                    {
+                        indexNames = new string[] {(string)value};
+                    }
+                    else if (value is ReadOnlyCollection<CustomAttributeTypedArgument>)
+                    {
+                         indexNames = ((ReadOnlyCollection<CustomAttributeTypedArgument>)value).Select(arg => (string)arg.Value);
+                    }
+                    
+                    foreach (var indexName in indexNames)
+                    {
+                        UpdateGSIMapWithRangeKey(gsiMap, indexName, gsiRangeKeyResult);        
+                    }
+                }
             }
-
+            
             return gsiMap;
         }
 
@@ -254,6 +294,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return tableName;
         }
 
+        private static void UpdateGSIMapWithRangeKey(Dictionary<string, GlobalSecondaryIndex> gsiMap, string indexName,
+            GlobalSecondaryIndexDetails gsiRangeKeyResult)
+        {
+            if (!gsiMap.TryGetValue(indexName, out GlobalSecondaryIndex entry))
+                throw new InvalidOperationException(
+                    $"The global secondary index {gsiRangeKeyResult.Prop.Name} lacks a hash key");
+
+            var gsiRangeKey = new KeySchemaElement(gsiRangeKeyResult.Prop.Name, KeyType.RANGE);
+            entry.KeySchema.Add(gsiRangeKey);
+        }
+
         // We treat all primitive types as a number
         // Then we test for a string, and treat that explicitly as a string
         // If not we look for a byte array and treat it as binary
@@ -278,5 +329,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             throw new NotSupportedException($"We can't convert {propertyType.Name} to a DynamoDb type. Avoid marking as an attribute and see if the lib can figure it out");
         }
 
-   }
+        private class GlobalSecondaryIndexDetails
+        {
+            public PropertyInfo Prop { get; set; }
+            public CustomAttributeData Attribute { get; set; }
+        }
+    }
 }
