@@ -19,7 +19,18 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
             var tableRequestFactory = new DynamoDbTableFactory();
             
             //act
-            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(new DynamoDbCreateProvisionedThroughput());
+            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(
+                new DynamoDbCreateProvisionedThroughput
+                (
+                    new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    new Dictionary<string, ProvisionedThroughput>
+                    {
+                        {
+                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10} 
+                        }
+                    }
+                )
+            );
             
             //assert
             Assert.Equal("MyEntity", tableRequest.TableName);

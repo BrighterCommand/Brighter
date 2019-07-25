@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
 
             var clientConfig = new AmazonDynamoDBConfig();
-            clientConfig.ServiceURL = "http://localhost:8000";
+            clientConfig.ServiceURL = "http://docker.for.mac.localhost:8000";
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
  
@@ -77,8 +77,8 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             }
 
             var tableNames = new string[] {TableName};
-            var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
-            _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
+            //var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
+           // _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
  
             _disposed = true;
        }

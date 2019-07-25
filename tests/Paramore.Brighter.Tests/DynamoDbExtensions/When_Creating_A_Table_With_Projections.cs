@@ -25,9 +25,17 @@ namespace Paramore.Brighter.Tests.DynamoDbExtensions
            
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(
-                new DynamoDbCreateProvisionedThroughput(),
+                new DynamoDbCreateProvisionedThroughput(
+                    new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    new Dictionary<string, ProvisionedThroughput>
+                    {
+                        {
+                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10} 
+                        }
+                    }
+                ),
                 gsiProjection
-                );
+            );
             
             //assert
             Assert.Equal(ProjectionType.KEYS_ONLY, tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.ProjectionType);

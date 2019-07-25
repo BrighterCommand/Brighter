@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
        
         private readonly DynamoDBContext _context;
 
-        public bool ContinueOnCapturedContext { get; set; }
-
+       public bool ContinueOnCapturedContext { get; set; }
+       
         /// <summary>
         ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
         /// </summary>
@@ -64,7 +64,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {            
-            AddAsync(command, contextKey).Wait();
+            AddAsync(command, contextKey)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>
@@ -77,7 +80,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <returns><see cref="T"/></returns>
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            return GetCommand<T>(id, contextKey).Result;
+            return GetCommandAsync<T>(id, contextKey)
+                .ConfigureAwait(false)
+                .GetAwaiter()
+                .GetResult();
         }
 
         /// <summary>
@@ -92,7 +98,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         {
             await _context
                 .SaveAsync(new CommandItem<T>(command, contextKey), cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
+                .ConfigureAwait(false);
         }
 
         /// <summary>
@@ -106,7 +112,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <returns><see cref="Task{T}"/></returns>
         public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {                
-            return await GetCommand<T>(id, contextKey, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
         }
 
        /// <summary>
@@ -120,10 +126,11 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
         public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
        {
-           return await GetCommand<T>(id, contextKey, cancellationToken).ConfigureAwait(ContinueOnCapturedContext) !=null;
+           return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false) !=null;
        }
 
-        /// <summary>
+
+       /// <summary>
         ///     Checks if the command exists based on the id
         /// </summary>
         /// <param name="id">The identifier</param>
@@ -136,7 +143,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             return ExistsAsync<T>(id, contextKey).Result;
         }
 
-        private async Task<T> GetCommand<T>(Guid id, string contextKey, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        private async Task<T> GetCommandAsync<T>(Guid id, string contextKey, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var queryConfig = new QueryOperationConfig
             {
@@ -145,7 +152,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             };
            
             //block async to make this sync
-            var messages = await PageAllMessagesAsync<T>(queryConfig);
+            var messages = await PageAllMessagesAsync<T>(queryConfig).ConfigureAwait(false);
 
             var result = messages.Select(msg => msg.ConvertToCommand()).FirstOrDefault();
             if ( result == null)
@@ -162,7 +169,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             var messages = new List<CommandItem<T>>();
             do
             {
-              messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(ContinueOnCapturedContext));
+              messages.AddRange(await asyncSearch.GetNextSetAsync().ConfigureAwait(false));
             } while (!asyncSearch.IsDone);
 
             return messages;

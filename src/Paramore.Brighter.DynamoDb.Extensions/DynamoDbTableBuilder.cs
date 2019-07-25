@@ -35,7 +35,7 @@ namespace Paramore.Brighter.DynamoDb.Extensions
         /// <returns>The response to table deletion</returns>
         public async Task<DeleteTableResponse[]> Delete(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
         {
-            var allDeletes = tableNames.Select(tn => _client.DeleteTableAsync(tn, ct));
+            var allDeletes = tableNames.Select(tn => _client.DeleteTableAsync(tn, ct)).ToList();
             return await Task.WhenAll(allDeletes);
         }
         
@@ -60,22 +60,23 @@ namespace Paramore.Brighter.DynamoDb.Extensions
         public async Task EnsureTablesReady(IEnumerable<string> tableNames, TableStatus targetStatus, CancellationToken ct = default(CancellationToken))
         {
             // Let us wait until all tables are created. Call DescribeTable.
-            var tableStatus = from tableName in tableNames
-                select new DynamoDbTableStatus{TableName = tableName, IsReady = false};
+            var tableStates = (from tableName in tableNames
+                select new DynamoDbTableStatus{TableName = tableName, IsReady = false}).ToList();
             
             do
             {
                 await Task.Delay(5000, ct);
                 try
                 {
-                    var allQueries = tableStatus.Where(ts => ts.IsReady == false).Select(ts => _client.DescribeTableAsync(ts.TableName, ct));
+                    var allQueries = tableStates.Where(ts => ts.IsReady == false).Select(ts => _client.DescribeTableAsync(ts.TableName, ct));
                     var allResults = await Task.WhenAll(allQueries);
 
                     foreach (var result in allResults)
                     {
                         if (result.Table.TableStatus == targetStatus)
                         {
-                            tableStatus.First(ts => ts.TableName == result.Table.TableName).IsReady = true;
+                            var tableStatus = tableStates.First(ts => ts.TableName == result.Table.TableName);
+                            tableStatus.IsReady = true;
                         }
                     }
 
@@ -85,7 +86,7 @@ namespace Paramore.Brighter.DynamoDb.Extensions
                     // DescribeTable is eventually consistent. So you might
                     // get resource not found. So we handle the potential exception.
                 }
-            } while (tableStatus.Any(ts => !ts.IsReady));
+            } while (tableStates.Any(ts => !ts.IsReady));
         }
         
         public async Task<(bool, IEnumerable<string>)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
