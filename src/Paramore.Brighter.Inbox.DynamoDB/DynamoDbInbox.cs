@@ -126,7 +126,15 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
         public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
        {
-           return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false) !=null;
+           try
+           {
+               var command = await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
+               return command !=null;
+           }
+           catch (RequestNotFoundException<T>)
+           {
+               return false;
+           }
        }
 
 
