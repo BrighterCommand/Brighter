@@ -260,7 +260,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         
         private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
-            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id, cancellationToken);
+            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
         

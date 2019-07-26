@@ -99,6 +99,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     }
                 }  
             }
+            else
+            {
+                foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
+                {
+                     globalSecondaryIndex.Projection = new Projection {ProjectionType = ProjectionType.ALL};
+                }
+            }
         }
 
         private void AddGSIProvisionedThroughput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
@@ -117,6 +124,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     {
                         globalSecondaryIndex.ProvisionedThroughput = new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10};
                     }
+                }
+            }
+            else
+            {
+                foreach (var globalSecondaryIndex in createTableRequest.GlobalSecondaryIndexes)
+                {
+                     globalSecondaryIndex.ProvisionedThroughput = new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10};
                 }
             }
         }

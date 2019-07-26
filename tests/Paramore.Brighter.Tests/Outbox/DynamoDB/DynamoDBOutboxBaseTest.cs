@@ -25,7 +25,11 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
             var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<MessageItem>(
                     new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                    new Dictionary<string, ProvisionedThroughput>()
+                    new Dictionary<string, ProvisionedThroughput>
+                    {
+                        {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
+                        {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
+                    }
                 ));
             TableName = createTableRequest.TableName;
             (bool missing, IEnumerable<string> tables) hasTables = _dynamoDbTableBuilder.HasTables(new string[] {TableName}).Result;
