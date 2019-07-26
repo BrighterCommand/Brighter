@@ -47,6 +47,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// set table properties from that. Only supports string, number and byte array properties, others should
         /// be unmarked. Generally, don't create a DBProperty unless you need to use in a Filter, and rely on
         /// DynamoDb client library to figure out how to store.
+        /// We will provide defaults for both throughput on tables and GSI, or projections if you don't provide them
+        /// Whilst this will work in testing, you want to provide sensible values in production environments
         /// </summary>
         /// <param name="provisonedThroughput">What is the provisioned throughput for the table. Defaults to 10 read and write units</param>
         /// <param name="gsiProjections">How are global secondary indexes projected; defaults to all</param>
