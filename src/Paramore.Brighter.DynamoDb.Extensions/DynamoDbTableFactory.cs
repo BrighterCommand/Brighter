@@ -171,15 +171,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var attributeDefinitions = new List<AttributeDefinition>();
             foreach (var item in fields)
             {
-                string attributeName = item.attribute.ConstructorArguments.Count == 0
-                    ? item.prop.Name
-                    : (string) item.attribute.ConstructorArguments.FirstOrDefault().Value;
-
                 var argumentCount = item.attribute.ConstructorArguments.Count;
                 var hasArguments =argumentCount > 0 ;
                 var hasName = hasArguments && item.attribute.ConstructorArguments.FirstOrDefault().Value is string;
                 var hasConverterOnly = argumentCount == 1 && !hasName;
                 var hasStorage = argumentCount == 2 && item.attribute.ConstructorArguments.Take(1).First().Value is string;
+
+                string attributeName = !hasName
+                    ? item.prop.Name
+                    : (string)item.attribute.ConstructorArguments.FirstOrDefault().Value;
+                
                 var hasNameAndConverter = argumentCount == 2 && !hasStorage;
 
                 attributeDefinitions.Add(new AttributeDefinition(attributeName, GetDynamoDbType(item.prop.PropertyType, hasConverterOnly || hasNameAndConverter)));
