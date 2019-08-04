@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Linq;
-using System.Threading.Tasks;
+using System.Threading;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                                     {
                                         var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
                                         //We need to support raw messages to allow the use of message attributes
-                                        snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true"));
+                                        snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
                                     }
                                 }
                             }
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                                 //and assume we are halfway through
                                 var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message} waiting 60s to retry";
                                 _logger.Value.Error(error);
-                                Task.Delay(TimeSpan.FromSeconds(30));
+                                Thread.Sleep(TimeSpan.FromSeconds(30));
                                 throw new ChannelFailureException(error, ae);
                             }
 
