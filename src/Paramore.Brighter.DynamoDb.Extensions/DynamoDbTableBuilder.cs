@@ -27,17 +27,8 @@ namespace Paramore.Brighter.DynamoDb.Extensions
         /// <returns>The response to table creation</returns>
         public async Task<CreateTableResponse> Build(CreateTableRequest createTableRequest, CancellationToken ct = default(CancellationToken))
         {
-            var filteredAttributes = createTableRequest
-                .AttributeDefinitions
-                .Where(
-                    attr => attr.AttributeType == ScalarAttributeType.B ||
-                            attr.AttributeType == ScalarAttributeType.N ||
-                            attr.AttributeType == ScalarAttributeType.S)
-                .ToList();
-
-            createTableRequest.AttributeDefinitions = filteredAttributes;
-            
-            return await _client.CreateTableAsync(createTableRequest, ct);
+            var modifiedTableRequest = RemoveNonSchemaAttributes(createTableRequest);
+            return await _client.CreateTableAsync(modifiedTableRequest, ct);
         }
 
         /// <summary>
@@ -127,7 +118,52 @@ namespace Paramore.Brighter.DynamoDb.Extensions
 
         }
         
-       
+        public CreateTableRequest RemoveNonSchemaAttributes(CreateTableRequest tableRequest)
+        {
+            var keyMatchedAttributes = new List<AttributeDefinition>();
+            var existingAttributes = tableRequest.AttributeDefinitions;
+
+            foreach (var attribute in existingAttributes)
+            {
+                foreach (var keySchemaElement in tableRequest.KeySchema)
+                {
+                    if (keySchemaElement.AttributeName == attribute.AttributeName)
+                    {
+                        keyMatchedAttributes.Add(attribute);
+                        break;
+                    }
+                }
+
+                foreach (var index in tableRequest.GlobalSecondaryIndexes)
+                {
+                    foreach (var keySchemaElement in index.KeySchema)
+                    {
+                        if (keySchemaElement.AttributeName == attribute.AttributeName)
+                        {
+                            keyMatchedAttributes.Add(attribute);
+                            break;
+                        }
+                    } 
+                }
+
+                foreach (var index in tableRequest.LocalSecondaryIndexes)
+                {
+                    foreach (var keySchemaElement in index.KeySchema)
+                    {
+                        if (keySchemaElement.AttributeName == attribute.AttributeName)
+                        {
+                            keyMatchedAttributes.Add(attribute);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            tableRequest.AttributeDefinitions = keyMatchedAttributes;
+            
+            return tableRequest;
+        }
+   
         private class DynamoDbTableStatus
         { 
             public string TableName { get; set; }

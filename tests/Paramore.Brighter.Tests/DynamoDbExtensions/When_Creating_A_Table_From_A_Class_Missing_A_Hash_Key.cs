@@ -6,7 +6,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.DynamoDbExtensions
 {
-    public class DynanmoDbnMissingHashKeyTests 
+    public class DynanmoDbMissingHashKeyTests 
     {
         [Fact]
         public void When_Creating_A_Table_From_A_Class_Missing_A_Hash_Key()
