@@ -77,8 +77,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         {
             _commandProcessor.Post(_myCommand);
 
-            //_should_store_the_message_in_the_outbox
-            _fakeOutbox.MessageWasAdded.Should().BeTrue();
+            //_should_store_the_message_in_the_message_store
+            _fakeOutbox
+                .Get()
+                .SingleOrDefault(msg => msg.Id == _message.Id)
+                .Should().NotBe(null);
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message

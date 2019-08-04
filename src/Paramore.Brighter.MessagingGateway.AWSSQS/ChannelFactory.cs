@@ -105,8 +105,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                             return false;
                         });
-                   }
-               }
+                    }
+                }
             }
         }
 

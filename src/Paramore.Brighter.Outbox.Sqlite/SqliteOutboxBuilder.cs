@@ -31,6 +31,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         , [Topic] nvarchar(255) NULL
                                         , [MessageType] nvarchar(32) NULL
                                         , [Timestamp] datetime NULL
+                                        , [Dispatched] datetime NULL
                                         , [HeaderBag] ntext NULL
                                         , [Body] ntext NULL
                                         , CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])

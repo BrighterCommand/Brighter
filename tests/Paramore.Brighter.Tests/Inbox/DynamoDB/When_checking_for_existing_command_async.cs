@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.DynamoDBv2.DataModel;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.DynamoDB;
@@ -9,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Tests.Inbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
-    public class DynamoDbCommandExistsAsyncTests : BaseImboxDyamoDBBaseTest
+    public class DynamoDbCommandExistsAsyncTests : DynamoDBInboxBaseTest
     {       
         private readonly MyCommand _command;
         private readonly DynamoDbInbox _dynamoDbInbox;
@@ -21,19 +22,9 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             _command = new MyCommand { Id = _guid, Value = "Test Earliest"};
             _contextKey = "test-context-key";
 
-            var createTableRequest = new DynamoDbInboxBuilder(DynamoDbTestHelper.DynamoDbInboxTestConfiguration.TableName).CreateInboxTableRequest();
-        
-            DynamoDbTestHelper.CreateInboxTable(createTableRequest);
-            _dynamoDbInbox = new DynamoDbInbox(DynamoDbTestHelper.DynamoDbContext, DynamoDbTestHelper.DynamoDbInboxTestConfiguration);
-
-            var config = new DynamoDBOperationConfig
-            {
-                OverrideTableName = DynamoDbTestHelper.DynamoDbInboxTestConfiguration.TableName,
-                ConsistentRead = false
-            };
-        
-            var dbContext = DynamoDbTestHelper.DynamoDbContext;
-            dbContext.SaveAsync(ConstructCommand(_command, DateTime.UtcNow, _contextKey), config).GetAwaiter().GetResult();
+            _dynamoDbInbox = new DynamoDbInbox(Client);
+            
+            _dynamoDbInbox.Add(_command, _contextKey);
         }
 
         [Fact]

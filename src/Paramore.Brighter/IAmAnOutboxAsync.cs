@@ -39,6 +39,14 @@ namespace Paramore.Brighter
     public interface IAmAnOutboxAsync<in T> where T : Message
     {
         /// <summary>
+        /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
+        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
+        /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
+        /// such as HTTPContext 
+        /// </summary>
+        bool ContinueOnCapturedContext { get; set; }
+         
+        /// <summary>
         /// Awaitable add the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -57,11 +65,11 @@ namespace Paramore.Brighter
         Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
-        /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
-        /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
-        /// such as HTTPContext 
+        /// Update a message to show it is dispatched
         /// </summary>
-        bool ContinueOnCapturedContext { get; set; }
-    }
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+         Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken));        
+   }
 }

@@ -12,10 +12,6 @@ services:
     volumes:
       - rabbitmq-home:/var/lib/rabbitmq
 
-
-
-
-
   eventstore:
     image: eventstore/eventstore
     ports:

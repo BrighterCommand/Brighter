@@ -71,6 +71,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
                 messageMapperRegistry,
                 (IAmAMessageProducer)_fakeMessageProducer,
                 responseChannelFactory: inMemoryChannelFactory);
+            
+            PipelineBuilder<MyRequest>.ClearPipelineCache();
   
         }
 

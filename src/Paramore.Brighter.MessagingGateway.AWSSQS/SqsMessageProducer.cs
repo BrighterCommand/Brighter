@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var topicArn = EnsureTopic(message.Header.Topic, client);
                 var publisher = new SqsMessagePublisher(topicArn, client);
                 publisher.Publish(message);
-           }
+            }
         }
 
         /// <summary>

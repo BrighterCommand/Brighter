@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using Amazon;
+using Amazon.Runtime;
+
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
     /// <summary>
@@ -29,27 +32,25 @@ namespace Paramore.Brighter.Inbox.DynamoDB
     /// </summary>
     public class DynamoDbInboxConfiguration
     {
+        //What AWS Credentials to use
+        public AWSCredentials Credentials { get; }
         /// <summary>
-        /// Gets the table name
+        /// Which AWS region
         /// </summary>
-        /// <value>The table name</value>
-        public string TableName { get; }
+        public RegionEndpoint Region { get; }
         /// <summary>
-        /// Gets whether to use strongly consistent reads
+        /// The table that forms the Outbox
         /// </summary>
-        /// <value>Whether to use stronly consistent reads</value>
-        public bool UseStronglyConsistentRead { get; }
+        public string TableName { get; set; }
 
-        public string RequestIdIndex { get; }
-        public string ContextKeyIndex { get; }
-
-        /// <summary>
-        /// Initalises a new instance of the <see cref="DynamoDbInboxConfiguration"/> class.
-        /// </summary>
-        /// <param name="tableName">The table name.</param>
-        /// <param name="useStronglyConsistentRead">Whether to use strongly consistent reads.</param>
-        /// <param name="requestIdIndex">Name of Command Id index for Scan operations</param>
-        public DynamoDbInboxConfiguration(string tableName, bool useStronglyConsistentRead, string requestIdIndex, string contextKeyIndex)
-            => (TableName, UseStronglyConsistentRead, RequestIdIndex, ContextKeyIndex) = (tableName, useStronglyConsistentRead, requestIdIndex, contextKeyIndex);
-    }     
+        public DynamoDbInboxConfiguration(
+            AWSCredentials credentials, 
+            RegionEndpoint region,
+            string tableName)
+        {
+            Credentials = credentials;
+            Region = region;
+            TableName = tableName;
+        }
+   }     
 }

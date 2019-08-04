@@ -81,12 +81,19 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         {
             await _controlBusSender.PostAsync(_myCommand);
 
-            //_should_store_the_message_in_the_sent_command_message_repository
-            _fakeOutbox.MessageWasAdded.Should().BeTrue();
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            
+            //_should_store_the_message_in_the_sent_command_message_repository
+            var message = _fakeOutbox
+              .DispatchedMessages(3000, -1)
+              .SingleOrDefault();
+              
+              
+            message.Should().NotBe(null);
+            
             //_should_convert_the_command_into_a_message
-            _fakeOutbox.Get().First().Should().Be(_message);
+            message.Should().Be(_message);
         }
 
         public void Dispose()

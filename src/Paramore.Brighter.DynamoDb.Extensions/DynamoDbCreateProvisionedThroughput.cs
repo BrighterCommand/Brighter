@@ -1,6 +1,6 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2019 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,29 +19,24 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
 #endregion
+using System.Collections.Generic;
+using Amazon.DynamoDBv2.Model;
 
-namespace Paramore.Brighter.Outbox.PostgreSql
+namespace Paramore.Brighter.DynamoDb.Extensions
 {
-    public class PostgreSqlOutboxBulder
+    public class DynamoDbCreateProvisionedThroughput
     {
-        const string OutboxDdl = @"
-       CREATE TABLE {0}
-            (
-                Id BIGSERIAL PRIMARY KEY,
-                MessageId UUID UNIQUE NOT NULL,
-                Topic VARCHAR(255) NULL,
-                MessageType VARCHAR(32) NULL,
-                Timestamp timestamptz NULL,
-                HeaderBag TEXT NULL,
-                Body TEXT NULL
-            );
-        ";
+        public ProvisionedThroughput Table { get; }
+        public Dictionary<string, ProvisionedThroughput> GSIThroughputs { get; }
 
-        public static string GetDDL(string OutboxTableName)
+        public DynamoDbCreateProvisionedThroughput(
+            ProvisionedThroughput table = null,
+            Dictionary<string, ProvisionedThroughput> gsiThroughputs = null)
         {
-            return string.Format(OutboxDdl, OutboxTableName);
+            //TODO: Sensible default value for table throughput?
+            Table = table ?? new ProvisionedThroughput(readCapacityUnits: 100, writeCapacityUnits: 100);
+            GSIThroughputs = gsiThroughputs;
         }
     }
 }

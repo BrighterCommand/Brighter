@@ -27,6 +27,8 @@ namespace Paramore.Brighter.Tests.MessageDispatch
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry());
+            
+            PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();

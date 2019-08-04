@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             RedisConfig.DefaultIdleTimeOutSecs.Should().Be(configuration.DefaultIdleTimeOutSecs.Value);
             RedisConfig.DefaultReceiveTimeout.Should().Be(configuration.DefaultReceiveTimeout.Value);
             RedisConfig.DefaultSendTimeout.Should().Be(configuration.DefaultSendTimeout.Value);
-            RedisConfig.DisableVerboseLogging.Should().Be(configuration.DisableVerboseLogging.Value);
+            RedisConfig.EnableVerboseLogging.Should().Be(configuration.DisableVerboseLogging.Value);
             RedisConfig.HostLookupTimeoutMs.Should().Be(configuration.HostLookupTimeoutMs.Value);
             RedisConfig.DefaultMaxPoolSize.Should().Be(configuration.MaxPoolSize.Value);
             gateway.MessageTimeToLive.Should().Be(configuration.MessageTimeToLive.Value);

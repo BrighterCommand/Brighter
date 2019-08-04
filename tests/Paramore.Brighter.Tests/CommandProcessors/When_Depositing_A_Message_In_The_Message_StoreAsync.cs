@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -58,13 +59,17 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             var postedMessageId = await _commandProcessor.DepositPostAsync(_myCommand);
             
             //assert
-            //message should be in the store
-            _fakeOutbox.MessageWasAdded.Should().BeTrue();
             //message should not be posted
             _fakeMessageProducer.MessageWasSent.Should().BeFalse();
             
+            //message should be in the store
+            var depositedPost = _fakeOutbox
+                .OutstandingMessages(3000)
+                .SingleOrDefault(msg => msg.Id == _message.Id);
+                
+            depositedPost.Should().NotBe(null);
+           
             //message should correspond to the command
-            var depositedPost = _fakeOutbox.Get(postedMessageId);
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);

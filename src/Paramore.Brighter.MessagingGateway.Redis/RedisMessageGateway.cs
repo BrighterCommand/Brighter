@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
             if (GatewayConfiguration.DisableVerboseLogging.HasValue)
             {
-                RedisConfig.DisableVerboseLogging = GatewayConfiguration.DisableVerboseLogging.Value;
+                RedisConfig.EnableVerboseLogging = !GatewayConfiguration.DisableVerboseLogging.Value;
             }
 
             if (GatewayConfiguration.HostLookupTimeoutMs.HasValue)

@@ -48,6 +48,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             container.Register<IHandleRequests<MyCommand>, MyAbortingHandler<MyCommand>>();
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]

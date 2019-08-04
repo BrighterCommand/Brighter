@@ -39,6 +39,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         public CommandProcessorPublishMissingHandlerFactoryTests()
         {
             _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
         [Fact]

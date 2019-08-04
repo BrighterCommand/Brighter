@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     
                     if(receiptHandle.Success)
                         message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
-               }
+                }
 
 
 
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     //we weill just suppress conversion errors, and return an empty bag
                 }
-           }
+            }
             return new Dictionary<string, object>();
         }
 

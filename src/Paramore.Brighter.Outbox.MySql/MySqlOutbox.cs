@@ -54,6 +54,18 @@ namespace Paramore.Brighter.Outbox.MySql
         ///     Initializes a new instance of the <see cref="MySqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
+
+
+        /// <summary>
+        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
+        ///     synchronization context.
+        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
+        ///     thread specific storage
+        ///     such as HTTPContext
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; set; }
+        
         public MySqlOutbox(MySqlOutboxConfiguration configuration)
         {
             _configuration = configuration;
@@ -94,39 +106,8 @@ namespace Paramore.Brighter.Outbox.MySql
 
                         throw;
                     }
-                };
+                }
             }
-        }
-
-        private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)
-        {
-            return sqlException.Number == MySqlDuplicateKeyError;
-        }
-
-        private string GetAddSql()
-        {
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
-                    _configuration.OutBoxTableName);
-            return sql;
-        }
-
-        /// <summary>
-        ///     Gets the specified message identifier.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId",
-                _configuration.OutBoxTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("@MessageId", messageId.ToString())
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
         }
 
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
@@ -162,23 +143,66 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the orginating synchronization context if you need to access
-        ///     thread specific storage
-        ///     such as HTTPContext
+        /// Which messages have been dispatched from the Outbox, within the specified time window
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        /// <param name="millisecondsDispatchedSince">How long ago can the message have been dispatched</param>
+        /// <param name="pageSize">How many messages per page</param>
+        /// <param name="pageNumber">Which page number to return</param>
+        /// <param name="outboxTimeout">When do we give up?</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>Messages that have been dispatched from the Outbox to the broker</returns>
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
+       {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
 
-        /// <summary>
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+       }
+       /// <summary>
+       /// Get a message
+       /// </summary>
+       /// <param name="messageId">The id of the message to retrieve</param>
+       /// <param name="outBoxTimeout">Timeout in milleseconds</param>
+       /// <returns></returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
+            var parameters = new[]
+            {
+                CreateSqlParameter("@MessageId", messageId.ToString())
+            };
+
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+        }
+
+       /// <summary>
         /// get as an asynchronous operation.
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Message> GetAsync(
+           Guid messageId, 
+           int outBoxTimeout = -1, 
+           CancellationToken cancellationToken = default(CancellationToken))
         {
             var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
             var parameters = new[]
@@ -195,18 +219,20 @@ namespace Paramore.Brighter.Outbox.MySql
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
+
         /// <summary>
-        ///     Returns all messages in the store
+        /// Returns all messages in the store
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, pageSize, pageNumber);
+                CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 connection.Open();
 
@@ -227,14 +253,19 @@ namespace Paramore.Brighter.Outbox.MySql
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken cancellationToken = default(CancellationToken))
+       public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, pageSize, pageNumber);
+                CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -250,6 +281,71 @@ namespace Paramore.Brighter.Outbox.MySql
                 return messages;
             }
         }
+        
+         /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+           using (var connection = GetConnection())
+           {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+                {
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+           }
+        }
+         
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        {
+           using (var connection = GetConnection())
+           {
+                connection.Open();
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+                {
+                    command.ExecuteNonQuery();
+                }
+           }
+        }
+          
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>Outstanding Messages</returns>
+       public IEnumerable<Message> OutstandingMessages(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
 
         private MySqlParameter CreateSqlParameter(string parameterName, object value)
         {
@@ -259,9 +355,55 @@ namespace Paramore.Brighter.Outbox.MySql
                 Value = value
             };
         }
+        
+        private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+            };
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int outboxTimeout,
-            params MySqlParameter[] parameters)
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+                
+        private void CreatePagedReadCommand(DbCommand command, int pageSize, int pageNumber)
+        {
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize)
+            };
+
+            var sql = string.Format("SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC", _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            AddParamtersParamArrayToCollection(parameters, command);
+        }
+         
+        private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+                
+        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int outboxTimeout, params MySqlParameter[] parameters)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
@@ -295,6 +437,15 @@ namespace Paramore.Brighter.Outbox.MySql
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
+        }
+
+        private string GetAddSql()
+        {
+            var sql =
+                string.Format(
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    _configuration.OutBoxTableName);
+            return sql;
         }
 
         private MySqlConnection GetConnection()
@@ -344,6 +495,21 @@ namespace Paramore.Brighter.Outbox.MySql
                     Value = message.Body.Value
                 }
             };
+        }
+
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
+        {
+            var command = connection.CreateCommand();
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            return command;
+        }
+        
+        private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)
+        {
+            return sqlException.Number == MySqlDuplicateKeyError;
         }
 
         private Message MapAMessage(IDataReader dr)
@@ -397,23 +563,11 @@ namespace Paramore.Brighter.Outbox.MySql
             return new Message();
         }
 
-        private void SetPagingCommandFor(DbCommand command, int pageSize, int pageNumber)
-        {
-            var parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format("SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC", _configuration.OutBoxTableName, pageNumber, pageSize);
-
-            command.CommandText = sql;
-            AddParamtersParamArrayToCollection(parameters, command);
-        }
 
         public void AddParamtersParamArrayToCollection(MySqlParameter[] parameters, DbCommand command)
         {
             command.Parameters.AddRange(parameters);
         }
+
     }
 }

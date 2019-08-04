@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _requestContext = new RequestContext();
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         [Fact]

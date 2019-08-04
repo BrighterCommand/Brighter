@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Toby Henderson <hendersont@gmail.com>
 
@@ -32,45 +33,18 @@ using Newtonsoft.Json;
 
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>
+    public class FakeOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
     {
-        private readonly List<Message> _messages = new List<Message>();
+        private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
 
-        public bool MessageWasAdded { get; set; }
+        public bool ContinueOnCapturedContext { get; set; }
 
         public void Add(Message message, int outBoxTimeout = -1)
         {
-            MessageWasAdded = true;
-            _messages.Add(message);
+            _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
         }
 
-        /// <summary>
-        ///     Finds a command with the specified identifier.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The identifier.</param>
-        /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
-        /// <returns><see cref="Message"/></returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            foreach (var message in _messages)
-            {
-                if (message.Id == messageId)
-                {
-                    return message;
-                }
-            }
-
-            return null;
-        }
-
-        public IEnumerable<Message> Get(int pageSize = 100, int pageNumber = 1)
-        {
-            return _messages.Take(pageSize);
-        }
-
-        public Task AddAsync(Message message, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);
@@ -80,8 +54,39 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(0);
         }
 
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
+            int pageNumber = 1,
+            int outboxTimeout = -1,
+            Dictionary<string, object> args = null)
+        {
+            var messagesSince = DateTime.UtcNow.AddMilliseconds(millisecondsDispatchedSince * -1);
+            return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
+        }
+
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            foreach (var outboxEntry in _posts)
+            {
+                if (outboxEntry.Message.Id == messageId)
+                {
+                    return outboxEntry.Message;
+                }
+            }
+
+            return null;
+        }
+
+        public IList<Message> Get(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
+        {
+            return _posts.Select(outboxEntry => outboxEntry.Message).Take(pageSize).ToList();
+        }
+
+        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled<Message>(cancellationToken);
@@ -89,6 +94,43 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(Get(messageId, outBoxTimeout));
         }
 
-        public bool ContinueOnCapturedContext { get; set; }
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var tcs = new TaskCompletionSource<object>();
+            
+            MarkDispatched(id, dispatchedAt);
+            
+            tcs.SetResult(new object());
+
+            return tcs.Task;
+        }
+
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        {
+           var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);
+           entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
+
+        }
+
+       public IEnumerable<Message> OutstandingMessages(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+           Dictionary<string, object> args = null)
+        {
+            var sentAfter = DateTime.UtcNow.AddMilliseconds(-1 * millSecondsSinceSent);
+            return _posts
+                .Where(oe => oe.TimeDeposited.Value > sentAfter && oe.TimeFlushed == null)
+                .Select(oe => oe.Message)
+                .Take(pageSize)
+                .ToArray();
+        }
+
+        class OutboxEntry
+        {
+            public DateTime? TimeDeposited { get; set; }
+            public DateTime? TimeFlushed { get; set; }
+            public Message Message { get; set; }
+        }
     }
 }

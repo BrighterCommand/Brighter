@@ -31,6 +31,7 @@ namespace Paramore.Brighter.Outbox.MySql
 	`Topic` VARCHAR(255) NOT NULL , 
 	`MessageType` VARCHAR(32) NOT NULL , 
 	`Timestamp` TIMESTAMP(3) NOT NULL , 
+    `Dispatched` TIMESTAMP(3) NOT NULL,
 	`HeaderBag` TEXT NOT NULL , 
 	`Body` TEXT NOT NULL , 
     `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),

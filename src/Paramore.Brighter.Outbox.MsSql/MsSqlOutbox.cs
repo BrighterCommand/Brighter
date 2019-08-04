@@ -51,6 +51,15 @@ namespace Paramore.Brighter.Outbox.MsSql
         private readonly MsSqlOutboxConfiguration _configuration;
 
         /// <summary>
+        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
+        ///     synchronization context.
+        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
+        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
+        ///     thread specific storage such as HTTPContext
+        /// </summary>
+        public bool ContinueOnCapturedContext { get; set; }
+        
+        /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
@@ -102,17 +111,6 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout"></param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
-            var parameters = new[]
-            {
-                CreateSqlParameter("MessageId", messageId)
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
-        }
-
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var parameters = InitAddDbParameters(message);
@@ -144,13 +142,55 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage such as HTTPContext
+        /// Retrieves messages that have been sent within the window
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
+        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="pageSize">How many messages in a page</param>
+        /// <param name="pageNumber">Which page of messages to get</param>
+        /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of dispatched messages</returns>
+        public IEnumerable<Message> DispatchedMessages(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
+
+       /// <summary>
+        /// Gets the specified message
+        /// </summary>
+        /// <param name="messageId">The id of the message to get</param>
+        /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
+        /// <returns>The message</returns>
+        public Message Get(Guid messageId, int outBoxTimeout = -1)
+        {
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
+            var parameters = new[]
+            {
+                CreateSqlParameter("MessageId", messageId)
+            };
+
+            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+        }
 
         /// <summary>
         /// get as an asynchronous operation.
@@ -178,17 +218,18 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        ///     Returns all messages in the store
+        /// Returns all messages in the store
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1)
+        /// <param name="args">Additional parameters required for search, if any</param>
+         /// <returns>A list of messages</returns>
+       public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
+                CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 connection.Open();
 
@@ -208,13 +249,19 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Cancellation Token</param>
         /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
-                SetPagingCommandFor(command, _configuration, pageSize, pageNumber);
+                CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
@@ -228,8 +275,122 @@ namespace Paramore.Brighter.Outbox.MsSql
                 return messages;
             }
         }
+        
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+ 
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+           using (var connection = GetConnection())
+           {
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+                {
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+           }
+        }
+ 
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        {
+           using (var connection = GetConnection())
+           {
+                connection.Open();
+                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+                {
+                    command.ExecuteNonQuery();
+                }
+           }
+        }
 
-        //Fold this code back in as there is only one choice
+       /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+       /// <returns>Outstanding Messages</returns>
+       public IEnumerable<Message> OutstandingMessages(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+            Dictionary<string, object> args = null)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                connection.Open();
+
+                var dbDataReader = command.ExecuteReader();
+
+                var messages = new List<Message>();
+                while (dbDataReader.Read())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
+        
+        private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+        private void CreatePagedReadCommand(DbCommand command, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+        
+        private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        {
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var parameters = new[]
+            {
+                CreateSqlParameter("PageNumber", pageNumber),
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
+            };
+
+            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
+
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
+        }
+
+
+       //Fold this code back in as there is only one choice
         private DbParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value ?? DBNull.Value);
@@ -300,6 +461,16 @@ namespace Paramore.Brighter.Outbox.MsSql
             return parameters;
         }
 
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
+        {
+            var command = connection.CreateCommand();
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            return command;
+         }
+        
         private Message MapAMessage(IDataReader dr)
         {
             var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
@@ -343,21 +514,5 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return new Message();
         }
-
-        private void SetPagingCommandFor(DbCommand command, MsSqlOutboxConfiguration configuration, int pageSize,
-            int pageNumber)
-        {
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            var parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-        }
-    }
+   }
 }

@@ -24,30 +24,34 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using Amazon;
 using FluentAssertions;
+using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.DynamoDB
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB OutBox")]
-    public class DynamoDbOutboxMessageAlreadyExistsAsyncTests : BaseDynamoDBOutboxTests
+    public class DynamoDbOutboxMessageAlreadyExistsAsyncTests : DynamoDBOutboxBaseTest
     {        
         private readonly Message _messageEarliest;
 
         private Exception _exception;
+        private DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxMessageAlreadyExistsAsyncTests()
         {                                  
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));            
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
         }
 
         [Fact]
         public async Task When_the_message_is_already_in_the_outbox_async()
         {
-            await DynamoDbOutbox.AddAsync(_messageEarliest);
+            await _dynamoDbOutbox.AddAsync(_messageEarliest);
 
-            _exception = await Catch.ExceptionAsync(() => DynamoDbOutbox.AddAsync(_messageEarliest));            
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest));            
 
             //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();

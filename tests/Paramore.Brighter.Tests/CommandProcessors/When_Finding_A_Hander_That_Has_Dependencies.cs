@@ -16,6 +16,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             var handlerFactory = new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(() => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession())));
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
         public void When_Finding_A_Hander_That_Has_Dependencies()

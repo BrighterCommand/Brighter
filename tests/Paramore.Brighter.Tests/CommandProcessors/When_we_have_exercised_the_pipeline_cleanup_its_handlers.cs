@@ -22,6 +22,8 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             var handlerFactory = new CheapHandlerFactory();
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            PipelineBuilder<MyCommand>.ClearPipelineCache();
+            
             _pipelineBuilder.Build(new RequestContext()).Any();
         }
 
