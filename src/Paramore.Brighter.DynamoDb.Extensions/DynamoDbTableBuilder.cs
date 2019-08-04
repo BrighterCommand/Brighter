@@ -18,12 +18,25 @@ namespace Paramore.Brighter.DynamoDb.Extensions
         
         /// <summary>
         /// Build a table from a create table request
+        /// We filter out any attributes that are not B, S, or N because DynamoDB does not currently support
+        /// creation of these types via the API. As these are not used for hash or range keys they are not
+        /// required to store items in DynamoDB
         /// </summary>
         /// <param name="createTableRequest">The request to build tables from</param>
         /// <param name="ct"></param>
         /// <returns>The response to table creation</returns>
         public async Task<CreateTableResponse> Build(CreateTableRequest createTableRequest, CancellationToken ct = default(CancellationToken))
         {
+            var filteredAttributes = createTableRequest
+                .AttributeDefinitions
+                .Where(
+                    attr => attr.AttributeType == ScalarAttributeType.B ||
+                            attr.AttributeType == ScalarAttributeType.N ||
+                            attr.AttributeType == ScalarAttributeType.S)
+                .ToList();
+
+            createTableRequest.AttributeDefinitions = filteredAttributes;
+            
             return await _client.CreateTableAsync(createTableRequest, ct);
         }
 
