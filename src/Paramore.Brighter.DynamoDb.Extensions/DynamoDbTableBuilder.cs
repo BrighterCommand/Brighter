@@ -93,7 +93,7 @@ namespace Paramore.Brighter.DynamoDb.Extensions
             } while (tableStates.Any(ts => !ts.IsReady));
         }
         
-        public async Task<(bool, IEnumerable<string>)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
+        public async Task<(bool exist, IEnumerable<string> missing)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
         {
             
             var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
