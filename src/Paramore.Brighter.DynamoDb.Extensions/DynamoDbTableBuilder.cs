@@ -112,7 +112,7 @@ namespace Paramore.Brighter.DynamoDb.Extensions
                 lastEvalutatedTableName = tablesResponse.LastEvaluatedTableName;
             } while (lastEvalutatedTableName != null);
 
-            return tableCheck.Any(kv => !kv.Value) ? 
+            return tableCheck.Any(kv => kv.Value) ? 
                 (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) : 
                 (false, Enumerable.Empty<string>());
 
