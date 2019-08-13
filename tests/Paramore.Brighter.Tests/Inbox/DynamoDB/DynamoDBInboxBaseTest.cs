@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
 
             var clientConfig = new AmazonDynamoDBConfig();
-            clientConfig.ServiceURL = "http://docker.for.mac.localhost:8000";
+            clientConfig.ServiceURL = "http://localhost:8000";
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
  
