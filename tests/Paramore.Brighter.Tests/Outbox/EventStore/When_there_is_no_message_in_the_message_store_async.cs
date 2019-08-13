@@ -22,91 +22,29 @@ THE SOFTWARE. */
 
 #endregion
 
-
-#if NET46
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net;
-using EventStore.ClientAPI;
-using EventStore.ClientAPI.Embedded;
-using EventStore.Core;
-using EventStore.Core.Data;
-using Nito.AsyncEx;
+using System.ComponentModel;
+using System.Threading.Tasks;
+using FluentAssertions;
+using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
-using Paramore.Brighter.OutBox.EventStore;
 
 namespace Paramore.Brighter.Tests.OutBox.EventStore
 {
     [Category("EventStore")]
-
-    public class EventStoreEmptyAsyncTests
+    public class EventStoreEmptyAsyncTests : EventStoreFixture
     {
-        private static IList<Message> s_messages;
-        private const string StreamName = "stream-123";
-        private static ClusterVNode s_eventStoreNode;
-        private static IEventStoreConnection s_eventStore;
-        private static bool s_eventStoreNodeStarted;
-        private static bool s_eventStoreClientConnected;
-        private static EventStoreOutbox s_eventStoreOutbox;
-        private const string EmptyStreamName = "empty-123";
-
-        [SetUp]
-        public void Establish()
-        {
-            s_eventStoreNodeStarted = false;
-            s_eventStoreClientConnected = false;
-
-            var noneIp = new IPEndPoint(IPAddress.None, 0);
-            s_eventStoreNode = EmbeddedVNodeBuilder
-                .AsSingleNode()
-                .RunInMemory()
-                .WithExternalTcpOn(noneIp)
-                .WithInternalTcpOn(noneIp)
-                .WithExternalHttpOn(noneIp)
-                .WithInternalHttpOn(noneIp)
-                .Build();
-            s_eventStoreNode.NodeStatusChanged +=
-                (sender, e) => { if (e.NewVNodeState == VNodeState.Master) s_eventStoreNodeStarted = true; };
-            s_eventStoreNode.Start();
-
-            s_eventStore = EmbeddedEventStoreConnection.Create(s_eventStoreNode);
-            s_eventStore.Connected += (sender, e) => { s_eventStoreClientConnected = true; };
-            s_eventStore.ConnectAsync().Wait();
-
-            s_eventStoreOutbox = new EventStoreOutbox(s_eventStore);
-
-            EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
-        }
-
-        [TearDown]
-        public void Dispose()
-        {
-            s_eventStore.Close();
-            s_eventStoreNode.Stop();
-        }
-
         [Fact]
-        public void When_There_Is_No_Message_In_The_Outbox()
+        public async Task When_There_Is_No_Message_In_The_Outbox()
         {
-            AsyncContext.Run(async () => s_messages = await s_eventStoreOutbox.GetAsync(EmptyStreamName, 0, 1));
+            // arrange
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            
+            // act
+            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);
 
+            // assert
             //_returns_an_empty_list
-            0.Should().Be(s_messages.Count);
-        }
-
-        private void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
-        {
-            var timer = new Stopwatch();
-            timer.Start();
-            while (!s_eventStoreNodeStarted || !s_eventStoreClientConnected)
-            {
-                if (timer.ElapsedMilliseconds > 10000)
-                {
-                    throw new TimeoutException();
-                }
-            }
+            messages.Count.Should().Be(0);
         }
     }
 }
-#endif

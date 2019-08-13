@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 George Ayris <george.ayris@gmail.com>
@@ -39,7 +39,11 @@ namespace Paramore.Brighter.Outbox.EventStore
     /// <summary>
     ///     Class EventStoreOutbox.
     /// </summary>
-    public class EventStoreOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
+    public class EventStoreOutbox : 
+        IAmAnOutbox<Message>, 
+        IAmAnOutboxAsync<Message>,
+        IAmAnOutboxViewer<Message>,
+        IAmAnOutboxViewerAsync<Message>
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<EventStoreOutbox>);
 
@@ -137,6 +141,11 @@ namespace Paramore.Brighter.Outbox.EventStore
             throw new NotImplementedException();
         }
 
+        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotImplementedException();
+        }
+        
         /// <summary>
         ///     Gets the specified message by identifier. Currently not implemented.
         /// </summary>
@@ -296,5 +305,6 @@ namespace Paramore.Brighter.Outbox.EventStore
             headerBagWithoutExtras.Remove("eventNumber");
             return headerBagWithoutExtras;
         }
+
     }
 }
