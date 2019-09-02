@@ -42,7 +42,6 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
             }
         }
 
-
         private IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
