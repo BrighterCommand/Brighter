@@ -38,13 +38,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private IConsumer<Null, string> _consumer;
-        private bool _disposedValue = false; 
+        private bool _disposedValue = false;
+        private string _topic;
+        private ConsumerConfig _consumerConfig;
 
         public KafkaMessageConsumer(string groupId, string topic, 
             KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingConsumerConfiguration consumerConfiguration)
         {
-            var consumerConfig = new ConsumerConfig()
+            _topic = topic;
+            _consumerConfig = new ConsumerConfig()
             {
                 GroupId = groupId,
                 ClientId = globalConfiguration.Name,
@@ -53,13 +56,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SessionTimeoutMs = 6000,
                 EnablePartitionEof = true,
 
-                AutoCommitIntervalMs = consumerConfiguration.AutoCommitInterval.Milliseconds,
-                EnableAutoCommit = consumerConfiguration.EnableAutoCommit,
-                AutoOffsetReset = consumerConfiguration.AutoResetOffset
+                //We always call acknowledge after processing a handler and commit then.
+                AutoCommitIntervalMs = 0, 
+                EnableAutoCommit = false,
+                
+                AutoOffsetReset = consumerConfiguration.OffsetDefault 
             };
 
 
-            _consumer = new ConsumerBuilder<Null, string>(consumerConfig)
+            _consumer = new ConsumerBuilder<Null, string>(_consumerConfig)
                 .SetPartitionsAssignedHandler((consumer, list) =>
                 {
                     _logger.Value.InfoFormat($"Assigned partitions: [{string.Join(", ", list)}], member id: {consumer.MemberId}");
@@ -76,8 +81,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         _logger.Value.Error($"ConsumeError: Member Id: {consumer.MemberId}, error: {error}");
                 })
                 .Build();
+            
+            _logger.Value.InfoFormat($"Kakfa consumer subscribing to {_topic}");
 
-            _consumer.Subscribe(new []{ topic });
+            _consumer.Subscribe(new []{ _topic });
         }
 
 
@@ -90,6 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!message.Header.Bag.TryGetValue("TopicPartitionOffset", out var bagData))
                 return;
             var topicPartitionOffset = bagData as TopicPartitionOffset;
+            _logger.Value.DebugFormat($"Commiting message {topicPartitionOffset} as read");
             _consumer.Commit(new[] {topicPartitionOffset});
         }
 
@@ -118,27 +126,57 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns>Message.</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            var consumeResult = _consumer.Consume(new TimeSpan(0,0,0,0,timeoutInMilliseconds));
-
-            if(consumeResult == null)
-                return new Message[]{new Message()};
-
-            if (consumeResult.IsPartitionEOF)
+            try
             {
-                _logger.Value.Info($"Consumer {_consumer.MemberId} has reached the end of the partition");
-                return new Message[]{new Message()};
-            }
+                _logger.Value.DebugFormat(
+                    $"Consuming messages from Kafka stream, will wait for {timeoutInMilliseconds}");
+                var consumeResult = _consumer.Consume(new TimeSpan(0, 0, 0, 0, timeoutInMilliseconds));
 
-            var messageHeader =
-                new MessageHeader(Guid.NewGuid(), consumeResult.Topic, MessageType.MT_EVENT)
+                if (consumeResult == null)
                 {
-                    Bag =
+                    _logger.Value.InfoFormat($"No messages available from Kafka stream");
+                    return new Message[] {new Message()};
+                }
+
+                if (consumeResult.IsPartitionEOF)
+                {
+                    _logger.Value.Info($"Consumer {_consumer.MemberId} has reached the end of the partition");
+                    return new Message[] {new Message()};
+                }
+
+                _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Value}");
+                _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Vallue: {consumeResult.Value}");
+
+                var messageHeader =
+                    new MessageHeader(Guid.NewGuid(), consumeResult.Topic, MessageType.MT_EVENT)
                     {
-                        ["TopicPartitionOffset"] = consumeResult.TopicPartitionOffset,
-                    }
-                };
-            var messageBody = new MessageBody(consumeResult.Value);
-            return new Message[] {new Message(messageHeader, messageBody)}; 
+                        Bag = {["TopicPartitionOffset"] = consumeResult.TopicPartitionOffset,}
+                    };
+                var messageBody = new MessageBody(consumeResult.Value);
+                return new Message[] {new Message(messageHeader, messageBody)};
+            }
+            catch (ConsumeException consumeException)
+            {
+                 _logger.Value.ErrorException(
+                     "KafkaMessageConsumer: There was an error listening to topic {0} with groupId {1) on bootstrap servers: {2) and consumer record {3}", 
+                     consumeException, 
+                     _topic, 
+                     _consumerConfig.GroupId, 
+                     _consumerConfig.BootstrapServers,
+                     consumeException.ConsumerRecord.ToString());
+                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", consumeException);
+                 
+            }
+            catch (Exception exception)
+            {
+                _logger.Value.ErrorException(
+                    "KafkaMessageConsumer: There was an error listening to topic {0} with groupId {1) on bootstrap servers: {2)", 
+                    exception, 
+                    _topic, 
+                    _consumerConfig.GroupId, 
+                    _consumerConfig.BootstrapServers);
+                throw;
+            }
         }
 
         /// <summary>
