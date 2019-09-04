@@ -21,25 +21,25 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using System.Collections.Generic;
 using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessagingConsumerConfiguration
     {
-        public bool EnableAutoCommit { get; set; }
-
-        public TimeSpan AutoCommitInterval { get; set; }
-
-        public AutoOffsetReset? AutoResetOffset{ get; set; }
+        /// <summary>
+        /// What do we do if there is no offset stored in ZooKeeper for this consumer
+        /// AutoOffsetReset.Earlist -  (our default) Begin reading the stream from the start
+        /// AutoOffsetReset.Latest - Start from now i.e. only consume messages after we start
+        /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
+        /// We use a default of earliest because we would rather duplicate messages than miss them due to an error
+        /// or when you start up a new consumer.
+        /// </summary>
+        public AutoOffsetReset OffsetDefault{ get; set; }
 
         public KafkaMessagingConsumerConfiguration()
         {
-            EnableAutoCommit = true;
-            AutoCommitInterval = new TimeSpan(0, 0, 0, 0, 5000);
-            AutoResetOffset = AutoOffsetReset.Latest;
+            OffsetDefault = AutoOffsetReset.Earliest;
         }
     }
 }

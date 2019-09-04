@@ -32,12 +32,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
         private IProducer<Null, string> _producer;
-        private bool _disposedValue = false; 
+        private bool _disposedValue = false;
+        private ProducerConfig _producerConfig;
 
         public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingProducerConfiguration producerConfiguration)
         {
-            ProducerConfig producerConfig = new ProducerConfig
+            _producerConfig = new ProducerConfig
             {
                 BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
                 ClientId = globalConfiguration.Name,
@@ -53,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 RetryBackoffMs = producerConfiguration.RetryBackoff?.Milliseconds
             };
 
-            _producer = new ProducerBuilder<Null, string>(producerConfig).Build();
+            _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
         }
 
         public void Send(Message message)
@@ -74,7 +75,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
-            return _producer.ProduceAsync(message.Header.Topic, new Message<Null, string>(){ Value = message.Body.Value});
+            try
+            {
+                _logger.Value.DebugFormat(
+                    "Sending message to Kafka. Servers {0} Topic: {1} Body: {2}", 
+                    _producerConfig.BootstrapServers,
+                    message.Header.Topic,
+                    message.Body.Value
+                    );
+                return _producer.ProduceAsync(message.Header.Topic, new Message<Null, string>(){ Value = message.Body.Value});
+            }
+            catch (ProduceException<Null, string> exception)
+            {
+                _logger.Value.ErrorException(
+                    "Error sending message to Kafka servers {0} because {1} ", 
+                    exception, 
+                    _producerConfig.BootstrapServers, 
+                    exception.Error.Reason
+                    );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", exception);
+            }
         }
 
         protected virtual void Dispose(bool disposing)
