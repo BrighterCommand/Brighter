@@ -243,7 +243,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     Connection.Exchange.Name,
                     Connection.AmpqUri.GetSanitizedUri());
                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", endOfStreamException);
-             }
+            }
             catch (BrokerUnreachableException bue)
             {
                 _logger.Value.ErrorException(
