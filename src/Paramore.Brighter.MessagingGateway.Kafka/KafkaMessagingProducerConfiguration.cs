@@ -88,6 +88,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public KafkaMessagingProducerConfiguration()
         {
+            Acks = Confluent.Kafka.Acks.All;
+            MessageTimeout = TimeSpan.FromMilliseconds(5000);
         }
 
     }
