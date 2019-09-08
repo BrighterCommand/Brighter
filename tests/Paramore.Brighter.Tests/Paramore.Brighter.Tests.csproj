@@ -38,7 +38,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="FakeItEasy" Version="5.1.1" />
+    <PackageReference Include="FakeItEasy" Version="5.2.0" />
     <PackageReference Include="FluentAssertions" Version="5.9.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <DotNetCliToolReference Include="dotnet-xunit" Version="2.3.1" />
