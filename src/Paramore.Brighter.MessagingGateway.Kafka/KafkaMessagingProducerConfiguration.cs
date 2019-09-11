@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Maximum time, in milliseconds, for buffering data 
         ///on the producer queue.
         /// </summary>
-        public TimeSpan? QueueBufferingMax { get; set; }
+        public int? QueueBufferingMax { get; set; }
 
         /// <summary>
         /// The acks parameter controls how many 
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The backoff time before retrying 
         /// a message send.
         /// </summary>
-        public TimeSpan? RetryBackoff { get; set; }
+        public int? RetryBackoff { get; set; }
 
         /// <summary>
         /// Maximum number of messages batched in one MessageSet. 
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 	    /// This value is only enforced by the broker and relies 
 	    /// on Acks being != AcksEnum.None.",
         /// </summary>
-        public TimeSpan? RequestTimeout { get; set; }
+        public int? RequestTimeout { get; set; }
 
         /// <summary>
         /// Local message timeout. "
@@ -84,12 +84,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 	    /// produced message waits for successful delivery. 
         ///  A time of 0 is infinite.
         /// </summary>
-        public TimeSpan? MessageTimeout { get; set; }
+        public int? MessageTimeout { get; set; }
 
         public KafkaMessagingProducerConfiguration()
         {
             Acks = Confluent.Kafka.Acks.All;
-            MessageTimeout = TimeSpan.FromMilliseconds(5000);
+            MessageTimeout = 5000;
         }
 
     }
