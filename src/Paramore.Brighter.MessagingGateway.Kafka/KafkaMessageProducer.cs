@@ -48,10 +48,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 QueueBufferingMaxKbytes = producerConfiguration.QueueBufferingMaxKbytes,
                 MessageSendMaxRetries = producerConfiguration.MessageSendMaxRetries,
                 BatchNumMessages = producerConfiguration.BatchNumberMessages,
-                LingerMs = producerConfiguration.QueueBufferingMax?.Milliseconds,
-                RequestTimeoutMs = producerConfiguration.RequestTimeout?.Milliseconds,
-                MessageTimeoutMs = producerConfiguration.MessageTimeout?.Milliseconds,
-                RetryBackoffMs = producerConfiguration.RetryBackoff?.Milliseconds
+                LingerMs = producerConfiguration.QueueBufferingMax,
+                RequestTimeoutMs = producerConfiguration.RequestTimeout,
+                MessageTimeoutMs = producerConfiguration.MessageTimeout,
+                RetryBackoffMs = producerConfiguration.RetryBackoff
             };
 
             _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
