@@ -362,9 +362,9 @@ namespace Paramore.Brighter.Outbox.MySql
             var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+                CreateSqlParameter("@PageNumber", pageNumber),
+                CreateSqlParameter("@PageSize", pageSize),
+                CreateSqlParameter("@OutstandingSince", -1 * millisecondsDispatchedSince)
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
@@ -377,8 +377,8 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize)
+                CreateSqlParameter("@PageNumber", pageNumber),
+                CreateSqlParameter("@PageSize", pageSize)
             };
 
             var sql = string.Format("SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC", _configuration.OutBoxTableName);
@@ -392,9 +392,9 @@ namespace Paramore.Brighter.Outbox.MySql
             var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
+                CreateSqlParameter("@PageNumber", pageNumber),
+                CreateSqlParameter("@PageSize", pageSize),
+                CreateSqlParameter("@OutstandingSince", milliSecondsSinceAdded)
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
@@ -501,10 +501,10 @@ namespace Paramore.Brighter.Outbox.MySql
         private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            command.Parameters.Add(CreateSqlParameter("@MessageId", messageId));
+            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt));
             return command;
         }
         
