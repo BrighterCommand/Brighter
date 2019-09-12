@@ -171,11 +171,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var attributeDefinitions = new List<AttributeDefinition>();
             foreach (var item in fields)
             {
-                string attributeName = item.attribute.ConstructorArguments.Count == 0
-                    ? item.prop.Name
-                    : (string) item.attribute.ConstructorArguments.FirstOrDefault().Value;
+                var argumentCount = item.attribute.ConstructorArguments.Count;
+                var hasArguments =argumentCount > 0 ;
+                var hasName = hasArguments && item.attribute.ConstructorArguments.FirstOrDefault().Value is string;
+                var hasConverterOnly = argumentCount == 1 && !hasName;
+                var hasStorage = argumentCount == 2 && item.attribute.ConstructorArguments.Take(1).First().Value is string;
 
-                attributeDefinitions.Add(new AttributeDefinition(attributeName, GetDynamoDbType(item.prop.PropertyType)));
+                string attributeName = !hasName
+                    ? item.prop.Name
+                    : (string)item.attribute.ConstructorArguments.FirstOrDefault().Value;
+                
+                var hasNameAndConverter = argumentCount == 2 && !hasStorage;
+
+                attributeDefinitions.Add(new AttributeDefinition(attributeName, GetDynamoDbType(item.prop.PropertyType, hasConverterOnly || hasNameAndConverter)));
             }
 
             return attributeDefinitions;
@@ -330,7 +338,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         // Then we test for a string, and treat that explicitly as a string
         // If not we look for a byte array and treat it as binary
         // Everything else is unsupported in .NET
-        private ScalarAttributeType GetDynamoDbType(Type propertyType)
+        private ScalarAttributeType GetDynamoDbType(Type propertyType, bool hasonverter)
         {
             if (propertyType.IsPrimitive)
             {
@@ -345,6 +353,43 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             if (propertyType == typeof(byte[]))
             {
                 return ScalarAttributeType.B;
+            }
+
+            if (propertyType == typeof(string[]))
+            {
+                return new ScalarAttributeType("SS");
+            }
+
+            if (
+                propertyType == typeof(double[]) ||
+                propertyType == typeof(float[]) ||
+                propertyType == typeof(ulong[]) ||
+                propertyType == typeof(long[]) ||
+                propertyType == typeof(uint[]) ||
+                propertyType == typeof(int[]) ||
+                propertyType == typeof(ushort[]) ||
+                propertyType == typeof(short[])
+            )
+            {
+                return new ScalarAttributeType("NS");
+            }
+
+            if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(List<>))
+            {
+                return new ScalarAttributeType("L");
+            }
+
+            if (propertyType.IsGenericType && propertyType.GetGenericTypeDefinition() == typeof(Dictionary<,>))
+            {
+                return new ScalarAttributeType("M");
+            }
+
+            if (hasonverter)
+            {
+                //at this point we can't tie you to something we understand, so if you have a custom converter
+                //let's assume that you store it to a string
+                //N.B. List<T> turns into an 'L' already, even if you have a custom converter, so represent as that!
+                return ScalarAttributeType.S;
             }
 
             throw new NotSupportedException($"We can't convert {propertyType.Name} to a DynamoDb type. Avoid marking as an attribute and see if the lib can figure it out");

@@ -18,13 +18,17 @@ namespace Paramore.Brighter.DynamoDb.Extensions
         
         /// <summary>
         /// Build a table from a create table request
+        /// We filter out any attributes that are not B, S, or N because DynamoDB does not currently support
+        /// creation of these types via the API. As these are not used for hash or range keys they are not
+        /// required to store items in DynamoDB
         /// </summary>
         /// <param name="createTableRequest">The request to build tables from</param>
         /// <param name="ct"></param>
         /// <returns>The response to table creation</returns>
         public async Task<CreateTableResponse> Build(CreateTableRequest createTableRequest, CancellationToken ct = default(CancellationToken))
         {
-            return await _client.CreateTableAsync(createTableRequest, ct);
+            var modifiedTableRequest = RemoveNonSchemaAttributes(createTableRequest);
+            return await _client.CreateTableAsync(modifiedTableRequest, ct);
         }
 
         /// <summary>
@@ -89,7 +93,7 @@ namespace Paramore.Brighter.DynamoDb.Extensions
             } while (tableStates.Any(ts => !ts.IsReady));
         }
         
-        public async Task<(bool, IEnumerable<string>)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
+        public async Task<(bool exist, IEnumerable<string> missing)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
         {
             
             var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
@@ -108,13 +112,58 @@ namespace Paramore.Brighter.DynamoDb.Extensions
                 lastEvalutatedTableName = tablesResponse.LastEvaluatedTableName;
             } while (lastEvalutatedTableName != null);
 
-            return tableCheck.Any(kv => !kv.Value) ? 
+            return tableCheck.Any(kv => kv.Value) ? 
                 (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) : 
                 (false, Enumerable.Empty<string>());
 
         }
         
-       
+        public CreateTableRequest RemoveNonSchemaAttributes(CreateTableRequest tableRequest)
+        {
+            var keyMatchedAttributes = new List<AttributeDefinition>();
+            var existingAttributes = tableRequest.AttributeDefinitions;
+
+            foreach (var attribute in existingAttributes)
+            {
+                foreach (var keySchemaElement in tableRequest.KeySchema)
+                {
+                    if (keySchemaElement.AttributeName == attribute.AttributeName)
+                    {
+                        keyMatchedAttributes.Add(attribute);
+                        break;
+                    }
+                }
+
+                foreach (var index in tableRequest.GlobalSecondaryIndexes)
+                {
+                    foreach (var keySchemaElement in index.KeySchema)
+                    {
+                        if (keySchemaElement.AttributeName == attribute.AttributeName)
+                        {
+                            keyMatchedAttributes.Add(attribute);
+                            break;
+                        }
+                    } 
+                }
+
+                foreach (var index in tableRequest.LocalSecondaryIndexes)
+                {
+                    foreach (var keySchemaElement in index.KeySchema)
+                    {
+                        if (keySchemaElement.AttributeName == attribute.AttributeName)
+                        {
+                            keyMatchedAttributes.Add(attribute);
+                            break;
+                        }
+                    }
+                }
+            }
+
+            tableRequest.AttributeDefinitions = keyMatchedAttributes;
+            
+            return tableRequest;
+        }
+   
         private class DynamoDbTableStatus
         { 
             public string TableName { get; set; }
