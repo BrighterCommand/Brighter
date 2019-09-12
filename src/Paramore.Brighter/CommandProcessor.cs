@@ -617,7 +617,7 @@ namespace Paramore.Brighter
                 _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
 
                 RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
-                Retry(() => _outBox.MarkDispatched(messageId));
+                Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
             }
 
         }
@@ -641,13 +641,13 @@ namespace Paramore.Brighter
                 if (message == null)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
                 
-                 _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+                _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
              
                 await RetryAndBreakCircuitAsync(
                     async ct => await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext), 
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
-                await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId));
+                await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
             }
 
 
