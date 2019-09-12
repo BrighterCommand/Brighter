@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -528,13 +529,6 @@ namespace Paramore.Brighter.Outbox.MySql
                     ? DateTime.MinValue
                     : dr.GetDateTime(ordinal);
                 header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
-
-                var created = dr.GetOrdinal("Created");
-                var createdTimestamp = dr.IsDBNull(created)
-                    ? DateTime.MinValue
-                    : dr.GetDateTime(created);
-                
-                header.Bag.Add("Created", createdTimestamp);
 
                 var i = dr.GetOrdinal("HeaderBag");
                 var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
