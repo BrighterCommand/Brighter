@@ -185,7 +185,15 @@ internal class RmqMessagePublisher
                 basicProperties.ReplyTo = replyTo;
 
             if (headers != null && headers.Any())
+            {
+                //RMQ doesn't like anything other than a string in the header
+                if (headers.Any(header => header.Value.GetType() != typeof(string)))
+                {
+                    throw new ConfigurationException("Only pass string data as bag values to RMQ as cannot serialize .NET types");
+                }
+                    
                 basicProperties.Headers = headers;
+            }
 
             return basicProperties;
         }
