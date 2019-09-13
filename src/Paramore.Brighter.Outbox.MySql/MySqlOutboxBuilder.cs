@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -22,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.ComponentModel;
+
 namespace Paramore.Brighter.Outbox.MySql
 {
     public class MySqlOutboxBuilder
@@ -40,8 +43,15 @@ namespace Paramore.Brighter.Outbox.MySql
 	PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
 
+        /// <summary>
+        /// Get the DDL that describes the table we will store messages in
+        /// </summary>
+        /// <param name="tableName">The name of the table to store messages in</param>
+        /// <returns></returns>
         public static string GetDDL(string tableName)
         {
+            if (string.IsNullOrEmpty(tableName))
+                throw new InvalidEnumArgumentException($"You must provide a tablename for the message box table");
             return string.Format(OutboxDdl, tableName);
         }
     }
