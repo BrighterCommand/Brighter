@@ -1,4 +1,4 @@
-version: 8.0.{build}
+version: 9.0.{build}
 image: Ubuntu1804
 configuration: Release
 stack: jdk 11
@@ -14,7 +14,7 @@ dotnet_csproj:
   file: '**\*.props'
   version: '{version}'
   package_version: '{version}'
-  assembly_version: '8.0.0.0'
+  assembly_version: '9.0.0.0'
   file_version: '{version}'
   informational_version: '{version}'
 environment:
