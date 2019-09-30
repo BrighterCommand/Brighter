@@ -61,7 +61,9 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
             int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            var messagesSince = DateTime.UtcNow.AddMilliseconds(millisecondsDispatchedSince * -1);
+            var ago = millisecondsDispatchedSince * -1;
+            var now = DateTime.UtcNow;
+            var messagesSince = now.AddMilliseconds(ago);
             return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
         }
 
