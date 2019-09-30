@@ -22,42 +22,31 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>, IDisposable
+    internal class MyStepsValidationHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private static MyCommand s_command;
-        public static bool DisposeWasCalled { get; set; }
+        private static TRequest s_command;
 
-        public MyPreAndPostDecoratedHandler()
+        public MyStepsValidationHandler()
         {
             s_command = null;
-            DisposeWasCalled = false;
         }
 
-        [MyPreValidationHandler(2, HandlerTiming.Before)]
-        [MyPostLoggingHandler(1, HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand command)
+        public override TRequest Handle(TRequest command)
         {
             LogCommand(command);
             return base.Handle(command);
         }
 
-        public static bool ShouldReceive(MyCommand expectedCommand)
+        public static bool ShouldReceive(TRequest expectedCommand)
         {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+            return (s_command != null);
         }
 
-        private void LogCommand(MyCommand request)
+        private void LogCommand(TRequest request)
         {
             s_command = request;
-        }
-
-        public void Dispose()
-        {
-            DisposeWasCalled = true;
         }
     }
 }

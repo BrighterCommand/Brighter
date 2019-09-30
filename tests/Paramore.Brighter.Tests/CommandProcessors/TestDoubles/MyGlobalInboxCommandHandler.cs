@@ -22,23 +22,17 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>, IDisposable
+    internal class MyGlobalInboxCommandHandler : RequestHandler<MyCommand>
     {
         private static MyCommand s_command;
-        public static bool DisposeWasCalled { get; set; }
 
-        public MyPreAndPostDecoratedHandler()
+        public MyGlobalInboxCommandHandler()
         {
             s_command = null;
-            DisposeWasCalled = false;
         }
 
-        [MyPreValidationHandler(2, HandlerTiming.Before)]
-        [MyPostLoggingHandler(1, HandlerTiming.After)]
         public override MyCommand Handle(MyCommand command)
         {
             LogCommand(command);
@@ -53,11 +47,6 @@ namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
         private void LogCommand(MyCommand request)
         {
             s_command = request;
-        }
-
-        public void Dispose()
-        {
-            DisposeWasCalled = true;
         }
     }
 }

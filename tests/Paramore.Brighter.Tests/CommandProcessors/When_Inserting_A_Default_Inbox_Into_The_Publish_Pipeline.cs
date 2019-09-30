@@ -17,16 +17,16 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
         public CommandProcessorBuildDefaultInboxPublishTests()
         {
-            var handler = new MyEventHandler(new Dictionary<string, Guid>());
+            var handler = new MyGlobalInboxEventHandler(new Dictionary<string, Guid>());
             
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
-             subscriberRegistry.Add(typeof(MyEvent), typeof(MyEventHandler));
+             subscriberRegistry.Add(typeof(MyEvent), typeof(MyGlobalInboxEventHandler));
              
              var container = new TinyIoCContainer();
              var handlerFactory = new TinyIocHandlerFactory(container);
 
-             container.Register<MyEventHandler>(handler);
+             container.Register<MyGlobalInboxEventHandler>(handler);
              container.Register<IAmAnInbox>(_inbox);
               
              var retryPolicy = Policy
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _commandProcessor.Publish(@event);
             
             //assert we are in, and auto-context added us under our name
-            var boxed = _inbox.Exists<MyEvent>(@event.Id, typeof(MyEventHandler).FullName, 100);
+            var boxed = _inbox.Exists<MyEvent>(@event.Id, typeof(MyGlobalInboxEventHandler).FullName, 100);
             boxed.Should().BeTrue();
         }
         
