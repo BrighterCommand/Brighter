@@ -34,8 +34,8 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
                     new Dictionary<string, ProvisionedThroughput>()
                 ));
             TableName = createTableRequest.TableName;
-            (bool missing, IEnumerable<string> tables) hasTables = _dynamoDbTableBuilder.HasTables(new string[] {TableName}).Result;
-            if (hasTables.missing)
+            (bool exist, IEnumerable<string> tables) hasTables = _dynamoDbTableBuilder.HasTables(new string[] {TableName}).Result;
+            if (!hasTables.exist)
             {
                 var buildTable = _dynamoDbTableBuilder.Build(createTableRequest).Result;
                 _dynamoDbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
