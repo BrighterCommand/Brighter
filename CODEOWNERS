@@ -3,6 +3,6 @@
 
 # These owners will be the default owners for everything in
 # the repo. Unless a later match takes precedence,
-# @iancooper or @holytshirt will be requested for
+# @adam-white or @ian-cooper or @jaimal-chohan will be requested for
 # review when someone opens a pull request.
-*       @iancooper @holytshirt
+*       @adam-white @ian-cooper @jaimal-chohan
