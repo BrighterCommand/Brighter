@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Tests.CommandProcessors
             _inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyCommandHandler>();
+            registry.Register<MyCommand, MyGlobalInboxCommandHandler>();
             
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);

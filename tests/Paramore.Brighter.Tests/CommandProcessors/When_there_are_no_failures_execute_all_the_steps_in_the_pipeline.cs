@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
@@ -38,13 +39,13 @@ namespace Paramore.Brighter.Tests.CommandProcessors
         public CommandProcessorPipelineStepsTests()
         {
             var registry = new SubscriberRegistry();
-            registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
+            registry.Register<MyCommand, MyStepsPreAndPostDecoratedHandler>();
 
             var container = new TinyIoCContainer();
             var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPreAndPostDecoratedHandler>();
-            container.Register<IHandleRequests<MyCommand>, MyValidationHandler<MyCommand>>();
-            container.Register<IHandleRequests<MyCommand>, MyLoggingHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyStepsPreAndPostDecoratedHandler>();
+            container.Register<IHandleRequests<MyCommand>, MyStepsValidationHandler<MyCommand>>();
+            container.Register<IHandleRequests<MyCommand>, MyStepsLoggingHandler<MyCommand>>();
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -57,11 +58,11 @@ namespace Paramore.Brighter.Tests.CommandProcessors
 
 
             //_should_call_the_pre_validation_handler
-            MyValidationHandler<MyCommand>.ShouldReceive(_myCommand).Should().BeTrue();
+            MyStepsValidationHandler<MyCommand>.ShouldReceive(_myCommand).Should().BeTrue();
             //_should_send_the_command_to_the_command_handler
-            MyPreAndPostDecoratedHandler.ShouldReceive(_myCommand).Should().BeTrue();
+            MyStepsPreAndPostDecoratedHandler.ShouldReceive(_myCommand).Should().BeTrue();
             // _should_call_the_post_validation_handler
-            MyLoggingHandler<MyCommand>.Shouldreceive(_myCommand).Should().BeTrue();
+            MyStepsLoggingHandler<MyCommand>.Shouldreceive(_myCommand).Should().BeTrue();
         }
     }
 }

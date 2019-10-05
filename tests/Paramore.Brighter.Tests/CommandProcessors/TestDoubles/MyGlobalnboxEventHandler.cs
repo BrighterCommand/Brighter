@@ -23,41 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>, IDisposable
+    internal class MyGlobalInboxEventHandler : RequestHandler<MyEvent>
     {
-        private static MyCommand s_command;
-        public static bool DisposeWasCalled { get; set; }
+        private readonly IDictionary<string, Guid> _receivedMessages;
 
-        public MyPreAndPostDecoratedHandler()
+        public MyGlobalInboxEventHandler(IDictionary<string, Guid> receivedMessages)
         {
-            s_command = null;
-            DisposeWasCalled = false;
+            _receivedMessages = receivedMessages;
         }
 
-        [MyPreValidationHandler(2, HandlerTiming.Before)]
-        [MyPostLoggingHandler(1, HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand command)
+        public override MyEvent Handle(MyEvent command)
         {
-            LogCommand(command);
+            _receivedMessages.Add(nameof(MyEventHandler), command.Id);
             return base.Handle(command);
-        }
-
-        public static bool ShouldReceive(MyCommand expectedCommand)
-        {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
-        }
-
-        private void LogCommand(MyCommand request)
-        {
-            s_command = request;
-        }
-
-        public void Dispose()
-        {
-            DisposeWasCalled = true;
         }
     }
 }

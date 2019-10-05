@@ -26,33 +26,31 @@ using System;
 
 namespace Paramore.Brighter.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyPreAndPostDecoratedHandler : RequestHandler<MyCommand>, IDisposable
+    internal class MyStepsLoggingHandler<TRequest> : RequestHandler<TRequest>, IDisposable where TRequest : class, IRequest
     {
-        private static MyCommand s_command;
+        private TRequest _command;
         public static bool DisposeWasCalled { get; set; }
 
-        public MyPreAndPostDecoratedHandler()
+        public MyStepsLoggingHandler()
         {
-            s_command = null;
+            _command = null;
             DisposeWasCalled = false;
         }
 
-        [MyPreValidationHandler(2, HandlerTiming.Before)]
-        [MyPostLoggingHandler(1, HandlerTiming.After)]
-        public override MyCommand Handle(MyCommand command)
+        public override TRequest Handle(TRequest command)
         {
             LogCommand(command);
             return base.Handle(command);
         }
 
-        public static bool ShouldReceive(MyCommand expectedCommand)
+        public static bool Shouldreceive(TRequest expectedCommand)
         {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+            return (expectedCommand != null);
         }
 
-        private void LogCommand(MyCommand request)
+        private void LogCommand(TRequest request)
         {
-            s_command = request;
+            _command = request;
         }
 
         public void Dispose()

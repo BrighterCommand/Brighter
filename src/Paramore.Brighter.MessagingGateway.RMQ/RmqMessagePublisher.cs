@@ -186,10 +186,13 @@ internal class RmqMessagePublisher
 
             if (headers != null && headers.Any())
             {
-                //RMQ doesn't like anything other than a string in the header
-                if (headers.Any(header => header.Value.GetType() != typeof(string)))
+                //RMQ doesn't like anything other than a string or number in the header
+                if (headers.Any(header => 
+                    header.Value.GetType() != typeof(string) ||
+                    header.Value.GetType().IsPrimitive 
+                    ))
                 {
-                    throw new ConfigurationException("Only pass string data as bag values to RMQ as cannot serialize .NET types");
+                    throw new ConfigurationException("Only pass primitive types as header values to RMQ as cannot serialize .NET types");
                 }
                     
                 basicProperties.Headers = headers;
