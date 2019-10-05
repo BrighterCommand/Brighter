@@ -121,49 +121,82 @@ namespace Paramore.Brighter.DynamoDb.Extensions
         public CreateTableRequest RemoveNonSchemaAttributes(CreateTableRequest tableRequest)
         {
             var keyMatchedAttributes = new List<AttributeDefinition>();
+            
+            //get the unfiltered markup
             var existingAttributes = tableRequest.AttributeDefinitions;
 
             foreach (var attribute in existingAttributes)
             {
-                foreach (var keySchemaElement in tableRequest.KeySchema)
+                var added = AddKeyUsedFields(tableRequest, attribute, keyMatchedAttributes);
+
+                if (!added)
                 {
-                    if (keySchemaElement.AttributeName == attribute.AttributeName)
-                    {
-                        keyMatchedAttributes.Add(attribute);
-                        break;
-                    }
+                     added = AddGobalSecondaryIndexUsedFields(tableRequest, attribute, keyMatchedAttributes);
                 }
 
-                foreach (var index in tableRequest.GlobalSecondaryIndexes)
+                if (!added)
                 {
-                    foreach (var keySchemaElement in index.KeySchema)
-                    {
-                        if (keySchemaElement.AttributeName == attribute.AttributeName)
-                        {
-                            keyMatchedAttributes.Add(attribute);
-                            break;
-                        }
-                    } 
-                }
-
-                foreach (var index in tableRequest.LocalSecondaryIndexes)
-                {
-                    foreach (var keySchemaElement in index.KeySchema)
-                    {
-                        if (keySchemaElement.AttributeName == attribute.AttributeName)
-                        {
-                            keyMatchedAttributes.Add(attribute);
-                            break;
-                        }
-                    }
+                    AddLocalSecondaryIndexUsedFields(tableRequest, attribute, keyMatchedAttributes);
                 }
             }
 
+            //swap for the filtered list
             tableRequest.AttributeDefinitions = keyMatchedAttributes;
             
             return tableRequest;
         }
-   
+
+        private static bool AddLocalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
+            List<AttributeDefinition> keyMatchedAttributes)
+        {
+            foreach (var index in tableRequest.LocalSecondaryIndexes)
+            {
+                foreach (var keySchemaElement in index.KeySchema)
+                {
+                    if (keySchemaElement.AttributeName == attribute.AttributeName)
+                    {
+                        keyMatchedAttributes.Add(attribute);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AddGobalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
+            List<AttributeDefinition> keyMatchedAttributes)
+        {
+            foreach (var index in tableRequest.GlobalSecondaryIndexes)
+            {
+                foreach (var keySchemaElement in index.KeySchema)
+                {
+                    if (keySchemaElement.AttributeName == attribute.AttributeName)
+                    {
+                        keyMatchedAttributes.Add(attribute);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool AddKeyUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
+            List<AttributeDefinition> keyMatchedAttributes)
+        {
+            foreach (var keySchemaElement in tableRequest.KeySchema)
+            {
+                if (keySchemaElement.AttributeName == attribute.AttributeName)
+                {
+                    keyMatchedAttributes.Add(attribute);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private class DynamoDbTableStatus
         { 
             public string TableName { get; set; }
