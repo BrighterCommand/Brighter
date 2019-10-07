@@ -20,7 +20,7 @@ steps:
   displayName: Run services
   inputs:
     action: Run services
-    dockerComposeFile: docker-compose.yml
+    dockerComposeFile: docker-compose.yaml
     projectName: $(Build.Repository.Name)
     qualifyImageNames: true
     buildImages: true
