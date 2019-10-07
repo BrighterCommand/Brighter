@@ -16,7 +16,18 @@ steps:
 - script: dotnet build --configuration $(buildConfiguration)
   displayName: 'dotnet build $(buildConfiguration)'
 
-- script: dotnet test --configuration $(buildConfiguration) --nobuild
+- task: DockerCompose@0
+  displayName: Run services
+  inputs:
+    action: Run services
+    dockerComposeFile: docker-compose.yml
+    projectName: $(Build.Repository.Name)
+    qualifyImageNames: true
+    buildImages: true
+    abortOnContainerExit: true
+    detached: false
+
+- script: dotnet test --configuration $(buildConfiguration) --no-build
   displayName: 'dotnet test $(buildConfiguration)'
 
 
