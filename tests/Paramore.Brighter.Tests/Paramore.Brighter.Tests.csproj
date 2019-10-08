@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration" Version="3.0.0" />
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.101.70" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.0.0" />y
+    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="3.0.0" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="3.0.0" />
     <PackageReference Include="MySqlConnector" Version="0.59.0" />
     <PackageReference Include="Serilog.Sinks.TestCorrelator" Version="3.2.0" />
