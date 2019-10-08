@@ -16,8 +16,11 @@ steps:
 - script: sudo service mysql stop
   displayName: service mysql stop
 
-- script: dotnet build --configuration $(buildConfiguration)
+- task: DotNetCoreCLI@2
   displayName: 'dotnet build $(buildConfiguration)'
+  inputs:
+    command: 'build'
+    arguments: '--configuration $(buildConfiguration)'
 
 - task: DockerCompose@0
   displayName: Run services for tests
@@ -26,8 +29,12 @@ steps:
     dockerComposeFile: 'docker-compose.yaml'
     action: 'Run services'
 
-- script: dotnet test -v normal --configuration $(buildConfiguration) --no-build --logger trx --filter "Category!=AWS&Category!=RESTMS"
-  displayName: 'dotnet test $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --logger trx --filter "Category!=AWS&Category!=RESTMS"'
+    testRunTitle: 'dotnet test $(buildConfiguration)'
 
 - task: PublishTestResults@2
   displayName: Publish Test Results
