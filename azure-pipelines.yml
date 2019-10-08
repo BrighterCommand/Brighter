@@ -30,9 +30,8 @@ steps:
     dockerComposeFile: 'docker-compose.yaml'
     action: 'Run services'
 
-- task: Delay@1
-  inputs:
-    delayForMinutes: '0.5'
+- script: sleep 20
+  displayName: sleep 20
 
 - script: docker ps
   displayName: docker ps
