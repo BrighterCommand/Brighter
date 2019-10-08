@@ -41,7 +41,7 @@ steps:
   timeoutInMinutes: 10
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=RESTMS"'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=RESTMS&Category=Redis"'
     testRunTitle: 'Test run on ubuntu'
 
 - task: PublishTestResults@2
