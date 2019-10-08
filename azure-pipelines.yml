@@ -26,8 +26,17 @@ steps:
     dockerComposeFile: 'docker-compose.yaml'
     action: 'Run services'
 
-- script: dotnet test --configuration $(buildConfiguration) --no-build
+- script: dotnet test -v normal --configuration $(buildConfiguration) --no-build --logger trx --filter "Category!=AWS&Category!=RESTMS&Category!=Kafka"
   displayName: 'dotnet test $(buildConfiguration)'
+
+- task: PublishTestResults@2
+  displayName: Publish Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testRunTitle: "Ubuntu (dotnet core 2.1)"
+    platform: "Ubuntu"
+    testRunner: VSTest
+    testResultsFiles: '**/*.trx'
 
 
 
