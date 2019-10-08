@@ -30,15 +30,15 @@ steps:
     dockerComposeFile: 'docker-compose.yaml'
     action: 'Run services'
 
-- script: sleep 20
-  displayName: sleep 20
+- script: sleep 60
+  displayName: sleep 60
 
 - script: docker ps
   displayName: docker ps
 
 - task: DotNetCoreCLI@2
   displayName: 'dotnet test $(buildConfiguration)'
-  timeoutInMinutes: 5
+  timeoutInMinutes: 10
   inputs:
     command: 'test'
     arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=RESTMS"'
