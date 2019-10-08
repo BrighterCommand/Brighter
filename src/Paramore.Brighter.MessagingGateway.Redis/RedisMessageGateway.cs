@@ -42,10 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 OverrideRedisClientDefaults();
 
-                return new RedisManagerPool(
-                    GatewayConfiguration.RedisConnectionString,
-                    new RedisPoolConfig()
-                );
+                return new RedisManagerPool(GatewayConfiguration.RedisConnectionString, new RedisPoolConfig());
             });
  
         }
