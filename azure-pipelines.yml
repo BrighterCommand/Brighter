@@ -31,10 +31,11 @@ steps:
 
 
 - task: DotNetCoreCLI@2
+  displayName: 'dotnet test $(buildConfiguration)'
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --logger trx --filter "Category!=AWS&Category!=RESTMS"'
-    testRunTitle: 'dotnet test $(buildConfiguration)'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=RESTMS"'
+    testRunTitle: 'Test run on ubuntu'
 
 - task: PublishTestResults@2
   displayName: Publish Test Results
