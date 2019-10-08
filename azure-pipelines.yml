@@ -26,7 +26,7 @@ steps:
     dockerComposeFile: 'docker-compose.yaml'
     action: 'Run services'
 
-- script: dotnet test -v normal --configuration $(buildConfiguration) --no-build --logger trx --filter "Category!=AWS&Category!=RESTMS&Category!=Kafka"
+- script: dotnet test -v normal --configuration $(buildConfiguration) --no-build --logger trx --filter "Category!=RESTMS"
   displayName: 'dotnet test $(buildConfiguration)'
 
 - task: PublishTestResults@2
