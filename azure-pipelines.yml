@@ -13,7 +13,7 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: service mysql stop
+- script: sudo service mysql stop
   displayName: service mysql stop
 
 - script: dotnet build --configuration $(buildConfiguration)
