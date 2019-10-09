@@ -49,6 +49,8 @@ namespace Paramore.Brighter.Outbox.EventStore
 
         private readonly IEventStoreConnection _eventStore;
 
+        public static readonly string StreamArg = "streamid";
+
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
@@ -136,14 +138,36 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="pageNumber">page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for search, if any</param>
          /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+        public IList<Message> Get(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
         {
-            throw new NotImplementedException();
+            return GetAsync(pageSize, pageNumber, args).Result;
         }
 
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            if (args is null)
+                throw new ArgumentNullException(nameof(args));
+            
+            if (!args.ContainsKey(StreamArg))
+                throw new ArgumentException($"{StreamArg} missing", nameof(args));
+
+            var stream = args[StreamArg] as string;
+            
+            if (string.IsNullOrEmpty(stream))
+                throw new ArgumentException($"{StreamArg} value must not be null or empty", nameof(args));
+
+            var fromEventNumber = pageSize * (pageNumber - 1);
+            
+            var eventStreamSlice = await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, pageSize, true);
+            
+            return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
         }
         
         /// <summary>
