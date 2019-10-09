@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             
             //send & receive a message
             _redisFixture.MessageProducer.Send(_messageOne);
-            var message = _redisFixture.MessageConsumer.Receive(3000).Single();
+            var message = _redisFixture.MessageConsumer.Receive(1000).Single();
             message.Header.HandledCount.Should().Be(0);
             message.Header.DelayedMilliseconds.Should().Be(0);
             
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
             _redisFixture.MessageConsumer.Requeue(_messageOne, 1000);
             
             //receive and assert
-            message = _redisFixture.MessageConsumer.Receive(3000).Single();
+            message = _redisFixture.MessageConsumer.Receive(1000).Single();
             message.Header.HandledCount.Should().Be(1);
             message.Header.DelayedMilliseconds.Should().Be(1000);
         }

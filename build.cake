@@ -56,7 +56,7 @@ Task("AllUnitTests")
             {
                 Configuration = configuration,
                 NoBuild = true,
-                Filter = "Category!=AWS&Category!=RESTMS&Category!=RMQDelay&Category!=Kafka&Category!=Redis",
+                Filter = "Category!=RESTMS",
                 Verbosity  = DotNetCoreVerbosity.Minimal
             };
           DotNetCoreTest("./tests/Paramore.Brighter.Tests/Paramore.Brighter.Tests.csproj", settings);

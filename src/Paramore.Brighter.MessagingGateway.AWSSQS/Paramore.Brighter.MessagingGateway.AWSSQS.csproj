@@ -9,9 +9,9 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.SQS" Version="3.3.102.11" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.101.68" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.103.43" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.3.102.13" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.101.70" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.103.45" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" />
   </ItemGroup>
 </Project>

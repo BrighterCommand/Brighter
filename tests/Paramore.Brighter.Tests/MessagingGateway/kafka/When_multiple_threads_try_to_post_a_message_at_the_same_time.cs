@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -31,6 +31,7 @@ using Xunit;
 namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
 {
     [Collection("Kafka")]
+    [Trait("Category", "Kafka")]
     public class KafkaMessageProducerSupportsMultipleThreadsTests : KafkaIntegrationTestBase
     {
         [Theory, MemberData(nameof(ServerParameters))]

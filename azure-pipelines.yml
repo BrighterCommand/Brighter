@@ -13,21 +13,50 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: dotnet build --configuration $(buildConfiguration)
+- script: sudo service mysql stop
+  displayName: service mysql stop
+
+- task: DotNetCoreCLI@2
   displayName: 'dotnet build $(buildConfiguration)'
+  inputs:
+    command: 'build'
+    arguments: '--configuration $(buildConfiguration)'
 
 - task: DockerCompose@0
-  displayName: Run services
+  displayName: Run services for tests
+  timeoutInMinutes: 5
   inputs:
-    action: Run services
-    dockerComposeFile: docker-compose.yaml
-    projectName: $(Build.Repository.Name)
-    qualifyImageNames: true
-    buildImages: true
-    abortOnContainerExit: true
-    detached: false
+    containerregistrytype: 'Azure Container Registry'
+    dockerComposeFile: 'docker-compose.yaml'
+    action: 'Run services'
 
-- script: dotnet test --configuration $(buildConfiguration) --no-build
+- script: sleep 60
+  displayName: sleep 60
+
+- script: docker ps
+  displayName: docker ps
+
+- task: DotNetCoreCLI@2
   displayName: 'dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 10
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=RESTMS&Category!=Kafka"'
+    testRunTitle: 'Test run on ubuntu'
+
+- task: PublishTestResults@2
+  displayName: Publish Test Results
+  condition: succeededOrFailed()
+  inputs:
+    testRunTitle: "Ubuntu (dotnet core 2.1)"
+    platform: "Ubuntu"
+    testRunner: VSTest
+    testResultsFiles: '**/*.trx'
+
+
+
+
+
+  
 
 
