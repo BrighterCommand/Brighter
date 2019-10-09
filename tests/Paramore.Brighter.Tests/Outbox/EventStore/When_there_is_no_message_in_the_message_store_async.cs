@@ -30,7 +30,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.OutBox.EventStore
 {
-    [Category("EventStore")]
+    [Trait("Category", "EventStore")]
+    [Collection("EventStore")]
     public class EventStoreEmptyAsyncTests : EventStoreFixture
     {
         [Fact]
