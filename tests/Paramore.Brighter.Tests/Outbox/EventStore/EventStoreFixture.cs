@@ -51,6 +51,8 @@ namespace Paramore.Brighter.Tests.OutBox.EventStore
             };
 
             await Connection.ConnectAsync();
+            
+            EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
 
             StreamName = $"{Guid.NewGuid()}";
         }
