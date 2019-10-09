@@ -22,6 +22,22 @@ steps:
     command: 'build'
     arguments: '--configuration $(buildConfiguration)'
 
+- task: DotNetCoreCLI@2
+  displayName: 'fast tests - dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=DynamoDB&Category!=EventStore&Category!=Kafka&Category!=MSSQL&Category!=MySql&Category!=PostgreSql&Category!=RESTMS&Category!=RMQ&Category!=Redis&Category!=Sqlite"'
+    testRunTitle: 'Fast tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'AWS & Sqlite dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=AWS&Category=Sqlite"'
+    testRunTitle: 'AWS & Sqlite tests running on ubuntu'
+
 - task: DockerCompose@0
   displayName: Run services for tests
   timeoutInMinutes: 5
@@ -37,26 +53,12 @@ steps:
   displayName: docker ps
 
 - task: DotNetCoreCLI@2
-  displayName: 'dotnet test $(buildConfiguration)'
-  timeoutInMinutes: 10
+  displayName: 'Tests that need docker infrastructure dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=RESTMS&Category!=Kafka"'
-    testRunTitle: 'Test run on ubuntu'
-
-- task: PublishTestResults@2
-  displayName: Publish Test Results
-  condition: succeededOrFailed()
-  inputs:
-    testRunTitle: "Ubuntu (dotnet core 2.1)"
-    platform: "Ubuntu"
-    testRunner: VSTest
-    testResultsFiles: '**/*.trx'
-
-
-
-
-
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=DynamoDB&Category=EventStore&Category=Kafka&Category=MSSQL&Category=MySql&Category=PostgreSql&Category=RMQ&Category=Redis"'
+    testRunTitle: 'DynamoDB,EventStore,Kafka,MSSQL,MySql,PostgreSql,RMQ,Redis,Sqlite tests running on ubuntu'
   
 
 
