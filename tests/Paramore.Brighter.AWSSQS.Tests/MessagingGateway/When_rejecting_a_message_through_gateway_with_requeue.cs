@@ -1,14 +1,13 @@
 using System;
 using Amazon;
-using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Newtonsoft.Json;
+using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Collection("AWS")]
     [Trait("Category", "AWS")]
@@ -30,11 +29,11 @@ namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
             _correlationId = Guid.NewGuid();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
-            _topicName = _myCommand.GetType().FullName.ToString().ToValidSNSTopicName();
+            _topicName = AWSNameExtensions.ToValidSNSTopicName((string) _myCommand.GetType().FullName.ToString());
             
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
-                new MessageBody(JsonConvert.SerializeObject(_myCommand))
+                new MessageBody(JsonConvert.SerializeObject((object) _myCommand))
             );
             
             //Must have credentials stored in the SDK Credentials store or shared credentials file

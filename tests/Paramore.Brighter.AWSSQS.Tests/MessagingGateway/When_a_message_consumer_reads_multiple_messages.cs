@@ -2,11 +2,11 @@
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
+using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.AWSSQS
+namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Collection("AWS")]
     [Trait("Category", "AWS")]
