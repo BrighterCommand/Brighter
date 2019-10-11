@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,24 +24,24 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
+namespace Paramore.Brighter.RMQ._Tests.MessagingGateway
 {
     [Collection("RMQ")]
     [Trait("Category", "RMQ")]
-    public class RmqMessageProducerSendMessageTests : IDisposable
+    public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
     {
         private readonly IAmAMessageProducer _messageProducer;
-        private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _message;
 
-        public RmqMessageProducerSendMessageTests()
+        public RmqMessageProducerSupportsMultipleThreadsTests()
         {
             _message = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), "nonexistenttopic", MessageType.MT_COMMAND), 
                 new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -51,21 +51,27 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
             };
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
-            _messageConsumer = new RmqMessageConsumer(rmqConnection, _message.Header.Topic, _message.Header.Topic, false, false);
-
-            new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
         }
 
         [Fact]
-        public void When_posting_a_message_via_the_messaging_gateway()
+        public void When_multiple_threads_try_to_post_a_message_at_the_same_time()
         {
-            _messageProducer.Send(_message);
+            bool exceptionHappened = false;
+            try
+            {
+                Parallel.ForEach(Enumerable.Range(0, 10), _ =>
+                {
+                    _messageProducer.Send(_message);
+                });
+            }
+            catch (Exception)
+            {
+                exceptionHappened = true;
+            }
 
-            var result = _messageConsumer.Receive(10000).First(); 
-
-            //_should_send_a_message_via_rmq_with_the_matching_body
-            result.Body.Value.Should().Be(_message.Body.Value);
-       }
+            //_should_not_throw
+            exceptionHappened.Should().BeFalse();
+        }
 
         public void Dispose()
         {

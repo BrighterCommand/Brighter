@@ -25,15 +25,16 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.Tests.MessagingGateway.TestDoubles;
+using Paramore.Brighter.RMQ.Tests;
+using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.RMQ 
+namespace Paramore.Brighter.RMQ._Tests.MessagingGateway
 {
     [Collection("RMQ")]
     [Trait("Category", "RMQ")]
-    public class RmqMessageConsumerConnectionClosedTests : IDisposable
+    public class RmqMessageConsumerOperationInterruptedTests : IDisposable
     {
         private readonly IAmAMessageProducer _sender;
         private readonly IAmAMessageConsumer _receiver;
@@ -41,9 +42,9 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
         private readonly Message _sentMessage;
         private Exception _firstException;
 
-        public RmqMessageConsumerConnectionClosedTests()
+        public RmqMessageConsumerOperationInterruptedTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(),  Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
+            var messageHeader = new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND);
 
             messageHeader.UpdateHandledCount();
             _sentMessage = new Message(messageHeader, new MessageBody("test content"));
@@ -56,21 +57,20 @@ namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
 
             _sender = new RmqMessageProducer(rmqConnection);
             _receiver = new RmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, false);
-            _badReceiver = new AlreadyClosedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
+            _badReceiver = new OperationInterruptedRmqMessageConsumer(rmqConnection, _sentMessage.Header.Topic, _sentMessage.Header.Topic, false, 1, false);
 
             _sender.Send(_sentMessage);
         }
 
         [Fact]
-        public void When_a_message_consumer_throws_an_already_closed_exception_when_connecting()
+        public void  When_a_message_consumer_throws_an_operation_interrupted_exception_when_connecting()
         {
             _firstException = Catch.Exception(() => _badReceiver.Receive(2000));
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();
-            
             //_should_return_an_explainging_inner_exception
-            _firstException.InnerException.Should().BeOfType<AlreadyClosedException>();
+            _firstException.InnerException.Should().BeOfType<OperationInterruptedException>();
         }
 
         public void Dispose()

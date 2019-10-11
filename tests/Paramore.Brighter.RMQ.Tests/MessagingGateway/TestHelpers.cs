@@ -22,14 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.RMQ
+namespace Paramore.Brighter.RMQ._Tests.MessagingGateway
 {
 
     internal class QueueFactory

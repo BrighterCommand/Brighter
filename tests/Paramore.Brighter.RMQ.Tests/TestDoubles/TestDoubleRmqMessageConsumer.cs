@@ -27,7 +27,7 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Exceptions;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.TestDoubles
+namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     /*
      * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure
