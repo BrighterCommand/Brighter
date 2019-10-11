@@ -23,39 +23,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
+namespace Paramore.Brighter.Kafka.Tests.TestDoubles
 {
-    [Collection("Kafka")]
-    [Trait("Category", "Kafka")]
-    public class KafkaMessageProducerSupportsMultipleThreadsTests : KafkaIntegrationTestBase
+    internal class MyCommand : Command
     {
-        [Theory, MemberData(nameof(ServerParameters))]
-        public void When_multiple_threads_try_to_post_a_message_at_the_same_time(string bootStrapServer)
-        {
-            using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
-            {
-                bool exceptionHappened = false;
-                var message = CreateMessage("nonexistenttopic", "test content");
-                try
-                {
-                    Parallel.ForEach(Enumerable.Range(0, 10), _ =>
-                    {
-                        producer.Send(message);
-                    });
-                }
-                catch (Exception)
-                {
-                    exceptionHappened = true;
-                }
+        public MyCommand()
+            :base(Guid.NewGuid()) 
+            
+        {}
 
-                //_should_not_throw
-                exceptionHappened.Should().BeFalse();
-            }
-        }
+        public string Value { get; set; }
+        public bool WasCancelled { get; set; }
+        public bool TaskCompleted { get; set; }
     }
 }

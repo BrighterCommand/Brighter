@@ -21,11 +21,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
 #endregion
+
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.MessagingGateway.Kafka;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.Kafka
+namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     public class KafkaIntegrationTestBase : IDisposable
     {
