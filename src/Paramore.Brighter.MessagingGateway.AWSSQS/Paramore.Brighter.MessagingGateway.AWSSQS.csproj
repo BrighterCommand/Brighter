@@ -11,7 +11,7 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.SQS" Version="3.3.102.13" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.3.101.70" />
-    <PackageReference Include="AWSSDK.Core" Version="3.3.103.45" />
+    <PackageReference Include="AWSSDK.Core" Version="3.3.103.49" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" />
   </ItemGroup>
 </Project>
