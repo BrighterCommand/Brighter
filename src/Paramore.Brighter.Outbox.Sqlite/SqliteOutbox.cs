@@ -207,7 +207,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
            using (var connection = GetConnection())
            {
@@ -224,7 +224,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
            using (var connection = GetConnection())
            {

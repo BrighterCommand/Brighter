@@ -172,7 +172,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
             {
