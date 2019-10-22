@@ -152,17 +152,8 @@ namespace Paramore.Brighter.Outbox.EventStore
             Dictionary<string, object> args = null, 
             CancellationToken cancellationToken = default)
         {
-            if (args is null)
-                throw new ArgumentNullException(nameof(args));
+            string stream = GetStreamFromArgs(args);
             
-            if (!args.ContainsKey(StreamArg))
-                throw new ArgumentException($"{StreamArg} missing", nameof(args));
-
-            var stream = args[StreamArg] as string;
-            
-            if (string.IsNullOrEmpty(stream))
-                throw new ArgumentException($"{StreamArg} value must not be null or empty", nameof(args));
-
             var fromEventNumber = pageSize * (pageNumber - 1);
             
             var eventStreamSlice = await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, pageSize, true);
@@ -331,5 +322,19 @@ namespace Paramore.Brighter.Outbox.EventStore
             return headerBagWithoutExtras;
         }
 
+        private static string GetStreamFromArgs(Dictionary<string, object> args)
+        {
+            if (args is null)
+                throw new ArgumentNullException(nameof(args));
+
+            if (!args.ContainsKey(StreamArg))
+                throw new ArgumentException($"{StreamArg} missing", nameof(args));
+
+            var stream = args[StreamArg] as string;
+
+            if (string.IsNullOrEmpty(stream))
+                throw new ArgumentException($"{StreamArg} value must not be null or empty", nameof(args));
+            return stream;
     }
+}
 }
