@@ -50,6 +50,8 @@ namespace Paramore.Brighter.Outbox.EventStore
         private readonly IEventStoreConnection _eventStore;
 
         public static readonly string StreamArg = "streamid";
+        public static readonly string DispatchedAtKey = "dispatchedAt";
+        public static readonly string PreviousEventIdKey = "previousEventId";
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -226,8 +228,38 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+            var stream = GetStreamFromArgs(args);
+            
+            StreamEventsSlice slice;
+            var startPos = (long) StreamPosition.End;
+            long? nextEventNumber = null;
+            RecordedEvent resolvedEvent;
+            bool found = false;
+            
+            do
+            {
+                slice = await _eventStore.ReadStreamEventsBackwardAsync(stream, startPos, 100, true);
+                startPos = slice.NextEventNumber;
+
+                if (nextEventNumber is null)
+                    nextEventNumber = (await _eventStore.ReadStreamEventsBackwardAsync(stream, StreamPosition.End, 1, true)).LastEventNumber;
+
+                resolvedEvent = slice.Events.FirstOrDefault(e => e.Event.EventId == id).Event;
+
+                if (resolvedEvent != null)
+                    found = true;
+
+            } while(!found && !slice.IsEndOfStream);
+
+            if (resolvedEvent is null)
+                return;
+
+            var message = ConvertEventToMessage(resolvedEvent, stream, dispatchedAt, nextEventNumber.Value);
+
+            var headerBag = message.Header.Bag;
+            var eventData = CreateEventData(message, headerBag);
+
+            await _eventStore.AppendToStreamAsync(stream, nextEventNumber.Value, eventData);
         }
           
         /// <summary>
@@ -237,8 +269,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+            MarkDispatchedAsync(id, dispatchedAt, args).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -259,11 +290,16 @@ namespace Paramore.Brighter.Outbox.EventStore
             throw new NotImplementedException();
         }
 
-        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber,
-            string stream)
+        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber, string stream, DateTime? dispatchedDate = null, Guid? previousEventId = null)
         {
             messageHeader.Bag.Add("streamId", stream);
             messageHeader.Bag.Add("eventNumber", eventNumber);
+
+            if (dispatchedDate != null)
+            {
+                messageHeader.Bag.Add(DispatchedAtKey, dispatchedDate);
+                messageHeader.Bag.Add(PreviousEventIdKey, previousEventId);
+            }
 
             var metadataJson =
                 JsonConvert.DeserializeObject<Dictionary<string, object>>(Encoding.UTF8.GetString(metadata));
@@ -285,13 +321,19 @@ namespace Paramore.Brighter.Outbox.EventStore
             return new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};
         }
 
-        private static Message ConvertEventToMessage(RecordedEvent @event, string stream)
+        private static Message ConvertEventToMessage(RecordedEvent @event, string stream, DateTime? dispatchedAt = null, long? eventNumber = null)
         {
             var messageBody = new MessageBody(Encoding.UTF8.GetString(@event.Data));
-            var messageHeader =
-                new MessageHeader(@event.EventId, @event.EventType, MessageType.MT_EVENT, @event.Created);
 
-            AddMetadataToHeader(@event.Metadata, messageHeader, @event.EventNumber, stream);
+            var eventId = dispatchedAt is null ? @event.EventId : Guid.NewGuid();
+
+            if (eventNumber is null)
+                eventNumber = @event.EventNumber;
+            
+            var messageHeader =
+                new MessageHeader(eventId, @event.EventType, MessageType.MT_EVENT, @event.Created);
+
+            AddMetadataToHeader(@event.Metadata, messageHeader, eventNumber.Value, stream, dispatchedAt, @event.EventId);
 
             return new Message(messageHeader, messageBody);
         }
