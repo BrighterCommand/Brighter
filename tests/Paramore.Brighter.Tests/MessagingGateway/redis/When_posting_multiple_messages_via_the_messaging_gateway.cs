@@ -33,18 +33,18 @@ namespace Paramore.Brighter.Tests.MessagingGateway.redis
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
-            _redisFixture.MessageConsumer.Receive(30000); 
+            _redisFixture.MessageConsumer.Receive(1000); 
             
             //Send a sequence of messages, we want to check that ordering is preserved
             _redisFixture.MessageProducer.Send(_messageOne);
             _redisFixture.MessageProducer.Send(_messageTwo);
             
             //Now receive, and confirm order off is order on
-            var sentMessageOne = _redisFixture.MessageConsumer.Receive(30000).Single();
+            var sentMessageOne = _redisFixture.MessageConsumer.Receive(1000).Single();
             var messageBodyOne = sentMessageOne.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageOne);
             
-            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(30000).Single();
+            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(1000).Single();
             var messageBodyTwo = sentMessageTwo.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageTwo);
             

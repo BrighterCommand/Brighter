@@ -7,6 +7,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.Outbox.MsSql
 {
+    [Trait("Category", "MSSQL")]
+    [Collection("MSSQL OutBox")]
     public class OutstandingMessagesTests 
     {
         private readonly Message _dispatchedMessage;

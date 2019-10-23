@@ -42,8 +42,8 @@ Task("LiteUnitTests")
             {
                 Configuration = configuration,
                 NoBuild = true,
-                Filter = "Category!=RMQ&Category!=RMQDelay&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis&Category!=PostgreSql&Category!=MySql&Category!=MSSQL&Category!=DynamoDB",
-                Verbosity  = DotNetCoreVerbosity.Minimal
+                Filter = "Category!=RMQ&Category!=RMQDelay&Category!=AWS&Category!=RESTMS&Category!=Kafka&Category!=Redis&Category!=PostgreSql&Category!=MySql&Category!=MSSQL&Category!=DynamoDB&Category!=Eventstore",
+                Verbosity  = DotNetCoreVerbosity.Normal
             };
           DotNetCoreTest("./tests/Paramore.Brighter.Tests/Paramore.Brighter.Tests.csproj", settings);
         });
@@ -56,8 +56,8 @@ Task("AllUnitTests")
             {
                 Configuration = configuration,
                 NoBuild = true,
-                Filter = "Category!=AWS&Category!=RESTMS&Category!=RMQDelay&Category!=Kafka&Category!=Redis",
-                Verbosity  = DotNetCoreVerbosity.Minimal
+                Filter = "Category!=RESTMS",
+                Verbosity  = DotNetCoreVerbosity.Normal
             };
           DotNetCoreTest("./tests/Paramore.Brighter.Tests/Paramore.Brighter.Tests.csproj", settings);
         });

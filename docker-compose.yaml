@@ -5,7 +5,7 @@ services:
     build:
       context: ./Docker/RabbitMQ/
       dockerfile: Dockerfile
-    image: rabbitmq:3-management-delay
+    image: rabbitmq:3.8-management-delay
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -51,8 +51,8 @@ services:
     image: postgres
     volumes:
       - postgres-data:/var/lib/postgresql
-      - postgres-config:/etc/postgresql
-      - postgres-logs:/var/log/postgresql
+      - postgres-data:/etc/postgresql
+      - postgres-data:/var/log/postgresql
     ports:
       - "5432:5432"
     environment:
@@ -102,27 +102,13 @@ networks:
 volumes:
   rabbitmq-home:
     driver: local
-  redis-master-data:
-    driver: local
-  redis-slave-data:
-    driver: local
   eventstore-data:
-    driver: local
-  redis-s1-data:
-    driver: local
-  redis-s2-data:
-    driver: local
-  redis-s3-data:
     driver: local
   mysql-data:
     driver: local
   sqlserver-data:
     driver: local
   postgres-data:
-    driver: local
-  postgres-config:
-    driver: local
-  postgres-logs:
     driver: local
   dynamodb:
     driver: local

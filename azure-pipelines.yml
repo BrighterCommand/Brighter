@@ -13,21 +13,52 @@ variables:
   buildConfiguration: 'Release'
 
 steps:
-- script: dotnet build --configuration $(buildConfiguration)
+- script: sudo service mysql stop
+  displayName: service mysql stop
+
+- task: DotNetCoreCLI@2
   displayName: 'dotnet build $(buildConfiguration)'
+  inputs:
+    command: 'build'
+    arguments: '--configuration $(buildConfiguration)'
+
+- task: DotNetCoreCLI@2
+  displayName: 'fast tests - dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=DynamoDB&Category!=EventStore&Category!=Kafka&Category!=MSSQL&Category!=MySql&Category!=PostgreSql&Category!=RESTMS&Category!=RMQ&Category!=Redis&Category!=Sqlite"'
+    testRunTitle: 'Fast tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'AWS & Sqlite dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=AWS&Category=Sqlite"'
+    testRunTitle: 'AWS & Sqlite tests running on ubuntu'
 
 - task: DockerCompose@0
-  displayName: Run services
+  displayName: Run services for tests
+  timeoutInMinutes: 5
   inputs:
-    action: Run services
-    dockerComposeFile: docker-compose.yaml
-    projectName: $(Build.Repository.Name)
-    qualifyImageNames: true
-    buildImages: true
-    abortOnContainerExit: true
-    detached: false
+    containerregistrytype: 'Azure Container Registry'
+    dockerComposeFile: 'docker-compose.yaml'
+    action: 'Run services'
 
-- script: dotnet test --configuration $(buildConfiguration) --no-build
-  displayName: 'dotnet test $(buildConfiguration)'
+- script: sleep 60
+  displayName: sleep 60
+
+- script: docker ps
+  displayName: docker ps
+
+- task: DotNetCoreCLI@2
+  displayName: 'Tests that need docker infrastructure dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=DynamoDB&Category=EventStore&Category=Kafka&Category=MSSQL&Category=MySql&Category=PostgreSql&Category=RMQ&Category=Redis"'
+    testRunTitle: 'DynamoDB,EventStore,Kafka,MSSQL,MySql,PostgreSql,RMQ,Redis,Sqlite tests running on ubuntu'
+  
 
 
