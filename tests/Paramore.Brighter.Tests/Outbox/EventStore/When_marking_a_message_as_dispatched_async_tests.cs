@@ -7,6 +7,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Tests.OutBox.EventStore
 {
+    [Trait("Category", "EventStore")]
+    [Collection("EventStore Outbox")]
     public class EventStoreOutboxMarkDispatchedAsyncTests : EventStoreFixture
     {
         [Fact]
