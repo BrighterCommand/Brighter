@@ -286,8 +286,48 @@ namespace Paramore.Brighter.Outbox.EventStore
             int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
-            //TODO: Implement outstanding message support
-            throw new NotImplementedException();
+            var stream = GetStreamFromArgs(args);
+            var sentBefore = DateTime.UtcNow.AddMilliseconds(millSecondsSinceSent * -1);
+            
+            var fromEventNumber = pageSize * (pageNumber - 1);
+            
+            var eventStreamSlice = _eventStore.ReadStreamEventsBackwardAsync(stream, fromEventNumber, pageSize, true).Result;
+
+            var messages = eventStreamSlice.Events
+                .Where(e => e.Event.Created <= sentBefore)
+                .Select(e => ConvertEventToMessage(e.Event, stream))
+                .ToList();
+
+            HashSet<Guid> dispatchedIds = new HashSet<Guid>();
+            List<Message> outstandingMessages = new List<Message>();
+
+            foreach (var message in messages)
+            {
+                var dispatchedAt = message.Header.Bag.ContainsKey(DispatchedAtKey) 
+                    ? message.Header.Bag[DispatchedAtKey] as string 
+                    : null;
+
+                if (dispatchedAt is null)
+                {
+                    outstandingMessages.Add(message);
+                    continue;
+                }
+
+                var previousEventId = message.Header.Bag[PreviousEventIdKey] as string;
+                
+                if (!Guid.TryParse(previousEventId, out Guid eventId))
+                    continue;
+
+                if (!dispatchedIds.Contains(eventId))
+                {
+                    dispatchedIds.Add(eventId);
+                    continue;
+                }
+
+                outstandingMessages.Add(message);
+            }
+
+            return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
         }
 
         private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber, string stream, DateTime? dispatchedDate = null, Guid? previousEventId = null)
