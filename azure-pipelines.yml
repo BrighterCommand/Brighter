@@ -19,6 +19,14 @@ steps:
 - script: sudo service mysql stop
   displayName: service mysql stop
 
+- task: AWSCLI@1
+  inputs:
+    awsCredentials: 'Brighter SNS Tests'
+    regionName: 'eu-west-2'
+    awsCommand: 'configure'
+    awsSubCommand: 'get'
+    awsArguments: 'region --profile default'
+
 - task: PowerShell@2
   inputs:
     targetType: 'inline'
