@@ -23,8 +23,8 @@ steps:
   inputs:
     awsCredentials: 'Brighter SNS Tests'
     regionName: 'eu-west-2'
-    awsCommand: 'iam'
-    awsSubCommand: 'get-user'
+    awsCommand: 'configure'
+    awsSubCommand: 'list'
 
 - task: PowerShell@2
   inputs:
