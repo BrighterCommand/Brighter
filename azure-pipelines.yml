@@ -11,13 +11,24 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  Version.MajorMinor: 9.0
+  Version.MajorMinor: '9.0'
   Version.Revision: $[counter(variables['Version.MajorMinor'], 0)]
 
 
 steps:
 - script: sudo service mysql stop
   displayName: service mysql stop
+
+- task: AWSShellScript@1
+  inputs:
+    awsCredentials: 'Brighter SNS Tests'
+    regionName: 'eu-west-2'
+    scriptType: 'inline'
+    inlineScript: |
+      aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+      aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+      aws configure set region $AWS_DEFAULT_REGION
+    failOnStandardError: true
 
 - task: AWSCLI@1
   inputs:
