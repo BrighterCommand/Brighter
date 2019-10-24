@@ -1,4 +1,4 @@
-﻿namespace Paramore.Brighter.Tests.MessagingGateway.TestDoubles
+﻿namespace Paramore.Brighter.Redis.Tests.TestDoubles
 {
     public class ConnectingToPoolFailedRedisMessageConsumer
     {

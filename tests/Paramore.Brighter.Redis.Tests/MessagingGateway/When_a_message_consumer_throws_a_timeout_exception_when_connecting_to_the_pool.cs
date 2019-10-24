@@ -1,10 +1,10 @@
 ﻿using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Redis;
-using Paramore.Brighter.Tests.MessagingGateway.TestDoubles;
+using Paramore.Brighter.Redis.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.redis
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
     [Collection("Redis")]
     [Trait("Category", "Redis")]

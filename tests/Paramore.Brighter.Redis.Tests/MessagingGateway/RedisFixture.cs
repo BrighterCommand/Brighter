@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Brighter.MessagingGateway.Redis;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.redis
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
     public class RedisFixture : IDisposable
     {

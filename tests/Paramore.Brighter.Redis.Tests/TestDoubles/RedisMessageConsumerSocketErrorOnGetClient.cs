@@ -1,9 +1,8 @@
-﻿using System;
-using System.Net.Sockets;
+﻿using System.Net.Sockets;
 using Paramore.Brighter.MessagingGateway.Redis;
 using ServiceStack.Redis;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.TestDoubles
+namespace Paramore.Brighter.Redis.Tests.TestDoubles
 {
     public class RedisMessageConsumerSocketErrorOnGetClient : RedisMessageConsumer
     {

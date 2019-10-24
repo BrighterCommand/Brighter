@@ -2,7 +2,7 @@
 using Paramore.Brighter.MessagingGateway.Redis;
 using ServiceStack.Redis;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.TestDoubles
+namespace Paramore.Brighter.Redis.Tests.TestDoubles
 {
     public class RedisMessageConsumerTimeoutOnGetClient : RedisMessageConsumer
     {

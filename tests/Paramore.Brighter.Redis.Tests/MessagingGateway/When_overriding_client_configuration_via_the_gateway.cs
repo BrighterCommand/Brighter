@@ -4,7 +4,7 @@ using Paramore.Brighter.MessagingGateway.Redis;
 using ServiceStack.Redis;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.redis
+namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
     [Collection("Redis")]
     [Trait("Category", "Redis")]

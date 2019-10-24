@@ -159,6 +159,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.AWSSQS.Te
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Kafka.Tests", "tests\Paramore.Brighter.Kafka.Tests\Paramore.Brighter.Kafka.Tests.csproj", "{28BC78DD-0B4E-4C45-957A-85DED8E55AAD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Redis.Tests", "tests\Paramore.Brighter.Redis.Tests\Paramore.Brighter.Redis.Tests.csproj", "{9064D9EE-2A98-4EB1-94E1-6732F1981A44}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -769,6 +771,18 @@ Global
 		{28BC78DD-0B4E-4C45-957A-85DED8E55AAD}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{28BC78DD-0B4E-4C45-957A-85DED8E55AAD}.Release|x86.ActiveCfg = Release|Any CPU
 		{28BC78DD-0B4E-4C45-957A-85DED8E55AAD}.Release|x86.Build.0 = Release|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Debug|x86.Build.0 = Debug|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Release|x86.ActiveCfg = Release|Any CPU
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -815,6 +829,7 @@ Global
 		{6494BB0C-728D-43CB-B3DA-E56E8D0E4938} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{FDD6E413-2BC4-4450-A9A6-E8BD2EF86052} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{28BC78DD-0B4E-4C45-957A-85DED8E55AAD} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{9064D9EE-2A98-4EB1-94E1-6732F1981A44} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
