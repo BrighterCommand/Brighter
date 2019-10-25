@@ -23,37 +23,41 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Amazon;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Outbox.DynamoDB;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
-    [Collection("DynamoDB OutBox")]
-    public class DynamoDbOutboxMessageAlreadyExistsTests : DynamoDBOutboxBaseTest
+    [Collection("DynamoDB Inbox")]
+    public class DynamoDbInboxDuplicateMessageAsyncTests : DynamoDBInboxBaseTest
     {
-        private readonly Message _messageEarliest;
-
+        private readonly DynamoDbInbox _dynamoDbInbox;
+        private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
         private Exception _exception;
-        private DynamoDbOutbox _dynamoDbOutbox;
 
-        public DynamoDbOutboxMessageAlreadyExistsTests()
-        {            
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
-            
-            _dynamoDbOutbox.AddAsync(_messageEarliest).Wait();
-         }
+        public DynamoDbInboxDuplicateMessageAsyncTests()
+        {
+            _dynamoDbInbox = new DynamoDbInbox(Client);
+ 
+            _raisedCommand = new MyCommand {Value = "Test"};
+            _contextKey = "context-key";
+        }
 
         [Fact]
-        public void When_the_message_is_already_in_the_outbox()
+        public async Task When_the_message_is_already_in_the_Inbox_async()
         {
-            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest));
+            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
 
-            //_should_ignore_the_duplicate_key_and_still_succeed
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.AddAsync(_raisedCommand, _contextKey));
+
+            //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
         }
+
     }
 }

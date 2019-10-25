@@ -23,38 +23,42 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
-using Paramore.Brighter.Outbox.DynamoDB;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
+using Paramore.Brighter.Inbox.DynamoDB;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
-    [Collection("DynamoDB OutBox")]
-    public class DynamoDbOutboxMessageAlreadyExistsAsyncTests : DynamoDBOutboxBaseTest
-    {        
-        private readonly Message _messageEarliest;
+    [Collection("DynamoDB Inbox")]
+    public class DynamoDbInboxAddMessageTests : DynamoDBInboxBaseTest
+    {
+        private readonly DynamoDbInbox _dynamoDbInbox;
+        private readonly MyCommand _raisedCommand;
+        private readonly string _contextKey;
+        private MyCommand _storedCommand;
 
-        private Exception _exception;
-        private DynamoDbOutbox _dynamoDbOutbox;
-
-        public DynamoDbOutboxMessageAlreadyExistsAsyncTests()
-        {                                  
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+        public DynamoDbInboxAddMessageTests()
+        {
+            _dynamoDbInbox = new DynamoDbInbox(Client);
+            
+            _raisedCommand = new MyCommand {Value = "Test"};
+            _contextKey = "context-key";
+            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
-        public async Task When_the_message_is_already_in_the_outbox_async()
+        public void When_writing_a_message_to_the_inbox()
         {
-            await _dynamoDbOutbox.AddAsync(_messageEarliest);
+            _storedCommand = _dynamoDbInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest));            
-
-            //_should_ignore_the_duplicate_key_and_still_succeed
-            _exception.Should().BeNull();
+            //_should_read_the_command_from_the__dynamo_db_inbox
+            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            //_should_read_the_command_value
+            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            //_should_read_the_command_id
+            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
         }
     }
 }

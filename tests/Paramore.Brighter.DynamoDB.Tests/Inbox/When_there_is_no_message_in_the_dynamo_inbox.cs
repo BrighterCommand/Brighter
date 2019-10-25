@@ -23,14 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Amazon;
 using FluentAssertions;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
@@ -47,7 +46,7 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         public void When_There_Is_No_Message_In_The_Inbox()
         {
             var exception = Catch.Exception(() => _dynamoDbInbox.Get<MyCommand>(Guid.NewGuid(), "some key"));
-            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
    }
 }

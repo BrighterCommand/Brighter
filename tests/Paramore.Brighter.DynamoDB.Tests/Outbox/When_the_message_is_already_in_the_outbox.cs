@@ -22,53 +22,38 @@ THE SOFTWARE. */
 
 #endregion
 
-
 using System;
 using Amazon;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.DynamoDB;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 {
     [Trait("Category", "DynamoDB")]
-    [Collection("DynamoDB Inbox")]
-    public class DynamoDbImboxDuplicateMessageTests : DynamoDBInboxBaseTest
+    [Collection("DynamoDB OutBox")]
+    public class DynamoDbOutboxMessageAlreadyExistsTests : DynamoDBOutboxBaseTest
     {
-        private readonly DynamoDbInbox _dynamoDbInbox;
-        private readonly string _contextKey;
-        private readonly MyCommand _raisedCommand;
+        private readonly Message _messageEarliest;
 
         private Exception _exception;
+        private DynamoDbOutbox _dynamoDbOutbox;
 
-        public DynamoDbImboxDuplicateMessageTests()
-        {
-            _dynamoDbInbox = new DynamoDbInbox(Client);
-            _raisedCommand = new MyCommand { Value = "Test" };
-            _contextKey = "context-key";
-            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
-        }
+        public DynamoDbOutboxMessageAlreadyExistsTests()
+        {            
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            
+            _dynamoDbOutbox.AddAsync(_messageEarliest).Wait();
+         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox()
+        public void When_the_message_is_already_in_the_outbox()
         {
-            _exception = Catch.Exception(() => _dynamoDbInbox.Add(_raisedCommand, _contextKey));
+            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest));
 
-            //_should_succeed_even_if_the_message_is_a_duplicate
+            //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();
         }
-
-        [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
-        {
-            _dynamoDbInbox.Add(_raisedCommand, "some other key");
-
-            var storedCommand = _dynamoDbInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
-
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            storedCommand.Should().NotBeNull();
-        }
-
     }
 }

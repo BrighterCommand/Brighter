@@ -29,7 +29,7 @@ using Paramore.Brighter.MessagingGateway.RESTMS;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
+namespace Paramore.Brighter.RESTMS.Tests.MessagingGateway
 {
     [Trait("Category", "RESTMS")]
     public class RestMsMessageProducerSendTests : IDisposable

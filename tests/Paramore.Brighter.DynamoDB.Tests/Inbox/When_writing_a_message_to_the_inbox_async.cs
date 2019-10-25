@@ -24,41 +24,42 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
-using Amazon;
 using FluentAssertions;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
-    public class DynamoDbInboxDuplicateMessageAsyncTests : DynamoDBInboxBaseTest
+    public class DynamoDbInboxAddMessageAsyncTests : DynamoDBInboxBaseTest
     {
         private readonly DynamoDbInbox _dynamoDbInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private Exception _exception;
+        private MyCommand _storedCommand;
 
-        public DynamoDbInboxDuplicateMessageAsyncTests()
+        public DynamoDbInboxAddMessageAsyncTests()
         {
             _dynamoDbInbox = new DynamoDbInbox(Client);
- 
-            _raisedCommand = new MyCommand {Value = "Test"};
+            
+            _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "context-key";
+            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
-        public async Task When_the_message_is_already_in_the_Inbox_async()
+        public async Task When_writing_a_message_to_the_inbox()
         {
-            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
+            _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            _exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.AddAsync(_raisedCommand, _contextKey));
-
-            //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
+            //_should_read_the_command_from_the__dynamo_db_inbox
+            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            //_should_read_the_command_value
+            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            //_should_read_the_command_id
+            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
         }
-
     }
 }

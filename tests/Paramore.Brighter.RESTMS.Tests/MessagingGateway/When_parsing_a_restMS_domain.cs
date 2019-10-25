@@ -27,7 +27,7 @@ using Paramore.Brighter.MessagingGateway.RESTMS.Model;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.MessagingGateway.RESTMS
+namespace Paramore.Brighter.RESTMS.Tests.MessagingGateway
 {
     [Trait("Category", "RESTMS")]
     public class ParseRestMSResultTests

@@ -4,32 +4,32 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Paramore.Brighter.DynamoDb.Extensions;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Outbox.DynamoDB;
 
-namespace Paramore.Brighter.Tests.Outbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
-    public class DynamoDBOutboxBaseTest : IDisposable
+    public abstract class DynamoDBInboxBaseTest : IDisposable
     {
         private bool _disposed;
         private DynamoDbTableBuilder _dynamoDbTableBuilder;
+        protected AWSCredentials Credentials { get; private set; }
         protected string TableName { get; }
-        protected AWSCredentials Credentials { get; set; }
         public IAmazonDynamoDB Client { get; }
-        
-        protected DynamoDBOutboxBaseTest ()
+
+        protected DynamoDBInboxBaseTest()
         {
+            //required by AWS 2.2
+            Environment.SetEnvironmentVariable("AWS_ENABLE_ENDPOINT_DISCOVERY", "false");
+            
             Client = CreateClient();
             _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
-            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<MessageItem>(
-                    new DynamoDbCreateProvisionedThroughput(
+            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<CommandItem<MyCommand>>(
+                new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                    new Dictionary<string, ProvisionedThroughput>
-                    {
-                        {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
-                        {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
-                    }
+                    new Dictionary<string, ProvisionedThroughput>()
                 ));
             TableName = createTableRequest.TableName;
             (bool exist, IEnumerable<string> tables) hasTables = _dynamoDbTableBuilder.HasTables(new string[] {TableName}).Result;
@@ -40,16 +40,12 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
             }
         }
 
-
-        protected IAmazonDynamoDB CreateClient()
+        private IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
-            
-            var clientConfig = new AmazonDynamoDBConfig
-            {
-                ServiceURL = "http://localhost:8000"
 
-            };
+            var clientConfig = new AmazonDynamoDBConfig();
+            clientConfig.ServiceURL = "http://localhost:8000";
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
  
@@ -61,7 +57,7 @@ namespace Paramore.Brighter.Tests.Outbox.DynamoDB
             GC.SuppressFinalize(this);
         }
 
-        ~DynamoDBOutboxBaseTest()
+        ~DynamoDBInboxBaseTest()
         {
             Dispose(false);
         }

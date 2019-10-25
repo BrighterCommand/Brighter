@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,14 +24,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Amazon;
 using FluentAssertions;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB Inbox")]
@@ -46,8 +46,9 @@ namespace Paramore.Brighter.Tests.Inbox.DynamoDB
         [Fact]
         public async void When_There_Is_No_Message_In_The_Sql_Inbox()
         {
-            var exception = await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
-            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+            var exception =
+                await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
+            AssertionExtensions.Should((object)exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
     }
 }

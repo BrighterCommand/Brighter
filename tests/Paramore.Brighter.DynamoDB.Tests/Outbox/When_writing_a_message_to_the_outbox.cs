@@ -23,44 +23,40 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 using Amazon;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 {
     [Trait("Category", "DynamoDB")]
     [Collection("DynamoDB OutBox")]
-    public class DynamoDbOutboxWritingMessageAsyncTests : DynamoDBOutboxBaseTest
+    public class DynamoDbOutboxWritingMessageTests : DynamoDBOutboxBaseTest
     {
         private readonly Message _messageEarliest;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
-
         private Message _storedMessage;
         private DynamoDbOutbox _dynamoDbOutbox;
 
-        public DynamoDbOutboxWritingMessageAsyncTests()
+        public DynamoDbOutboxWritingMessageTests()
         {
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
-
-            _messageEarliest = new Message(messageHeader, new MessageBody("message body"));            
             _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
  
+            _messageEarliest = new Message(messageHeader, new MessageBody("Body"));
+           _dynamoDbOutbox.Add(_messageEarliest);
         }
 
         [Fact]
-        public async Task When_writing_a_message_to_the_dynamo_db_outbox()
+        public void When_writing_a_message_to_the_dynamo_db_outbox()
         {
-            await _dynamoDbOutbox.AddAsync(_messageEarliest);
-
-            _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
 
             //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

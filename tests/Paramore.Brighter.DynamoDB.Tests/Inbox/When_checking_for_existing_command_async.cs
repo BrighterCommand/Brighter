@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Amazon;
-using Amazon.DynamoDBv2.DataModel;
 using FluentAssertions;
+using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
     public class DynamoDbCommandExistsAsyncTests : DynamoDBInboxBaseTest

@@ -26,41 +26,35 @@ using System;
 using System.Threading.Tasks;
 using Amazon;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.DynamoDB;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.DynamoDB
+namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 {
     [Trait("Category", "DynamoDB")]
-    [Collection("DynamoDB Inbox")]
-    public class DynamoDbInboxAddMessageAsyncTests : DynamoDBInboxBaseTest
-    {
-        private readonly DynamoDbInbox _dynamoDbInbox;
-        private readonly MyCommand _raisedCommand;
-        private readonly string _contextKey;
-        private MyCommand _storedCommand;
+    [Collection("DynamoDB OutBox")]
+    public class DynamoDbOutboxMessageAlreadyExistsAsyncTests : DynamoDBOutboxBaseTest
+    {        
+        private readonly Message _messageEarliest;
 
-        public DynamoDbInboxAddMessageAsyncTests()
-        {
-            _dynamoDbInbox = new DynamoDbInbox(Client);
-            
-            _raisedCommand = new MyCommand { Value = "Test" };
-            _contextKey = "context-key";
-            _dynamoDbInbox.Add(_raisedCommand, _contextKey);
+        private Exception _exception;
+        private DynamoDbOutbox _dynamoDbOutbox;
+
+        public DynamoDbOutboxMessageAlreadyExistsAsyncTests()
+        {                                  
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
         }
 
         [Fact]
-        public async Task When_writing_a_message_to_the_inbox()
+        public async Task When_the_message_is_already_in_the_outbox_async()
         {
-            _storedCommand = await _dynamoDbInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+            await _dynamoDbOutbox.AddAsync(_messageEarliest);
 
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            _storedCommand.Should().NotBeNull();
-            //_should_read_the_command_value
-            _storedCommand.Value.Should().Be(_raisedCommand.Value);
-            //_should_read_the_command_id
-            _storedCommand.Id.Should().Be(_raisedCommand.Id);
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest));            
+
+            //_should_ignore_the_duplicate_key_and_still_succeed
+            _exception.Should().BeNull();
         }
     }
 }
