@@ -36,7 +36,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Outbox.Sq
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Inbox.Sqlite", "src\Paramore.Brighter.Inbox.Sqlite\Paramore.Brighter.Inbox.Sqlite.csproj", "{5A8F1495-B8D2-4018-8B3D-6DA25A14290F}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Tests", "tests\Paramore.Brighter.Tests\Paramore.Brighter.Tests.csproj", "{9E0E5F11-2777-4789-BB09-C866BC5F800D}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Core.Tests", "tests\Paramore.Brighter.Core.Tests\Paramore.Brighter.Core.Tests.csproj", "{9E0E5F11-2777-4789-BB09-C866BC5F800D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessagingGateway.Redis", "src\Paramore.Brighter.MessagingGateway.Redis\Paramore.Brighter.MessagingGateway.Redis.csproj", "{091C19CA-31B8-4ECA-BA0B-ED229A6404C8}"
 EndProject
