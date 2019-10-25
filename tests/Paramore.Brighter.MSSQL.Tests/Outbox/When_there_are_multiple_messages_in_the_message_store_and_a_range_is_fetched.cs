@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -24,37 +24,52 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL OutBox")]
-    public class MsSqlOutboxEmptyStoreTests : IDisposable
+    public class MsSqlOutboxRangeRequestTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
-        private readonly Message _messageEarliest;
+        private readonly string _TopicFirstMessage = "test_topic";
+        private readonly string _TopicLastMessage = "test_topic3";
+        private IEnumerable<Message> _messages;
         private readonly MsSqlOutbox _sqlOutbox;
-        private Message _storedMessage;
 
-        public MsSqlOutboxEmptyStoreTests()
+        public MsSqlOutboxRangeRequestTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            _sqlOutbox.Add(messageEarliest);
+            Task.Delay(100);
+            _sqlOutbox.Add(message1);
+            Task.Delay(100);
+             _sqlOutbox.Add(message2);
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Outbox()
+        public void When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched()
         {
-            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
+            _messages = _sqlOutbox.Get(1, 3);
 
-            //_should_return_a_empty_message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            //_should_fetch_1_message
+            _messages.Should().HaveCount(1);
+            //_should_fetch_expected_message
+            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
+            //_should_not_fetch_null_messages
+            _messages.Should().NotBeNull();
         }
 
         public void Dispose()

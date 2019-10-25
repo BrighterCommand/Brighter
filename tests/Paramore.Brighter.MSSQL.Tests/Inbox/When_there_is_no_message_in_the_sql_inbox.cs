@@ -26,10 +26,10 @@ using System;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Inbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL Inbox")]
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Tests.Inbox.MsSql
             Guid commandId = Guid.NewGuid();
             var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]

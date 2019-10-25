@@ -24,23 +24,22 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL OutBox")]
-    public class MsSqlOutboxEmptyStoreAsyncTests : IDisposable
+    public class MsSqlOutboxEmptyStoreTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly Message _messageEarliest;
         private readonly MsSqlOutbox _sqlOutbox;
         private Message _storedMessage;
 
-        public MsSqlOutboxEmptyStoreAsyncTests()
+        public MsSqlOutboxEmptyStoreTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -50,9 +49,9 @@ namespace Paramore.Brighter.Tests.Outbox.MsSql
         }
 
         [Fact]
-        public async Task When_There_Is_No_Message_In_The_Sql_Outbox_Async()
+        public void When_There_Is_No_Message_In_The_Sql_Outbox()
         {
-            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
             //_should_return_a_empty_message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
@@ -62,5 +61,5 @@ namespace Paramore.Brighter.Tests.Outbox.MsSql
         {
             _msSqlTestHelper.CleanUpDb();
         }
-    }    
+    }
 }

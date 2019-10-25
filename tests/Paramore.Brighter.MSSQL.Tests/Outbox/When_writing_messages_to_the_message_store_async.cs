@@ -31,54 +31,68 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL OutBox")]
-    public class MsSqlOutboxRangeRequestAsyncTests : IDisposable
+    public class SqlOutboxWritingMessagesAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
-        private readonly string _TopicFirstMessage = "test_topic";
-        private readonly string _TopicLastMessage = "test_topic3";
-        private IEnumerable<Message> _messages;
-        private readonly Message _message1;
-        private readonly Message _message2;
-        private readonly Message _messageEarliest;
+        private Message _message2;
+        private Message _messageEarliest;
+        private Message _messageLatest;
+        private IList<Message> _retrievedMessages;
         private readonly MsSqlOutbox _sqlOutbox;
 
-        public MsSqlOutboxRangeRequestAsyncTests()
+        public SqlOutboxWritingMessagesAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
         }
 
         [Fact]
-        public async Task When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched_Async()
+        public async Task When_Writing_Messages_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
-            await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message1);
-            await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message2);
+            await SetUpMessagesAsync();
 
-             _messages = await _sqlOutbox.GetAsync(1, 3);
+            _retrievedMessages = await _sqlOutbox.GetAsync();
 
-            //_should_fetch_1_message
-            _messages.Should().HaveCount(1);
-            //_should_fetch_expected_message
-            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
-            //_should_not_fetch_null_messages
-            _messages.Should().NotBeNull();
+            //_should_read_first_message_last_from_the__outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //_should_read_last_message_first_from_the__outbox
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            // _should_read_the_messages_from_the__outbox
+            _retrievedMessages.Should().HaveCount(3);
         }
 
-        public void Dispose()
+        private async Task SetUpMessagesAsync()
+        {
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
+            await _sqlOutbox.AddAsync(_messageEarliest);
+
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
+            await _sqlOutbox.AddAsync(_message2);
+
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            await _sqlOutbox.AddAsync(_messageLatest);
+        }
+
+        private void Release()
         {
             _msSqlTestHelper.CleanUpDb();
+        }
+        
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            Release();
+        }
+
+        ~SqlOutboxWritingMessagesAsyncTests()
+        {
+            Release();
         }
     }
 }

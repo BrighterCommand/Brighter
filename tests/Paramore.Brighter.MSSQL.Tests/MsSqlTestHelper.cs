@@ -4,7 +4,7 @@ using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.MSSQL.Tests
 {
     public class MsSqlTestHelper
     {

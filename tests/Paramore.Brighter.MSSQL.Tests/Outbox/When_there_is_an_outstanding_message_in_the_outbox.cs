@@ -5,7 +5,7 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL OutBox")]

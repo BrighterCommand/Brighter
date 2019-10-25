@@ -24,23 +24,24 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MsSql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Inbox
 {
     [Trait("Category", "MSSQL")]
-    [Collection("MSSQL inbox")]
-    public class SqlInboxDuplicateMessageTests : IDisposable
+    [Collection("MSSQL Inbox")]
+    public class SqlInboxAddMessageTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly MsSqlInbox _sqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private Exception _exception;
+        private MyCommand _storedCommand;
 
-        public SqlInboxDuplicateMessageTests()
+        public SqlInboxAddMessageTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupCommandDb();
@@ -52,25 +53,26 @@ namespace Paramore.Brighter.Tests.Inbox.MsSql
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox()
+        public void When_Writing_A_Message_To_The_Inbox()
         {
-            _exception = Catch.Exception(() => _sqlInbox.Add(_raisedCommand, _contextKey));
+            _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
-            //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            _sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            //_should_read_the_command_from_the__sql_inbox
+            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            //_should_read_the_command_value
+            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            //_should_read_the_command_id
+            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
+        public void When_Reading_A_Message_From_The_Inbox_And_ContextKey_IsNull()
         {
-            _sqlInbox.Add(_raisedCommand, "some other key");
-
-            var storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
-
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            storedCommand.Should().NotBeNull();
+            var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, null));
+            //should_not_read_message
+            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
+
 
         public void Dispose()
         {

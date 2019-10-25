@@ -24,35 +24,37 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL OutBox")]
-    public class MsSqlOutboxMessageAlreadyExistsTests : IDisposable
+    public class MsSqlOutboxMessageAlreadyExistsAsyncTests : IDisposable
     {
         private Exception _exception;
         private readonly Message _messageEarliest;
         private readonly MsSqlOutbox _sqlOutbox;
         private readonly MsSqlTestHelper _msSqlTestHelper;
 
-        public MsSqlOutboxMessageAlreadyExistsTests()
+        public MsSqlOutboxMessageAlreadyExistsAsyncTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _sqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Outbox()
+        public async Task When_The_Message_Is_Already_In_The_Outbox_Async()
         {
-            _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest));
+            await _sqlOutbox.AddAsync(_messageEarliest);
+
+            _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest));
 
             //_should_ignore_the_duplcate_key_and_still_succeed
             _exception.Should().BeNull();

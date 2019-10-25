@@ -26,10 +26,10 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.MsSql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MSSQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MsSql
+namespace Paramore.Brighter.MSSQL.Tests.Inbox
 {
     [Trait("Category", "MSSQL")]
     [Collection("MSSQL Inbox")]
@@ -59,11 +59,11 @@ namespace Paramore.Brighter.Tests.Inbox.MsSql
             _storedCommand = await _sqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_inbox
-            _storedCommand.Should().NotBeNull();
+            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
             //_should_read_the_command_value
-            _storedCommand.Value.Should().Be(_raisedCommand.Value);
+            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            _storedCommand.Id.Should().Be(_raisedCommand.Id);
+            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
         }
 
         public void Dispose()
