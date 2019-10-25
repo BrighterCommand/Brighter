@@ -47,6 +47,5 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DynamoDbExtensions" />
-    <Folder Include="Outbox\Sqlite" />
   </ItemGroup>
 </Project>
