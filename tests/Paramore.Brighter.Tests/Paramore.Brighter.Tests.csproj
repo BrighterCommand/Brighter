@@ -47,5 +47,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DynamoDbExtensions" />
+    <Folder Include="Outbox\NoOpStore" />
   </ItemGroup>
 </Project>

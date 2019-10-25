@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -22,37 +23,32 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.ComponentModel;
-using System.Linq;
-using System.Threading.Tasks;
+using System;
 using FluentAssertions;
-using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.OutBox.EventStore
+namespace Paramore.Brighter.NoOpStore.Tests.Outbox
 {
-    [Trait("Category", "EventStore")]
-    [Collection("EventStore")]
-    public class EventStoreOutboxAsyncTests : EventStoreFixture
+    public class NoOpOutboxWriteTests
     {
-        [Fact]
-        public async Task When_Writing_Messages_To_The_Outbox_Async()
+        private readonly Message _messageEarliest;
+        private readonly NoOpOutbox _noOpStore;
+        private Exception _exception;
+
+        public NoOpOutboxWriteTests()
         {
-            // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            _noOpStore = new NoOpOutbox();
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _noOpStore.Add(_messageEarliest);
+        }
 
-            var message1 = CreateMessage(0, StreamName);
-            var message2 = CreateMessage(1, StreamName);
-            
-            // act
-            await eventStoreOutbox.AddAsync(message1);
-            await eventStoreOutbox.AddAsync(message2);           
-            
-            // assert
-            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 2);
+        [Fact]
+        public void When_writing_to_noopstore()
+        {
+            _exception = Catch.Exception(() => _noOpStore.Add(_messageEarliest));
 
-            messages.Count(m => MessagesEqualApartFromTimestamp(m, message1)).Should().Be(1);
-            messages.Count(m => MessagesEqualApartFromTimestamp(m, message2)).Should().Be(1);
+            //_should_not_cause_exception
+            _exception.Should().BeNull();
         }
     }
 }

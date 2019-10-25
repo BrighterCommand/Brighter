@@ -29,7 +29,7 @@ using EventStore.ClientAPI;
 using EventStore.ClientAPI.SystemData;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.OutBox.EventStore
+namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     public class EventStoreFixture : IAsyncLifetime
     {

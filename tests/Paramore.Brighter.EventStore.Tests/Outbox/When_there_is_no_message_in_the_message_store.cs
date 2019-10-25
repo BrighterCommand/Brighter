@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -22,36 +23,28 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.ComponentModel;
-using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.OutBox.EventStore
+namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore")]
-    public class EventStoreOutboxTests : EventStoreFixture
+    public class EventStoreEmptyTests : EventStoreFixture
     {
         [Fact]
-        public void When_Writing_Messages_To_The_Outbox_Async()
+        public void When_There_Is_No_Message_In_The_Outbox()
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-
-            var message1 = CreateMessage(0, StreamName);
-            var message2 = CreateMessage(1, StreamName);
             
             // act
-            eventStoreOutbox.Add(message1);
-            eventStoreOutbox.Add(message2);   
-            
-            // assert
-            var messages = eventStoreOutbox.Get(StreamName, 0, 2);
+            var messages = eventStoreOutbox.Get(StreamName, 0, 1);
 
-            messages.Count(m => MessagesEqualApartFromTimestamp(m, message1)).Should().Be(1);
-            messages.Count(m => MessagesEqualApartFromTimestamp(m, message2)).Should().Be(1);
+            // assert
+            //_returns_an_empty_list
+            messages.Count.Should().Be(0);
         }
     }
 }

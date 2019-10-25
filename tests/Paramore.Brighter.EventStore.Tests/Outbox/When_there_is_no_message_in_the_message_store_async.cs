@@ -1,5 +1,4 @@
 #region Licence
-
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -23,36 +22,29 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
+using System.Threading.Tasks;
 using FluentAssertions;
+using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.NoOpStore
+namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
-    public class NoOutboxReadTests
+    [Trait("Category", "EventStore")]
+    [Collection("EventStore")]
+    public class EventStoreEmptyAsyncTests : EventStoreFixture
     {
-        private readonly NoOpOutbox _noOpStore;
-        private Exception _exception;
-        private IList<Message> _messages;
-
-        public NoOutboxReadTests()
-        {
-            _noOpStore = new NoOpOutbox();
-            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _noOpStore.Add(messageEarliest);
-        }
-
         [Fact]
-        public void When_reading_from_noopstore()
+        public async Task When_There_Is_No_Message_In_The_Outbox()
         {
-            _exception = Catch.Exception(() => _messages = _noOpStore.Get());
+            // arrange
+            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            
+            // act
+            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);
 
-            //_should_not_cause_exception
-            _exception.Should().BeNull();
-            //_should_return_empty_list
-            _messages.Should().NotBeNull();
-            _messages.Should().BeEmpty();
+            // assert
+            //_returns_an_empty_list
+            messages.Count.Should().Be(0);
         }
-   }
+    }
 }

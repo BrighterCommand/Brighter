@@ -24,31 +24,35 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.NoOpStore
+namespace Paramore.Brighter.NoOpStore.Tests.Outbox
 {
-    public class NoOpOutboxWriteTests
+    public class NoOutboxReadTests
     {
-        private readonly Message _messageEarliest;
         private readonly NoOpOutbox _noOpStore;
         private Exception _exception;
+        private IList<Message> _messages;
 
-        public NoOpOutboxWriteTests()
+        public NoOutboxReadTests()
         {
             _noOpStore = new NoOpOutbox();
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _noOpStore.Add(_messageEarliest);
+            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _noOpStore.Add(messageEarliest);
         }
 
         [Fact]
-        public void When_writing_to_noopstore()
+        public void When_reading_from_noopstore()
         {
-            _exception = Catch.Exception(() => _noOpStore.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _messages = _noOpStore.Get());
 
             //_should_not_cause_exception
             _exception.Should().BeNull();
+            //_should_return_empty_list
+            _messages.Should().NotBeNull();
+            _messages.Should().BeEmpty();
         }
-    }
+   }
 }
