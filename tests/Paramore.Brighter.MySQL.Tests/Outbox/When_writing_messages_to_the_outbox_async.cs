@@ -31,50 +31,53 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql OutBox")]
-    public class MySqlOutboxRangeRequestTests : IDisposable
+    public class MySqlOutboxWritingMessagesAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
-        private readonly string _TopicFirstMessage = "test_topic";
-        private readonly string _TopicLastMessage = "test_topic3";
-        private IEnumerable<Message> messages;
-        private readonly Message _message1;
-        private readonly Message _message2;
-        private readonly Message _messageEarliest;
+        private Message _message2;
+        private Message _messageEarliest;
+        private Message _messageLatest;
+        private IList<Message> _retrievedMessages;
 
-        public MySqlOutboxRangeRequestTests()
+        public MySqlOutboxWritingMessagesAsyncTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
-
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _mySqlOutbox.Add(_messageEarliest);
-            Task.Delay(100);
-            _mySqlOutbox.Add(_message1);
-            Task.Delay(100);
-             _mySqlOutbox.Add(_message2);
         }
 
         [Fact]
-        public void When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched()
+        public async Task When_Writing_Messages_To_The_Outbox_Async()
         {
-            messages = _mySqlOutbox.Get(1, 3);
+            await SetUpMessagesAsync();
 
-            //_should_fetch_1_message
-            messages.Should().HaveCount(1);
-            //_should_fetch_expected_message
-            messages.First().Header.Topic.Should().Be(_TopicLastMessage);
-            //_should_not_fetch_null_messages
-            messages.Should().NotBeNull();
+            _retrievedMessages = await _mySqlOutbox.GetAsync();
+
+            //_should_read_first_message_last_from_the__outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //_should_read_last_message_first_from_the__outbox
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //_should_read_the_messages_from_the__outbox
+            _retrievedMessages.Should().HaveCount(3);
         }
 
+        private async Task SetUpMessagesAsync()
+        {
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
+            await _mySqlOutbox.AddAsync(_messageEarliest);
+
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
+            await _mySqlOutbox.AddAsync(_message2);
+
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            await _mySqlOutbox.AddAsync(_messageLatest);
+        }
+        
         public void Dispose()
         {
             _mySqlTestHelper.CleanUpDb();

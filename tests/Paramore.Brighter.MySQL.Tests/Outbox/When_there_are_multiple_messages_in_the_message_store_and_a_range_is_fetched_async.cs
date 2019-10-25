@@ -31,7 +31,7 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql OutBox")]

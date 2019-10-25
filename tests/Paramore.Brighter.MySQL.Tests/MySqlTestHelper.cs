@@ -4,7 +4,7 @@ using MySql.Data.MySqlClient;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Outbox.MySql;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.MySQL.Tests
 {
     public class MySqlTestHelper
     {

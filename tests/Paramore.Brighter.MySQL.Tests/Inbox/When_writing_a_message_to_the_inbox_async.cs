@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,44 +23,47 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MySQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Inbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql Inbox")]
-    public class SqlInboxEmptyWhenSearchedTests : IDisposable
+    public class MySqlInboxAddMessageAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mysqlTestHelper;
-        private readonly MySqlInbox _mysqlInBox;
+        private readonly MySqlInbox _mysqlInbox;
+        private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
+        private MyCommand _storedCommand;
 
-        public SqlInboxEmptyWhenSearchedTests()
+        public MySqlInboxAddMessageAsyncTests()
         {
             _mysqlTestHelper = new MySqlTestHelper();
             _mysqlTestHelper.SetupCommandDb();
 
-            _mysqlInBox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
+            _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
+            _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Inbox_Get()
+        public async Task When_Writing_A_Message_To_The_Inbox_Async()
         {
-            Guid commandId = Guid.NewGuid();
-            var exception = Catch.Exception(() => _mysqlInBox.Get<MyCommand>(commandId, _contextKey));
-            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
-        }
+            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey);
 
-        [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Inbox_Exists()
-        {
-            Guid commandId = Guid.NewGuid();
-            _mysqlInBox.Exists<MyCommand>(commandId, _contextKey).Should().BeFalse();
+            _storedCommand = await _mysqlInbox.GetAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+
+            //_should_read_the_command_from_the__sql_inbox
+            _storedCommand.Should().NotBeNull();
+            //_should_read_the_command_value
+            _storedCommand.Value.Should().Be(_raisedCommand.Value);
+            //_should_read_the_command_id
+            _storedCommand.Id.Should().Be(_raisedCommand.Id);
         }
 
         public void Dispose()

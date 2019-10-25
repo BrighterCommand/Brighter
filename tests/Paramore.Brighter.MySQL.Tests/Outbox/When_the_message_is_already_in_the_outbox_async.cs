@@ -29,40 +29,37 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql OutBox")]
-    public class MySqlOutboxEmptyStoreAsyncTests : IDisposable
+    public class MySqlOutboxMessageAlreadyExistsAsyncTests : IDisposable
     {
-        private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutbox _mySqlOutbox;
+        private Exception _exception;
         private readonly Message _messageEarliest;
-        private Message _storedMessage;
+        private readonly MySqlOutbox _sqlOutbox;
+        private readonly MySqlTestHelper _msSqlTestHelper;
 
-        public MySqlOutboxEmptyStoreAsyncTests()
+        public MySqlOutboxMessageAlreadyExistsAsyncTests()
         {
-            _mySqlTestHelper = new MySqlTestHelper();
-            _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
-                new MessageBody("message body"));
+            _msSqlTestHelper = new MySqlTestHelper();
+            _msSqlTestHelper.SetupMessageDb();
+
+            _sqlOutbox = new MySqlOutbox(_msSqlTestHelper.OutboxConfiguration);
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
         [Fact]
-        public async Task When_There_Is_No_Message_In_The_Sql_Outbox_Async()
+        public async Task When_The_Message_Is_Already_In_The_Outbox_Async()
         {
-            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id);
-
-            //_should_return_a_empty_message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            await _sqlOutbox.AddAsync(_messageEarliest);
+            _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest));
+            _exception.Should().BeNull();
         }
 
         public void Dispose()
         {
-            GC.Collect();
-            GC.WaitForPendingFinalizers();
-            _mySqlTestHelper.CleanUpDb();
+            _msSqlTestHelper.CleanUpDb();
         }
-    }    
+    }
 }

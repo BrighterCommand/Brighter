@@ -25,10 +25,10 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MySQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Inbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql Inbox")]

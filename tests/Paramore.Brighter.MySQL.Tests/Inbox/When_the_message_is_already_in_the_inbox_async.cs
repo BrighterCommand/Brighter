@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,17 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
-using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MySQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Inbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql Inbox")]
-    public class MySqlInboxDuplicateMessageTests : IDisposable
+    public class SqlInboxDuplicateMessageAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mysqlTestHelper;
         private readonly MySqlInbox _mysqlInbox;
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
         private readonly string _contextKey;
         private Exception _exception;
 
-        public MySqlInboxDuplicateMessageTests()
+        public SqlInboxDuplicateMessageAsyncTests()
         {
             _mysqlTestHelper = new MySqlTestHelper();
             _mysqlTestHelper.SetupCommandDb();
@@ -49,27 +49,30 @@ namespace Paramore.Brighter.Tests.Inbox.MySql
             _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
-            _mysqlInbox.Add(_raisedCommand, _contextKey);
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox()
+        public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
         {
-            _exception = Catch.Exception(() => _mysqlInbox.Add(_raisedCommand, _contextKey));
+            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey);
 
-            //_should_succeed_even_if_the_message_is_a_duplicate
+            _exception = await Catch.ExceptionAsync(() => _mysqlInbox.AddAsync(_raisedCommand, _contextKey));
+
+           //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
-            _mysqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey).Should().BeTrue();
+            var exists = await _mysqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
+            exists.Should().BeTrue();
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
+        public async void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _mysqlInbox.Add(_raisedCommand, "some other key");
+            await _mysqlInbox.AddAsync(_raisedCommand, "some other key");
 
-            _exception = Catch.Exception(() => _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key"));
+            var storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
 
-            _exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
+            //_should_read_the_command_from_the__dynamo_db_inbox
+            storedCommand.Should().NotBeNull();
         }
 
         public void Dispose()

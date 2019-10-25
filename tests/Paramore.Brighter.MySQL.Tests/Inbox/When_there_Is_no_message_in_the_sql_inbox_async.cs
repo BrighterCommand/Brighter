@@ -25,54 +25,44 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.MySQL.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Inbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Inbox
 {
     [Trait("Category", "MySql")]
     [Collection("MySql Inbox")]
-    public class SqlInboxDuplicateMessageAsyncTests : IDisposable
+    public class  SqlInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mysqlTestHelper;
         private readonly MySqlInbox _mysqlInbox;
-        private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
-        private Exception _exception;
 
-        public SqlInboxDuplicateMessageAsyncTests()
+        public SqlInboxEmptyWhenSearchedAsyncTests()
         {
             _mysqlTestHelper = new MySqlTestHelper();
             _mysqlTestHelper.SetupCommandDb();
 
             _mysqlInbox = new MySqlInbox(_mysqlTestHelper.InboxConfiguration);
-            _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = "test-context";
         }
 
         [Fact]
-        public async Task When_The_Message_Is_Already_In_The_Inbox_Async()
+        public async Task When_There_Is_No_Message_In_The_Sql_Inbox_Get_Async()
         {
-            await _mysqlInbox.AddAsync(_raisedCommand, _contextKey);
-
-            _exception = await Catch.ExceptionAsync(() => _mysqlInbox.AddAsync(_raisedCommand, _contextKey));
-
-           //_should_succeed_even_if_the_message_is_a_duplicate
-            _exception.Should().BeNull();
-            var exists = await _mysqlInbox.ExistsAsync<MyCommand>(_raisedCommand.Id, _contextKey);
-            exists.Should().BeTrue();
+            Guid commandId = Guid.NewGuid();
+            var exception = await Catch.ExceptionAsync(() => _mysqlInbox.GetAsync<MyCommand>(commandId, _contextKey));
+            exception.Should().BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]
-        public async void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
+        public async Task When_There_Is_No_Message_In_The_Sql_Inbox_Exists_Async()
         {
-            await _mysqlInbox.AddAsync(_raisedCommand, "some other key");
-
-            var storedCommand = _mysqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
-
-            //_should_read_the_command_from_the__dynamo_db_inbox
-            storedCommand.Should().NotBeNull();
+            Guid commandId = Guid.NewGuid();
+            bool exists = await _mysqlInbox.ExistsAsync<MyCommand>(commandId, _contextKey);
+            exists.Should().BeFalse();
         }
 
         public void Dispose()

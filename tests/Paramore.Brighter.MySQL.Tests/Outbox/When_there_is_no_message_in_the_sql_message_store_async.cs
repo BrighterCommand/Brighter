@@ -24,56 +24,45 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.MySql
+namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
-    public class MySqlOutboxWritngMessagesTests 
+    [Collection("MySql OutBox")]
+    public class MySqlOutboxEmptyStoreAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
         private readonly Message _messageEarliest;
-        private readonly Message _messageLatest;
-        private IEnumerable<Message> _retrievedMessages;
+        private Message _storedMessage;
 
-        public MySqlOutboxWritngMessagesTests()
+        public MySqlOutboxEmptyStoreAsyncTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
-
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _mySqlOutbox.Add(_messageEarliest);
-
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _mySqlOutbox.Add(message2);
-
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            _mySqlOutbox.Add(_messageLatest);
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
+                new MessageBody("message body"));
         }
 
         [Fact]
-        public void When_Writing_Messages_To_The_Outbox()
+        public async Task When_There_Is_No_Message_In_The_Sql_Outbox_Async()
         {
-            _retrievedMessages = _mySqlOutbox.Get();
+            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id);
 
-            // _should_read_first_message_last_from_the__outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //_should_read_last_message_first_from_the__outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //_should_read_the_messages_from_the__outbox
-            _retrievedMessages.Should().HaveCount(3);
+            //_should_return_a_empty_message
+            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
 
-        [Fact]
         public void Dispose()
         {
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
             _mySqlTestHelper.CleanUpDb();
         }
-    }
+    }    
 }
