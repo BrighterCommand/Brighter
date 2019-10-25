@@ -3,7 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Npgsql;
 using Paramore.Brighter.Outbox.PostgreSql;
 
-namespace Paramore.Brighter.Tests
+namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     internal class PostgreSqlTestHelper
     {

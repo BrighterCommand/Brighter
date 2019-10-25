@@ -175,6 +175,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.EventStor
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.NoOpStore.Tests", "tests\Paramore.Brighter.NoOpStore.Tests\Paramore.Brighter.NoOpStore.Tests.csproj", "{B853A06F-5DFD-4093-979B-B08D1BBDD2D6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.PostgresSQL.Tests", "tests\Paramore.Brighter.PostgresSQL.Tests\Paramore.Brighter.PostgresSQL.Tests.csproj", "{C2355F42-792D-4964-B068-79186F887C6D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -881,6 +883,18 @@ Global
 		{B853A06F-5DFD-4093-979B-B08D1BBDD2D6}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B853A06F-5DFD-4093-979B-B08D1BBDD2D6}.Release|x86.ActiveCfg = Release|Any CPU
 		{B853A06F-5DFD-4093-979B-B08D1BBDD2D6}.Release|x86.Build.0 = Release|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Debug|x86.Build.0 = Debug|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Release|x86.ActiveCfg = Release|Any CPU
+		{C2355F42-792D-4964-B068-79186F887C6D}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -935,6 +949,7 @@ Global
 		{A475F4CC-D53F-46B9-B32F-606C05C49D65} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{E151A25D-B893-4D73-84F8-3946F0FB4CEF} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{B853A06F-5DFD-4093-979B-B08D1BBDD2D6} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{C2355F42-792D-4964-B068-79186F887C6D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

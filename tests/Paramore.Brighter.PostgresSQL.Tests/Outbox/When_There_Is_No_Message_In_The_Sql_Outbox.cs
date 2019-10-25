@@ -28,34 +28,33 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.PostgreSql
+namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgreSql")]
     [Collection("PostgreSql OutBox")]
-    public class PostgreSqlOutboxMessageAlreadyExistsTests : IDisposable
+    public class PostgreSqlOutboxEmptyStoreTests : IDisposable
     {
-        private Exception _exception;
+        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
         private readonly Message _messageEarliest;
         private readonly PostgreSqlOutbox _sqlOutbox;
-        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
+        private Message _storedMessage;
 
-        public PostgreSqlOutboxMessageAlreadyExistsTests()
+        public PostgreSqlOutboxEmptyStoreTests()
         {
             _PostgreSqlTestHelper = new PostgreSqlTestHelper();
             _PostgreSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _sqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
-        public void When_The_Message_Is_Already_In_The_Outbox()
+        public void When_There_Is_No_Message_In_The_Sql_Outbox()
         {
-            _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest));
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
-            //_should_ignore_the_duplcate_key_and_still_succeed
-            _exception.Should().BeNull();
+            //_should_return_a_empty_message
+            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
 
         public void Dispose()

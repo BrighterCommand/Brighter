@@ -24,42 +24,67 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.PostgreSql
+namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgreSql")]
     [Collection("PostgreSql OutBox")]
-    public class PostgreSqlOutboxEmptyStoreTests : IDisposable
+    public class SqlOutboxWritngMessagesTests : IDisposable
     {
         private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
         private readonly Message _messageEarliest;
+        private readonly Message _messageLatest;
+        private IEnumerable<Message> _retrievedMessages;
         private readonly PostgreSqlOutbox _sqlOutbox;
-        private Message _storedMessage;
 
-        public PostgreSqlOutboxEmptyStoreTests()
+        public SqlOutboxWritngMessagesTests()
         {
             _PostgreSqlTestHelper = new PostgreSqlTestHelper();
             _PostgreSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
+            _sqlOutbox.Add(_messageEarliest);
+
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
+            _sqlOutbox.Add(message2);
+
+            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _sqlOutbox.Add(_messageLatest);
         }
 
         [Fact]
-        public void When_There_Is_No_Message_In_The_Sql_Outbox()
+        public void When_Writing_Messages_To_The_Outbox()
         {
-            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
+            _retrievedMessages = _sqlOutbox.Get();
 
-            //_should_return_a_empty_message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            //_should_read_first_message_last_from_the__outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //_should_read_last_message_first_from_the__outbox
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //_should_read_the_messages_from_the__outbox
+            _retrievedMessages.Should().HaveCount(3);
         }
 
-        public void Dispose()
+        private void Release()
         {
             _PostgreSqlTestHelper.CleanUpTable();
+        }
+        
+        public void Dispose()
+        {
+            GC.SuppressFinalize(this);
+            Release();
+        }
+
+        ~SqlOutboxWritngMessagesTests()
+        {
+            Release();
         }
     }
 }

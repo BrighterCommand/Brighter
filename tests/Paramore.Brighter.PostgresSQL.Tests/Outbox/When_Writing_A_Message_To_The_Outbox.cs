@@ -28,7 +28,7 @@ using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.Outbox.PostgreSql
+namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgreSql")]
     [Collection("PostgreSql OutBox")]
