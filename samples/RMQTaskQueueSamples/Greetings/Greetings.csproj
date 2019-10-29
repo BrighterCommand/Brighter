@@ -8,7 +8,7 @@
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="1.7.3.7" />
+    <PackageReference Include="MessagePack" Version="1.8.74" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.6.0" />
   </ItemGroup>
 </Project>
