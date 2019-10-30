@@ -41,6 +41,7 @@ namespace Paramore.Brighter
         private readonly IAmAMessageConsumer _messageConsumer;
         private ConcurrentQueue<Message> _queue = new ConcurrentQueue<Message>();
         private readonly int _maxQueueLength;
+        private static readonly Message s_NoneMessage = new Message();
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="Channel" /> class.
@@ -59,7 +60,7 @@ namespace Paramore.Brighter
                     "The channel buffer must have one item, and cannot have more than 10");
             }
             
-            _maxQueueLength = maxQueueLength;
+            _maxQueueLength = maxQueueLength + 1; //+1 so you can fit the quit message on the queue as well 
         }
 
         /// <summary>
@@ -86,7 +87,7 @@ namespace Paramore.Brighter
 
             if (newLength > _maxQueueLength)
             {
-                throw new InvalidOperationException("You cannot enqueue more items than the buffer length"); 
+                throw new InvalidOperationException($"You cannot enqueue {newLength} items which larger than the buffer length {_maxQueueLength}"); 
             }
             
             messages.Each((message) => _queue.Enqueue(message));
@@ -119,7 +120,7 @@ namespace Paramore.Brighter
                 Enqueue(_messageConsumer.Receive(timeoutinMilliseconds));
                 if (!_queue.TryDequeue(out message))
                 {
-                    message = new Message(); //Will be MT_NONE
+                    message = s_NoneMessage; //Will be MT_NONE
                 }
             }
 
