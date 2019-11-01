@@ -26,6 +26,8 @@ environment:
 
 before_build:
 - sh: >-
+    pip3 install requests
+    
     sudo apt-get update && sudo apt-get install -y docker-compose
 
     docker-compose up -d
