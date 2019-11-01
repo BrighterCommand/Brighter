@@ -23,7 +23,8 @@ dotnet_csproj:
 environment:
   Sql__TestsBrighterConnectionString: Server=localhost;Database=BrighterTests;User ID=sa;Password=Password123!;Application Name=BrighterTests
   Sql__TestsMasterConnectionString: Server=localhost;Database=master;User ID=sa;Password=Password123!;Application Name=BrighterTests
-install:
+
+before_build:
 - sh: >-
 
     docker-compose up -d
