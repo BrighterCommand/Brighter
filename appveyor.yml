@@ -1,5 +1,5 @@
 version: 8.1.{build}
-image: Ubuntu
+image: Ubuntu1804
 configuration: Release
 stack: jdk 11
 
@@ -26,7 +26,7 @@ environment:
 
 before_build:
 - sh: >-
-    sudo apt-get install -y docker-compose
+    sudo apt-get update && sudo apt-get install -y docker-compose
 
     docker-compose up -d
 
