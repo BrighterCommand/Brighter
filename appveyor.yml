@@ -3,6 +3,16 @@ image: Ubuntu1804
 configuration: Release
 stack: jdk 11
 
+services: 
+- docker 
+install: 
+- sudo curl -L "https://github.com/docker/compose/releases/download/1.24.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose 
+- sudo chmod +x /usr/local/bin/docker-compose 
+- wget -q https://packages.microsoft.com/config/ubuntu/16.04/packages-microsoft-prod.deb 
+- sudo dpkg -i packages-microsoft-prod.deb 
+- sudo apt-get install apt-transport-https 
+- sudo apt-get update 
+
 skip_commits:
   files:
     - '**/*.md'
@@ -20,10 +30,9 @@ dotnet_csproj:
 environment:
   Sql__TestsBrighterConnectionString: Server=localhost;Database=BrighterTests;User ID=sa;Password=Password123!;Application Name=BrighterTests
   Sql__TestsMasterConnectionString: Server=localhost;Database=master;User ID=sa;Password=Password123!;Application Name=BrighterTests
-install:
-- sh: >-
-    sudo snap install docker
 
+before_build:
+- sh: >-
     docker-compose up -d
 
     java --version
@@ -45,4 +54,4 @@ test:
 
 artifacts:
   - path: '**\*.nupkg'
-    
+
