@@ -1,7 +1,10 @@
 version: 8.1.{build}
-image: Ubuntu1804
+image: Ubuntu
 configuration: Release
 stack: jdk 11
+
+services:
+  - docker
 
 skip_commits:
   files:
@@ -22,7 +25,6 @@ environment:
   Sql__TestsMasterConnectionString: Server=localhost;Database=master;User ID=sa;Password=Password123!;Application Name=BrighterTests
 install:
 - sh: >-
-    sudo snap install docker
 
     docker-compose up -d
 
