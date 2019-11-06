@@ -10,7 +10,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Confluent.Kafka" Version="1.2.0" />
+    <PackageReference Include="Confluent.Kafka" Version="1.2.1" />
     <PackageReference Include="Polly" Version="7.1.1" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19367-01" />
   </ItemGroup>
