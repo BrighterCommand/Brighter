@@ -5,16 +5,50 @@
 
 trigger:
 - master
+- building
 
 pool:
   vmImage: 'ubuntu-latest'
 
 variables:
   buildConfiguration: 'Release'
+  Version.MajorMinor: '9.0'
+  Version.Revision: $[counter(variables['Version.MajorMinor'], 0)]
+
 
 steps:
 - script: sudo service mysql stop
   displayName: service mysql stop
+
+- task: AWSShellScript@1
+  inputs:
+    awsCredentials: 'Brighter SNS Tests'
+    regionName: 'eu-west-2'
+    scriptType: 'inline'
+    inlineScript: |
+      aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+      aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+      aws configure set region $AWS_DEFAULT_REGION
+    failOnStandardError: true
+
+- task: AWSCLI@1
+  inputs:
+    awsCredentials: 'Brighter SNS Tests'
+    regionName: 'eu-west-2'
+    awsCommand: 'configure'
+    awsSubCommand: 'list'
+
+- task: PowerShell@2
+  inputs:
+    targetType: 'inline'
+    script: |
+      $xml = [xml](Get-Content -Path src\Directory.Build.props)
+      $xml.Project.PropertyGroup.AssemblyVersion = '$(Version.MajorMinor).0.0'
+      $xml.Project.PropertyGroup.FileVersion = '$(Version.MajorMinor).$(Version.Revision)'
+      $xml.Project.PropertyGroup.InformationalVersion = '$(Version.MajorMinor).$(Version.Revision)'
+      $xml.Project.PropertyGroup.Version = '$(Version.MajorMinor).$(Version.Revision)'
+      $xml.Save("src\Directory.Build.props")
+    pwsh: true
 
 - task: DotNetCoreCLI@2
   displayName: 'dotnet build $(buildConfiguration)'
@@ -35,7 +69,7 @@ steps:
   timeoutInMinutes: 5
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=AWS&Category=Sqlite"'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=AWS|Category=Sqlite"'
     testRunTitle: 'AWS & Sqlite tests running on ubuntu'
 
 - task: DockerCompose@0
@@ -57,8 +91,19 @@ steps:
   timeoutInMinutes: 5
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=DynamoDB&Category=EventStore&Category=Kafka&Category=MSSQL&Category=MySql&Category=PostgreSql&Category=RMQ&Category=Redis"'
+    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=DynamoDB|Category=EventStore|Category=Kafka|Category=MSSQL|Category=MySql|Category=PostgreSql|Category=RMQ|Category=Redis"'
     testRunTitle: 'DynamoDB,EventStore,Kafka,MSSQL,MySql,PostgreSql,RMQ,Redis,Sqlite tests running on ubuntu'
-  
 
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    ArtifactName: 'artifacts'
+    publishLocation: 'Container'
+
+- task: NuGetCommand@2
+  inputs:
+    command: 'push'
+    packagesToPush: '$(Build.ArtifactStagingDirectory)/**/*.nupkg;!$(Build.ArtifactStagingDirectory)/**/*.symbols.nupkg'
+    nuGetFeedType: 'internal'
+    publishVstsFeed: '22e7994e-1665-47ea-8089-92f0fb852d6f'
 
