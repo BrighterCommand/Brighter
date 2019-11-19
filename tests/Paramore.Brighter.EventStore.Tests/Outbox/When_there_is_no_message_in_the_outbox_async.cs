@@ -1,5 +1,4 @@
 #region Licence
-
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -23,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
@@ -30,17 +30,17 @@ using Xunit;
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
-    [Collection("EventStore")]
-    public class EventStoreEmptyTests : EventStoreFixture
+    [Collection("EventStore Outbox")]
+    public class EventStoreEmptyAsyncTests : EventStoreFixture
     {
         [Fact]
-        public void When_There_Is_No_Message_In_The_Outbox()
+        public async Task When_There_Is_No_Message_In_The_Outbox()
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
             
             // act
-            var messages = eventStoreOutbox.Get(StreamName, 0, 1);
+            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);
 
             // assert
             //_returns_an_empty_list

@@ -49,6 +49,10 @@ namespace Paramore.Brighter.Outbox.EventStore
 
         private readonly IEventStoreConnection _eventStore;
 
+        public static readonly string StreamArg = "streamid";
+        public static readonly string DispatchedAtKey = "dispatchedAt";
+        public static readonly string PreviousEventIdKey = "previousEventId";
+
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
@@ -136,14 +140,27 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="pageNumber">page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for search, if any</param>
          /// <returns></returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+        public IList<Message> Get(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
         {
-            throw new NotImplementedException();
+            return GetAsync(pageSize, pageNumber, args).Result;
         }
 
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            string stream = GetStreamFromArgs(args);
+            
+            var fromEventNumber = pageSize * (pageNumber - 1);
+            
+            var eventStreamSlice = await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, pageSize, true);
+            
+            return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
         }
         
         /// <summary>
@@ -207,11 +224,42 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+            var stream = GetStreamFromArgs(args);
+            
+            StreamEventsSlice slice;
+            var startPos = (long) StreamPosition.End;
+            long? nextEventNumber = null;
+            RecordedEvent resolvedEvent;
+            bool found = false;
+            
+            do
+            {
+                slice = await _eventStore.ReadStreamEventsBackwardAsync(stream, startPos, 100, true);
+                startPos = slice.NextEventNumber;
+
+                if (nextEventNumber is null)
+                    nextEventNumber = (await _eventStore.ReadStreamEventsBackwardAsync(stream, StreamPosition.End, 1, true)).LastEventNumber;
+
+                resolvedEvent = slice.Events.FirstOrDefault(e => e.Event.EventId == id).Event;
+
+                if (resolvedEvent != null)
+                    found = true;
+
+            } while(!found && !slice.IsEndOfStream);
+
+            if (resolvedEvent is null)
+                return;
+
+            var message = ConvertEventToMessage(resolvedEvent, stream, dispatchedAt, nextEventNumber.Value);
+
+            var headerBag = message.Header.Bag;
+            var eventData = CreateEventData(message, headerBag);
+
+            await _eventStore.AppendToStreamAsync(stream, nextEventNumber.Value, eventData);
         }
           
         /// <summary>
@@ -219,10 +267,9 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            //TODO: Implement mark dispatched
-            throw new NotImplementedException();
+            MarkDispatchedAsync(id, dispatchedAt, args).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -239,15 +286,60 @@ namespace Paramore.Brighter.Outbox.EventStore
             int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
-            //TODO: Implement outstanding message support
-            throw new NotImplementedException();
+            var stream = GetStreamFromArgs(args);
+            var sentBefore = DateTime.UtcNow.AddMilliseconds(millSecondsSinceSent * -1);
+            
+            var fromEventNumber = pageSize * (pageNumber - 1);
+            
+            var eventStreamSlice = _eventStore.ReadStreamEventsBackwardAsync(stream, fromEventNumber, pageSize, true).Result;
+
+            var messages = eventStreamSlice.Events
+                .Where(e => e.Event.Created <= sentBefore)
+                .Select(e => ConvertEventToMessage(e.Event, stream))
+                .ToList();
+
+            HashSet<Guid> dispatchedIds = new HashSet<Guid>();
+            List<Message> outstandingMessages = new List<Message>();
+
+            foreach (var message in messages)
+            {
+                var dispatchedAt = message.Header.Bag.ContainsKey(DispatchedAtKey) 
+                    ? message.Header.Bag[DispatchedAtKey] as string 
+                    : null;
+
+                if (dispatchedAt is null)
+                {
+                    outstandingMessages.Add(message);
+                    continue;
+                }
+
+                var previousEventId = message.Header.Bag[PreviousEventIdKey] as string;
+                
+                if (!Guid.TryParse(previousEventId, out Guid eventId))
+                    continue;
+
+                if (!dispatchedIds.Contains(eventId))
+                {
+                    dispatchedIds.Add(eventId);
+                    continue;
+                }
+
+                outstandingMessages.Add(message);
+            }
+
+            return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
         }
 
-        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber,
-            string stream)
+        private static void AddMetadataToHeader(byte[] metadata, MessageHeader messageHeader, long eventNumber, string stream, DateTime? dispatchedDate = null, Guid? previousEventId = null)
         {
             messageHeader.Bag.Add("streamId", stream);
             messageHeader.Bag.Add("eventNumber", eventNumber);
+
+            if (dispatchedDate != null)
+            {
+                messageHeader.Bag.Add(DispatchedAtKey, dispatchedDate);
+                messageHeader.Bag.Add(PreviousEventIdKey, previousEventId);
+            }
 
             var metadataJson =
                 JsonConvert.DeserializeObject<Dictionary<string, object>>(Encoding.UTF8.GetString(metadata));
@@ -269,13 +361,19 @@ namespace Paramore.Brighter.Outbox.EventStore
             return new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};
         }
 
-        private static Message ConvertEventToMessage(RecordedEvent @event, string stream)
+        private static Message ConvertEventToMessage(RecordedEvent @event, string stream, DateTime? dispatchedAt = null, long? eventNumber = null)
         {
             var messageBody = new MessageBody(Encoding.UTF8.GetString(@event.Data));
-            var messageHeader =
-                new MessageHeader(@event.EventId, @event.EventType, MessageType.MT_EVENT, @event.Created);
 
-            AddMetadataToHeader(@event.Metadata, messageHeader, @event.EventNumber, stream);
+            var eventId = dispatchedAt is null ? @event.EventId : Guid.NewGuid();
+
+            if (eventNumber is null)
+                eventNumber = @event.EventNumber;
+            
+            var messageHeader =
+                new MessageHeader(eventId, @event.EventType, MessageType.MT_EVENT, @event.Created);
+
+            AddMetadataToHeader(@event.Metadata, messageHeader, eventNumber.Value, stream, dispatchedAt, @event.EventId);
 
             return new Message(messageHeader, messageBody);
         }
@@ -306,5 +404,19 @@ namespace Paramore.Brighter.Outbox.EventStore
             return headerBagWithoutExtras;
         }
 
+        private static string GetStreamFromArgs(Dictionary<string, object> args)
+        {
+            if (args is null)
+                throw new ArgumentNullException(nameof(args));
+
+            if (!args.ContainsKey(StreamArg))
+                throw new ArgumentException($"{StreamArg} missing", nameof(args));
+
+            var stream = args[StreamArg] as string;
+
+            if (string.IsNullOrEmpty(stream))
+                throw new ArgumentException($"{StreamArg} value must not be null or empty", nameof(args));
+            return stream;
     }
+}
 }

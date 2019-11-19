@@ -94,7 +94,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.FromResult(Get(messageId, outBoxTimeout));
         }
 
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>();
             
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return tcs.Task;
         }
 
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
            var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);
            entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;

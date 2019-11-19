@@ -100,7 +100,7 @@ namespace Paramore.Brighter
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
  
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, CancellationToken cancellationToken = default(CancellationToken))
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string,object> args = null, CancellationToken cancellationToken = default)
         {
            return Task.FromResult<object>(null);
         }
@@ -150,7 +150,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The message to mark as dispatched</param>
         /// <exception cref="NotImplementedException"></exception>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null)
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             return;
         }

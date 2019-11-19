@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Threading.Tasks;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
@@ -30,21 +30,27 @@ using Xunit;
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
-    [Collection("EventStore")]
-    public class EventStoreEmptyAsyncTests : EventStoreFixture
+    [Collection("EventStore Outbox")]
+    public class EventStoreOutboxTests : EventStoreFixture
     {
         [Fact]
-        public async Task When_There_Is_No_Message_In_The_Outbox()
+        public void When_Writing_Messages_To_The_Outbox()
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
+
+            var message1 = CreateMessage(0, StreamName);
+            var message2 = CreateMessage(1, StreamName);
             
             // act
-            var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);
-
+            eventStoreOutbox.Add(message1);
+            eventStoreOutbox.Add(message2);   
+            
             // assert
-            //_returns_an_empty_list
-            messages.Count.Should().Be(0);
+            var messages = eventStoreOutbox.Get(StreamName, 0, 2);
+
+            messages.Count(m => MessagesEqualApartFromTimestamp(m, message1)).Should().Be(1);
+            messages.Count(m => MessagesEqualApartFromTimestamp(m, message2)).Should().Be(1);
         }
     }
 }
