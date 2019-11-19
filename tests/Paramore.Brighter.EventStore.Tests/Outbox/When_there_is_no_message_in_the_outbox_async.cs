@@ -22,13 +22,12 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.ComponentModel;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
 using Xunit;
 
-namespace Paramore.Brighter.Tests.OutBox.EventStore
+namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
     [Collection("EventStore Outbox")]
