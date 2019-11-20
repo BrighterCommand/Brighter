@@ -37,6 +37,7 @@ steps:
     regionName: 'eu-west-2'
     awsCommand: 'configure'
     awsSubCommand: 'list'
+    awsArguments: '--profile default'
 
 - task: PowerShell@2
   inputs:
