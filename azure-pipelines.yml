@@ -81,6 +81,14 @@ steps:
     arguments: 'tests\Paramore.Brighter.Sqlite.Tests\Paramore.Brighter.Sqlite.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
     testRunTitle: 'Sqlite tests running on ubuntu'
 
+- task: DotNetCoreCLI@2
+  displayName: 'AWSSQS dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.AWSSQS.Tests\Paramore.Brighter.AWSSQS.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'AWSSQS tests running on ubuntu'
+
 - task: DockerCompose@0
   displayName: Run services for tests
   timeoutInMinutes: 5
