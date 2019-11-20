@@ -57,20 +57,28 @@ steps:
     arguments: '--configuration $(buildConfiguration)'
 
 - task: DotNetCoreCLI@2
-  displayName: 'fast tests - dotnet test $(buildConfiguration)'
+  displayName: 'Core tests - dotnet test $(buildConfiguration)'
   timeoutInMinutes: 5
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category!=AWS&Category!=DynamoDB&Category!=EventStore&Category!=Kafka&Category!=MSSQL&Category!=MySql&Category!=PostgreSql&Category!=RESTMS&Category!=RMQ&Category!=Redis&Category!=Sqlite"'
+    arguments: 'tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
     testRunTitle: 'Fast tests running on ubuntu'
 
 - task: DotNetCoreCLI@2
-  displayName: 'AWS & Sqlite dotnet test $(buildConfiguration)'
+  displayName: 'NoOpStore dotnet test $(buildConfiguration)'
   timeoutInMinutes: 5
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=AWS|Category=Sqlite"'
-    testRunTitle: 'AWS & Sqlite tests running on ubuntu'
+    arguments: 'tests\Paramore.Brighter.NoOpStore.Tests\Paramore.Brighter.NoOpStore.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'NoOpStore tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Sqlite dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.Sqlite.Tests\Paramore.Brighter.Sqlite.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'Sqlite tests running on ubuntu'
 
 - task: DockerCompose@0
   displayName: Run services for tests
@@ -87,12 +95,69 @@ steps:
   displayName: docker ps
 
 - task: DotNetCoreCLI@2
-  displayName: 'Tests that need docker infrastructure dotnet test $(buildConfiguration)'
+  displayName: 'RabbitMQ dotnet test $(buildConfiguration)'
   timeoutInMinutes: 5
   inputs:
     command: 'test'
-    arguments: '-v normal --configuration $(buildConfiguration) --no-build --filter "Category=DynamoDB|Category=EventStore|Category=Kafka|Category=MSSQL|Category=MySql|Category=PostgreSql|Category=RMQ|Category=Redis"'
-    testRunTitle: 'DynamoDB,EventStore,Kafka,MSSQL,MySql,PostgreSql,RMQ,Redis,Sqlite tests running on ubuntu'
+    arguments: 'tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'RabbitMQ tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'DynamoDB dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.DynamoDB.Tests\Paramore.Brighter.DynamoDB.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'DynamoDB tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'EventStore dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.EventStore.Tests\Paramore.Brighter.EventStore.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'EventStore tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Kafka dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.Kafka.Tests\Paramore.Brighter.Kafka.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'Kafka tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'MSSQL dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.MSSQL.Tests\Paramore.Brighter.MSSQL.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'MSSQL tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'MySQL dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.MySQL.Tests\Paramore.Brighter.MySQL.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'MySQL tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'PostgresSQL dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.PostgresSQL.Tests\Paramore.Brighter.PostgresSQL.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'PostgresSQL tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'Redis dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.Redis.Tests\Paramore.Brighter.Redis.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'Redis tests running on ubuntu'
+
 
 - task: PublishBuildArtifacts@1
   inputs:
