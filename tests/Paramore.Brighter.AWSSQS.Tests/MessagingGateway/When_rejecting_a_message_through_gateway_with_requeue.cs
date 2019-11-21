@@ -49,11 +49,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 _messageProducer = new SqsMessageProducer(awsConnection);
             }
  
-       }
+        }
 
         [Fact]
         public void When_rejecting_a_message_through_gateway_with_requeue()
         {
+            _channel.Purge();
+
             _messageProducer.Send(_message);
 
             var message = _channel.Receive(1000);

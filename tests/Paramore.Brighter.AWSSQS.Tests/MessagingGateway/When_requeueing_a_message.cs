@@ -53,6 +53,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         [Fact]
         public void When_requeueing_a_message()
         {
+            _channel.Purge();
+
             _sender.Send(_message);
             _receivedMessage = _channel.Receive(2000); 
             _channel.Requeue(_receivedMessage);

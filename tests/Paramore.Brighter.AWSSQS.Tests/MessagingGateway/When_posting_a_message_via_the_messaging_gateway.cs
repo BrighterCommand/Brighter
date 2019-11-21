@@ -54,6 +54,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         [Fact]
         public void When_posting_a_message_via_the_producer()
         {
+            _channel.Purge();
             //arrange
             _messageProducer.Send(_message);
             
