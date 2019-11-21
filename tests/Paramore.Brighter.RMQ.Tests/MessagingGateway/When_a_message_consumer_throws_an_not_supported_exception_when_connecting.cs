@@ -25,11 +25,10 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.RMQ.Tests;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ._Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Collection("RMQ")]
     [Trait("Category", "RMQ")]

@@ -90,21 +90,21 @@
 #endif
 
 #endregion
+
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
 #if SERIALIZABLE
 using System.Runtime.Serialization;
+
 #endif
 
-namespace TinyIoC
+namespace Paramore.Brighter.RMQ.Tests
 {
-    using System;
-    using System.Collections.Generic;
-    using System.Collections.ObjectModel;
-    using System.Linq;
-    using System.Reflection;
-
 #if EXPRESSIONS
     using System.Linq.Expressions;
-    using System.Threading;
 
 #endif
 

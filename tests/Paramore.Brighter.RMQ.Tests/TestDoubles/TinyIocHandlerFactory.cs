@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using TinyIoC;
 
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {

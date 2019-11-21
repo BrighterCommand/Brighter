@@ -4,7 +4,7 @@ using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ._Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Collection("RMQ")]
     [Trait("Category", "RMQ")]

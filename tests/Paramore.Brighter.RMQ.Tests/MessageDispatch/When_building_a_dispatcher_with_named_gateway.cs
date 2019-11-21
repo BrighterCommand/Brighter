@@ -29,7 +29,6 @@ using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
 using Polly;
 using Polly.Registry;
-using TinyIoC;
 using Xunit;
 
 namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
