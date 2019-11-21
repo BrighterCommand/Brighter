@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     internal class RmqMessageCreator
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageCreator>);
+        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RmqMessageCreator>);
 
         private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
         {
@@ -44,10 +44,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 return new HeaderResult<string>(string.Empty, !dieOnMissing);
             }
 
-            var bytes = dict[key] as byte[];
-            if (null == bytes)
+            if (!(dict[key] is byte[] bytes))
             {
-                _logger.Value.WarnFormat("The value of header {0} could not be cast to a byte array", key);
+                s_logger.Value.WarnFormat("The value of header {0} could not be cast to a byte array", key);
                 return new HeaderResult<string>(null, false);
             }
 
@@ -59,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                _logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
+                s_logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
                 return new HeaderResult<string>(null, false);
             }
         }
@@ -117,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
             catch (Exception e)
             {
-                _logger.Value.WarnException("Failed to create message from amqp message", e);
+                s_logger.Value.WarnException("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
             
@@ -159,42 +158,59 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     {
                         return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
                     }
-                    MessageType result;
-                    var success = Enum.TryParse(s, true, out result);
+
+                    var success = Enum.TryParse(s, true, out MessageType result);
                     return new HeaderResult<MessageType>(result, success);
                 });
         }
 
         private HeaderResult<int> ReadHandledCount(IDictionary<string, object> headers)
         {
-            return ReadHeader(headers, HeaderNames.HANDLED_COUNT).Map(s =>
+            if (headers.ContainsKey(HeaderNames.HANDLED_COUNT) == false)
             {
-                if (string.IsNullOrEmpty(s))
+                return new HeaderResult<int>(0, true);
+            }
+
+            switch (headers[HeaderNames.HANDLED_COUNT])
+            {
+                case byte[] value:
                 {
-                    return new HeaderResult<int>(0, true);
+                    var val = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
+                    return new HeaderResult<int>(val, true);
                 }
-                int handledCount;
-                var val = int.TryParse(s, out handledCount) ? handledCount : 0;
-                return new HeaderResult<int>(val, true);
-            });
+                case int value:
+                    return new HeaderResult<int>(value, true);
+                default:
+                    return new HeaderResult<int>(0, true);
+            }
         }
 
         private HeaderResult<int> ReadDelayedMilliseconds(IDictionary<string, object> headers)
         {
-            return ReadHeader(headers, HeaderNames.DELAYED_MILLISECONDS).Map(s =>
+            if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS) == false)
             {
-                if (string.IsNullOrEmpty(s))
+                return new HeaderResult<int>(0, true);
+            }
+
+            int delayedMilliseconds;
+
+            switch (headers[HeaderNames.DELAYED_MILLISECONDS])
+            {
+                case byte[] value:
                 {
-                    return new HeaderResult<int>(-1, true);
+                    delayedMilliseconds = int.TryParse(Encoding.UTF8.GetString(value), out var handledCount) ? handledCount : 0;
+                    break;
                 }
+                case int value:
+                {
+                    delayedMilliseconds = value;
+                    break;
+                }
+                default:
+                    return new HeaderResult<int>(0, false);
+            }
 
-                int delayedMilliseconds;
-
-                if (int.TryParse(s, out delayedMilliseconds))
-                    return new HeaderResult<int>(delayedMilliseconds > 0 ? -1 : (delayedMilliseconds * -1), true);
-                else
-                    return new HeaderResult<int>(-1, false);
-            });
+            return new HeaderResult<int>(delayedMilliseconds, true);
         }
 
         private HeaderResult<string> ReadTopic(BasicDeliverEventArgs fromQueue, IDictionary<string, object> headers)
@@ -212,7 +228,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             if (string.IsNullOrEmpty(messageId))
             {
-                _logger.Value.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                s_logger.Value.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
@@ -221,7 +237,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
-            _logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            s_logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
         }
 
@@ -243,8 +259,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private static object ParseHeaderValue(object value)
         {
-            var bytes = value as byte[];
-            return bytes != null ? Encoding.UTF8.GetString(bytes) : value;
+            return value is byte[] bytes ? Encoding.UTF8.GetString(bytes) : value;
         }
 
     }
