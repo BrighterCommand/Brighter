@@ -1,5 +1,4 @@
 ﻿using System;
-using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
@@ -50,8 +49,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         [Fact]
         public void When_a_message_consumer_reads_multiple_messages()
         {
-            _consumer.Purge();
-
             var messageOne = new Message(
                 new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, CONTENT_TYPE),
                 new MessageBody("test content one")

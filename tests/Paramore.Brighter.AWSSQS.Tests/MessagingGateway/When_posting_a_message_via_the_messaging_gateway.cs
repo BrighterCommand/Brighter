@@ -1,5 +1,4 @@
 ﻿using System;
-using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -22,6 +21,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
+        private Connection<MyCommand> _connection = new Connection<MyCommand>(channelName: new ChannelName($"{typeof(MyCommand)}.{Guid.NewGuid()}"));
 
         public SqsMessageProducerSendTests()
         {
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _correlationId = Guid.NewGuid();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
-            _topicName = AWSNameExtensions.ToValidSNSTopicName((string) _myCommand.GetType().FullName.ToString());
+            _topicName = _myCommand.GetType().FullName.ToValidSNSTopicName();
             
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
@@ -44,7 +44,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
 
                 _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-                _channel = _channelFactory.CreateChannel(new Connection<MyCommand>());
+
+                _channel = _channelFactory.CreateChannel(_connection);
                 
                 _messageProducer = new SqsMessageProducer(awsConnection);
             }
@@ -54,7 +55,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         [Fact]
         public void When_posting_a_message_via_the_producer()
         {
-            _channel.Purge();
             //arrange
             _messageProducer.Send(_message);
             
@@ -83,9 +83,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            var connection = new Connection<MyCommand>();
-            _channelFactory.DeleteQueue(connection);
-            _channelFactory.DeleteTopic(connection);
+            _channelFactory.DeleteQueue(_connection);
+            _channelFactory.DeleteTopic(_connection);
         }
         
         private DateTime RoundToSeconds(DateTime dateTime)
