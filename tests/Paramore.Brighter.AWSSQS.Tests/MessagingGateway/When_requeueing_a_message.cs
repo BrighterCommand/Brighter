@@ -39,9 +39,11 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             );
  
             //Must have credentials stored in the SDK Credentials store or shared credentials file
-            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            var credentialChain = new CredentialProfileStoreChain();
+            
+            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
             {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
                 _sender = new SqsMessageProducer(awsConnection);
                 _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
                 _channel = _channelFactory.CreateChannel(new Connection<MyCommand>());
