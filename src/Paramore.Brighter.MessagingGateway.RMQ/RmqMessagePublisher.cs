@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
@@ -63,11 +63,11 @@ internal class RmqMessagePublisher
         /// </exception>
         public RmqMessagePublisher(IModel channel, string exchangeName) 
         {
-            if (channel == null)
+            if (channel is null)
             {
                 throw new ArgumentNullException(nameof(channel));
             }
-            if (exchangeName == null)
+            if (exchangeName is null)
             {
                 throw new ArgumentNullException(nameof(exchangeName));
             }
@@ -90,7 +90,7 @@ internal class RmqMessagePublisher
             {
                 { HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString() },
                 { HeaderNames.TOPIC, message.Header.Topic },
-                { HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture) }
+                { HeaderNames.HANDLED_COUNT, message.Header.HandledCount }
             };
 
             if (message.Header.CorrelationId != Guid.Empty)
@@ -138,7 +138,7 @@ internal class RmqMessagePublisher
             {
                 {HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString()},
                 {HeaderNames.TOPIC, message.Header.Topic},
-                {HeaderNames.HANDLED_COUNT, message.Header.HandledCount.ToString(CultureInfo.InvariantCulture)},
+                {HeaderNames.HANDLED_COUNT, message.Header.HandledCount},
             };
 
             if (message.Header.CorrelationId != Guid.Empty)
@@ -184,21 +184,52 @@ internal class RmqMessagePublisher
             if (!string.IsNullOrEmpty(replyTo))
                 basicProperties.ReplyTo = replyTo;
 
-            if (headers != null && headers.Any())
+            if (!(headers is null))
             {
-                //RMQ doesn't like anything other than a string or number in the header
-                if (headers.Any(header => 
-                    header.Value.GetType() != typeof(string) ||
-                    header.Value.GetType().IsPrimitive 
-                    ))
+                foreach (var header in headers)
                 {
-                    throw new ConfigurationException("Only pass primitive types as header values to RMQ as cannot serialize .NET types");
+                    if(!IsAnAmqpType(header.Value))
+                        throw new ConfigurationException($"The value {header.Value} is type {header.Value.GetType()} for header {header.Key} value only supports the AMQP 0-8/0-9 standard entry types S, I, D, T and F, as well as the QPid-0-8 specific b, d, f, l, s, t, x and V types and the AMQP 0-9-1 A type.");
                 }
-                    
+
                 basicProperties.Headers = headers;
             }
 
             return basicProperties;
+        }
+
+        /// <summary>
+        /// Supports the AMQP 0-8/0-9 standard entry types S, I, D, T
+        /// and F, as well as the QPid-0-8 specific b, d, f, l, s, t
+        /// x and V types and the AMQP 0-9-1 A type.
+        /// </summary>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        private bool IsAnAmqpType(object value)
+        {
+            switch (value)
+            {
+                case null:
+                case string _:
+                case byte[] _:
+                case int _:
+                case uint _:
+                case decimal _:
+                case AmqpTimestamp _:
+                case IDictionary _:
+                case IList _:
+                case byte _:
+                case sbyte _:
+                case double _:
+                case float _:
+                case long _:
+                case short _:
+                case bool _:
+                case BinaryTableValue _:
+                    return true;
+                default:
+                    return false;
+            }
         }
     }
 }

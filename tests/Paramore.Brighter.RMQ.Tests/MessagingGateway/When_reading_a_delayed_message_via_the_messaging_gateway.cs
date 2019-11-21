@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -66,6 +66,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             var immediateResult = _messageConsumer.Receive(0).First();
             var deliveredWithoutWait = immediateResult.Header.MessageType == MessageType.MT_NONE;
+            immediateResult.Header.HandledCount.Should().Be(0);
+            immediateResult.Header.DelayedMilliseconds.Should().Be(0);
 
             //_should_have_not_been_able_get_message_before_delay
             deliveredWithoutWait.Should().BeTrue();
@@ -75,7 +77,37 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
            //_should_send_a_message_via_rmq_with_the_matching_body
             delayedResult.Body.Value.Should().Be(_message.Body.Value);
-       }
+            delayedResult.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            delayedResult.Header.HandledCount.Should().Be(0);
+            delayedResult.Header.DelayedMilliseconds.Should().Be(3000);
+
+            _messageConsumer.Acknowledge(delayedResult);
+        }
+
+        [Fact]
+        public void When_requeing_a_failed_message_with_delay()
+        {
+            //send & receive a message
+            _messageProducer.Send(_message);
+            var message = _messageConsumer.Receive(1000).Single();
+            message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            message.Header.HandledCount.Should().Be(0);
+            message.Header.DelayedMilliseconds.Should().Be(0);
+
+            _messageConsumer.Acknowledge(message);
+
+            //now requeue with a delay
+            _message.UpdateHandledCount();
+            _messageConsumer.Requeue(_message, 1000);
+
+            //receive and assert
+            var message2 = _messageConsumer.Receive(5000).Single();
+            message2.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            message2.Header.HandledCount.Should().Be(1);
+            message2.Header.DelayedMilliseconds.Should().Be(1000);
+
+            _messageConsumer.Acknowledge(message2);
+        }
 
         public void Dispose()
         {
