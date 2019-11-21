@@ -46,12 +46,12 @@ steps:
     script: |
       $xml = [xml](Get-Content -Path src\Directory.Build.props)
       $xml.Project.PropertyGroup.AssemblyVersion = '$(Version.MajorMinor).0.0'
-      $xml.Project.PropertyGroup.FileVersion = '$(Version.MajorMinor).$(Version.Revision)'
+      $xml.Project.PropertyGroup.FileVersion = '$(Version.MajorMinor).$(Version.Revision).0'
       $xml.Project.PropertyGroup.InformationalVersion = '$(Version.MajorMinor).$(Version.Revision)'
       $xml.Project.PropertyGroup.Version = '$(Version.MajorMinor).$(Version.Revision)'
       $xml.Save("src\Directory.Build.props")
 
-      cat src\Directory.Build.props 
+      Get-Content -Path .\src\Directory.Build.props
     pwsh: true
 
 - task: DotNetCoreCLI@2
