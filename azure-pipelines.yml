@@ -51,7 +51,7 @@ steps:
       $xml.Project.PropertyGroup.Version = '$(Version.MajorMinor).$(Version.Revision)'
       $xml.Save("src\Directory.Build.props")
 
-      cat .\src\Directory.Build.props 
+      cat src\Directory.Build.props 
     pwsh: true
 
 - task: DotNetCoreCLI@2
