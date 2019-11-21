@@ -160,7 +160,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
                 (bool exists, string name) queueExists = QueueExists(sqsClient, connection.ChannelName.ToValidSQSQueueName());
-                if (!queueExists.exists)
+                
+                if (queueExists.exists)
                 {
                     sqsClient.DeleteQueueAsync(queueExists.name).Wait();
                 }
