@@ -93,7 +93,7 @@ steps:
     testRunTitle: 'AWSSQS tests running on ubuntu'
 
 - task: DockerCompose@0
-  displayName: Run services for tests
+  displayName: Run docker-compose for tests
   timeoutInMinutes: 5
   inputs:
     containerregistrytype: 'Azure Container Registry'
@@ -101,7 +101,7 @@ steps:
     action: 'Run services'
 
 - script: sleep 60
-  displayName: sleep 60
+  displayName: sleep 60 seconds so docker has time to catch up 
 
 - script: docker ps
   displayName: docker ps
