@@ -74,6 +74,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         Connection.Exchange.Name);
                     EnsureChannel();
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
+
+                    if (Connection.PersistMessages)
+                        message.DeliveryMode = 2;
+
                     _logger.Value.DebugFormat(
                         "RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
