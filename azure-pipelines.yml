@@ -28,7 +28,7 @@ steps:
     inlineScript: |
       aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
       aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
-      aws configure set region $AWS_DEFAULT_REGION
+      aws configure set region eu-west-2
     failOnStandardError: true
 
 - task: AWSCLI@1
@@ -38,6 +38,7 @@ steps:
     awsCommand: 'configure'
     awsSubCommand: 'list'
     awsArguments: '--profile default'
+    
 
 - task: PowerShell@2
   inputs:
@@ -45,10 +46,12 @@ steps:
     script: |
       $xml = [xml](Get-Content -Path src\Directory.Build.props)
       $xml.Project.PropertyGroup.AssemblyVersion = '$(Version.MajorMinor).0.0'
-      $xml.Project.PropertyGroup.FileVersion = '$(Version.MajorMinor).$(Version.Revision)'
+      $xml.Project.PropertyGroup.FileVersion = '$(Version.MajorMinor).$(Version.Revision).0'
       $xml.Project.PropertyGroup.InformationalVersion = '$(Version.MajorMinor).$(Version.Revision)'
       $xml.Project.PropertyGroup.Version = '$(Version.MajorMinor).$(Version.Revision)'
       $xml.Save("src\Directory.Build.props")
+
+      Get-Content -Path .\src\Directory.Build.props
     pwsh: true
 
 - task: DotNetCoreCLI@2
