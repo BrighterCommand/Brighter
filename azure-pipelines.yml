@@ -12,9 +12,9 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  Version.Major: '9'
-  Version.Minor: '0'
-  Version.MajorMinor: "variables['Version.Major'].variables['Version.Minor']"
+  Version.Major: 9
+  Version.Minor: 0
+  Version.MajorMinor: $(Version.Major).$(Version.Minor)
   Version.Revision: $[counter(variables['Version.MajorMinor'], 0)]
 
 steps:
@@ -49,7 +49,7 @@ steps:
       Write-Host "Version.Minor: $(Version.Minor)"
       Write-Host "Version.MajorMinor: $(Version.MajorMinor)"
       Write-Host "Version.Revision: $(Version.Revision)"
-      Write-Hote "semver build: $(Version.MajorMinor).$(Version.Revision)"
+      Write-Host "semver build: $(Version.MajorMinor).$(Version.Revision)"
 
       $xml = [xml](Get-Content -Path src/Directory.Build.props)
       $xml.Project.PropertyGroup.AssemblyVersion = "$(Version.Major).0.0.0"
