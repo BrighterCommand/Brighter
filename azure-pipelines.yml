@@ -12,7 +12,9 @@ pool:
 
 variables:
   buildConfiguration: 'Release'
-  Version.MajorMinor: '9.0'
+  Version.Major: '9'
+  Version.Minor: '0'
+  Version.MajorMinor: 'Version.Major.Version.Minor'
   Version.Revision: $[counter(variables['Version.MajorMinor'], 0)]
 
 
@@ -44,14 +46,20 @@ steps:
   inputs:
     targetType: 'inline'
     script: |
-      $xml = [xml](Get-Content -Path src\Directory.Build.props)
-      $xml.Project.PropertyGroup.AssemblyVersion = '$(Version.MajorMinor).0.0'
-      $xml.Project.PropertyGroup.FileVersion = '$(Version.MajorMinor).$(Version.Revision).0'
-      $xml.Project.PropertyGroup.InformationalVersion = '$(Version.MajorMinor).$(Version.Revision)'
-      $xml.Project.PropertyGroup.Version = '$(Version.MajorMinor).$(Version.Revision)'
-      $xml.Save("src\Directory.Build.props")
+      Write-Host "Version.Major: $(Version.Major)"
+      Write-Host "Version.Minor: $(Version.Minor)"
+      Write-Host "Version.MajorMinor: $(Version.MajorMinor)"
+      Write-Host "Version.MajorMinor: $(Version.Revision)"
+      Write-Hote "semver build: $(Version.MajorMinor).$(Version.Revision)"
 
-      Get-Content -Path .\src\Directory.Build.props
+      $xml = [xml](Get-Content -Path src/Directory.Build.props)
+      $xml.Project.PropertyGroup.AssemblyVersion = "$(Version.Major).0.0.0"
+      $xml.Project.PropertyGroup.FileVersion = "$(Version.MajorMinor).$(Version.Revision).0"
+      $xml.Project.PropertyGroup.InformationalVersion = "$(Version.MajorMinor).$(Version.Revision)"
+      $xml.Project.PropertyGroup.Version = "$(Version.MajorMinor).$(Version.Revision)"
+      $xml.Save("src/Directory.Build.props")
+
+      Get-Content -Path ./src/Directory.Build.props
     pwsh: true
 
 - task: DotNetCoreCLI@2
