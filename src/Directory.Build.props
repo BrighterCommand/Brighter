@@ -4,7 +4,8 @@
     <Authors>Ian Cooper</Authors>
     <Copyright>Copyright © Ian Cooper 2014</Copyright>
     <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
-    <PackageIconUrl>https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png</PackageIconUrl>
+    <PackageIcon>packageicon.png</PackageIcon>
+
     <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
 
@@ -32,5 +33,9 @@
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta2-19554-01">
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+      <None Include="..\..\images\BrighterSticker.png" Pack="true" PackagePath="packageicon.png"/>
   </ItemGroup>
 </Project>
