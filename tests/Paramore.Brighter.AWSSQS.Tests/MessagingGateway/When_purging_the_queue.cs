@@ -1,5 +1,4 @@
 using System;
-using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -17,6 +16,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
+        private Connection<MyCommand> _connection = new Connection<MyCommand>(channelName: new ChannelName($"{typeof(MyCommand)}.{Guid.NewGuid()}"));
 
         public SqsQueuePurgeTests ()
         {
@@ -27,13 +27,14 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 new MessageBody(JsonConvert.SerializeObject((object) myCommand))
             );
             
-            //Must have credentials stored in the SDK Credentials store or shared credentials file
-            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            var credentialChain = new CredentialProfileStoreChain();
+            
+            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
             {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
 
                 _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-                _channel = _channelFactory.CreateChannel(new Connection<MyCommand>());
+                _channel = _channelFactory.CreateChannel(_connection);
                 
                 _messageProducer = new SqsMessageProducer(awsConnection);
             }
@@ -56,9 +57,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            var connection = new Connection<MyCommand>();
-            _channelFactory.DeleteQueue(connection);
-            _channelFactory.DeleteTopic(connection);
+            _channelFactory.DeleteQueue(_connection);
+            _channelFactory.DeleteTopic(_connection);
         }
     }
 }

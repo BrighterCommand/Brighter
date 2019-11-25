@@ -1,5 +1,4 @@
 ﻿using System;
-using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
@@ -22,9 +21,11 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         public SQSBufferedConsumerTests()
         {
             //Must have credentials stored in the SDK Credentials store or shared credentials file
-            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            var credentialChain = new CredentialProfileStoreChain();
+            
+            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
             {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
 
                 ChannelFactory channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
                 var name = Guid.NewGuid().ToString();
