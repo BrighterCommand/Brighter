@@ -117,6 +117,7 @@ internal class RmqMessagePublisher
                     message.Body.BodyType, 
                     message.Header.ContentType, 
                     message.Header.ReplyTo,
+                    message.Persist,
                     headers),
                 message.Body.Bytes);
         }
@@ -168,15 +169,17 @@ internal class RmqMessagePublisher
                     message.Body.BodyType, 
                     message.Header.ContentType, 
                     message.Header.ReplyTo,
+                    message.Persist,
                     headers),
                 message.Body.Bytes);
         }
 
-        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType, string replyTo, IDictionary<string, object> headers = null)
+        private IBasicProperties CreateBasicProperties(Guid id, DateTime timeStamp, string type, string contentType,
+            string replyTo, bool persistMessage, IDictionary<string, object> headers = null)
         {
             var basicProperties = _channel.CreateBasicProperties();
 
-            basicProperties.DeliveryMode = 1;
+            basicProperties.DeliveryMode = (byte) (persistMessage ? 2 : 1); // delivery mode set to 2 if message is persistent or 1 if non-persistent
             basicProperties.ContentType = contentType;
             basicProperties.Type = type;
             basicProperties.MessageId = id.ToString();

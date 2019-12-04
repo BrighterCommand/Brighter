@@ -75,13 +75,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     EnsureChannel();
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
 
-                    if (Connection.PersistMessages)
-                        message.DeliveryMode = 2;
+                    message.Persist = Connection.PersistMessages;
 
                     _logger.Value.DebugFormat(
-                        "RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and body: {4}",
+                        "RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
-                        message.Id, message.Body.Value, delayMilliseconds);
+                        message.Id, message.Body.Value, delayMilliseconds, message.Persist);
                     if (DelaySupported)
                     {
                         rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
@@ -93,9 +92,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     }
 
                     _logger.Value.InfoFormat(
-                        "RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {5} and topic {2} and id {3} and message: {4} at {5}",
+                        "RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
-                        message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds);
+                        message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds, message.Persist);
                 }
             }
             catch (IOException io)
