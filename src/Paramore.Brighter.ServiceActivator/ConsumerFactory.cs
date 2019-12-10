@@ -55,20 +55,5 @@ namespace Paramore.Brighter.ServiceActivator
 
             return new Consumer(_consumerName, _connection.Name, channel, messagePump);
         }
-
-        public Consumer CreateAsync()
-        {
-            var channel = _connection.ChannelFactory.CreateChannel(_connection);
-            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
-            {
-                Channel = channel,
-                TimeoutInMilliseconds = _connection.TimeoutInMiliseconds,
-                RequeueCount = _connection.RequeueCount,
-                RequeueDelayInMilliseconds = _connection.RequeueDelayInMilliseconds,
-                UnacceptableMessageLimit = _connection.UnacceptableMessageLimit
-            };
-
-            return new Consumer(_consumerName, _connection.Name, channel, messagePump);
-        }
-    }
+   }
 }

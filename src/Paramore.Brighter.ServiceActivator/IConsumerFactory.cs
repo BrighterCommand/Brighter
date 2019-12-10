@@ -27,6 +27,5 @@ namespace Paramore.Brighter.ServiceActivator
     internal interface IConsumerFactory
     {
         Consumer Create();
-        Consumer CreateAsync();
     }
 }
