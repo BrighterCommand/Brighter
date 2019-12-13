@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -101,6 +101,8 @@ namespace Paramore.Brighter
             }
             set { Header.Bag[RedeliveredHeaderName] = value; }
         }
+
+        public bool Persist { get; set; }
 
         public void UpdateHandledCount()
         {

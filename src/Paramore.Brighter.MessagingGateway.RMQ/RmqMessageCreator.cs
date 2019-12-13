@@ -75,6 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var deliveryTag = HeaderResult<ulong>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
             var replyTo = HeaderResult<string>.Empty();
+            var deliveryMode = fromQueue.BasicProperties.DeliveryMode;
 
             Message message;
             try
@@ -113,6 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 message.DeliveryTag = deliveryTag.Result;
                 message.Redelivered = redelivered.Result;
                 message.Header.ReplyTo = replyTo.Result;
+                message.Persist = deliveryMode == 2;
             }
             catch (Exception e)
             {

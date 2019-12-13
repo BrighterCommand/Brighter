@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -56,6 +56,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Gets or sets the Heartbeat in seconds. Defaults to 5.
         /// </summary>
         public ushort Heartbeat { get; set; } = 5;
+
+        /// <summary>
+        /// Gets or sets whether to persist messages. Defaults to false.
+        /// </summary>
+        public bool PersistMessages { get; set; }
     }
 
     /// <summary>
