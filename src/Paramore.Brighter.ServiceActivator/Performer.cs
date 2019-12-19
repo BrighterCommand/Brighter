@@ -46,12 +46,8 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Task Run()
         {
-            //TODO: We want to support an event loop for async pipelines, but more work is needed
-            //if (!_messagePump.IsAsync)
-                return Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning);
-            //else
-                //return Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-         }
+            return Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning); 
+        }
 
         public void Dispose()
         {
