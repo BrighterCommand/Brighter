@@ -76,6 +76,9 @@ Brighter contributors (sorted alphabeticaly)
   
 **[Henk Mollema](https://github.com/henkmollema)**
   * Documentation fixes 
+  
+**[Hope McLeod](https://github.com/homcl)**
+  * Persistent message enhancement 
 
 **[Scott McLewin](https://github.com/smclewin)**
   * Binary serialization support for messages 
