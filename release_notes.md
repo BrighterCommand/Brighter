@@ -17,6 +17,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  --- This means we don't do reflection every time we build the pipeline for a request
  --- We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
  --- We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
+ - Added ability to persist RabbitMQ messages
   
 
 ## Release 8.0.* ##
