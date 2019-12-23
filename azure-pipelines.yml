@@ -114,14 +114,6 @@ steps:
   displayName: docker ps
 
 - task: DotNetCoreCLI@2
-  displayName: 'RabbitMQ dotnet test $(buildConfiguration)'
-  timeoutInMinutes: 5
-  inputs:
-    command: 'test'
-    arguments: 'tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
-    testRunTitle: 'RabbitMQ tests running on ubuntu'
-
-- task: DotNetCoreCLI@2
   displayName: 'DynamoDB dotnet test $(buildConfiguration)'
   timeoutInMinutes: 5
   inputs:
@@ -177,6 +169,13 @@ steps:
     arguments: 'tests\Paramore.Brighter.Redis.Tests\Paramore.Brighter.Redis.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
     testRunTitle: 'Redis tests running on ubuntu'
 
+- task: DotNetCoreCLI@2
+  displayName: 'RabbitMQ dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 5
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'RabbitMQ tests running on ubuntu'
 
 - task: PublishBuildArtifacts@1
   inputs:
