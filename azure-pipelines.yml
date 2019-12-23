@@ -114,14 +114,6 @@ steps:
   displayName: docker ps
 
 - task: DotNetCoreCLI@2
-  displayName: 'DynamoDB dotnet test $(buildConfiguration)'
-  timeoutInMinutes: 15
-  inputs:
-    command: 'test'
-    arguments: 'tests\Paramore.Brighter.DynamoDB.Tests\Paramore.Brighter.DynamoDB.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
-    testRunTitle: 'DynamoDB tests running on ubuntu'
-
-- task: DotNetCoreCLI@2
   displayName: 'EventStore dotnet test $(buildConfiguration)'
   timeoutInMinutes: 5
   inputs:
@@ -168,6 +160,14 @@ steps:
     command: 'test'
     arguments: 'tests\Paramore.Brighter.Redis.Tests\Paramore.Brighter.Redis.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
     testRunTitle: 'Redis tests running on ubuntu'
+
+- task: DotNetCoreCLI@2
+  displayName: 'DynamoDB dotnet test $(buildConfiguration)'
+  timeoutInMinutes: 15
+  inputs:
+    command: 'test'
+    arguments: 'tests\Paramore.Brighter.DynamoDB.Tests\Paramore.Brighter.DynamoDB.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
+    testRunTitle: 'DynamoDB tests running on ubuntu'
 
 - task: DotNetCoreCLI@2
   displayName: 'RabbitMQ dotnet test $(buildConfiguration)'
