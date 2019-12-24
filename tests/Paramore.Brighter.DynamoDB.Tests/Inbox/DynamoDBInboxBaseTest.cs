@@ -7,7 +7,9 @@ using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Outbox.DynamoDB;
+using Xunit;
 
+[assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     public abstract class DynamoDBInboxBaseTest : IDisposable
