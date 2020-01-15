@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using Paramore.Brighter.Logging;
 using Polly;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -121,6 +122,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 var connection = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
 
+                connection.ConnectionBlocked += HandleBlocked;
+                connection.ConnectionUnblocked += HandleUnBlocked;
+
                 _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}",
                     Connection.AmpqUri.GetSanitizedUri());
 
@@ -140,6 +144,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 //desired state configuration of the exchange
                 Channel.DeclareExchangeForConnection(Connection);
             }
+        }
+
+        private void HandleBlocked(object sender, ConnectionBlockedEventArgs args)
+        {
+            _logger.Value.WarnFormat("RMQMessagingGateway: Connection to {0} blocked. Reason: {1}", 
+                Connection.AmpqUri.GetSanitizedUri(), args.Reason);
+        }
+
+        private void HandleUnBlocked(object sender, EventArgs args)
+        {
+            _logger.Value.InfoFormat("RMQMessagingGateway: Connection to {0} unblocked", Connection.AmpqUri.GetSanitizedUri());
         }
 
         protected void ResetConnectionToBroker()
