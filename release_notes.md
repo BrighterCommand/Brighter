@@ -18,6 +18,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  --- We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
  --- We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
  - Added ability to persist RabbitMQ messages
+ - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
   
 
 ## Release 8.0.* ##
