@@ -3,7 +3,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.104.16" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.104.20" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0" />
   </ItemGroup>
