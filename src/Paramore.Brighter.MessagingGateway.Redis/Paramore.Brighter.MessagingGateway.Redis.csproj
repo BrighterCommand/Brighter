@@ -11,7 +11,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
-    <PackageReference Include="ServiceStack.Redis.Core" Version="5.7.0" />
+    <PackageReference Include="ServiceStack.Redis.Core" Version="5.8.0" />
     <PackageReference Include="System.ValueTuple" Version="4.5.0" />
     <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0" />
   </ItemGroup>
