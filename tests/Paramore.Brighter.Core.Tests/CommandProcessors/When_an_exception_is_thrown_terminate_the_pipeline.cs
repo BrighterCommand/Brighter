@@ -26,7 +26,8 @@ using System;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -42,12 +43,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyUnusedCommandHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyUnusedCommandHandler>();
-            container.Register<IHandleRequests<MyCommand>, MyAbortingHandler<MyCommand>>();
+            var container = new ServiceCollection();
+            container.AddTransient<MyUnusedCommandHandler>();
+            container.AddTransient<MyAbortingHandler<MyCommand>>();
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -33,14 +33,9 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
     internal class MyFailsWithFallbackDivideByZeroHandlerAsync : RequestHandlerAsync<MyCommand>
     {
-        public static bool FallbackCalled { get; set; }
-        public static bool ReceivedCommand { get; set; }
-        public static bool SetException { get; set; }
-
-        static MyFailsWithFallbackDivideByZeroHandlerAsync()
-        {
-            ReceivedCommand = false;
-        }
+        public  bool FallbackCalled { get; set; }
+        public  bool ReceivedCommand { get; set; }
+        public  bool SetException { get; set; }
 
         [FallbackPolicyAsync(true, false, 1)]
         [UsePolicyAsync("MyDivideByZeroPolicy", 2)]
@@ -70,17 +65,17 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
             return await base.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        public static bool ShouldFallback(MyCommand command)
+        public  bool ShouldFallback(MyCommand command)
         {
             return FallbackCalled;
         }
 
-        public static bool ShouldReceive(MyCommand myCommand)
+        public  bool ShouldReceive(MyCommand myCommand)
         {
             return ReceivedCommand;
         }
 
-        public static bool ShouldSetException(MyCommand myCommand)
+        public  bool ShouldSetException(MyCommand myCommand)
         {
             return SetException;
         }

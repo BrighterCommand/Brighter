@@ -23,14 +23,14 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Serilog;
-using TinyIoC;
 
 namespace GreetingsSender
 {
@@ -39,57 +39,40 @@ namespace GreetingsSender
         static void Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-              .MinimumLevel.Debug()
-              .WriteTo.Console()
-              .CreateLogger();
-            
-            var container = new TinyIoCContainer();
-            container.Register<IHandleRequests<GreetingReply>, GreetingReplyHandler>();
-            container.Register<IAmAMessageMapper<GreetingReply>, GreetingReplyMessageMapper>();
-            container.Register<IAmAMessageMapper<GreetingRequest>, GreetingRequestMessageMapper>();
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-            var handerFactory = new TinyIocHandlerFactory(container);
+            var serviceCollection = new ServiceCollection();
 
-            var subscriberRegistry = new SubscriberRegistry()
-            {
-                {typeof(GreetingReply), typeof(GreetingReplyHandler)}
-            };
-
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingRequest), typeof(GreetingRequestMessageMapper)},
-                {typeof(GreetingReply), typeof(GreetingReplyMessageMapper)}
-            };
-
-            var rmqConnnection = new RmqMessagingGatewayConnection
+            var rmqConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            
-            var producer = new RmqMessageProducer(rmqConnnection);
-            var inputChannelFactory = new ChannelFactory(new RmqMessageConsumerFactory(rmqConnnection));
-            
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, handerFactory))
-                .DefaultPolicy()
-                .RequestReplyQueues(
-                    new MessagingConfiguration(
-                        null, 
-                        producer, 
-                        messageMapperRegistry,
-                        responseChannelFactory: inputChannelFactory))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            var producer = new RmqMessageProducer(rmqConnection);
 
-            var commandProcessor = builder.Build();
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+
+            serviceCollection.AddBrighter(options =>
+            {
+                var outBox = new InMemoryOutbox();
+                options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, null);
+            }).AutoFromAssemblies();
+
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             Console.WriteLine("Requesting Salutation...");
-            
+
             //blocking call
-            commandProcessor.Call<GreetingRequest, GreetingReply>(new GreetingRequest{Name = "Ian", Language = "en-gb"}, 2000 );
-            
+            commandProcessor.Call<GreetingRequest, GreetingReply>(new GreetingRequest { Name = "Ian", Language = "en-gb" }, 2000);
+
             Console.WriteLine("Done...");
+            Console.ReadLine();
         }
     }
 }

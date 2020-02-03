@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
 
@@ -39,26 +38,15 @@ namespace Greetings.Ports.CommandHandlers
         
         public override GreetingRequest Handle(GreetingRequest request)
         {
-            string salutation;
-            switch (request.Language)
+            var salutation = request.Language switch
             {
-                case ("en-gb"):
-                case ("en-us"):
-                    salutation = "Hello";
-                    break;
-                case ("fr-fr"):
-                    salutation = "Bonjour";
-                    break;
-                case ("de-de"):
-                    salutation = "Hallo";
-                    break;
-                case ("tlh"):
-                    salutation = "nuqneH";
-                    break;
-                default:
-                    salutation = "Salution";
-                    break;
-            }
+                ("en-gb") => "Hello",
+                ("en-us") => "Hello",
+                ("fr-fr") => "Bonjour",
+                ("de-de") => "Hallo",
+                ("tlh") => "nuqneH",
+                _ => "Salution"
+            };
 
             salutation += " " + request.Name;
 

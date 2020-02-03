@@ -82,15 +82,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             lock (s_lock)
             {
                 DelayReconnecting();
-
+                
                 try
                 {
-                    CreateConnection(connectionFactory);
-                }
+                CreateConnection(connectionFactory);
+            }
                 catch (BrokerUnreachableException exception)
                 {
                     s_logger.Value.ErrorException("RMQMessageGatewayConnectionPool: Failed to reset connection to Rabbit MQ endpoint {0}", exception, connectionFactory.Endpoint);
-                }
+        }
             }
         }
 
@@ -135,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             if (s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection))
             {
-                pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
+                    pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
                 pooledConnection.Connection.Dispose();
                 s_connectionPool.Remove(connectionId);
             }

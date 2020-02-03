@@ -33,7 +33,8 @@ using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Handlers;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
@@ -55,13 +56,15 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             
             registry.Register<MyCommand, MyMonitoredHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyMonitoredHandler>();
-            container.Register<IHandleRequests<MyCommand>, MonitorHandler<MyCommand>>();
-            container.Register<IAmAControlBusSender>(_controlBusSender);
-            container.Register(new MonitorConfiguration {IsMonitoringEnabled = true, InstanceName = "UnitTests" });
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var container = new ServiceCollection();
+            container.AddTransient<MyMonitoredHandler>();
+            container.AddTransient<MonitorHandler<MyCommand>>();
+            container.AddSingleton<IAmAControlBusSender>(_controlBusSender);
+            container.AddSingleton(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
+
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
             _command = new MyCommand();
 

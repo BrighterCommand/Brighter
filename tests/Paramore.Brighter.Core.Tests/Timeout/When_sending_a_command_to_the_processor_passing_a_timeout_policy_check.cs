@@ -27,7 +27,9 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Timeout.Test_Doubles;
 using Xunit;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.Timeout
 {
@@ -42,11 +44,13 @@ namespace Paramore.Brighter.Core.Tests.Timeout
             //Handler is decorated with UsePolicy 
             registry.Register<MyCommand, MyPassesTimeoutHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyPassesTimeoutHandler>();
+            var container = new ServiceCollection();
+            container.AddTransient<MyPassesTimeoutHandler>();
+            container.AddTransient<TimeoutPolicyHandler<MyCommand>>();
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+            
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //We have to catch the final exception that bubbles out after retry

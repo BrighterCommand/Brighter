@@ -320,7 +320,8 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-         public CommandProcessor(
+        /// <param name="responseChannelFactory">Add response channel if doing request reply</param>
+        public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmAHandlerFactoryAsync asyncHandlerFactory,

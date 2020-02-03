@@ -22,12 +22,11 @@ THE SOFTWARE. */
 
 #endregion
 
-using KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost;
 using KafkaTaskQueueSamples.Greetings.Ports.Commands;
-using KafkaTaskQueueSamples.Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using TinyIoC;
 
 namespace KafkaTaskQueueSamples.GreetingsSender
 {
@@ -35,11 +34,10 @@ namespace KafkaTaskQueueSamples.GreetingsSender
     {
         static void Main(string[] args)
         {
-            var kafkaMessagingGatewayConfiguration
-                = new KafkaMessagingGatewayConfiguration()
+            var kafkaMessagingGatewayConfiguration = new KafkaMessagingGatewayConfiguration()
                 {
                     Name = "paramore.brighter.greetingsender",
-                    BootStrapServers = new[] {"localhost:9092"}
+                    BootStrapServers = new[] { "localhost:9092" }
                 };
 
             for (var i = 0; i < args.Length; i += 2)
@@ -61,24 +59,21 @@ namespace KafkaTaskQueueSamples.GreetingsSender
                 }
             }
 
-            var container = new TinyIoCContainer();
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+
+            var serviceCollection = new ServiceCollection();
+
+            var producer = new KafkaMessageProducerFactory(kafkaMessagingGatewayConfiguration).Create();
+
+            serviceCollection.AddBrighter(options =>
             {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
+                var outBox = new InMemoryOutbox();
+                options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, null);
+            }).AutoFromAssemblies();
 
-            var outbox = new InMemoryOutbox();
-            var producer = new KafkaMessageProducerFactory(kafkaMessagingGatewayConfiguration)
-                               .Create();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
-            var commandProcessor = builder.Build();
             commandProcessor.Post(new GreetingEvent("Wayne"));
         }
     }

@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using Paramore.Brighter.ServiceActivator;
@@ -64,8 +66,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(connection);
 
+            var container = new ServiceCollection();
             var commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new TinyIocHandlerFactory(new TinyIoCContainer())))
+                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), (IAmAHandlerFactory)new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(policyRegistry)
                 .NoTaskQueues()
                 .RequestContextFactory(new InMemoryRequestContextFactory())

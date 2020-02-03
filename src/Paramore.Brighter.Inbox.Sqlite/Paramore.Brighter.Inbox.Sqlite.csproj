@@ -6,12 +6,9 @@
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.3" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="3.1.2" />
-    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
-    
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
 </Project>

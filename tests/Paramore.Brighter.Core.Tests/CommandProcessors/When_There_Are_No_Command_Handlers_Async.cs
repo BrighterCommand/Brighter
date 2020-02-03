@@ -27,7 +27,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -42,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             _commandProcessor = new CommandProcessor(
                 new SubscriberRegistry(),
-                new TinyIocHandlerFactoryAsync(new TinyIoCContainer()),
+                (IAmAHandlerFactoryAsync)new ServiceProviderHandlerFactory(new ServiceCollection().BuildServiceProvider()),
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry());
         }

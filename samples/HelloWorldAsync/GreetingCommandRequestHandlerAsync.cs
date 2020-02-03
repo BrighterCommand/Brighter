@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,11 +26,13 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
 
 namespace HelloWorldAsync
 {
     internal class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
+        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default(CancellationToken))
         {
             var api = new IpFyApi(new Uri("https://api.ipify.org"));

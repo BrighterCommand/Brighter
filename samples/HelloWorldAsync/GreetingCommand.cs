@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,6 +34,6 @@ namespace HelloWorldAsync
             Name = name;
         }
 
-        public string Name { get; private set; }
+        public string Name { get; }
     }
 }

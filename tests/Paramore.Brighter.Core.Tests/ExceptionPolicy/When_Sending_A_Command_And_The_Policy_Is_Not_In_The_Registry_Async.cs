@@ -31,7 +31,8 @@ using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
@@ -46,14 +47,15 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyDoesNotFailPolicyHandlerAsync>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyDoesNotFailPolicyHandlerAsync>("MyDoesNotFailPolicyHandler");
-            container.Register<IHandleRequestsAsync<MyCommand>, ExceptionPolicyHandlerAsync<MyCommand>>("MyExceptionPolicyHandler");
+            var container = new ServiceCollection();
+            container.AddTransient<MyDoesNotFailPolicyHandlerAsync>();
+            container.AddTransient<ExceptionPolicyHandlerAsync<MyCommand>>();
+
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //We have to catch the final exception that bubbles out after retry

@@ -2,6 +2,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Logging.TestDoubles;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.Logging.Handlers;
 using Polly.Registry;
@@ -32,12 +33,11 @@ namespace Paramore.Brighter.Core.Tests.Logging
 
                 var registry = new SubscriberRegistry();
                 registry.Register<MyCommand, IHandleRequests<MyCommand>>();
-                var container = new ServiceCollection();
-
 
                 var requestLogger = new RequestLoggingHandler<MyCommand>();
 
-                container.AddTransient<IHandleRequests<MyCommand>, MyLoggedHandler>();
+                var container = new ServiceCollection();
+                container.AddTransient<MyLoggedHandler>();
                 container.AddTransient(typeof(RequestLoggingHandler<MyCommand>), provider => requestLogger);
 
                 var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());

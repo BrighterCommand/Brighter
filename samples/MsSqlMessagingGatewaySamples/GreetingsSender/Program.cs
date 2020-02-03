@@ -1,9 +1,9 @@
-﻿using Events.Adapters.ServiceHost;
-using Events.Ports.Commands;
-using Events.Ports.Mappers;
+﻿using Events.Ports.Commands;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using TinyIoC;
+using Serilog;
 
 namespace GreetingsSender
 {
@@ -11,28 +11,27 @@ namespace GreetingsSender
     {
         static void Main()
         {
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
-
-            var outbox = new InMemoryOutbox();
+            var serviceCollection = new ServiceCollection();
 
             var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
             var producer = new MsSqlMessageProducer(messagingConfiguration);
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            serviceCollection.AddBrighter(options =>
+            {
+                var outBox = new InMemoryOutbox();
+                options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, null);
+            }).AutoFromAssemblies();
 
-            var commandProcessor = builder.Build();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+
 
             commandProcessor.Post(new GreetingEvent("Ian"));
         }

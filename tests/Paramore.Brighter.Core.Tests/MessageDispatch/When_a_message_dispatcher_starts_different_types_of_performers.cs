@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,7 +32,8 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -48,11 +50,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandChannel = new FakeChannel();
             var commandProcessor = new SpyCommandProcessor();
 
-            var container = new TinyIoCContainer();
-            container.Register<MyEventMessageMapper>();
-            container.Register<MyCommandMessageMapper>();
+            var container = new ServiceCollection();
+            container.AddTransient<MyEventMessageMapper>();
+            container.AddTransient<MyCommandMessageMapper>();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new TinyIoCMessageMapperFactory(container));
+            var messageMapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(container.BuildServiceProvider()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
@@ -94,4 +96,5 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
     }
+
 }

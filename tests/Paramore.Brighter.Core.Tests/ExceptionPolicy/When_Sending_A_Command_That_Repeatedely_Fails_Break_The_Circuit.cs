@@ -31,7 +31,8 @@ using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
@@ -48,10 +49,11 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyFailsWithDivideByZeroHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyFailsWithDivideByZeroHandler>().AsSingleton();
-            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>().AsSingleton();
+            var container = new ServiceCollection();
+            container.AddSingleton<MyFailsWithDivideByZeroHandler>();
+            container.AddSingleton<ExceptionPolicyHandler<MyCommand>>();
+
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             var policyRegistry = new PolicyRegistry();
 
@@ -63,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         }
 
         //We have to catch the final exception that bubbles out after retry

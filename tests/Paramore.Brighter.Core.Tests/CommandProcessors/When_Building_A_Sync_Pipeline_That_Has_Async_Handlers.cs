@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,8 @@ using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -42,12 +43,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyMixedImplicitHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyMixedImplicitHandler>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            var container = new ServiceCollection();
+            container.AddTransient<MyMixedImplicitHandler>();
+            container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
 
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);            
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactory)handlerFactory);            
             PipelineBuilder<MyCommand>.ClearPipelineCache();
  
         }

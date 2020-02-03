@@ -1,11 +1,13 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Polly;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Inbox.Handlers;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -23,11 +25,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
              //This handler has no Inbox attribute
              subscriberRegistry.Add(typeof(MyEvent), typeof(MyGlobalInboxEventHandler));
              
-             var container = new TinyIoCContainer();
-             var handlerFactory = new TinyIocHandlerFactory(container);
+             var container = new ServiceCollection();
+             container.AddSingleton<MyGlobalInboxEventHandler>(handler);
+             container.AddSingleton<IAmAnInbox>(_inbox);
+             container.AddSingleton<UseInboxHandler<MyEvent>>();
+             
 
-             container.Register<MyGlobalInboxEventHandler>(handler);
-             container.Register<IAmAnInbox>(_inbox);
+           var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
               
              var retryPolicy = Policy
                 .Handle<Exception>()
@@ -45,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
            _commandProcessor = new CommandProcessor(
                 subscriberRegistry, 
-                handlerFactory, 
+                (IAmAHandlerFactory)handlerFactory, 
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 inboxConfiguration: inboxConfiguration

@@ -24,12 +24,12 @@ THE SOFTWARE. */
 
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
-using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using TinyIoC;
+using Serilog;
 
 namespace GreetingsSender
 {
@@ -37,28 +37,29 @@ namespace GreetingsSender
     {
         static void Main(string[] args)
         {
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
+            var serviceCollection = new ServiceCollection();
 
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
 
             if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
                 var producer = new SqsMessageProducer(awsConnection);
 
-                var builder = CommandProcessorBuilder.With()
-                    .Handlers(new HandlerConfiguration())
-                    .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(new InMemoryOutbox(), producer, messageMapperRegistry))
-                    .RequestContextFactory(new InMemoryRequestContextFactory());
+                serviceCollection.AddBrighter(options =>
+                {
+                    var outBox = new InMemoryOutbox();
+                    options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, null);
+                }).AutoFromAssemblies();
 
-                var commandProcessor = builder.Build();
+                var serviceProvider = serviceCollection.BuildServiceProvider();
+
+                var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
                 commandProcessor.Post(new GreetingEvent("Ian"));
             }

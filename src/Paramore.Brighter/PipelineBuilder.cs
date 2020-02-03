@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -81,6 +81,7 @@ namespace Paramore.Brighter
             var handlers = _interpreter.GetHandlers();
 
             var pipelines = new Pipelines<TRequest>();
+
             handlers.Each(handler => pipelines.Add(BuildPipeline(handler, requestContext)));
 
             pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
@@ -107,6 +108,11 @@ namespace Paramore.Brighter
 
         private IHandleRequests<TRequest> BuildPipeline(RequestHandler<TRequest> implicitHandler, IRequestContext requestContext)
         {
+            if (implicitHandler is null)
+            {
+                throw new ArgumentNullException(nameof(implicitHandler));
+            }
+
             implicitHandler.Context = requestContext;
 
             if (!_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
@@ -155,6 +161,11 @@ namespace Paramore.Brighter
 
         private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(RequestHandlerAsync<TRequest> implicitHandler, IRequestContext requestContext, bool continueOnCapturedContext)
         {
+            if (implicitHandler is null)
+            {
+                throw new ArgumentNullException(nameof(implicitHandler));
+            }
+
             implicitHandler.Context = requestContext;
             implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;
 

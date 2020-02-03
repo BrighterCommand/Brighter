@@ -22,97 +22,63 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using KafkaTaskQueueSamples.Greetings.Adapters.ServiceHost;
-using KafkaTaskQueueSamples.Greetings.Ports.CommandHandlers;
+using System.Threading.Tasks;
 using KafkaTaskQueueSamples.Greetings.Ports.Commands;
-using KafkaTaskQueueSamples.Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Paramore.Brighter.ServiceActivator;
-using Polly;
-using Polly.Registry;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
-using TinyIoC;
 
 namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .WriteTo.Console()
                 .CreateLogger();
 
-            var container = new TinyIoCContainer();
-
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-            container.Register<IHandleRequests<GreetingEvent>, GreetingEventHandler>();
-
-            var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<GreetingEvent, GreetingEventHandler>();
-
-            //create policies
-            var retryPolicy = Policy
-                .Handle<Exception>()
-                .WaitAndRetry(new[]
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
                 {
-                    TimeSpan.FromMilliseconds(50),
-                    TimeSpan.FromMilliseconds(100),
-                    TimeSpan.FromMilliseconds(150)
-                });
+                    var connections = new Connection[]
+                    {
+                        new Connection<GreetingEvent>(
+                            new ConnectionName("paramore.example.greeting"),
+                            new ChannelName("greeting.event"),
+                            new RoutingKey("greeting.event"),
+                            timeoutInMilliseconds: 200)
+                    };
+                    //create the gateway
+                    var messagingGatewayConfiguration = new KafkaMessagingGatewayConfiguration
+                    {
+                        Name = "paramore.brighter", 
+                        BootStrapServers = new[] {"localhost:9092"}
+                    };
 
-            var circuitBreakerPolicy = Policy
-                .Handle<Exception>()
-                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+                    var consumerFactory = new KafkaMessageConsumerFactory(messagingGatewayConfiguration);
 
-            var policyRegistry = new PolicyRegistry
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
-            };
+                    services.AddServiceActivator(options =>
+                    {
+                        options.Connections = connections;
+                        options.ChannelFactory = new ChannelFactory(consumerFactory);
+                        var outBox = new InMemoryOutbox();
+                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new KafkaMessageProducerFactory(messagingGatewayConfiguration).Create(), null);
+                    }).AutoFromAssemblies();
 
-            //create message mappers
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                { typeof(GreetingEvent), typeof(GreetingEventMessageMapper) }
-            };
 
-            //create the gateway
-            var gatewayConfiguration = new KafkaMessagingGatewayConfiguration
-            {
-                 Name = "paramore.brighter",
-                 BootStrapServers = new[] { "localhost:9092" }
-            };
+                    services.AddHostedService<ServiceActivatorHostedService>();
+                })
+                .UseConsoleLifetime()
+                .UseSerilog()
+                .Build();
 
-            var messageConsumerFactory = new KafkaMessageConsumerFactory(gatewayConfiguration); 
-
-            var dispatcher = DispatchBuilder.With()
-                .CommandProcessor(CommandProcessorBuilder.With()
-                    .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                    .Policies(policyRegistry)
-                    .NoTaskQueues()
-                    .RequestContextFactory(new InMemoryRequestContextFactory())
-                    .Build())
-                .MessageMappers(messageMapperRegistry)
-                .DefaultChannelFactory(new ChannelFactory(messageConsumerFactory))
-                .Connections(new Connection[]
-                {
-                    new Connection<GreetingEvent>(
-                        new ConnectionName("paramore.example.greeting"),
-                        new ChannelName("greeting.event"),
-                        new RoutingKey("greeting.event"),
-                        timeoutInMilliseconds: 200)
-                }).Build();
-
-            dispatcher.Receive();
-
-            Console.WriteLine("Press Enter to stop ...");
-            Console.ReadLine();
-
-            dispatcher.End().Wait();
+            await host.RunAsync();
         }
     }
 }
