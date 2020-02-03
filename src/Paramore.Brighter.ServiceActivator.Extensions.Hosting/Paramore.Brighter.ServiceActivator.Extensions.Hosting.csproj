@@ -1,23 +1,15 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>Service Activator Microsoft.Extensions.Hosting (IHostBuilder) support for background tasks</Description>
     <Authors>Toby Henderson</Authors>
-    <PublishRepositoryUrl>true</PublishRepositoryUrl>
-    <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0-beta-63127-02">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Hosting" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="2.2.0" />
-    <PackageReference Include="Paramore.Brighter.ServiceActivator" Version="8.0.71" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="3.1.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="3.1.1" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
   </ItemGroup>
 </Project>

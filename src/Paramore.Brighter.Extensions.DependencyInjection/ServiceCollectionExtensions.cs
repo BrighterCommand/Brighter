@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -46,11 +46,27 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ? policyBuilder.DefaultPolicy()
                 : policyBuilder.Policies(options.PolicyRegistry);
 
-            var builder = options.BrighterMessaging == null
-                ? messagingBuilder.NoTaskQueues()
-                : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.MessageStore, options.BrighterMessaging.Producer, messageMapperRegistry));
+            
+            INeedARequestContext taskQueuesBuilder;
+            if (options.ChannelFactory is null)
+            {
+                //TODO: Need to add async outbox 
+                
+                taskQueuesBuilder = options.BrighterMessaging == null
+                    ? messagingBuilder.NoTaskQueues()
+                    : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.OutBox,
+                        options.BrighterMessaging.AsyncOutBox, options.BrighterMessaging.Producer,
+                        options.BrighterMessaging.AsyncProducer, messageMapperRegistry));
+            }
+            else
+            {
+                taskQueuesBuilder = options.BrighterMessaging == null
+                    ? messagingBuilder.NoTaskQueues()
+                    : messagingBuilder.RequestReplyQueues(new MessagingConfiguration(options.BrighterMessaging.OutBox,
+                        options.BrighterMessaging.Producer, messageMapperRegistry, responseChannelFactory: options.ChannelFactory));
+            }
 
-            var commandProcessor = builder
+            var commandProcessor = taskQueuesBuilder
                 .RequestContextFactory(options.RequestContextFactory)
                 .Build();
 
@@ -74,13 +90,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
     public class BrighterMessaging
     {
-        public IAmAMessageStore<Message> MessageStore { get; }
+        public IAmAnOutbox<Message> OutBox { get; }
+        public IAmAnOutboxAsync<Message> AsyncOutBox { get; }
         public IAmAMessageProducer Producer { get; }
+        public IAmAMessageProducerAsync AsyncProducer { get; }
 
-        public BrighterMessaging(IAmAMessageStore<Message> messageStore, IAmAMessageProducer producer)
+        public BrighterMessaging(IAmAnOutbox<Message> outBox, IAmAnOutboxAsync<Message> asyncOutBox, IAmAMessageProducer producer, IAmAMessageProducerAsync asyncProducer)
         {
-            MessageStore = messageStore;
+            OutBox = outBox;
+            AsyncOutBox = asyncOutBox;
             Producer = producer;
+            AsyncProducer = asyncProducer;
         }
     }
 }

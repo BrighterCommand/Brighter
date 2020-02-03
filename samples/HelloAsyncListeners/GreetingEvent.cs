@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Paramore.Brighter;
 
 namespace HelloAsyncListeners
@@ -10,6 +10,6 @@ namespace HelloAsyncListeners
             Name = name;
         }
 
-        public string Name { get; private set; }
+        public string Name { get; }
     }
 }

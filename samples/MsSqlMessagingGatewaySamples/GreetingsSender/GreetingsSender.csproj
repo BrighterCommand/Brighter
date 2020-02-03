@@ -4,6 +4,11 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj" />
     <ProjectReference Include="..\Events\Events.csproj" />
   </ItemGroup>
   <ItemGroup>

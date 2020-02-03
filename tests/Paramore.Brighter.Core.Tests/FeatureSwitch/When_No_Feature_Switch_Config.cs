@@ -27,8 +27,10 @@ using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
+using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
@@ -37,7 +39,8 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
     {
         private readonly MyCommand _myCommand = new MyCommand();        
         private readonly SubscriberRegistry _registry;
-        private readonly TinyIocHandlerFactory _handlerFactory;
+        private readonly ServiceProvider _provider;
+        private readonly ServiceProviderHandlerFactory _handlerFactory;
 
         private CommandProcessor _commandProcessor;
 
@@ -46,23 +49,25 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             _registry = new SubscriberRegistry();
             _registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
 
-            var container = new TinyIoCContainer();
-            _handlerFactory = new TinyIocHandlerFactory(container);
+            var container = new ServiceCollection();
+            container.AddSingleton<MyFeatureSwitchedConfigHandler>();
+            container.AddTransient<FeatureSwitchHandler<MyCommand>>();
 
-            container.Register<IHandleRequests<MyCommand>, MyFeatureSwitchedConfigHandler>().AsSingleton();
+            _provider = container.BuildServiceProvider();
+            _handlerFactory = new ServiceProviderHandlerFactory(_provider);
         }
 
         [Fact]
         public void When_a_sending_a_command_to_the_processor_when_null_feature_switch_config()
         {
             _commandProcessor = new CommandProcessor(_registry, 
-                                                     _handlerFactory, 
+                                                     (IAmAHandlerFactory)_handlerFactory, 
                                                      new InMemoryRequestContextFactory(), 
                                                      new PolicyRegistry());
 
             _commandProcessor.Send(_myCommand);
 
-            MyFeatureSwitchedConfigHandler.DidReceive(_myCommand).Should().BeTrue();
+            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeTrue();
         }
 
         public void Dispose()

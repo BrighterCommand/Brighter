@@ -25,7 +25,8 @@ THE SOFTWARE. */
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -40,13 +41,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStepsPreAndPostDecoratedHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyStepsPreAndPostDecoratedHandler>();
-            container.Register<IHandleRequests<MyCommand>, MyStepsValidationHandler<MyCommand>>();
-            container.Register<IHandleRequests<MyCommand>, MyStepsLoggingHandler<MyCommand>>();
+            var container = new ServiceCollection();
+            container.AddTransient<MyStepsPreAndPostDecoratedHandler>();
+            container.AddTransient<MyStepsValidationHandler<MyCommand>>();
+            container.AddTransient<MyStepsLoggingHandler<MyCommand>>();
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

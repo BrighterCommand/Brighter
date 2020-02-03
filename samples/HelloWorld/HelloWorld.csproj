@@ -4,6 +4,10 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>

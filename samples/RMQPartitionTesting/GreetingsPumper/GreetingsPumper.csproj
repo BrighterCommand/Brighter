@@ -4,6 +4,9 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\..\RMQTaskQueueSamples\Greetings\Greetings.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.RMQ\Paramore.Brighter.MessagingGateway.RMQ.csproj" />
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />

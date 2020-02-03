@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -6,8 +6,10 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Inbox;
 using Polly;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
+using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
@@ -24,12 +26,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
              //This handler has no Inbox attribute
              subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
              
-             var container = new TinyIoCContainer();
-             var handlerFactory = new TinyIocHandlerFactoryAsync(container);
+             var container = new ServiceCollection();
+             container.AddSingleton<MyCommandHandlerAsync>(handler);
+             container.AddSingleton<IAmAnInboxAsync>(_inbox);
+             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
 
-             container.Register<MyCommandHandlerAsync>(handler);
-             container.Register<IAmAnInboxAsync>(_inbox);
-              
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
              var retryPolicy = Policy
                 .Handle<Exception>()
                 .RetryAsync();
@@ -46,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
            _commandProcessor = new CommandProcessor(
                 subscriberRegistry, 
-                handlerFactory, 
+                (IAmAHandlerFactoryAsync)handlerFactory, 
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry
                 {

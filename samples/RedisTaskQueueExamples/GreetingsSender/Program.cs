@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2017 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,48 +20,48 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
-using Greetings.Adapters;
 using Greetings.Ports.Events;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Redis;
-using TinyIoC;
+using Serilog;
 
 namespace GreetingsSender
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+            var serviceCollection = new ServiceCollection();
 
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
-
-            var outbox = new InMemoryOutbox();
             var redisConnection = new RedisMessagingGatewayConfiguration
             {
-                RedisConnectionString = "localhost:6379?connectTimeout=1&sendTImeout=1000&",
+                RedisConnectionString = "localhost:6379?connectTimeout=1&sendTimeout=1000&",
                 MaxPoolSize = 10,
                 MessageTimeToLive = TimeSpan.FromMinutes(10)
             };
-            
             var producer = new RedisMessageProducer(redisConnection);
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            serviceCollection.AddBrighter(options =>
+            {
+                var outBox = new InMemoryOutbox();
+                options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, null);
+            }).AutoFromAssemblies();
 
-            var commandProcessor = builder.Build();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             commandProcessor.Post(new GreetingEvent("Ian"));
         }

@@ -1,16 +1,16 @@
-using System;
+﻿using System;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter;
-using Paramore.Brighter.Eventsourcing.Handlers;
+using Paramore.Brighter.Inbox.Handlers;
 using Paramore.Brighter.Logging.Handlers;
 using Paramore.Brighter.Monitoring.Handlers;
 using Paramore.Brighter.Policies.Handlers;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Tests;
 using Xunit;
 
-namespace Tests
+namespace Paramore.Brighter.Extensions.Tests
 {
     public class AssemblyResolutionDefaultTransientTests
     {
@@ -57,7 +57,7 @@ namespace Tests
             TestRegistration(typeof(FallbackPolicyHandler<>), ServiceLifetime.Transient);
             TestRegistration(typeof(TimeoutPolicyHandler<>), ServiceLifetime.Transient);
             TestRegistration(typeof(MonitorHandler<>), ServiceLifetime.Transient);
-            TestRegistration(typeof(CommandSourcingHandler<>), ServiceLifetime.Transient);
+            TestRegistration(typeof(UseInboxHandler<>), ServiceLifetime.Transient);
             TestRegistration(typeof(RequestLoggingHandler<>), ServiceLifetime.Transient);
         }
 

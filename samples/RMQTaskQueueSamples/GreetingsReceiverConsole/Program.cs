@@ -23,112 +23,75 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Adapters.ServiceHost;
-using Greetings.Ports.CommandHandlers;
+using System.Threading.Tasks;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.ServiceActivator;
-using Polly;
-using Polly.Registry;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
-using TinyIoC;
 
 namespace GreetingsReceiverConsole
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-              .MinimumLevel.Debug()
-              .WriteTo.Console()
-              .CreateLogger();
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-            var container = new TinyIoCContainer();
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
 
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-            container.Register<IHandleRequests<GreetingEvent>, GreetingEventHandler>();
-            container.Register<IHandleRequests<FarewellEvent>, FarewellEventHandler>();
+                {
+                    var connections = new Connection[]
+                    {
+                    new Connection<GreetingEvent>(
+                        new ConnectionName("paramore.example.greeting"),
+                        new ChannelName("greeting.event"),
+                        new RoutingKey("greeting.event"),
+                        timeoutInMilliseconds: 200,
+                        isDurable: true,
+                        highAvailability: true),
+                    new Connection<FarewellEvent>(
+                        new ConnectionName("paramore.example.farewell"),
+                        new ChannelName("farewell.event"),
+                        new RoutingKey("farewell.event"),
+                        timeoutInMilliseconds: 200,
+                        isDurable: true,
+                        highAvailability: true)
+                    };
 
+                    var rmqConnection = new RmqMessagingGatewayConnection
+                    {
+                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                        Exchange = new Exchange("paramore.brighter.exchange")
+                    };
 
-            var subscriberRegistry = new SubscriberRegistry()
-        {
-            {typeof(GreetingEvent), typeof(GreetingEventHandler)},
-            {typeof(FarewellEvent), typeof(FarewellEventHandler)}
-        };
+                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-            //create policies
-            var retryPolicy = Policy
-              .Handle<Exception>()
-              .WaitAndRetry(new[]
-              {
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromMilliseconds(100),
-            TimeSpan.FromMilliseconds(150)
-              });
+                    services.AddServiceActivator(options =>
+                    {
+                        options.Connections = connections;
+                        options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                        var outBox = new InMemoryOutbox();
+                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new RmqMessageProducer(rmqConnection), null);
+                    }).AutoFromAssemblies();
 
-            var circuitBreakerPolicy = Policy
-              .Handle<Exception>()
-              .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+                    
+                    services.AddHostedService<ServiceActivatorHostedService>();
+                })
+                .UseConsoleLifetime()
+                .UseSerilog()
+                .Build();
 
-            var policyRegistry = new PolicyRegistry
-        {
-          {CommandProcessor.RETRYPOLICY, retryPolicy},
-          {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
-        };
-
-            //create message mappers
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-        {
-          {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)},
-          {typeof(FarewellEvent), typeof(FarewellEventMessageMapper) }
-        };
-
-            //create the gateway
-            var rmqConnnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-            };
-
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
-
-            var dispatcher = DispatchBuilder.With()
-              .CommandProcessor(CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                .Policies(policyRegistry)
-                .NoTaskQueues()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build())
-              .MessageMappers(messageMapperRegistry)
-              .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-              .Connections(new Connection[]
-              {
-            new Connection<GreetingEvent>(
-              new ConnectionName("paramore.example.greeting"),
-              new ChannelName("greeting.event"),
-              new RoutingKey("greeting.event"),
-              timeoutInMilliseconds: 200,
-              isDurable: true,
-              highAvailability: true),
-            new Connection<FarewellEvent>(
-                new ConnectionName("paramore.example.farewell"),
-                new ChannelName("farewell.event"),
-                new RoutingKey("farewell.event"),
-                timeoutInMilliseconds: 200,
-                isDurable: true,
-                highAvailability: true)
-              }).Build();
-
-            dispatcher.Receive();
-
-            Console.WriteLine("Press Enter to stop ...");
-            Console.ReadLine();
-
-            dispatcher.End().Wait();
+            await host.RunAsync();
         }
     }
 }

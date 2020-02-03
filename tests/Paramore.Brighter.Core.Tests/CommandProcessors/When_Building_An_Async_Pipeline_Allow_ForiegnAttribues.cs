@@ -1,7 +1,8 @@
-using System.Linq;
+﻿using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
@@ -15,13 +16,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyObsoleteCommandHandlerAsync>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyObsoleteCommandHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyValidationHandlerAsync<MyCommand>>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            var container = new ServiceCollection();
 
-            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            container.AddTransient<MyObsoleteCommandHandlerAsync>();
+            container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
+            container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
+
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+            
+            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -23,51 +23,55 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
+using Serilog;
 
 namespace HelloWorldAsync
 {
     internal class Program
     {
-        private static void Main()
+        private static async Task Main(string[] args)
         {
-            // Use bootstrapper for async/await in Console app
-            MainAsync().Wait();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
+
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
+
+                    {
+                        services.AddBrighter().AutoFromAssemblies();
+                        services.AddHostedService<RunCommandProcessor>();
+                    }
+                )
+                .UseConsoleLifetime()
+                .Build();
+
+            await host.RunAsync();
+        }
+    }
+
+    internal class RunCommandProcessor : IHostedService
+    {
+        private readonly IAmACommandProcessor _commandProcessor;
+
+        public RunCommandProcessor(IAmACommandProcessor commandProcessor)
+        {
+            _commandProcessor = commandProcessor;
         }
 
-        private static async Task MainAsync()
+        public async Task StartAsync(CancellationToken cancellationToken)
         {
-            var registry = new SubscriberRegistry();
-            registry.RegisterAsync<GreetingCommand, GreetingCommandRequestHandlerAsync>();
-
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(registry, new SimpleHandlerFactoryAsync()))
-                .DefaultPolicy()
-                .NoTaskQueues()
-                .RequestContextFactory(new InMemoryRequestContextFactory());
-
-            var commandProcessor = builder.Build();
-
-            // To allow the command handler(s) to release the thread
-            // while doing potentially long running operations,
-            // await the async (but inline) handling of the command
-            await commandProcessor.SendAsync(new GreetingCommand("Ian"));
-
-            Console.ReadLine();
+            await _commandProcessor.SendAsync(new GreetingCommand("Ian"), cancellationToken: cancellationToken);
         }
 
-        internal class SimpleHandlerFactoryAsync : IAmAHandlerFactoryAsync
-        {
-            public void Release(IHandleRequestsAsync handler)
-            {
-            }
-
-            IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
-            {
-                return new GreetingCommandRequestHandlerAsync();
-            }
-        }
+        public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
     }
 }

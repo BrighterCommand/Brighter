@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles connection establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : RMQMessageGateway, IAmAMessageProducer
+    public class RmqMessageProducer : RMQMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
@@ -106,6 +106,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
             }
+        }
+
+        public Task SendAsync(Message message)
+        {
+            throw new NotImplementedException();
         }
     }
 }

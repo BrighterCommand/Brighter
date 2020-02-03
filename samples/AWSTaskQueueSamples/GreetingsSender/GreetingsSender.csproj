@@ -4,10 +4,10 @@
     <TargetFramework>netcoreapp2.1</TargetFramework>
   </PropertyGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Greetings\Greetings.csproj" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.101" />
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
 </Project>

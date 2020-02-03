@@ -1,64 +1,81 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
-using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using TinyIoC;
+using Serilog;
 
 namespace GreetingsPumper
 {
-    class Program
+    internal class Program
     {
-        static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
 
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+                    {
+                        var outbox = new InMemoryOutbox();
+                        var gatewayConnection = new RmqMessagingGatewayConnection
+                        {
+                            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
+                            Exchange = new Exchange("paramore.brighter.exchange")
+                        };
+                        var producer = new RmqMessageProducer(gatewayConnection);
 
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+                        services.AddBrighter(options =>
+                        {
+                            options.BrighterMessaging = new BrighterMessaging(outbox, outbox, producer, null);
+                        }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+
+                        services.AddHostedService<RunCommandProcessor>();
+                    }
+                )
+                .UseConsoleLifetime()
+                .Build();
+
+            await host.RunAsync();
+        }
+
+        internal class RunCommandProcessor : IHostedService
+        {
+            private readonly IAmACommandProcessor _commandProcessor;
+
+            public RunCommandProcessor(IAmACommandProcessor commandProcessor)
             {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
+                _commandProcessor = commandProcessor;
+            }
 
-            var outbox = new InMemoryOutbox();
-            var rmqConnnection = new RmqMessagingGatewayConnection
+            public async Task StartAsync(CancellationToken cancellationToken)
             {
-                AmpqUri = new AmqpUriSpecification(new Uri("amqp://myuser:mypass@localhost:5672/%2f")),
-                Exchange = new Exchange("paramore.brighter.exchange"),
-            };
-            var producer = new RmqMessageProducer(rmqConnnection);
-
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
-
-            var commandProcessor = builder.Build();
-
-            Console.WriteLine("Press <ENTER> to stop sending messages");
-            long loop = 0;
-            while (true)
-            {
-                loop++;
-                if (Console.KeyAvailable)
+                long loop = 0;
+                while (true)
                 {
-                    var key = Console.ReadKey();
-                    if (key.Key == ConsoleKey.Enter)
-                        break;
-                }
-                Console.WriteLine($"Sending message #{loop}");
-                commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
+                    if (cancellationToken.IsCancellationRequested) break;
 
-                if (loop % 100 == 0)
-                {
+                    loop++;
+                 
+                    Console.WriteLine($"Sending message #{loop}");
+                    _commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
+
+                    if (loop % 100 != 0) continue;
+
                     Console.WriteLine("Pausing for breath...");
-                    Task.Delay(4000).Wait();
+                    await Task.Delay(4000, cancellationToken);
                 }
             }
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

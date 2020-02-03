@@ -1,4 +1,4 @@
-using Microsoft.Extensions.DependencyInjection;
+﻿using Microsoft.Extensions.DependencyInjection;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -24,6 +24,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///     Configures the life time of the Command Processor. Defaults to Singleton.
         /// </summary>
         public ServiceLifetime CommandProcessorLifetime { get; set; } = ServiceLifetime.Singleton;
+
+        public IAmAChannelFactory ChannelFactory { get; set; }
     }
 
     public interface IBrighterOptions
@@ -47,5 +49,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///     Configures the life time of the Command Processor. Defaults to Singleton
         /// </summary>
         ServiceLifetime CommandProcessorLifetime { get; set; }
+
+        IAmAChannelFactory ChannelFactory { get; set; }
     }
 }

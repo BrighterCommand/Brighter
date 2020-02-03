@@ -28,11 +28,11 @@ using Paramore.Brighter;
 
 namespace Greetings.Adapters.ServiceHost
 {
-    public class TinyIocHandlerFactory : IAmAHandlerFactory
+    public class ServiceProviderHandlerFactory : IAmAHandlerFactory
     {
         private readonly TinyIoCContainer _container;
 
-        public TinyIocHandlerFactory(TinyIoCContainer container)
+        public ServiceProviderHandlerFactory(TinyIoCContainer container)
         {
             _container = container;
         }

@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
@@ -20,9 +21,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         public IServiceCollection Services { get; }
 
-        public IBrighterHandlerBuilder AutoFromAssemblies()
+        public IBrighterHandlerBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
         {
-            var assemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic).ToArray();
+            var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && !a.FullName.StartsWith("Microsoft.",true, CultureInfo.InvariantCulture) && !a.FullName.StartsWith("System.", true, CultureInfo.InvariantCulture));
+
+            var assemblies = appDomainAssemblies.Concat(extraAssemblies).ToArray();
 
             MapperRegistryFromAssemblies(assemblies);
             HandlersFromAssemblies(assemblies);
@@ -46,7 +49,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
 
             var mappers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes)
+                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
                 from i in ti.ImplementedInterfaces
                 where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
@@ -63,6 +66,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return this;
         }
+
+
 
         public IBrighterHandlerBuilder Handlers(Action<IAmASubscriberRegistry> registerHandlers)
         {
@@ -96,8 +101,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return this;
         }
 
-        private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies,
-            Assembly assembly)
+        private void RegisterHandlersFromAssembly(Type interfaceType, IEnumerable<Assembly> assemblies, Assembly assembly)
         {
             assemblies = assemblies.Concat(new [] {assembly});
             var subscribers =

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -31,8 +32,12 @@ namespace Tests
             var serviceCollection = new ServiceCollection();
             
             serviceCollection
-                .AddBrighter(options => 
-                    options.BrighterMessaging = new BrighterMessaging(new InMemoryMessageStore(), new FakeProducer()))
+                .AddBrighter(options =>
+                {
+                    var outBox = new InMemoryOutbox();
+                    var producer = new FakeProducer();
+                    options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, producer);
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -91,9 +96,15 @@ namespace Tests
 
     }
 
-    internal class FakeProducer : IAmAMessageProducer
+    internal class FakeProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+
     {
         public void Dispose()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SendAsync(Message message)
         {
             throw new NotImplementedException();
         }

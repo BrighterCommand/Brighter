@@ -30,7 +30,8 @@ using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
@@ -45,14 +46,15 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyDoesNotFailPolicyHandler>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            container.Register<IHandleRequests<MyCommand>, MyDoesNotFailPolicyHandler>("MyDoesNotFailPolicyHandler");
-            container.Register<IHandleRequests<MyCommand>, ExceptionPolicyHandler<MyCommand>>("MyExceptionPolicyHandler");
+            var container = new ServiceCollection();
+            container.AddTransient<MyDoesNotFailPolicyHandler>();
+            container.AddTransient<ExceptionPolicyHandler<MyCommand>>();
 
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+            
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //We have to catch the final exception that bubbles out after retry

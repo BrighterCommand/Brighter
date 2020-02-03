@@ -23,12 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using TinyIoC;
+using Serilog;
 
 namespace GreetingsSender
 {
@@ -36,32 +36,30 @@ namespace GreetingsSender
     {
         static void Main(string[] args)
         {
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)},
-                {typeof(FarewellEvent), typeof(FarewellEventMessageMapper) }
-            };
-
-            var outbox = new InMemoryOutbox();
-            var rmqConnnection = new RmqMessagingGatewayConnection
+            var serviceCollection = new ServiceCollection();
+            
+            var rmqConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            var producer = new RmqMessageProducer(rmqConnnection);
+            var producer = new RmqMessageProducer(rmqConnection);
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            serviceCollection.AddBrighter(options =>
+            {
+                var outBox = new InMemoryOutbox();
+                options.BrighterMessaging = new BrighterMessaging(outBox,outBox, producer, null);
+            }).AutoFromAssemblies();
 
-            var commandProcessor = builder.Build();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
 
             commandProcessor.Post(new GreetingEvent("Ian says: Hi there!"));
             commandProcessor.Post(new FarewellEvent("Ian says: See you later!"));

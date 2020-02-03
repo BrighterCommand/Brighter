@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
@@ -22,9 +22,13 @@ namespace HelloAsyncListeners
             var api = new IpFyApi(new Uri("https://api.ipify.org"));
             var result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            Console.WriteLine("Want-to-be-greeted received hello from {0}", @event.Name);
-            Console.WriteLine(result.Success ? "Want-to-be-greeted has public IP addres is {0}" : "Call to IpFy API failed : {0}",
-                result.Message);
+            Console.BackgroundColor = ConsoleColor.Blue;
+            Console.ForegroundColor = ConsoleColor.White;
+            
+            Console.WriteLine($"Want-to-be-greeted received hello from {@event.Name}");
+            Console.WriteLine(result.Success ? $"Want-to-be-greeted has public IP address is {result.Message}" : $"Call to IpFy API failed : {result.Message}");
+
+            Console.ResetColor();
 
             return await base.HandleAsync(@event, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

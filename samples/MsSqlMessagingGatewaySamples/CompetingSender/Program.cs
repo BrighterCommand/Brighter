@@ -1,18 +1,20 @@
 ﻿using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Transactions;
-using Events;
-using Events.Adapters.ServiceHost;
 using Events.Ports.Commands;
-using Events.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
-using TinyIoC;
+using Serilog;
 
 namespace CompetingSender
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
             if (args.Length != 1)
             {
@@ -27,43 +29,66 @@ namespace CompetingSender
                 return;
             }
 
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(CompetingConsumerCommand), typeof(CompetingConsumerCommandMessageMapper)}
-            };
-
-            var outbox = new InMemoryOutbox();
-
-            var messagingConfiguration =
-                new MsSqlMessagingGatewayConfiguration(
-                    @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
-            var producer = new MsSqlMessageProducer(messagingConfiguration);
-
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration())
-                .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>) outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory());
-
-            var commandProcessor = builder.Build();
-
-            using (new TransactionScope(TransactionScopeOption.RequiresNew,
-                new TransactionOptions {IsolationLevel = IsolationLevel.ReadCommitted},
-                TransactionScopeAsyncFlowOption.Enabled))
-            {
-                Console.WriteLine($"Sending {repeatCount} command messages");
-                var sequenceNumber = 1;
-                for (int i = 0; i < repeatCount; i++)
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
                 {
-                    commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
-                }
-                // We do NOT complete the transaction here to show that a message is
-                // always queued, whether the transaction commits or aborts!
+                    //create the gateway
+                    var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
+
+                    services.AddBrighter(options =>
+                    {
+                        var outBox = new InMemoryOutbox();
+                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new MsSqlMessageProducer(messagingConfiguration), null);
+                    }).AutoFromAssemblies();
+
+                    services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetService<IAmACommandProcessor>(),  repeatCount));
+                })
+                .UseConsoleLifetime()
+                .UseSerilog()
+                .Build();
+
+            await host.RunAsync();
+
+        }
+
+        internal class RunCommandProcessor : IHostedService
+        {
+            private readonly IAmACommandProcessor _commandProcessor;
+            private readonly int _repeatCount;
+
+            public RunCommandProcessor(IAmACommandProcessor commandProcessor, int repeatCount)
+            {
+                _commandProcessor = commandProcessor;
+                _repeatCount = repeatCount;
             }
+
+            public async Task StartAsync(CancellationToken cancellationToken)
+            {
+                using (new TransactionScope(TransactionScopeOption.RequiresNew,
+                    new TransactionOptions { IsolationLevel = IsolationLevel.ReadCommitted },
+                    TransactionScopeAsyncFlowOption.Enabled))
+                {
+                    Console.WriteLine($"Sending {_repeatCount} command messages");
+                    var sequenceNumber = 1;
+                    for (int i = 0; i < _repeatCount; i++)
+                    {
+                        _commandProcessor.Post(new CompetingConsumerCommand(sequenceNumber++));
+                    }
+                    // We do NOT complete the transaction here to show that a message is
+                    // always queued, whether the transaction commits or aborts!
+                }
+
+                await Task.CompletedTask;
+            }
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
-}
+    }
+

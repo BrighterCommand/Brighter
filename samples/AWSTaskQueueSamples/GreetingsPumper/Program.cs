@@ -1,66 +1,85 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
-using Greetings.Adapters.ServiceHost;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using TinyIoC;
+using Serilog;
 
 namespace GreetingsPumper
 {
     class Program
     {
-        static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            var container = new TinyIoCContainer();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
 
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+                {
+                    if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+                    {
+                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                        var producer = new SqsMessageProducer(awsConnection);
 
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
+                        services.AddBrighter(options =>
+                        {
+                            var outBox = new InMemoryOutbox();
+                            options.BrighterMessaging = new BrighterMessaging(outBox, outBox, producer, null);
+                        }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                    }
+
+                    services.AddHostedService<RunCommandProcessor>();
+                }
+                )
+                .UseConsoleLifetime()
+                .UseSerilog()
+                .Build();
+
+            await host.RunAsync();
+        }
+
+        internal class RunCommandProcessor : IHostedService
+        {
+            private readonly IAmACommandProcessor _commandProcessor;
+
+            public RunCommandProcessor(IAmACommandProcessor commandProcessor)
             {
-                {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-            };
+                _commandProcessor = commandProcessor;
+            }
 
-            var outbox = new InMemoryOutbox();
-            if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+            public async Task StartAsync(CancellationToken cancellationToken)
             {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
-                var producer = new SqsMessageProducer(awsConnection);
-
-                var builder = CommandProcessorBuilder.With()
-                    .Handlers(new HandlerConfiguration())
-                    .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-                    .RequestContextFactory(new InMemoryRequestContextFactory());
-
-                var commandProcessor = builder.Build();
-
-                Console.WriteLine("Press <ENTER> to stop sending messages");
                 long loop = 0;
                 while (true)
                 {
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
                     loop++;
-                    if (Console.KeyAvailable)
-                    {
-                        var key = Console.ReadKey();
-                        if (key.Key == ConsoleKey.Enter)
-                            break;
-                    }
 
                     Console.WriteLine($"Sending message #{loop}");
-                    commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
+                    _commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
 
-                    if (loop % 100 == 0)
-                    {
-                        Console.WriteLine("Pausing for breath...");
-                        Task.Delay(4000).Wait();
-                    }
+                    if (loop % 100 != 0)
+                        continue;
+
+                    Console.WriteLine("Pausing for breath...");
+                    await Task.Delay(4000, cancellationToken);
                 }
             }
+
+            public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
         }
     }
 }

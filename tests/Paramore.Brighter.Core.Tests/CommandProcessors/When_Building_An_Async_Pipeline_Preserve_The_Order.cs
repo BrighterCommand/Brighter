@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,7 +25,8 @@ THE SOFTWARE. */
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -40,13 +41,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyCommand>, MyDoubleDecoratedHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyValidationHandlerAsync<MyCommand>>();
-            container.Register<IHandleRequestsAsync<MyCommand>, MyLoggingHandlerAsync<MyCommand>>();
+            var container = new ServiceCollection();
+            container.AddTransient<MyDoubleDecoratedHandlerAsync>();
+            container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
+            container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
 
-            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
+            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 

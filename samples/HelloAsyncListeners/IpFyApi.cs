@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,8 +14,8 @@ namespace HelloAsyncListeners
             Message = message;
         }
 
-        public bool Success { get; private set; }
-        public string Message { get; private set; }
+        public bool Success { get; }
+        public string Message { get; }
     }
 
     internal class IpFyApi
@@ -27,7 +27,7 @@ namespace HelloAsyncListeners
             _endpoint = endpoint;
         }
 
-        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default)
         {
             using (var client = new HttpClient())
             {

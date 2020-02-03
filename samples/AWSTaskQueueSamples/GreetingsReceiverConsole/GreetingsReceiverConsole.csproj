@@ -4,12 +4,15 @@
     <OutputType>Exe</OutputType>
   </PropertyGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
     <ProjectReference Include="..\Greetings\Greetings.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.Extensions.NETCore.Setup" Version="3.3.101" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
     <PackageReference Include="Serilog" Version="2.9.0" />
-    <PackageReference Include="Serilog.Sinks.Literate" Version="3.0.0" />
+    <PackageReference Include="Serilog.Extensions.Hosting" Version="3.0.0" />
+    <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
   </ItemGroup>
 </Project>
