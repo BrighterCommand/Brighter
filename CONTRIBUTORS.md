@@ -139,6 +139,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Wayne Hunsley](https://github.com/whunsley)**
   * Kafka transport
   * Various Fixes
+  
+**[Tim van Wijk](https://github.com/timvw74)**
+  * Kafka transport fixes  
 
 **[Joseph Woodward](https://github.com/JosephWoodward)**  
   * Documentation fixes 
