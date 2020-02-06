@@ -36,7 +36,7 @@ Brighter contributors (sorted alphabeticaly)
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
-  * Work on POSTEL messaging approach
+  * Work on Postel's Law (Tolerant Reader) messaging approach
   
 **[Scott Hanselman](https://github.com/shanselman)**
   * Various fixes
