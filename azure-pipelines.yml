@@ -65,7 +65,7 @@ steps:
   displayName: 'dotnet build $(buildConfiguration)'
   inputs:
     command: 'build'
-    arguments: '--configuration $(buildConfiguration)'
+    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Core tests - dotnet test $(buildConfiguration)'
