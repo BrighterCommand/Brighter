@@ -65,7 +65,7 @@ steps:
   displayName: 'dotnet build $(buildConfiguration)'
   inputs:
     command: 'build'
-    arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+    arguments: '--configuration $(buildConfiguration)'
 
 - task: DotNetCoreCLI@2
   displayName: 'Core tests - dotnet test $(buildConfiguration)'
@@ -177,6 +177,13 @@ steps:
     arguments: 'tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj -v normal --configuration $(buildConfiguration) --no-build'
     testRunTitle: 'RabbitMQ tests running on ubuntu'
 
+
+- task: DotNetCoreCLI@2
+  inputs:
+    command: 'publish'
+    publishWebProjects: false
+    arguments: '--output $(Build.ArtifactStagingDirectory) --no-build'
+    zipAfterPublish: false
 - task: PublishBuildArtifacts@1
   inputs:
     PathtoPublish: '$(Build.ArtifactStagingDirectory)'
