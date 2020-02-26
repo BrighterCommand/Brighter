@@ -82,7 +82,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             lock (s_lock)
             {
-                var connection = s_connectionPool[connectionId];
                 TryRemoveConnection(connectionId);
                 
                 DelayReconnecting();
