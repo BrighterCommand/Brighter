@@ -1,0 +1,23 @@
+name: .NET Core
+
+on: [push]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.1.101
+    - name: Build with dotnet
+      run: dotnet build --configuration Release
+    - name: Run core tests
+      run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build --logger:trx
+    #- name: stop native mysql
+    #  run: sudo service mysql stop
+    #- name: Build the stack
+    #  run: docker-compose up -d 
