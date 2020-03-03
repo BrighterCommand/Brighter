@@ -41,12 +41,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _disposedValue = false;
         private string _topic;
         private ConsumerConfig _consumerConfig;
+        private bool _autoCommitEnabled = false;
 
         public KafkaMessageConsumer(string groupId, string topic, 
             KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingConsumerConfiguration consumerConfiguration)
         {
             _topic = topic;
+            _autoCommitEnabled = consumerConfiguration.EnableAutoCommit;
             _consumerConfig = new ConsumerConfig()
             {
                 GroupId = groupId,
@@ -56,9 +58,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SessionTimeoutMs = 6000,
                 EnablePartitionEof = true,
 
-                //We always call acknowledge after processing a handler and commit then.
-                AutoCommitIntervalMs = 0, 
-                EnableAutoCommit = false,
+                /*/
+                 * By default, we always call acknowledge after processing a handler and commit then.
+                 * This has the potential to cause a lot of traffic for the Kafka cluster as every commit is a new message on the consumer_offsets topic.  
+                 * To lower the load, you can enable AutoCommit and the AutoCommitIntervalMs.  The downside being that if the consumer dies, you may process a message more than once when a new consumer resumes reading a partition.
+                 /*/
+
+                AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs, 
+                EnableAutoCommit = consumerConfiguration.EnableAutoCommit,
                 
                 AutoOffsetReset = consumerConfiguration.OffsetDefault 
             };
@@ -186,7 +193,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
          public void Reject(Message message, bool requeue)
         {
-            if (!requeue)
+            if (!requeue && !_autoCommitEnabled)
                 Acknowledge(message);
         }
 

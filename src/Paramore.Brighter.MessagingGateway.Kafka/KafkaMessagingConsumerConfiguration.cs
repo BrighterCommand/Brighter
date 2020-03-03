@@ -34,12 +34,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
         /// We use a default of earliest because we would rather duplicate messages than miss them due to an error
         /// or when you start up a new consumer.
+        /// EnableAutoCommit - Allow the consumer to commit its offset based on a time interval insetead of after every message. 
+        /// Enabling this lowers the load on the Kafka cluster but  you may process messages more than once if a consumer dies before commiting it's offset.
+        /// AutoCommitIntervalMs - The time between committing offsets if AutoCommit is enabled
         /// </summary>
         public AutoOffsetReset OffsetDefault{ get; set; }
+        public bool EnableAutoCommit { get; set; }
+        public int AutoCommitIntervalMs { get; set; }
 
         public KafkaMessagingConsumerConfiguration()
         {
             OffsetDefault = AutoOffsetReset.Earliest;
+            EnableAutoCommit = false;
+            AutoCommitIntervalMs = 0;
         }
     }
 }

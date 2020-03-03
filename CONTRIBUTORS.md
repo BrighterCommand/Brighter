@@ -36,7 +36,7 @@ Brighter contributors (sorted alphabeticaly)
   
 **[Bob Gregory](https://github.com/BobFromHuddle)**
   * Various fixes
-  * Work on POSTEL messaging approach
+  * Work on Postel's Law (Tolerant Reader) messaging approach
   
 **[Scott Hanselman](https://github.com/shanselman)**
   * Various fixes
@@ -136,9 +136,8 @@ Brighter contributors (sorted alphabeticaly)
 **[Yiannis Triantafyllopoulos](https://github.com/yiannistri)**  
   * Various Fixes
   
-**[Wayne Hunsley](https://github.com/whunsley)**
-  * Kafka transport
-  * Various Fixes
+**[Tim van Wijk](https://github.com/timvw74)**
+  * Kafka transport fixes  
 
 **[Joseph Woodward](https://github.com/JosephWoodward)**  
   * Documentation fixes 
