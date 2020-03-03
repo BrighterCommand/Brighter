@@ -6,7 +6,7 @@
 
     <ItemGroup>
       <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.0.0" />
-      <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.104.22" />
+      <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.3.105.6" />
     </ItemGroup>
    
 </Project>
