@@ -119,7 +119,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             if (Channel == null || Channel.IsClosed)
             {
-                var connection = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
+                RMQMessageGatewayConnectionPool rmqMessageGatewayConnectionPool = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat);
+                var connection = rmqMessageGatewayConnectionPool.GetConnection(_connectionFactory);
 
                 _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}",
                     Connection.AmpqUri.GetSanitizedUri());
@@ -129,10 +130,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 //set the number of messages to fetch -- defaults to 1 unless set on connection, no impact on
                 //BasicGet, only works on BasicConsume
                 Channel.BasicQos(0, _batchSize, false);
-
-                //When AutoClose is true, the last channel to close will also cause the connection to close. If it is set to
-                //true before any channel is created, the connection will close then and there.
-                if (connection.AutoClose == false) connection.AutoClose = true;
 
                 _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}",
                     Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
@@ -156,9 +153,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             if (disposing)
             {
+
                 Channel?.Abort();
                 Channel?.Dispose();
                 Channel = null;
+
+                new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
             }
         }
     }

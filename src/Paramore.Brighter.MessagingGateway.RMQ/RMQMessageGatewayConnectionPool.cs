@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             var connectionFound = s_connectionPool.TryGetValue(connectionId, out var pooledConnection);
 
-            if (connectionFound != false && pooledConnection.Connection.IsOpen != false)
+            if (connectionFound && pooledConnection.Connection.IsOpen)
                 return pooledConnection.Connection;
 
             lock (s_lock)
@@ -77,12 +77,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         public void ResetConnection(ConnectionFactory connectionFactory)
         {
-            var connectionId = GetConnectionId(connectionFactory);
-
             lock (s_lock)
             {
-                TryRemoveConnection(connectionId);
-
                 try
                 {
                     CreateConnection(connectionFactory);
@@ -115,10 +111,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
 
-            EventHandler<ShutdownEventArgs> ShutdownHandler = delegate { TryRemoveConnection(connectionId); };
+            void ShutdownHandler(object sender, ShutdownEventArgs e)
+            {
+                s_logger.Value.WarnFormat("RMQMessagingGateway: The connection {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
+
+                lock (s_lock)
+                {
+                    TryRemoveConnection(connectionId);
+                }
+            }
+
             connection.ConnectionShutdown += ShutdownHandler;
 
             var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
+
             s_connectionPool.Add(connectionId, pooledConnection);
 
             return pooledConnection;
@@ -126,29 +132,36 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void TryRemoveConnection(string connectionId)
         {
-            if (s_connectionPool.ContainsKey(connectionId))
+            if (s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection))
             {
-                var pooledConnection = s_connectionPool[connectionId];
-                if (pooledConnection != null)
-                {
-                    pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
-                    if (pooledConnection.Connection.IsOpen)
-                        pooledConnection.Connection.Close();
-                }
-
+                pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler; 
+                pooledConnection.Connection.Dispose();
                 s_connectionPool.Remove(connectionId);
             }
         }
 
         private string GetConnectionId(ConnectionFactory connectionFactory)
         {
-            return string.Concat(connectionFactory.UserName, ".", connectionFactory.Password, ".", connectionFactory.HostName, ".", connectionFactory.Port, ".", connectionFactory.VirtualHost).ToLowerInvariant();
+            return $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}".ToLowerInvariant();
         }
 
         class PooledConnection
         {
             public IConnection Connection { get; set; }
             public EventHandler<ShutdownEventArgs> ShutdownHandler { get; set; }
+        }
+
+        public void RemoveConnection(ConnectionFactory connectionFactory)
+        {
+            var connectionId = GetConnectionId(connectionFactory);
+
+            if (s_connectionPool.ContainsKey(connectionId))
+            {
+                lock (s_lock)
+                {
+                    TryRemoveConnection(connectionId);
+                }
+            }
         }
     }
 }
