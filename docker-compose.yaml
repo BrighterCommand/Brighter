@@ -2,10 +2,7 @@ version: '3'
 
 services:
   rabbitmq:
-    build:
-      context: ./Docker/RabbitMQ/
-      dockerfile: Dockerfile
-    image: rabbitmq:3-management-delay
+    image: brightercommand/rabbitmq:3.8-management-delay
     ports:
       - "5672:5672"
       - "15672:15672"
