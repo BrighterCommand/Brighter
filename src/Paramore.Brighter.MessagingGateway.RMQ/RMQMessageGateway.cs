@@ -119,20 +119,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             if (Channel == null || Channel.IsClosed)
             {
-                RMQMessageGatewayConnectionPool rmqMessageGatewayConnectionPool = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat);
-                var connection = rmqMessageGatewayConnectionPool.GetConnection(_connectionFactory);
+                var connection = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
 
-                _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}",
-                    Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}", Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
-                
+
                 //set the number of messages to fetch -- defaults to 1 unless set on connection, no impact on
                 //BasicGet, only works on BasicConsume
                 Channel.BasicQos(0, _batchSize, false);
 
-                _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}",
-                    Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+                _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
                 Channel.DeclareExchangeForConnection(Connection);

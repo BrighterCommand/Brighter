@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -334,11 +334,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             _consumer = new PullConsumer(Channel);
             
+            _consumer.ConsumerCancelled += (sender, args) =>
+            {
+                _logger.Value.WarnFormat(
+                    "RmqMessageConsumer: Consumer cancelled for queue {0} with routing key {1} via exchange {2} on connection {3}",
+                    _queueName,
+                    _routingKeys,
+                    Connection.Exchange.Name,
+                    Connection.AmpqUri.GetSanitizedUri());
+            };
+            
             Channel.BasicQos(0, (ushort)_batchSize, false);
 
             Channel.BasicConsume(_queueName, false, Connection.Name, SetQueueArguments(), _consumer);
             
-            _consumer.HandleBasicConsumeOk(String.Empty);
+            _consumer.HandleBasicConsumeOk(Connection.Name);
             
             _logger.Value.InfoFormat("RmqMessageConsumer: Created consumer for queue {0} with routing key {1} via exchange {2} on connection {3}",
                 _queueName,
