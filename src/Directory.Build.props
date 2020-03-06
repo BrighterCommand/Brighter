@@ -5,10 +5,8 @@
     <Copyright>Copyright © Ian Cooper 2014</Copyright>
     <PackageReleaseNotes>https://github.com/BrighterCommand/Brighter/blob/master/release_notes.md</PackageReleaseNotes>
     <PackageIcon>packageicon.png</PackageIcon>
-
     <PackageProjectUrl>https://www.goparamore.io/</PackageProjectUrl>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 
@@ -32,6 +30,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
       <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
