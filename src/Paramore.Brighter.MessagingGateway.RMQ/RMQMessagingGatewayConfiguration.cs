@@ -53,9 +53,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public Exchange Exchange { get; set; }
 
         /// <summary>
-        /// Gets or sets the Heartbeat in seconds. Defaults to 5.
+        /// Gets or sets the Heartbeat in seconds. Defaults to 20.
         /// </summary>
-        public ushort Heartbeat { get; set; } = 5;
+        public ushort Heartbeat { get; set; } = 20;
 
         /// <summary>
         /// Gets or sets whether to persist messages. Defaults to false.

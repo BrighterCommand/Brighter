@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -60,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             var connectionFound = s_connectionPool.TryGetValue(connectionId, out var pooledConnection);
 
-            if (connectionFound != false && pooledConnection.Connection.IsOpen != false)
+            if (connectionFound && pooledConnection.Connection.IsOpen)
                 return pooledConnection.Connection;
 
             lock (s_lock)
@@ -78,8 +79,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         public void ResetConnection(ConnectionFactory connectionFactory)
         {
-            var connectionId = GetConnectionId(connectionFactory);
-
             lock (s_lock)
             {
                 TryRemoveConnection(connectionId);
@@ -88,6 +87,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 
                 CreateConnection(connectionFactory);
             }
+                catch (BrokerUnreachableException exception)
+                {
+                    s_logger.Value.ErrorException(
+                        "RMQMessagingGateway: Failed to reset connection to Rabbit MQ endpoint {0}",
+                        exception,
+                        connectionFactory.Endpoint);
+                }
+        }
         }
 
         private PooledConnection CreateConnection(ConnectionFactory connectionFactory)
@@ -108,10 +115,20 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
 
-            EventHandler<ShutdownEventArgs> ShutdownHandler = delegate { TryRemoveConnection(connectionId); };
+            void ShutdownHandler(object sender, ShutdownEventArgs e)
+            {
+                s_logger.Value.WarnFormat("RMQMessagingGateway: The connection {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
+
+                lock (s_lock)
+                {
+                    TryRemoveConnection(connectionId);
+                }
+            }
+
             connection.ConnectionShutdown += ShutdownHandler;
 
             var pooledConnection = new PooledConnection{Connection = connection, ShutdownHandler = ShutdownHandler};
+
             s_connectionPool.Add(connectionId, pooledConnection);
 
             return pooledConnection;
@@ -119,23 +136,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void TryRemoveConnection(string connectionId)
         {
-            if (s_connectionPool.ContainsKey(connectionId))
-            {
-                var pooledConnection = s_connectionPool[connectionId];
-                if (pooledConnection != null)
+            if (s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection))
                 {
                     pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
-                    if (pooledConnection.Connection.IsOpen)
-                        pooledConnection.Connection.Close();
-                }
-
+                pooledConnection.Connection.Dispose();
                 s_connectionPool.Remove(connectionId);
             }
         }
 
         private string GetConnectionId(ConnectionFactory connectionFactory)
         {
-            return string.Concat(connectionFactory.UserName, ".", connectionFactory.Password, ".", connectionFactory.HostName, ".", connectionFactory.Port, ".", connectionFactory.VirtualHost).ToLowerInvariant();
+            return $"{connectionFactory.UserName}.{connectionFactory.Password}.{connectionFactory.HostName}.{connectionFactory.Port}.{connectionFactory.VirtualHost}".ToLowerInvariant();
         }
 
         private static void DelayReconnecting()
@@ -148,6 +159,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             public IConnection Connection { get; set; }
             public EventHandler<ShutdownEventArgs> ShutdownHandler { get; set; }
+        }
+
+        public void RemoveConnection(ConnectionFactory connectionFactory)
+        {
+            var connectionId = GetConnectionId(connectionFactory);
+
+            if (s_connectionPool.ContainsKey(connectionId))
+            {
+                lock (s_lock)
+                {
+                    TryRemoveConnection(connectionId);
+                }
+            }
         }
     }
 }
