@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             var connectionId = GetConnectionId(connectionFactory);
 
-            var connectionFound = s_connectionPool.TryGetValue(connectionId, out var pooledConnection);
+            var connectionFound = s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection);
 
             if (connectionFound && pooledConnection.Connection.IsOpen)
                 return pooledConnection.Connection;
@@ -81,20 +81,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             lock (s_lock)
             {
-                TryRemoveConnection(connectionId);
-                
                 DelayReconnecting();
-                
-                CreateConnection(connectionFactory);
-            }
+
+                try
+                {
+                    CreateConnection(connectionFactory);
+                }
                 catch (BrokerUnreachableException exception)
                 {
-                    s_logger.Value.ErrorException(
-                        "RMQMessagingGateway: Failed to reset connection to Rabbit MQ endpoint {0}",
-                        exception,
-                        connectionFactory.Endpoint);
+                    s_logger.Value.ErrorException("RMQMessageGatewayConnectionPool: Failed to reset connection to Rabbit MQ endpoint {0}", exception, connectionFactory.Endpoint);
                 }
-        }
+            }
         }
 
         private PooledConnection CreateConnection(ConnectionFactory connectionFactory)
@@ -103,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             TryRemoveConnection(connectionId);
 
-            s_logger.Value.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
+            s_logger.Value.DebugFormat("RMQMessageGatewayConnectionPool: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
 
             connectionFactory.RequestedHeartbeat = _connectionHeartbeat;
             connectionFactory.RequestedConnectionTimeout = 5000;
@@ -112,12 +109,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             var connection = connectionFactory.CreateConnection(_connectionName);
 
-            s_logger.Value.DebugFormat("RMQMessagingGateway: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
+            s_logger.Value.DebugFormat("RMQMessageGatewayConnectionPool: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
 
             void ShutdownHandler(object sender, ShutdownEventArgs e)
             {
-                s_logger.Value.WarnFormat("RMQMessagingGateway: The connection {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
+                s_logger.Value.WarnFormat("RMQMessageGatewayConnectionPool: The connection {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
 
                 lock (s_lock)
                 {
@@ -137,8 +134,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private void TryRemoveConnection(string connectionId)
         {
             if (s_connectionPool.TryGetValue(connectionId, out PooledConnection pooledConnection))
-                {
-                    pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
+            {
+                pooledConnection.Connection.ConnectionShutdown -= pooledConnection.ShutdownHandler;
                 pooledConnection.Connection.Dispose();
                 s_connectionPool.Remove(connectionId);
             }

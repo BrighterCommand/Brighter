@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
@@ -73,6 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             _messageConsumer.Purge();
             _messageConsumer.Dispose();
+            _messageProducer.Dispose();
         }
     }
 }

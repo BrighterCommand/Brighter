@@ -111,6 +111,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
         public void Dispose()
         {
+            _messageConsumer.Dispose();
             _messageProducer.Dispose();
         }
     }
