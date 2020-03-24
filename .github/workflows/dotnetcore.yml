@@ -13,6 +13,10 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 3.1.101
+        source-url: https://nuget.pkg.github.com/BrighterCommand/index.json
+      env:
+        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
     - name: Build with dotnet
       run: dotnet build --configuration Release
     - name: Core tests
@@ -47,4 +51,7 @@ jobs:
       run: dotnet test tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --configuration Release --no-build --logger:trx
     - name: RabbitMQ tests
       run: dotnet test tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: Publish nuget packages to GitHub
+      run: dotnet nuget push "**/Paramore.Brighter.*.nupkg"
+
 
