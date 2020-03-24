@@ -15,9 +15,32 @@ jobs:
         dotnet-version: 3.1.101
     - name: Build with dotnet
       run: dotnet build --configuration Release
-    - name: Run core tests
+    - name: Core tests
       run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build --logger:trx
-    #- name: stop native mysql
-    #  run: sudo service mysql stop
-    #- name: Build the stack
-    #  run: docker-compose up -d 
+    - name: NoOpStore tests
+      run: dotnet test tests\Paramore.Brighter.NoOpStore.Tests\Paramore.Brighter.NoOpStore.Tests.csproj  --configuration Release --no-build --logger:trx
+    - name: Sqlite tests
+      run: dotnet test tests\Paramore.Brighter.Sqlite.Tests\Paramore.Brighter.Sqlite.Tests.csproj  --configuration Release --no-build --logger:trx
+    #- name: AWSSQS tests
+    #  run: dotnet test tests\Paramore.Brighter.AWSSQS.Tests\Paramore.Brighter.AWSSQS.Tests.csproj  --configuration Release --no-build --logger:trx
+    - name: stop native mysql
+      run: sudo service mysql stop
+    - name: Build the stack
+      run: docker-compose up -d
+    - name: EventStore tests
+      run: dotnet test tests\Paramore.Brighter.EventStore.Tests\Paramore.Brighter.EventStore.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: Kafka tests
+      run: dotnet test tests\Paramore.Brighter.Kafka.Tests\Paramore.Brighter.Kafka.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: MSSQL tests
+      run: dotnet test tests\Paramore.Brighter.MSSQL.Tests\Paramore.Brighter.MSSQL.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: MySQL tests
+      run: dotnet test tests\Paramore.Brighter.MySQL.Tests\Paramore.Brighter.MySQL.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: PostgresSQL tests
+      run: dotnet test tests\Paramore.Brighter.PostgresSQL.Tests\Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: Redis tests
+      run: dotnet test tests\Paramore.Brighter.Redis.Tests\Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: DynamoDB tests
+      run: dotnet test tests\Paramore.Brighter.DynamoDB.Tests\Paramore.Brighter.DynamoDB.Tests.csproj --configuration Release --no-build --logger:trx
+    - name: RabbitMQ tests
+      run: dotnet test tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build --logger:trx
+
