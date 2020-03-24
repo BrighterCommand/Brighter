@@ -27,6 +27,10 @@ jobs:
       run: sudo service mysql stop
     - name: Build the stack
       run: docker-compose up -d
+    - name: Wait / Sleep
+      uses: jakejarvis/wait-action@v0.1.0
+      with:
+        time: '30s'
     - name: EventStore tests
       run: dotnet test tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --no-build --logger:trx
     - name: Kafka tests
