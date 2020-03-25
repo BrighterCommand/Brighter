@@ -62,7 +62,7 @@ jobs:
       uses: actions/upload-artifact@v2-preview
       with:
         # Artifact name
-        name: Upload nuget packages
+        name: NugetPackages
         # Directory containing files to upload
         path: "**/Paramore.Brighter.*.nupkg"
 
