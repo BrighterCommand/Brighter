@@ -59,7 +59,7 @@ jobs:
     # - name: Publish nuget packages to GitHub
     #   run: dotnet nuget push "**/Paramore.Brighter.*.nupkg" --skip-duplicate
     - name: Upload artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v2-preview
       with:
         # Artifact name
         name: Upload nuget packages
