@@ -61,7 +61,7 @@ jobs:
     - run: | 
         mkdir ${{ github.workspace }}/.nugetpackages
         shopt -s globstar
-        cp -R src/**/*.nupkg "${{ github.workspace }}/.nugetpackages"
+        cp -R src/**/Paramore.Brighter.*.nupkg "${{ github.workspace }}/.nugetpackages"
     - name: Upload artifact
       uses: actions/upload-artifact@v2-preview
       with:
