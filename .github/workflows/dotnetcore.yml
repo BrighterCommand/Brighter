@@ -58,12 +58,15 @@ jobs:
     #   run: dotnet nuget 
     # - name: Publish nuget packages to GitHub
     #   run: dotnet nuget push "**/Paramore.Brighter.*.nupkg" --skip-duplicate
+    - run: | 
+        mkdir ${{ github.workspace }}/package
+        dotnet pack --no-build -c Release --output "${{ github.workspace }}/package"
     - name: Upload artifact
-      uses: actions/upload-artifact@v2-preview
+      uses: actions/upload-artifact@v1
       with:
         # Artifact name
         name: NugetPackages
         # Directory containing files to upload
-        path: "**/Paramore.Brighter.*.nupkg"
+        path: ${{ github.workspace }}/package
 
 
