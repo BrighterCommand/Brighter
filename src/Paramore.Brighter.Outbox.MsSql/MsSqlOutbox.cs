@@ -464,7 +464,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
             command.CommandText = sql;
             command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
             command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
