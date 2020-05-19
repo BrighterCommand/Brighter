@@ -9,7 +9,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="MySqlConnector" Version="0.65.0" />
+    <PackageReference Include="MySqlConnector" Version="0.66.0" />
     
   </ItemGroup>
 </Project>
