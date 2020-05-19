@@ -11,7 +11,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Confluent.Kafka" Version="1.4.3" />
-    <PackageReference Include="Polly" Version="7.2.1" />
-    
+    <PackageReference Include="Polly" Version="7.2.1" />    
   </ItemGroup>
 </Project>
