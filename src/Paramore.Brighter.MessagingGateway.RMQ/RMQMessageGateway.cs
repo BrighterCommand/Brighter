@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _connectionFactory = new ConnectionFactory
             {
                 Uri = Connection.AmpqUri.Uri,
-                RequestedHeartbeat = connection.Heartbeat
+                RequestedHeartbeat = TimeSpan.FromSeconds(connection.Heartbeat)
             };
 
             DelaySupported = Connection.Exchange.SupportDelay;

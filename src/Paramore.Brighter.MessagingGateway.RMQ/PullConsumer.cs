@@ -60,12 +60,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             string exchange, 
             string routingKey,
             IBasicProperties properties, 
-            byte[] body)
+            ReadOnlyMemory<byte> body)
         {
+            //We have to copy the body, before returning, as the memory in body is pooled and may be re-used after (see base class documentation)
+            //See also https://docs.microsoft.com/en-us/dotnet/standard/memory-and-spans/memory-t-usage-guidelines
+            var payload = new byte[body.Length];
+            body.CopyTo(payload);
+            
             _messages.Enqueue(new BasicDeliverEventArgs
             {
                 BasicProperties = properties,
-                Body = body,
+                Body = payload,
                 ConsumerTag = consumerTag,
                 DeliveryTag = deliveryTag,
                 Exchange = exchange,
@@ -74,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             });
         }
 
-        public override void OnCancel()
+        public override void OnCancel(params string[] consumerTags)
         {
             //try  to nack anything in the buffer.
             try

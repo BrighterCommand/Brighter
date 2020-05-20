@@ -86,6 +86,21 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
+        /// TODO: We don't support the range of options on Span<T> on netstandard2.0 that let's us
+        /// flow through a ReadOnlyMemory<byte> for serialization so we allocate here as well as in
+        /// PullConsumer when we probably don't need this allocation.
+        /// We can fix in .NET 5.0 over the dead-end fork of netstandard2.1
+        /// </summary>
+        /// <param name="body"></param>
+        /// <param name="bodyType"></param>
+        public MessageBody(in ReadOnlyMemory<byte> body, string bodyType)
+        {
+            Bytes = body.ToArray();
+            BodyType = bodyType ?? "JSON";
+         }
+
+         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class.
         /// </summary>
         /// <param name="postBack">The continuation to run</param>
@@ -94,7 +109,7 @@ namespace Paramore.Brighter
             PostBack = postBack;
         }
 
-        /// <summary>
+       /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>

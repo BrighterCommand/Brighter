@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Bob Gregory 
 
@@ -97,9 +98,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 else
                 {
                     var messageHeader = timeStamp.Success
-                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, delayedMilliseconds.Result)
+                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result,
+                            delayedMilliseconds.Result)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
+                    //this effectively transfers ownership of our buffer 
                     message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));
@@ -121,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 s_logger.Value.WarnException("Failed to create message from amqp message", e);
                 message = FailureMessage(topic, messageId);
             }
-            
+
             return message;
         }
 
@@ -245,7 +248,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private HeaderResult<bool> ReadRedeliveredFlag(bool redelivered)
         {
-           return new HeaderResult<bool>(redelivered, true); 
+            return new HeaderResult<bool>(redelivered, true);
         }
 
         private HeaderResult<string> ReadReplyTo(IBasicProperties basicProperties)
@@ -256,13 +259,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
 
             return new HeaderResult<string>(null, true);
- 
         }
 
         private static object ParseHeaderValue(object value)
         {
             return value is byte[] bytes ? Encoding.UTF8.GetString(bytes) : value;
         }
-
     }
 }
