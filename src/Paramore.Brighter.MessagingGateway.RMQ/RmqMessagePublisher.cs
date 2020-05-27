@@ -228,7 +228,6 @@ internal class RmqMessagePublisher
                 case long _:
                 case short _:
                 case bool _:
-                case BinaryTableValue _:
                     return true;
                 default:
                     return false;

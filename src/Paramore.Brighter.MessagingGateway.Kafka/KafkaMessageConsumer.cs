@@ -151,15 +151,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     return new Message[] {new Message()};
                 }
 
-                _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Value}");
-                _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Vallue: {consumeResult.Value}");
+                _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Message.Value}");
+                _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Vallue: {consumeResult.Message.Value}");
 
                 var messageHeader =
                     new MessageHeader(Guid.NewGuid(), consumeResult.Topic, MessageType.MT_EVENT)
                     {
                         Bag = {["TopicPartitionOffset"] = consumeResult.TopicPartitionOffset,}
                     };
-                var messageBody = new MessageBody(consumeResult.Value);
+                var messageBody = new MessageBody(consumeResult.Message.Value);
                 return new Message[] {new Message(messageHeader, messageBody)};
             }
             catch (ConsumeException consumeException)
