@@ -13,6 +13,6 @@
     <ProjectReference Include="..\..\RMQTaskQueueSamples\Greetings\Greetings.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.4" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.5" />
   </ItemGroup>
 </Project>
