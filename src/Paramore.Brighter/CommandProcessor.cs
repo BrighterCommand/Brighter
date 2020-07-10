@@ -482,7 +482,24 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            ClearPostBox(DepositPost(request));
+            _logger.Value.InfoFormat("Decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+
+            if (_messageStore == null)
+                throw new InvalidOperationException("No message store defined.");
+            if (_messageProducer == null)
+                throw new InvalidOperationException("No message producer defined.");
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+
+            var message = messageMapper.MapToMessage(request);
+
+            RetryAndBreakCircuit(() =>
+            {
+                _messageStore.Add(message, _messageStoreTimeout);
+                _messageProducer.Send(message);
+            });
         }
 
         /// <summary>
@@ -501,8 +518,24 @@ namespace Paramore.Brighter
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
-            await ClearPostBoxAsync(new Guid[]{messageId}, continueOnCapturedContext, cancellationToken);
+            _logger.Value.InfoFormat("Async decoupled invocation of request: {0} {1}", request.GetType(), request.Id);
+
+            if (_asyncMessageStore == null)
+                throw new InvalidOperationException("No async message store defined.");
+            if (_asyncMessageProducer == null)
+                throw new InvalidOperationException("No async message producer defined.");
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+
+            var message = messageMapper.MapToMessage(request);
+
+            await RetryAndBreakCircuitAsync(async ct =>
+            {
+                await _asyncMessageStore.AddAsync(message, _messageStoreTimeout, ct).ConfigureAwait(continueOnCapturedContext);
+                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext);
+            }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
         }
 
         /// <summary>
