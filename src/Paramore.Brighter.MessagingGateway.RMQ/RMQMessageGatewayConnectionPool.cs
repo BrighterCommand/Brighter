@@ -101,10 +101,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             s_logger.Value.DebugFormat("RMQMessagingGateway: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
 
-            connectionFactory.RequestedHeartbeat = _connectionHeartbeat;
-            connectionFactory.RequestedConnectionTimeout = 5000;
-            connectionFactory.SocketReadTimeout = 5000;
-            connectionFactory.SocketWriteTimeout = 5000;
+            connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(_connectionHeartbeat);
+            connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
+            connectionFactory.SocketReadTimeout = TimeSpan.FromMilliseconds(5000);
+            connectionFactory.SocketWriteTimeout = TimeSpan.FromMilliseconds(5000);
 
             var connection = connectionFactory.CreateConnection(_connectionName);
 

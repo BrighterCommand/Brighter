@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -79,9 +79,24 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="body"></param>
         /// <param name="bodyType">Hint for deserilization, the type of message encoded in body</param>
-        public MessageBody(byte[] body, string bodyType)
+        public MessageBody(byte[] body, string bodyType = "JSON")
         {
             Bytes = body;
+            BodyType = bodyType;
+        }
+        
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
+        /// TODO: We don't support the range of options on Span<T> on netstandard2.0 that let's us
+        /// flow through a ReadOnlyMemory<byte> for serialization so we allocate here as well as in
+        /// PullConsumer when we probably don't need this allocation.
+        /// We can fix in .NET 5.0 over the dead-end fork of netstandard2.1
+        /// </summary>
+        /// <param name="body"></param>
+        /// <param name="bodyType"></param>
+        public MessageBody(in ReadOnlyMemory<byte> body, string bodyType)
+        {
+            Bytes = body.ToArray();
             BodyType = bodyType ?? "JSON";
         }
 
