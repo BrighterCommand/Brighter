@@ -10,7 +10,7 @@ services:
       - rabbitmq-home:/var/lib/rabbitmq
 
   eventstore:
-    image: eventstore/eventstore
+    image: eventstore/eventstore:release-5.0.8
     ports:
       - "1113:1113" # TCP (default 1113)
       - "2113:2113" # HTTP (default 2113)
@@ -22,11 +22,10 @@ services:
     
   # Need to give 4GB of memory to Docker for SQL
   sqlserver:
-    image: microsoft/mssql-server-linux
+    image: mcr.microsoft.com/mssql/server:2019-latest
+
     ports:
       - "1433:1433"
-    volumes:
-      - sqlserver-data:/var/opt/mssql
     environment:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Password123!
