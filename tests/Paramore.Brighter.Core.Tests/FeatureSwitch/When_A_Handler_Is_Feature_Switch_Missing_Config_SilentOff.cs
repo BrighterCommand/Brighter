@@ -28,8 +28,10 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
+using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
@@ -38,21 +40,24 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
     {
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly SubscriberRegistry _registry;
-        private readonly TinyIocHandlerFactory _handlerFactory;
+        private readonly ServiceProviderHandlerFactory _handlerFactory;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
 
-        private CommandProcessor _commandProcessor;        
+        private CommandProcessor _commandProcessor;
+        private IServiceProvider _provider;
 
         public FeatureSwitchByConfigMissingConfigStrategySilentOffTests()
         {
             _registry = new SubscriberRegistry();
             _registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
 
-            var container = new TinyIoCContainer();
-            _handlerFactory = new TinyIocHandlerFactory(container);
+            var container = new ServiceCollection();
+            container.AddSingleton<MyFeatureSwitchedConfigHandler>();
+            container.AddTransient<FeatureSwitchHandler<MyCommand>>();
 
-            container.Register<IHandleRequests<MyCommand>, MyFeatureSwitchedConfigHandler>();
-            
+            _provider = container.BuildServiceProvider();
+            _handlerFactory = new ServiceProviderHandlerFactory(_provider);
+
             _featureSwitchRegistry = new FakeConfigRegistry();
         }        
 
@@ -62,18 +67,17 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             _featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.SilentOff;
 
             _commandProcessor = new CommandProcessor(_registry, 
-                                                     _handlerFactory, 
+                                                     (IAmAHandlerFactory)_handlerFactory, 
                                                      new InMemoryRequestContextFactory(), 
                                                      new PolicyRegistry(),
                                                      _featureSwitchRegistry);
             _commandProcessor.Send(_myCommand);
 
-            MyFeatureSwitchedConfigHandler.DidReceive(_myCommand).Should().BeFalse();
+            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeFalse();
         }
 
         public void Dispose()
         {
-            MyFeatureSwitchedConfigHandler.CommandReceived = false;
             _commandProcessor?.Dispose();
             GC.SuppressFinalize(this);
         }

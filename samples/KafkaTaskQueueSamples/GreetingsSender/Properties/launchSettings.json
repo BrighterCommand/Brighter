@@ -2,7 +2,7 @@
   "profiles": {
     "GreetingsSender": {
       "commandName": "Project",
-      "commandLineArgs": "--bootstrap-server localmac:9092"
+      "commandLineArgs": "--bootstrap-server localhost:9092"
     }
   }
 }

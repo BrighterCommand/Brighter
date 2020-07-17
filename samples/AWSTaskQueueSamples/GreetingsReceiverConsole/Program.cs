@@ -22,101 +22,74 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
-using Greetings.Adapters.ServiceHost;
-using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
-using Paramore.Brighter.ServiceActivator;
-using Polly;
-using Polly.Registry;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
-using TinyIoC;
 
 namespace GreetingsReceiverConsole
 {
     public class Program
     {
-      public static void Main(string[] args)
-      {
-        Log.Logger = new LoggerConfiguration()
-          .MinimumLevel.Debug()
-          .WriteTo.LiterateConsole()
-          .CreateLogger();
-
-        var container = new TinyIoCContainer();
-
-        var handlerFactory = new TinyIocHandlerFactory(container);
-        var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
-        container.Register<IHandleRequests<GreetingEvent>, GreetingEventHandler>();
-
-        var subscriberRegistry = new SubscriberRegistry();
-        subscriberRegistry.Register<GreetingEvent, GreetingEventHandler>();
-
-        //create policies
-        var retryPolicy = Policy
-          .Handle<Exception>()
-          .WaitAndRetry(new[]
-          {
-            TimeSpan.FromMilliseconds(50),
-            TimeSpan.FromMilliseconds(100),
-            TimeSpan.FromMilliseconds(150)
-          });
-
-        var circuitBreakerPolicy = Policy
-          .Handle<Exception>()
-          .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
-        var policyRegistry = new PolicyRegistry
+        public static async Task Main(string[] args)
         {
-          {CommandProcessor.RETRYPOLICY, retryPolicy},
-          {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
-        };
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-        //create message mappers
-        var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-        {
-          {typeof(GreetingEvent), typeof(GreetingEventMessageMapper)}
-        };
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
 
-        //create the gateway
-      if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
-      {
-          var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
+                {
+                    var connections = new Connection[]
+                    {
+                        new Connection<GreetingEvent>(
+                            new ConnectionName("paramore.example.greeting"),
+                            new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
+                            timeoutInMilliseconds: 200,
+                            isDurable: true,
+                            highAvailability: true)
+                    };
 
-          var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
+                    //create the gateway
+                    if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
+                    {
+                        var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-          var dispatcher = DispatchBuilder.With()
-              .CommandProcessor(CommandProcessorBuilder.With()
-                  .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                  .Policies(policyRegistry)
-                  .NoTaskQueues()
-                  .RequestContextFactory(new InMemoryRequestContextFactory())
-                  .Build())
-              .MessageMappers(messageMapperRegistry)
-              .DefaultChannelFactory(new ChannelFactory(awsConnection, sqsMessageConsumerFactory))
-              .Connections(new Connection[]
-              {
-                  new Connection<GreetingEvent>(
-                      new ConnectionName("paramore.example.greeting"),
-                      new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                      new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                      timeoutInMilliseconds: 200,
-                      isDurable: true,
-                      highAvailability: true)
-              }).Build();
+                        var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
 
-          dispatcher.Receive();
+                        services.AddServiceActivator(options =>
+                        {
+                            options.Connections = connections;
+                            options.ChannelFactory = new ChannelFactory(awsConnection,sqsMessageConsumerFactory);
+                            var outBox = new InMemoryOutbox();
+                            options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new SqsMessageProducer(awsConnection), null);
+                        }).AutoFromAssemblies();
+                    }
 
-          Console.WriteLine("Press Enter to stop ...");
-          Console.ReadLine();
+                    services.AddHostedService<ServiceActivatorHostedService>();
+                })
+                .UseConsoleLifetime()
+                .UseSerilog()
+                .Build();
 
-          dispatcher.End().Wait();
-      }
-  }
+            await host.RunAsync();
+
+
+
+
+        }
     }
 }
+

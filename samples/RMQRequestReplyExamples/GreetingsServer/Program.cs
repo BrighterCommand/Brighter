@@ -23,110 +23,69 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.Adapters.ServiceHost;
-using Greetings.Ports.CommandHandlers;
+using System.Threading.Tasks;
 using Greetings.Ports.Commands;
-using Greetings.Ports.Mappers;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.ServiceActivator;
-using Polly;
-using Polly.Registry;
+using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
-using TinyIoC;
 
 namespace GreetingsServer
 {
     class Program
     {
-        static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-              .MinimumLevel.Debug()
-              .WriteTo.Console()
-              .CreateLogger();
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
-            var container = new TinyIoCContainer();
-            container.Register<IHandleRequests<GreetingRequest>, GreetingRequestHandler>();
-            container.Register<IAmAMessageMapper<GreetingRequest>, GreetingRequestMessageMapper>();
-            container.Register<IAmAMessageMapper<GreetingReply>, GreetingReplyMessageMapper>();
+            var host = new HostBuilder()
+                .ConfigureServices((hostContext, services) =>
+                {
+                    var connections = new Connection[]
+                    {
+                    new Connection<GreetingRequest>(
+                        new ConnectionName("paramore.example.greeting"),
+                        new ChannelName("Greeting.Request"),
+                        new RoutingKey("Greeting.Request"),
+                        timeoutInMilliseconds: 200,
+                        isDurable: true,
+                        highAvailability: true)
+                    };
 
-            var handlerFactory = new TinyIocHandlerFactory(container);
-            var messageMapperFactory = new TinyIoCMessageMapperFactory(container);
+                    var rmqConnection = new RmqMessagingGatewayConnection
+                    {
+                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                        Exchange = new Exchange("paramore.brighter.exchange")
+                    };
 
-            var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.Register<GreetingRequest, GreetingRequestHandler>();
+                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+                    ChannelFactory amAChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                    var amAMessageProducer = new RmqMessageProducer(rmqConnection);
 
-            //create policies
-            var retryPolicy = Policy
-              .Handle<Exception>()
-              .WaitAndRetry(new[]
-              {
-                TimeSpan.FromMilliseconds(50),
-                TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(150)
-              });
+                    services.AddServiceActivator(options =>
+                    {
+                        options.Connections = connections;
+                        options.ChannelFactory = amAChannelFactory;
+                        var outBox = new InMemoryOutbox();
+                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, amAMessageProducer, null);
+                    }).AutoFromAssemblies();
 
-            var circuitBreakerPolicy = Policy
-              .Handle<Exception>()
-              .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-            var policyRegistry = new PolicyRegistry
-            {
-              {CommandProcessor.RETRYPOLICY, retryPolicy},
-              {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
-            };
-            
-            var outbox = new InMemoryOutbox();
- 
-            //create message mappers
-            var messageMapperRegistry = new MessageMapperRegistry(messageMapperFactory)
-            {
-                {typeof(GreetingRequest), typeof(GreetingRequestMessageMapper)},
-                {typeof(GreetingReply), typeof(GreetingReplyMessageMapper)}
-            };
-
-            //create the gateway
-            var rmqConnnection = new RmqMessagingGatewayConnection
-            {
-              AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-              Exchange = new Exchange("paramore.brighter.exchange"),
-            };
-
-            var producer = new RmqMessageProducer(rmqConnnection);
-            
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnnection);
-
-            var commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, handlerFactory))
-                .Policies(policyRegistry)
-                .TaskQueues(new MessagingConfiguration(outbox, producer, messageMapperRegistry))
-                .RequestContextFactory(new InMemoryRequestContextFactory())
+                    services.AddHostedService<ServiceActivatorHostedService>();
+                })
+                .UseConsoleLifetime()
+                .UseSerilog()
                 .Build();
 
-            container.Register<IAmACommandProcessor>(commandProcessor);
-            
-            var dispatcher = DispatchBuilder.With()
-              .CommandProcessor(commandProcessor)
-              .MessageMappers(messageMapperRegistry)
-              .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
-              .Connections(new Connection[]
-              {
-                new Connection<GreetingRequest>(
-                  new ConnectionName("paramore.example.greeting"),
-                  new ChannelName("Greeting.Request"),
-                  new RoutingKey("Greeting.Request"),
-                  timeoutInMilliseconds: 200,
-                  isDurable: true,
-                  highAvailability: true)
-              }).Build();
-
-            dispatcher.Receive();
-
-            Console.WriteLine("Press Enter to stop ...");
-            Console.ReadLine();
-
-            dispatcher.End().Wait();
+            await host.RunAsync();
         }
     }
 }

@@ -87,9 +87,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 StoreMessage(client, redisMessage, nextMsgId);
                 //If there are subscriber queues, push the message to the subscriber queues
                 var pushedTo = PushToQueues(client, nextMsgId);
-                _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to quues: {3}", 
+                _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to queues: {3}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
-             }
+            }
         }
 
         /// <summary>

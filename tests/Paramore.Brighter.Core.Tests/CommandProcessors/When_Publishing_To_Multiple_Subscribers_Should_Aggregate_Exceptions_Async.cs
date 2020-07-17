@@ -28,7 +28,8 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -47,14 +48,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             registry.RegisterAsync<MyEvent, MyOtherEventHandlerAsync>();
             registry.RegisterAsync<MyEvent, MyThrowingEventHandlerAsync>();
 
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
-            container.Register<IHandleRequestsAsync<MyEvent>, MyEventHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyEvent>, MyOtherEventHandlerAsync>();
-            container.Register<IHandleRequestsAsync<MyEvent>, MyThrowingEventHandlerAsync>();
-            container.Register(_receivedMessages);
+            var container = new ServiceCollection();
+            container.AddTransient<MyEventHandlerAsync>();
+            container.AddTransient<MyOtherEventHandlerAsync>();
+            container.AddTransient<MyThrowingEventHandlerAsync>();
+            container.AddSingleton(_receivedMessages);
 
-            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
+
+            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 

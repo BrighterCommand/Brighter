@@ -20,6 +20,10 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  - Added ability to persist RabbitMQ messages
  - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
 
+## Release 8.1.1399 ##
+ - Update nuget libs
+ - RabbitMQ 6.*
+ - Fix correlationid no been sent correctly when using SqlCommandStore
 
 ## Release 8.1.1036 ##
   - Fixes issue when a rabbitmq connection is dropped it sometimes ends up with 2 connections and then does not dispose the ghost connection.

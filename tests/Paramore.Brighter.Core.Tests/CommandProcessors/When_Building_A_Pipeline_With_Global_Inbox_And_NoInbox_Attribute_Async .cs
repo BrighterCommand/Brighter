@@ -1,10 +1,8 @@
-using System.Linq;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Inbox.Handlers;
-using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
-using TinyIoC;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -25,17 +23,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyNoInboxCommandHandlerAsync>();
             
-            var container = new TinyIoCContainer();
-            var handlerFactory = new TinyIocHandlerFactoryAsync(container);
+            var container = new ServiceCollection();
+            container.AddTransient<MyNoInboxCommandHandlerAsync>();
+            container.AddSingleton<IAmAnInbox>(_inbox);
 
-            container.Register<IHandleRequestsAsync<MyCommand>, MyNoInboxCommandHandlerAsync>();
-            container.Register<IAmAnInbox>(_inbox);
- 
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+
             _requestContext = new RequestContext();
             
             _inboxConfiguration = new InboxConfiguration();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory, _inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
             
         }
 

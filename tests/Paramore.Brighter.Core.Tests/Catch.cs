@@ -1,4 +1,4 @@
-#region License NUnit.Specifications
+﻿#region License NUnit.Specifications
 /* From https://raw.githubusercontent.com/derekgreer/NUnit.Specifications/master/license.txt
 Copyright(c) 2015 Derek B.Greer
 

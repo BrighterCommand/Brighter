@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -44,7 +44,10 @@ namespace Paramore.Brighter
         {
             var handlerType = attribute.GetHandlerType().MakeGenericType(typeof(TRequest));
             var handler = (IHandleRequestsAsync<TRequest>)factory.Create(handlerType);
-            //Lod the context before the initializer - in case we want to use the context from within the initializer
+
+            if (handler is null)
+                throw new ConfigurationException($"Could not create handler {handlerType} from {factory}"); 
+            //Load the context before the initializer - in case we want to use the context from within the initializer
             handler.Context = requestContext;
             handler.InitializeFromAttributeParams(attribute.InitializerParams());
             return handler;

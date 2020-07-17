@@ -249,7 +249,7 @@ namespace Paramore.Brighter
                     asyncMessageProducer: _asyncMessagingGateway,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry
-                    );
+                );
             }
             else if (_useRequestReplyQueues)
             {

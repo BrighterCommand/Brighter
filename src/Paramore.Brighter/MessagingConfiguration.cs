@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -107,14 +107,14 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
         /// </summary>
         /// <param name="outboxAsync">The OutBox which supports async/await.</param>
-        /// <param name="asyncmessageProducer">The messaging gateway that supports async/await.</param>
+        /// <param name="asyncMessageProducer">The messaging gateway that supports async/await.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, by hand</param>
         public MessagingConfiguration(
             IAmAnOutboxAsync<Message> outboxAsync,
-            IAmAMessageProducerAsync asyncmessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,
             int messagingGatewaySendTimeout = 300,
@@ -122,7 +122,7 @@ namespace Paramore.Brighter
              )
         {
             OutboxAsync = outboxAsync;
-            MessageProducerAsync = asyncmessageProducer;
+            MessageProducerAsync = asyncMessageProducer;
             MessageMapperRegistry = messageMapperRegistry;
             OutboxWriteTimeout = outboxWriteTimeout;
             MessagingGatewaySendTimeout = messagingGatewaySendTimeout;
@@ -135,7 +135,7 @@ namespace Paramore.Brighter
         /// <param name="outBox">The OutBox.</param>
         /// <param name="outboxAsync">The OutBox that supports async/await.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
-        /// <param name="asyncmessageProducer">The messaging gateway that supports async/await.</param>
+        /// <param name="asyncMessageProducer">The messaging gateway that supports async/await.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
@@ -144,7 +144,7 @@ namespace Paramore.Brighter
             IAmAnOutbox<Message> outBox,
             IAmAnOutboxAsync<Message> outboxAsync,
             IAmAMessageProducer messageProducer,
-            IAmAMessageProducerAsync asyncmessageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,
             int messagingGatewaySendTimeout = 300,
@@ -154,7 +154,7 @@ namespace Paramore.Brighter
             OutBox = outBox;
             OutboxAsync = outboxAsync;
             MessageProducer = messageProducer;
-            MessageProducerAsync = asyncmessageProducer;
+            MessageProducerAsync = asyncMessageProducer;
             MessageMapperRegistry = messageMapperRegistry;
             OutboxWriteTimeout = outboxWriteTimeout;
             MessagingGatewaySendTimeout = messagingGatewaySendTimeout;

@@ -1,4 +1,5 @@
-#region Licence
+﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,8 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
-using Paramore.Brighter.Logging.Handlers;
+using Paramore.Brighter.Extensions.DependencyInjection;
+using Serilog;
 
 namespace HelloWorld
 {
@@ -32,41 +35,23 @@ namespace HelloWorld
     {
         private static void Main(string[] args)
         {
-            var registry = new SubscriberRegistry();
-            registry.Register<GreetingCommand, GreetingCommandHandler>();
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
 
+            var serviceCollection = new ServiceCollection();
 
-            var builder = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(
-                     subscriberRegistry: registry,
-                     handlerFactory: new SimpleHandlerFactory()
-                    ))
-                .DefaultPolicy()
-                .NoTaskQueues()
-                .RequestContextFactory(new InMemoryRequestContextFactory());
+            serviceCollection.AddBrighter().AutoFromAssemblies();
 
-            var commandProcessor = builder.Build();
+            var serviceProvider = serviceCollection.BuildServiceProvider();
 
+            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+            
             commandProcessor.Send(new GreetingCommand("Ian"));
 
             Console.ReadLine();
-        }
-
-        internal class SimpleHandlerFactory : IAmAHandlerFactory
-        {
-            public IHandleRequests Create(Type handlerType)
-            {
-                if (handlerType == typeof(GreetingCommandHandler))
-                    return new GreetingCommandHandler();
-                else if (handlerType == typeof (RequestLoggingHandler<GreetingCommand>))
-                    return new RequestLoggingHandler<GreetingCommand>();
-                else
-                    return null;
-            }
-
-            public void Release(IHandleRequests handler)
-            {
-            }
         }
     }
 }
