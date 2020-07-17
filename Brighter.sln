@@ -177,6 +177,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.NoOpStore
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.PostgresSQL.Tests", "tests\Paramore.Brighter.PostgresSQL.Tests\Paramore.Brighter.PostgresSQL.Tests.csproj", "{C2355F42-792D-4964-B068-79186F887C6D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.RedisStreams", "src\Paramore.Brighter.MessagingGateway.RedisStreams\Paramore.Brighter.MessagingGateway.RedisStreams.csproj", "{878853C1-2B46-4324-B0B9-57E4CEAADD4C}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -895,6 +897,18 @@ Global
 		{C2355F42-792D-4964-B068-79186F887C6D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{C2355F42-792D-4964-B068-79186F887C6D}.Release|x86.ActiveCfg = Release|Any CPU
 		{C2355F42-792D-4964-B068-79186F887C6D}.Release|x86.Build.0 = Release|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Debug|x86.Build.0 = Debug|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Release|x86.ActiveCfg = Release|Any CPU
+		{878853C1-2B46-4324-B0B9-57E4CEAADD4C}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
