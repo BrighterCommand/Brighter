@@ -1,6 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.Configuration;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Outbox.MySql;
 

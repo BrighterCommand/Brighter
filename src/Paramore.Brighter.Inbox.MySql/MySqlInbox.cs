@@ -28,7 +28,7 @@ using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
-using MySql.Data.MySqlClient;
+using MySqlConnector;
 using Newtonsoft.Json;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
