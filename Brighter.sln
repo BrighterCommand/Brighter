@@ -187,6 +187,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Extension
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MessagingGateway.RedisStreams", "src\Paramore.Brighter.MessagingGateway.RedisStreams\Paramore.Brighter.MessagingGateway.RedisStreams.csproj", "{878853C1-2B46-4324-B0B9-57E4CEAADD4C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.RedisStreams.Tests", "tests\Paramore.Brighter.RedisStreams.Tests\Paramore.Brighter.RedisStreams.Tests.csproj", "{4C71B768-86AC-4AA2-925D-E8D79AC694A4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -953,6 +955,18 @@ Global
 		{D2B52F80-5106-4981-9031-A02C5EB479B4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{D2B52F80-5106-4981-9031-A02C5EB479B4}.Release|x86.ActiveCfg = Release|Any CPU
 		{D2B52F80-5106-4981-9031-A02C5EB479B4}.Release|x86.Build.0 = Release|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Debug|x86.Build.0 = Debug|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Release|x86.ActiveCfg = Release|Any CPU
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1009,6 +1023,7 @@ Global
 		{B853A06F-5DFD-4093-979B-B08D1BBDD2D6} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{C2355F42-792D-4964-B068-79186F887C6D} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 		{D2B52F80-5106-4981-9031-A02C5EB479B4} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
+		{4C71B768-86AC-4AA2-925D-E8D79AC694A4} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

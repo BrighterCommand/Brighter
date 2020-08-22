@@ -50,83 +50,6 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         }
 
 
-        /// <summary>
-        /// Creates a plain/text JSON representation of the message
-        /// </summary>
-        /// <param name="message">The Brighter message to convert</param>
-        /// <returns></returns>
-        protected static string CreateMessage(Message message)
-        {
-            //Convert the message into something we can put out via Redis i.e. a string
-            var redisMessage = RedisStreamsPublisher.EMPTY_MESSAGE;
-            using (var redisMessageFactory = new RedisStreamsPublisher())
-            {
-                redisMessage = redisMessageFactory.Create(message);
-            }
-            return redisMessage;
-        }
-
-        protected void ForceReconnect()
-        {
-            var now = DateTimeOffset.UtcNow;
-            var elapsedSinceLastReconnect = now - _lastReconnect;
-            var reconnectMinFrequency = TimeSpan.FromSeconds(_configuration.ReconnectMinFrequencyInSeconds);
-            var reconnectWindow = TimeSpan.FromSeconds(_configuration.ReconnectErrorThresholdInSeconds);
-
-            if (elapsedSinceLastReconnect > reconnectMinFrequency)
-            {
-                lock (_reconnectLock)
-                {
-                    now = DateTimeOffset.UtcNow;
-                    
-                    //check that we were not blocked behind another thread, that has already reconnected
-                    elapsedSinceLastReconnect = now - _lastReconnect;
-                    if (elapsedSinceLastReconnect < reconnectMinFrequency)
-                        return; 
-                    
-                    if (_firstError == DateTimeOffset.MinValue)
-                    {
-                        _firstError = now;
-                        _previousError = now;
-                        return;
-                    }
-
-                    var elapsedSinceFirstError = now - _firstError;
-                    var elapsedSinceMostRecentError = now - _previousError;
-                    _previousError = now;
-
-                    if (
-                        elapsedSinceFirstError >= reconnectWindow   //Did ServiceStack fail to reconnect in the time window 
-                        && elapsedSinceMostRecentError <= reconnectWindow //Did we likely retry this already?
-                    )
-
-                    {
-                        _firstError = DateTimeOffset.MinValue;
-                        _previousError = DateTimeOffset.MinValue;
-
-                        CloseRedisClient();
-                        CreateRedisClient();
-                        _lastReconnect = now;
-                    }
-                }
-            }
-        }
-
-        protected void CloseRedisClient()
-       {
-           if (_redis != null)
-           {
-               try
-               {
-                   Redis.Close();
-               }
-               catch (Exception)
-               {
-                   // Example error condition: if accessing old.Value causes a connection attempt and that fails.
-               }
-           }
-       }
-       
        private void CreateRedisClient()
        {
            _redis = new Lazy<ConnectionMultiplexer>(() =>
@@ -140,5 +63,65 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
                return ConnectionMultiplexer.Connect(options);
            });
        }
-}
+      
+       protected void CloseRedisClient()
+       {
+           if (_redis != null)
+           {
+               try
+               {
+                   Redis.Close();
+               }
+               catch (Exception)
+               {
+                   // Example error condition: if accessing old.Value causes a connection attempt and that fails.
+               }
+           }
+       }
+       protected void ForceReconnect()
+       {
+           var now = DateTimeOffset.UtcNow;
+           var elapsedSinceLastReconnect = now - _lastReconnect;
+           var reconnectMinFrequency = TimeSpan.FromSeconds(_configuration.ReconnectMinFrequencyInSeconds);
+           var reconnectWindow = TimeSpan.FromSeconds(_configuration.ReconnectErrorThresholdInSeconds);
+
+           if (elapsedSinceLastReconnect > reconnectMinFrequency)
+           {
+               lock (_reconnectLock)
+               {
+                   now = DateTimeOffset.UtcNow;
+                   
+                   //check that we were not blocked behind another thread, that has already reconnected
+                   elapsedSinceLastReconnect = now - _lastReconnect;
+                   if (elapsedSinceLastReconnect < reconnectMinFrequency)
+                       return; 
+                   
+                   if (_firstError == DateTimeOffset.MinValue)
+                   {
+                       _firstError = now;
+                       _previousError = now;
+                       return;
+                   }
+
+                   var elapsedSinceFirstError = now - _firstError;
+                   var elapsedSinceMostRecentError = now - _previousError;
+                   _previousError = now;
+
+                   if (
+                       elapsedSinceFirstError >= reconnectWindow   //Did ServiceStack fail to reconnect in the time window 
+                       && elapsedSinceMostRecentError <= reconnectWindow //Did we likely retry this already?
+                   )
+
+                   {
+                       _firstError = DateTimeOffset.MinValue;
+                       _previousError = DateTimeOffset.MinValue;
+
+                       CloseRedisClient();
+                       CreateRedisClient();
+                       _lastReconnect = now;
+                   }
+               }
+           }
+       }
+     }
 }

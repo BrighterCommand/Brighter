@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.RedisStreams
 {
     public enum ReconnectStrategy
@@ -37,6 +39,23 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// </summary>
         public string ConfigurationOptions { get; set; }
 
+        //How may messages to read at once from the stream
+        public int BatchSize { get; set; } = 10;
+
+        /// <summary>
+        /// If this is a consumer, what group does it belong to?
+        /// Within a group of consumers, they will employ a lock and read-past strategy. When a message is locked by a specific consumer, other consumers in the
+        /// group will read-past in the stream to get subsequent message. This allows us to use the competing consumers pattern with Redis.
+        /// Every consumer you want to be part of the same group, must have the same consumer group.
+        /// Because we use the group syntax to read, this will default to a unique id i.e. each consumer is a group, unless set
+        /// </summary>
+        public string ConsumerGroup { get; set; } = Guid.NewGuid().ToString();
+
+        /// <summary>
+        /// What is the id of this consumer = used for tracking messages read in a group
+        /// </summary>
+        public string ConsumerId { get; set; } = Guid.NewGuid().ToString();
+
         /// <summary>
         /// How long to wait to retry between reconnection attempts
         /// </summary>
@@ -47,10 +66,14 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// </summary>
         public ReconnectStrategy ReconnectStrategy { get; set; } = ReconnectStrategy.Linear;
         
-        // In general, let StackExchange.Redis handle most reconnects, but allow forced reconnect on errors 
+        /// <summary>
+        /// In general, let StackExchange.Redis handle most reconnects, but allow forced reconnect on errors 
+        /// </summary>
         public int ReconnectMinFrequencyInSeconds { get; set; } = 60;
 
-        // if errors continue for longer than the below threshold, then the multiplexer seems to not be reconnecting, so re-create the multiplexer
+        /// <summary>
+        /// if errors continue for longer than the below threshold, then the multiplexer seems to not be reconnecting, so re-create the multiplexer
+        /// </summary>
         public int ReconnectErrorThresholdInSeconds { get; set; } = 30;
 
         /// <summary>

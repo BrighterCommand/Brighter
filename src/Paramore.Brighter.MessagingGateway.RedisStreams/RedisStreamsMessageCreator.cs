@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// </summary>
         /// <param name="redisMessage">The raw message read from the wire</param>
         /// <returns></returns>
-        public Message CreateMessage(IEnumerable<NameValueEntry> streamEntryValues)
+        public Message CreateMessage(StreamEntry streamEntryValues)
         {
             var message = new Message();
             if (!streamEntryValues.Any())

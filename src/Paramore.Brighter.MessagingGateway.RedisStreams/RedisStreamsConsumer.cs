@@ -28,6 +28,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
+using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.RedisStreams
 {
@@ -37,12 +38,12 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /* see RedisMessageProducer to understand how we are using a dynamic recipient list model with Redis */
 
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsConsumer>);
-        private const string QUEUES = "queues";
-        
         private readonly string _queueName;
-        
-        private readonly Dictionary<Guid, string> _inflight = new Dictionary<Guid, string>();
- 
+        private readonly string _consumerGroup;
+        private readonly int _batchSize;
+        private readonly string _consumerId;
+        private readonly IDatabase _db;
+
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
         /// </summary>
@@ -50,40 +51,46 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <param name="queueName">Key of the list in Redis we want to read from</param>
         /// <param name="topic">The topic that the list subscribes to</param>
         public RedisStreamsConsumer(
-            RedisStreamsConfiguration redisStreamsConfiguration, 
-            string queueName, 
-            string topic)
-            :base(redisStreamsConfiguration)
+            RedisStreamsConfiguration redisStreamsConfiguration,
+            string queueName)
+            : base(redisStreamsConfiguration)
         {
+            _batchSize = redisStreamsConfiguration.BatchSize;
+            _consumerGroup = redisStreamsConfiguration.ConsumerGroup;
+            _consumerId = redisStreamsConfiguration.ConsumerId;
             _queueName = queueName;
-            Topic = topic;
-       }
+            
+            _db = Redis.GetDatabase();
+
+            //if we can't create the group, fail fast (RAII)
+            if (!_db.StreamCreateConsumerGroup(queueName, redisStreamsConfiguration.ConsumerGroup, StreamPosition.NewMessages))
+            {
+                throw new InvalidOperationException($"Not able to create the consumer group for consumer: {_consumerId}");
+            }
+
+        }
 
         /// <summary>
-        /// This a 'do nothing operation' as with Redis we pop the message from the queue to read;
-        /// this allows us to have competing consumers, and thus a message is always 'consumed' even
-        /// if we fail to process it.
-        /// The risk with Redis is that we lose any in-flight message if we kill the service, without allowing
-        /// the job to run to completion. Brighter uses run to completion if shut down properly, but not if you
-        /// just kill the process.
-        /// If you need the level of reliability that unprocessed messages that return to the queue don't use Redis.
+        /// Free up our Redis connection. Connections are relatively expensive, so the Conumer can be kept on open for the lifetime
+        /// of the application. The StackExchange client should handle most reconnection issues, but we can force a reconnection if it
+        /// holds open to long 
+        /// </summary>
+        public void Dispose()
+        {
+             ReleaseUnmanagedResources();
+             GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Move the consumer pointer along, so that we grab the next record
         /// </summary>
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
             _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0}", message.Id.ToString());
-            _inflight.Remove(message.Id);
+            _db.StreamAcknowledge(_queueName, _consumerGroup, message.)
         }
 
-        /// <summary>
-        /// Free up our RedisMangerPool, connections not held open between invocations of Receive, so you can create
-        /// a consumer and keep it for program lifetime, disposing at the end only, without fear of a leak
-        /// </summary>
-        public void Dispose()
-        {
-            DisposePool();
-            GC.SuppressFinalize(this);
-        }
 
         /// <summary>
         /// Clear the queue
@@ -107,45 +114,17 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         {
             _logger.Value.DebugFormat("RedisStreamsConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, Topic);
 
-            if (_inflight.Any())
-            {
-                 _logger.Value.ErrorFormat("RedisStreamsConsumer: Preparing to retrieve next message from queue {0}, but have unacked or not rejected message ", _queueName);
-                throw new ChannelFailureException(string.Format("Unacked message still in flight with id: {0}", _inflight.Keys.First().ToString()));   
-            }
-            
-            var message = new Message();
-            IRedisClient client = null;
             try
             {
-                client = GetClient();
-                EnsureConnection(client);
-                (string msgId, string rawMsg) redisMessage = ReadMessage(client, timeoutInMilliseconds);
-                message = new RedisStreamsMessageCreator().CreateMessage(redisMessage.rawMsg);
-                
-                if (message.Header.MessageType != MessageType.MT_NONE && message.Header.MessageType != MessageType.MT_UNACCEPTABLE)
-                {
-                    _inflight.Add(message.Id, redisMessage.msgId);
-                }
+                var entries = _db.StreamReadGroup(_queueName, _consumerGroup, _consumerId, ">", _batchSize);
+                var messageCreator = new RedisStreamsMessageCreator();
+                return entries.Select(se => messageCreator.CreateMessage(se)).ToArray();
             }
-            catch (TimeoutException te)
+            catch (Exception e)    //TODO: What exceptions can be thrown, and what can we do with them
             {
-                _logger.Value.ErrorFormat("Could not connect to Redis client within {0} milliseconds", timeoutInMilliseconds.ToString());
-                throw new ChannelFailureException(
-                    string.Format("Could not connect to Redis client within {0} milliseconds", timeoutInMilliseconds.ToString()),
-                    te
-                );
+                throw new ChannelFailureException(string.Format("Could not read from Redis"));
             }
-            catch (RedisException re)
-            {
-                _logger.Value.ErrorFormat($"Could not connect to Redis: {re.Message}");
-                throw new ChannelFailureException(string.Format("Could not connect to Redis client - see inner exception for details" ), re);
-                 
-            }
-            finally
-            {
-                client?.Dispose();
-            }
-            return new Message[] {message};
+            return new Message[0];
         }
 
 
@@ -195,44 +174,9 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             Requeue(message);
         }
         
-        /*Virtual to allow testing to simulate client failure*/
-        protected virtual IRedisClient GetClient()
+        private void ReleaseUnmanagedResources()
         {
-            return Pool.Value.GetClient();
+            throw new NotImplementedException();
         }
-
-
-        private void EnsureConnection(IRedisClient client)
-        {
-            _logger.Value.DebugFormat("RedisMessagingGateway: Creating queue {0}", _queueName);
-            //what is the queue list key
-            var key = Topic + "." + QUEUES;
-            //subscribe us 
-            client.AddItemToSet(key, _queueName);
-
-        }
-
-        private (string msgId, string rawMsg) ReadMessage(IRedisClient client, int timeoutInMilliseconds)
-        {
-            var msg = string.Empty;
-            var latestId = client.BlockingRemoveStartFromList(_queueName, TimeSpan.FromMilliseconds(timeoutInMilliseconds));
-            if (latestId != null)
-            {
-                var key = Topic + "." + latestId;
-                msg = client.GetValue(key);
-                _logger.Value.InfoFormat(
-                    "Redis: Received message from queue {0} with routing key {0}, message: {1}",
-                    _queueName, Topic, JsonConvert.SerializeObject(msg), Environment.NewLine);
-            }
-            else
-            {
-               _logger.Value.DebugFormat(
-                   "RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1}",
-                    _queueName, Topic);
-  
-            }
-            return (latestId, msg);
-        }
-        
-    }
+   }
 }

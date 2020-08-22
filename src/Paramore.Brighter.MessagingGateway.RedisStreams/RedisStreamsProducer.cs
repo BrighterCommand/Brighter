@@ -25,11 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Paramore.Brighter.Logging;
+using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.RedisStreams
 {
     public class RedisStreamsProducer : RedisStreamsGateway, IAmAMessageProducer
-    {
+    { 
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsProducer>);
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
@@ -38,10 +39,15 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             : base(redisStreamsConfiguration)
         {}
 
-        public void Dispose()
+       public void Dispose()
         {
-            CloseRedisClient();
+            ReleaseUnmanagedResources();
             GC.SuppressFinalize(this);
+        }
+
+        ~RedisStreamsProducer()
+        {
+            ReleaseUnmanagedResources();
         }
 
         /// <summary>
@@ -51,56 +57,55 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <returns>Task.</returns>
         public void Send(Message message)
         {
-                Topic = message.Header.Topic;
+            _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
 
-                _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
-  
+            try
+            {
                 var redisMessage = CreateMessage(message);
 
                 _logger.Value.DebugFormat("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
-                    message.Header.Topic, message.Id.ToString(), message.Body.Value);
-                //increment a counter to get the next message id
-                var nextMsgId = IncrementMessageCounter(client);
-                //store the message, against that id
-                StoreMessage(client, redisMessage, nextMsgId);
-                //If there are subscriber queues, push the message to the subscriber queues
-                var pushedTo = PushToQueues(client, nextMsgId);
-                _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to quues: {3}", 
-                    message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
-        }
+                        message.Header.Topic, message.Id.ToString(), message.Body.Value);
 
-        /// <summary>
+                var db = Redis.GetDatabase();
+                var messageId = db.StreamAdd(message.Header.Topic, redisMessage);
+                
+               _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2}", 
+                        message.Header.Topic, message.Id.ToString(), message.Body.Value);
+     
+            }
+            catch (Exception e)
+            {
+                _logger.Value.ErrorFormat(
+                    "RedisStreamsProducer: Error talking to the Redis on {0}, resetting connection",
+                    Redis.Configuration 
+                    );
+ 
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
+            }
+        }
+        
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">The sending delay</param>
         /// <returns>Task.</returns>
-         public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             //No delay support implemented
             Send(message);
-        }
- 
-
-        private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
+        } 
+        
+        private NameValueEntry[] CreateMessage(Message message)
         {
-            var key = Topic + "." + QUEUES;
-            var queues = client.GetAllItemsFromSet(key).ToList();
-            foreach (var queue in queues)
-            {
-                //First add to the queue itself
-                client.AddItemToList(queue, nextMsgId.ToString());
-            }
-            return queues;
+            return RedisStreamsPublisher.Create(message);
         }
-
-        private long IncrementMessageCounter(IRedisClient client)
+        
+        private void ReleaseUnmanagedResources()
         {
-            //This holds the next id for this topic; we use that to store message contents and signal to queue
-            //that there is a message to read.
-            var key = Topic + "." + NEXT_ID;
-            return client.IncrementValue(key);
+            CloseRedisClient();
         }
 
-   }
+         
+
+  }
 }
