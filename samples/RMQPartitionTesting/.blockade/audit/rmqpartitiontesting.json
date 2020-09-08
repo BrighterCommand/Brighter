@@ -1,0 +1,4 @@
+{"status": "Success", "timestamp": 1523700035.843735, "message": "", "event": "partition", "targets": [["8fac40eb0547"], ["5c61184c4451", "64337b1a8bcb"]]}
+{"status": "Success", "timestamp": 1523700124.381972, "message": "", "event": "join", "targets": []}
+{"status": "Success", "timestamp": 1524497414.486464, "message": "", "event": "partition", "targets": [["1eeb9c8e538a"], ["e6ab85c927cd", "b59ce10e2409"]]}
+{"status": "Success", "timestamp": 1524497503.501736, "message": "", "event": "join", "targets": []}
