@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
 using StackExchange.Redis;
 
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
             try
             {
-                var redisMessage = CreateMessage(message);
+                var redisMessage = RedisStreamsPublisher.Create(message);
 
                 _logger.Value.DebugFormat("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
                         message.Header.Topic, message.Id.ToString(), message.Body.Value);
@@ -92,14 +93,10 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             //No delay support implemented
+            Task.Delay(delayMilliseconds).Wait();
             Send(message);
-        } 
-        
-        private NameValueEntry[] CreateMessage(Message message)
-        {
-            return RedisStreamsPublisher.Create(message);
-        }
-        
+}
+
         private void ReleaseUnmanagedResources()
         {
             CloseRedisClient();

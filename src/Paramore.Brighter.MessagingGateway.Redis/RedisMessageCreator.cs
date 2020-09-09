@@ -157,9 +157,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
                 if (bag.Success)
                 {
-                    foreach (var key in headers.Keys)
+                    foreach (var key in bag.Result.Keys)
                     {
-                        messageHeader.Bag.Add(key, headers[key]);
+                        messageHeader.Bag.Add(key, bag.Result[key]);
                     }
                 }
 

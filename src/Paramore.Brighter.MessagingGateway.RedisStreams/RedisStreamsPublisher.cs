@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         private static void WriteBody(MessageBody messageBody, ICollection<NameValueEntry> entries)
         {
-            entries.Add( new NameValueEntry("body", messageBody.Value)); 
+            entries.Add( new NameValueEntry(MessageNames.BODY, messageBody.Value)); 
         }
 
         private static void WriteHeader(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             //Read MessageBag
             WriteMessageBag(messageHeader, entries);
             //reply to
-            WrtiteReplyTo(messageHeader, entries);
+            WriteReplyTo(messageHeader, entries);
             //content type
             WriteContentType(messageHeader, entries);
             //correlation id
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             entries.Add(new NameValueEntry(MessageNames.MESSAGE_TYPE, messageHeader.MessageType.ToString()));
         }
         
-        private static void WrtiteReplyTo(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
+        private static void WriteReplyTo(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
         {
             entries.Add(new NameValueEntry(MessageNames.REPLY_TO, messageHeader.ReplyTo));
         }

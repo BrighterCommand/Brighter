@@ -35,80 +35,81 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
     public class RedisStreamsMessageCreator
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsMessageCreator>);
-        
+
         /// <summary>
-        /// Create a Brighter Message from the Redis raw content
+        /// Create a Brighter Message from the Redis StreamEntry
         /// Expected message shape is:
         /// {
-        ///     {"TimeStamp":"2018-02-07T09:38:36Z"},
-        ///     {"Id":"18669550-2069-48c5-923d-74a2e79c0748"},
-        ///     {"Topic":"test"},
-        ///     {"MessageType":"1"},
-        ///     {"Bag":"{}"},
-        ///     {"HandledCount":"0"},
-        ///     {"DelayedMilliseconds":"0"},
-        ///     {"CorrelationId":"00000000-0000-0000-0000-000000000000"},
-        ///     {"ContentType":"text/plain"},
-        ///     {"ReplyTo":"", Body="{JSON content}"}
+        ///     Id : 1020234G,
+        ///     Values :  {
+        ///         {"TimeStamp":"2018-02-07T09:38:36Z"},
+        ///         {"Id":"18669550-2069-48c5-923d-74a2e79c0748"},
+        ///         {"Topic":"test"},
+        ///         {"MessageType":"1"},
+        ///         {"Bag":"{}"},
+        ///         {"HandledCount":"0"},
+        ///         {"DelayedMilliseconds":"0"},
+        ///         {"CorrelationId":"00000000-0000-0000-0000-000000000000"},
+        ///         {"ContentType":"text/plain"},
+        ///         {"ReplyTo":"", Body="{JSON content}"}
+        ///     }
         /// }
         /// </summary>
-        /// <param name="redisMessage">The raw message read from the wire</param>
+        /// <param name="streamEntry">The entry read from the Redis Stream</param>
         /// <returns></returns>
-        public Message CreateMessage(StreamEntry streamEntryValues)
+        public Message CreateMessage(StreamEntry streamEntry)
         {
-            var message = new Message();
-            if (!streamEntryValues.Any())
+            if (!streamEntry.Values.Any())
             {
-                return message;
+                return new Message();
             }
 
-            var valueMap = streamEntryValues.ToDictionary(t => t.Name.ToString(), t => t.Value);
+            var valueMap = streamEntry.Values.ToDictionary(t => t.Name.ToString(), t => t.Value);
             
             var messageHeader = ReadHeader(valueMap);
-                
             var messageBody = ReadBody(valueMap);
 
-            message = new Message(messageHeader, messageBody);
+            var message = new Message(messageHeader, messageBody);
+            
+            message.Header.Bag.Add(MessageNames.REDIS_ID, streamEntry.Id.ToString());
 
             return message;
         }
 
-        private MessageBody ReadBody(Dictionary<string, RedisValue> reader)
+        private MessageBody ReadBody(Dictionary<string, RedisValue> entries)
         {
-            var body
-            return new MessageBody(reader.ReadLine());
+            return new MessageBody(entries[MessageNames.BODY].ToString());
         }
 
         /// <summary>
-        /// We can't just de-serializee the headers from JSON using Newtonsoft
+        /// We can't just de-serializee the entries from JSON using Newtonsoft
         /// (1) We want to support Postel's Law and be tolerant to missing input where we can
         /// (2) JSON parsers can struggle with some types.
         /// </summary>
-        /// <param name="headersJson">The raw header JSON</param>
+        /// <param name="entries">A dictionary of names to RedisValues </param>
         /// <returns></returns>
-        private MessageHeader ReadHeader(Dictionary<string, RedisValue> headersJson)
+        private MessageHeader ReadHeader(Dictionary<string, RedisValue>entries)
         {
-            var headers = JsonConvert.DeserializeObject<Dictionary<string, string>>(headersJson);  
             //Read Message Id
-            var messageId = ReadMessageId(headers);
+            var messageId = ReadMessageId(entries);
             //Read TimeStamp
-            var timeStamp = ReadTimeStamp(headers);
+            var timeStamp = ReadTimeStamp(entries);
             //Read Topic
-            var topic = ReadTopic(headers);
+            var topic = ReadTopic(entries);
             //Read MessageType
-            var messageType = ReadMessageType(headers);
+            var messageType = ReadMessageType(entries);
            //Read HandledCount
-            var handledCount = ReadHandledCount(headers);
+            var handledCount = ReadHandledCount(entries);
             //Read DelayedMilliseconds
-            var delayedMilliseconds = ReadDelayedMilliseconds(headers);
+            var delayedMilliseconds = ReadDelayedMilliseconds(entries);
             //Read MessageBag
-            var bag = ReadMessageBag(headers);
+            var bag = ReadMessageBag(entries);
             //reply to
-            var replyTo = ReadReplyTo(headers);
+            var replyTo = ReadReplyTo(entries);
             //content type
-            var contentType = ReadContentType(headers);
+            var contentType = ReadContentType(entries);
             //correlation id
-            var correlationId = ReadCorrelationId(headers);
+            var correlationId = ReadCorrelationId(entries);
             
 
             if (!messageId.Success)
@@ -133,9 +134,9 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
                 if (bag.Success)
                 {
-                    foreach (var key in headers.Keys)
+                    foreach (var key in bag.Result.Keys)
                     {
-                        messageHeader.Bag.Add(key, headers[key]);
+                        messageHeader.Bag.Add(key, bag.Result[key]);
                     }
                 }
 
@@ -163,22 +164,22 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
                 MessageType.MT_UNACCEPTABLE);
         }
         
-        private HeaderResult<string> ReadContentType(Dictionary<string, string> headers)
+        private HeaderResult<string> ReadContentType(Dictionary<string, RedisValue> entries)
         {
-            if (headers.ContainsKey(MessageNames.CONTENT_TYPE))
+            if (entries.ContainsKey(MessageNames.CONTENT_TYPE))
             {
-                return new HeaderResult<string>(headers[MessageNames.CONTENT_TYPE], true);
+                return new HeaderResult<string>(entries[MessageNames.CONTENT_TYPE], true);
             }
             return new HeaderResult<string>(String.Empty, false);
         }
 
-        private HeaderResult<Guid> ReadCorrelationId(Dictionary<string, string> headers)
+        private HeaderResult<Guid> ReadCorrelationId(Dictionary<string, RedisValue> entries)
         {
             var messageId = Guid.Empty;
             
-            if (headers.ContainsKey(MessageNames.CORRELATION_ID))
+            if (entries.ContainsKey(MessageNames.CORRELATION_ID))
             {
-                if (Guid.TryParse(headers[MessageNames.CORRELATION_ID], out messageId))
+                if (Guid.TryParse(entries[MessageNames.CORRELATION_ID], out messageId))
                 {
                     return new HeaderResult<Guid>(messageId, true);
                 }
@@ -187,11 +188,11 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             return new HeaderResult<Guid>(messageId, false);
         }
 
-         private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
+         private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, RedisValue> entries)
         {
-            if (headers.ContainsKey(MessageNames.DELAYED_MILLISECONDS))
+            if (entries.ContainsKey(MessageNames.DELAYED_MILLISECONDS))
             {
-                if (int.TryParse(headers[MessageNames.DELAYED_MILLISECONDS], out int delayedMilliseconds))
+                if (int.TryParse(entries[MessageNames.DELAYED_MILLISECONDS], out int delayedMilliseconds))
                 {
                     return new HeaderResult<int>(delayedMilliseconds, true); 
                 }
@@ -199,11 +200,11 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             return new HeaderResult<int>(0, true);
          }
         
-        private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
+        private HeaderResult<int> ReadHandledCount(Dictionary<string, RedisValue> entries)
         {
-            if (headers.ContainsKey(MessageNames.HANDLED_COUNT))
+            if (entries.ContainsKey(MessageNames.HANDLED_COUNT))
             {
-                if (int.TryParse(headers[MessageNames.HANDLED_COUNT], out int handledCount))
+                if (int.TryParse(entries[MessageNames.HANDLED_COUNT], out int handledCount))
                 {
                     return new HeaderResult<int>(handledCount, true); 
                 }
@@ -218,14 +219,14 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// we can't do any conversion from a string. So the consumer of the bag will need to
         /// convert to their target type
         /// </summary>
-        /// <param name="headers">The raw json</param>
+        /// <param name="entries">The raw json</param>
         /// <returns>A dictionary, either empty if key missing or matching contents if present (could be mepty)</returns>
-        private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
+        private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, RedisValue> entries)
         {
 
-            if (headers.ContainsKey(MessageNames.BAG))
+            if (entries.ContainsKey(MessageNames.BAG))
             {
-                var bagJson = headers[MessageNames.BAG];
+                var bagJson = entries[MessageNames.BAG];
                 var bag = JsonConvert.DeserializeObject<Dictionary<string, object>>(bagJson);
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
@@ -233,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         }
 
-         private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
+         private HeaderResult<MessageType> ReadMessageType(Dictionary<string, RedisValue> headers)
         {
             if (headers.ContainsKey(MessageNames.MESSAGE_TYPE))
             {
@@ -246,7 +247,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
-        private HeaderResult<Guid> ReadMessageId(IDictionary<string, string> headers)
+        private HeaderResult<Guid> ReadMessageId(Dictionary<string, RedisValue> headers)
         {
             var messageId = Guid.Empty;
             
@@ -261,7 +262,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             return new HeaderResult<Guid>(messageId, false);
         }
         
-        private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)
+        private HeaderResult<string> ReadReplyTo(Dictionary<string, RedisValue> headers)
         {
             if (headers.ContainsKey(MessageNames.REPLY_TO))
             {
@@ -273,9 +274,9 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
        /// <summary>
         /// Note that RMQ uses a unix timestamp, we just Newtonsoft's JSON date format in Redis 
         /// </summary>
-        /// <param name="headers">The collection of headers</param>
+        /// <param name="headers">The collection of entries</param>
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>
-        private HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
+        private HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, RedisValue> headers)
         {
             if (headers.ContainsKey(MessageNames.TIMESTAMP))
             {
@@ -287,7 +288,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
-        private HeaderResult<string> ReadTopic(Dictionary<string, string> headers)
+        private HeaderResult<string> ReadTopic(Dictionary<string, RedisValue> headers)
         {
             var topic = string.Empty;
             if (headers.ContainsKey(MessageNames.TOPIC))

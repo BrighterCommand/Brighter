@@ -1,28 +1,26 @@
 ﻿using System;
 using System.Linq;
 using FluentAssertions;
-using Paramore.Brighter.Redis.Tests.Fixtures;
+using Paramore.Brighter.RedisStreams.Tests.Fixtures;
 using Xunit;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway
+namespace Paramore.Brighter.RedisStreams.Tests.MessagingGateway
 {
-    [Collection("Redis")]
-    [Trait("Category", "Redis")]
-    public class RedisMessageProducerSendTests : IClassFixture<RedisFixture>
+    public class RedisStreamMessageProducerSentTests : IClassFixture<RedisFixture>
     {
         private readonly RedisFixture _redisFixture;
-        private readonly Message _message;
+        private Message _message;
 
-        public RedisMessageProducerSendTests(RedisFixture redisFixture)
+        public RedisStreamMessageProducerSentTests(RedisFixture redisFixture)
         {
-            const string topic = "test";
             _redisFixture = redisFixture;
+            
             _message = new Message(
-                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), "Brighter_Test_Topic", MessageType.MT_EVENT), 
                 new MessageBody("test content")
                 );
-        }
-        
+ 
+        } 
         
         [Fact]
         public void When_posting_a_message_via_the_messaging_gateway()
@@ -33,8 +31,9 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             var messageBody = sentMessage.Body.Value;
             _redisFixture.Consumer.Acknowledge(sentMessage);
 
-            //_should_send_a_message_via_restms_with_the_matching_body
+            //_should_send_a_message_via_redies_streams_with_the_matching_body
             messageBody.Should().Be(_message.Body.Value);
         }
+ 
     }
 }

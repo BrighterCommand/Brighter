@@ -1,21 +1,21 @@
 ﻿using System;
 using Paramore.Brighter.MessagingGateway.Redis;
 
-namespace Paramore.Brighter.Redis.Tests.MessagingGateway
+namespace Paramore.Brighter.Redis.Tests.Fixtures
 {
     public class RedisFixture : IDisposable
     {
         private const string QueueName = "test";
         protected const string Topic = "test";
-        public readonly RedisMessageProducer MessageProducer;
-        public readonly RedisMessageConsumer MessageConsumer;
+        public readonly RedisMessageProducer Producer;
+        public readonly RedisMessageConsumer Consumer;
 
         public RedisFixture()
         {
             RedisMessagingGatewayConfiguration configuration = RedisMessagingGatewayConfiguration();
 
-            MessageProducer = new RedisMessageProducer(configuration);
-            MessageConsumer = new RedisMessageConsumer(configuration, QueueName, Topic);
+            Producer = new RedisMessageProducer(configuration);
+            Consumer = new RedisMessageConsumer(configuration, QueueName, Topic);
         }
 
         public static RedisMessagingGatewayConfiguration RedisMessagingGatewayConfiguration()
@@ -32,9 +32,9 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 
         public void Dispose()
         {
-            MessageConsumer.Purge();
-            MessageConsumer.Dispose();
-            MessageProducer.Dispose();
+            Consumer.Purge();
+            Consumer.Dispose();
+            Producer.Dispose();
         }
     }
 }

@@ -42,6 +42,21 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         public const string CONTENT_TYPE = "ContentType";
 
         /// <summary>
+        /// The correlation id
+        /// </summary>
+        public const string CORRELATION_ID = "CorrelationId";
+        
+        /// <summary>
+        /// The milliseconds to delay the message by (requires plugin rabbitmq_delayed_message_exchange)
+        /// </summary>
+        public const string DELAYED_MILLISECONDS = "DelayedMilliseconds";
+        
+         /// <summary>
+        /// The handled count
+        /// </summary>
+        public const string HANDLED_COUNT = "HandledCount";
+        
+        /// <summary>
         /// The message type
         /// </summary>
         public const string MESSAGE_TYPE = "MessageType";
@@ -50,26 +65,11 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// The message identifier
         /// </summary>
         public const string MESSAGE_ID = "Id";
-        
+
         /// <summary>
-        /// The correlation id
+        /// The Id of the message underestood by Redis Streams
         /// </summary>
-        public const string CORRELATION_ID = "CorrelationId";
-        
-        /// <summary>
-        /// The topic
-        /// </summary>
-        public const string TOPIC = "Topic";
-        
-        /// <summary>
-        /// The handled count
-        /// </summary>
-        public const string HANDLED_COUNT = "HandledCount";
-        
-        /// <summary>
-        /// The milliseconds to delay the message by (requires plugin rabbitmq_delayed_message_exchange)
-        /// </summary>
-        public const string DELAYED_MILLISECONDS = "DelayedMilliseconds";
+        public const string REDIS_ID = "RedisId";
         
         /// <summary>
         /// RPC, who should we reply to 
@@ -80,5 +80,11 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// The timestamp of the message
         /// </summary>
         public const string TIMESTAMP = "TimeStamp";
-    }
+       
+        /// <summary>
+        /// The topic
+        /// </summary>
+        public const string TOPIC = "Topic";
+        
+   }
 }

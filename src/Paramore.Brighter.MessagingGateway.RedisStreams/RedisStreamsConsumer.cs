@@ -50,9 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <param name="redisStreamsConfiguration">Configuration for our Redis cient etc.</param>
         /// <param name="queueName">Key of the list in Redis we want to read from</param>
         /// <param name="topic">The topic that the list subscribes to</param>
-        public RedisStreamsConsumer(
-            RedisStreamsConfiguration redisStreamsConfiguration,
-            string queueName)
+        public RedisStreamsConsumer(RedisStreamsConfiguration redisStreamsConfiguration, string queueName)
             : base(redisStreamsConfiguration)
         {
             _batchSize = redisStreamsConfiguration.BatchSize;
@@ -67,7 +65,6 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             {
                 throw new InvalidOperationException($"Not able to create the consumer group for consumer: {_consumerId}");
             }
-
         }
 
         /// <summary>
@@ -87,8 +84,9 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
-            _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0}", message.Id.ToString());
-            _db.StreamAcknowledge(_queueName, _consumerGroup, message.)
+            var redisId = message.Header.Bag[MessageNames.REDIS_ID].ToString();
+            _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0}", redisId);
+            _db.StreamAcknowledge(_queueName, _consumerGroup, new RedisValue(redisId));
         }
 
 
@@ -97,12 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// </summary>
         public void Purge()
         {
-            using (var client = Pool.Value.GetClient())
-            {
-                _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
-                //This kills the queue, not the messages, which we assume expire
-                client.RemoveAllFromList(_queueName);
-            }
+            _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
         }
 
         /// <summary>
@@ -112,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <returns>The message read from the list</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            _logger.Value.DebugFormat("RedisStreamsConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, Topic);
+            _logger.Value.DebugFormat("RedisStreamsConsumer: Preparing to retrieve next message from queue {0}", _queueName);
 
             try
             {
@@ -135,7 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <param name="requeue"></param>
         public void Reject(Message message, bool requeue)
         {
-            _inflight.Remove(message.Id);
+            return;
         }
 
         /// <summary>
@@ -144,22 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <param name="message"></param>
         public void Requeue(Message message)
         {
-            message.Header.HandledCount++;
-            using (var client = Pool.Value.GetClient())
-            {
-                if (_inflight.ContainsKey(message.Id))
-                {
-                    var msgId = _inflight[message.Id];
-                    client.AddItemToList(_queueName, msgId);
-                    var redisMsg = CreateMessage(message);
-                    StoreMessage(client, redisMsg, long.Parse(msgId));
-                    _inflight.Remove(message.Id);
-                }
-                else
-                {
-                    throw new ChannelFailureException(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
-                }
-            }
+            return;
         }
 
         /// <summary>

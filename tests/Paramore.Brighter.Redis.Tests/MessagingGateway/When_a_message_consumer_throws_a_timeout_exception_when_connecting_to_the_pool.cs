@@ -1,6 +1,7 @@
 ﻿using System;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.Redis;
+using Paramore.Brighter.Redis.Tests.Fixtures;
 using Paramore.Brighter.Redis.Tests.TestDoubles;
 using Xunit;
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using FluentAssertions;
+using Paramore.Brighter.Redis.Tests.Fixtures;
 using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway
@@ -33,20 +34,20 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             //Need to receive to subscribe to feed, before we send a message. This returns an empty message we discard
-            _redisFixture.MessageConsumer.Receive(1000); 
+            _redisFixture.Consumer.Receive(1000); 
             
             //Send a sequence of messages, we want to check that ordering is preserved
-            _redisFixture.MessageProducer.Send(_messageOne);
-            _redisFixture.MessageProducer.Send(_messageTwo);
+            _redisFixture.Producer.Send(_messageOne);
+            _redisFixture.Producer.Send(_messageTwo);
             
             //Now receive, and confirm order off is order on
-            var sentMessageOne = _redisFixture.MessageConsumer.Receive(1000).Single();
+            var sentMessageOne = _redisFixture.Consumer.Receive(1000).Single();
             var messageBodyOne = sentMessageOne.Body.Value;
-            _redisFixture.MessageConsumer.Acknowledge(sentMessageOne);
+            _redisFixture.Consumer.Acknowledge(sentMessageOne);
             
-            var sentMessageTwo = _redisFixture.MessageConsumer.Receive(1000).Single();
+            var sentMessageTwo = _redisFixture.Consumer.Receive(1000).Single();
             var messageBodyTwo = sentMessageTwo.Body.Value;
-            _redisFixture.MessageConsumer.Acknowledge(sentMessageTwo);
+            _redisFixture.Consumer.Acknowledge(sentMessageTwo);
             
             //_should_send_a_message_via_restms_with_the_matching_body
             messageBodyOne.Should().Be(_messageOne.Body.Value);
