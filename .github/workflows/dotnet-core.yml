@@ -20,11 +20,11 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Build
-        run: dotnet build --configuration Release --no-restore
+        run: dotnet build --configuration Release --no-restore --output artifacts
       - uses: actions/upload-artifact@v2
         with:
           name: dotnet artifacts
-          path: artifacts/
+          path: artifacts
   
   test:
 
@@ -39,7 +39,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
-          path: artifacts/
+          path: artifacts
       - name: Core Tests
-        run: dotnet test Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
-        working-directory: artifacts/tests
+        run: dotnet test Paramore.Brighter.Core.Tests.dll --configuration Release --no-build
+        working-directory: artifacts
