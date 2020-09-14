@@ -41,7 +41,5 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
-      - name: Display Structure of Downloaded Files
-        run: ls -R
       - name: Core Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
