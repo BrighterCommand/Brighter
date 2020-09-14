@@ -24,6 +24,7 @@ jobs:
       - uses: actions/upload-artifact@v2
         with:
           name: dotnet artifacts
+          path: ~/*/**
   
   test:
 
@@ -38,6 +39,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
+          path: ~/*/**
       - name: Core Tests
         run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
         working-directory: artifacts
