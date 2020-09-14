@@ -44,5 +44,5 @@ jobs:
       - name: Display Structure of Downloaded Files
         run: ls -R
       - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
+        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
         working-directory: artifacts
