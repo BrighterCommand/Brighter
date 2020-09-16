@@ -25,6 +25,7 @@ jobs:
         with:
           name: dotnet artifacts
           path: |
+            ./
             src/
             tests/
   
@@ -35,7 +36,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
       - uses: actions/download-artifact@v2
@@ -45,3 +46,18 @@ jobs:
         run: ls -R
       - name: Core Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
+
+  release:
+    
+    runs-on: ubuntu-latest
+    needs: [test]
+    
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: dotnet artifacts
+      - name: catalog
+        run: ls -R
+      - name: Copy files to local nuget directoryd
+        run: dotnet pack -v normal -c Release --no-restore --include-symbols --include-source -p:PackageVersion=$GITHUB_RUN_ID
+      
