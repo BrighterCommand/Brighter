@@ -47,7 +47,7 @@ jobs:
       - name: Core Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build
 
-  release:
+  package:
     
     runs-on: ubuntu-latest
     needs: [test]
@@ -56,8 +56,30 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
-      - name: catalog
-        run: ls -R
-      - name: Copy files to local nuget directoryd
+      - name: package 
         run: dotnet pack -v normal -c Release --no-restore --include-symbols --include-source -p:PackageVersion=$GITHUB_RUN_ID
+      - uses: actions/upload-artifact@v2
+        with:
+          name: nuget packages
+          path: "**/*.nupkg"
+      
+  prerelease:
+    runs-on: ubuntu-latest
+    needs: [package]
+    
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: dotnet artifacts
+      - name: Display Structure of Downloaded Files
+        run: ls -R
+      - name: Push to GitHub Feed
+        run: |
+          for f in ./nupkg/*.nupkg
+          do
+            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED
+          done
+      
+            
+      
       
