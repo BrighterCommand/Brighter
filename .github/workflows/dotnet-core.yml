@@ -54,8 +54,6 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
-      - name: package 
-        run: dotnet pack -v normal -c Release --no-restore -p:PackageVersion=$GITHUB_RUN_ID
       - uses: actions/upload-artifact@v2
         with:
           name: nuget packages
