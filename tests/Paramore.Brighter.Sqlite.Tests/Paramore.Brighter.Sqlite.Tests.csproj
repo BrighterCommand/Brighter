@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="AWSSDK.Core" Version="3.5.1.11" />
+      <PackageReference Include="AWSSDK.Core" Version="3.5.1.15" />
       <PackageReference Include="coverlet.collector" Version="1.3.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
