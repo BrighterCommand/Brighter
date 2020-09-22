@@ -5,6 +5,12 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
+env:
+  # Project name to pack and publish
+  # GitHub Packages Feed settings
+  GITHUB_FEED: https://nuget.pkg.github.com/BrighterCommannd/Brighter/
+  GITHUB_USER: iancooper
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   build:
