@@ -8,7 +8,7 @@ on:
 env:
   # Project name to pack and publish
   # GitHub Packages Feed settings
-  GITHUB_FEED: "https://nuget.pkg.github.com/$GITHUB_REPOSITORY"
+  GITHUB_FEED: "https://nuget.pkg.github.com/${GITHUB_REPOSITORY}"
   GITHUB_USER: iancooper
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
