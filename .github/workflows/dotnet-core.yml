@@ -8,7 +8,7 @@ on:
 env:
   # Project name to pack and publish
   # GitHub Packages Feed settings
-  GITHUB_FEED: https://nuget.pkg.github.com/BrighterCommannd/Brighter/
+  GITHUB_FEED: https://nuget.pkg.github.com/
   GITHUB_USER: iancooper
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -73,13 +73,11 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: nuget packages
-      - name: Check Path
-        run: echo $GITHUB_FEED
       - name: Push to GitHub Feed
         run: |
           for f in **/*.nupkg
           do
-            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED
+            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED$GITHUB_REPOSITORY
           done
       
             
