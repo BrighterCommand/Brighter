@@ -99,5 +99,25 @@ jobs:
           name: dotnet artifacts
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build
+  
+  rabbitmq-ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Echo RABBITMQ_PORT
+        run: echo "$RABBITMQ_PORT"
+        env:
+          # get randomly assigned published ports
+          RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}
+    services:
+      rabbitmq:
+        image: rabbitmq:latest
+        ports:
+        - 5672/tcp
+        # needed because the rabbitmq container does not provide a healthcheck
+        options: >-
+          --health-cmd "rabbitmqctl node_health_check"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
 
