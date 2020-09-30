@@ -8,7 +8,7 @@ on:
 env:
   # Project name to pack and publish
   # GitHub Packages Feed settings
-  GITHUB_FEED: "https://nuget.pkg.github.com/${GITHUB_REPOSITORY}"
+  GITHUB_FEED: https://nuget.pkg.github.com/
   GITHUB_USER: iancooper
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -74,12 +74,12 @@ jobs:
         with:
           name: nuget packages
       - name: Check Path
-        run: echo $GITHUB_FEED
+        run: echo $GITHUB_FEED$GITHUB_REPOSITORY
       - name: Push to GitHub Feed
         run: |
           for f in **/*.nupkg
           do
-            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED
+            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED$GITHUB_REPOSITORY
           done
       
             
