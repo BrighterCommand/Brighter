@@ -50,5 +50,5 @@ We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on 
        src="https://scan.coverity.com/projects/2900/badge.svg"/>
 </a>
 
-[![CI](https://github.com/BrighterCommand/actions-gh-pages/workflows/ci/badge.svg?branch=main&event=push)
+[![CI](https://github.com/BrighterCommand/actions-gh-pages/workflows/ci/badge.svg?branch=main&event=push)]
 
