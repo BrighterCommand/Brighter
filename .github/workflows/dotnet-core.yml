@@ -73,8 +73,6 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: nuget packages
-      - name: Check Path
-        run: echo $GITHUB_FEED$GITHUB_REPOSITORY
       - name: Push to GitHub Feed
         run: |
           for f in **/*.nupkg
