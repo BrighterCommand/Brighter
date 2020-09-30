@@ -50,4 +50,5 @@ We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on 
        src="https://scan.coverity.com/projects/2900/badge.svg"/>
 </a>
 
-[![Build status](https://ci.appveyor.com/api/projects/status/srgw17idv5994wkm/branch/master?svg=true)](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter/branch/master)
+[![CI](https://github.com/BrighterCommand/actions-gh-pages/workflows/ci/badge.svg?branch=main&event=push)
+
