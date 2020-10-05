@@ -83,17 +83,24 @@ jobs:
   redis-ci:
     runs-on: ubuntu-latest
     needs: [test]
-    container: mcr.microsoft.com/dotnet/core/sdk:3.1
     
     services:
-      image: redis
-      options: >-
-        --health-cmd "redis-cli ping"
-        --health-interval 10s
-        --health-timeout 5s
-        --health-retries 5             
+      redis:  
+        image: redis:latest
+        ports:
+        - 6379/tcp
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5             
       
     steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x 
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
@@ -102,12 +109,8 @@ jobs:
   
   rabbitmq-ci:
     runs-on: ubuntu-latest
-    steps:
-      - name: Echo RABBITMQ_PORT
-        run: echo "$RABBITMQ_PORT"
-        env:
-          # get randomly assigned published ports
-          RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}
+    needs: [test]
+
     services:
       rabbitmq:
         image: rabbitmq:latest
@@ -119,5 +122,13 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+
+    steps:
+      - name: Echo RABBITMQ_PORT
+        run: echo "$RABBITMQ_PORT"
+        env:
+          # get randomly assigned published ports
+          RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}
+
 
 
