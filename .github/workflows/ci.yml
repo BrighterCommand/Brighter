@@ -45,6 +45,10 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
@@ -96,6 +100,10 @@ jobs:
           --health-retries 5             
       
     steps:
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
@@ -127,6 +135,10 @@ jobs:
           --health-retries 5
 
     steps:
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 3.1.x
       - name: Echo RABBITMQ_PORT
         run: echo "$RABBITMQ_PORT"
         env:
@@ -135,7 +147,7 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
-      - name: Redis Transport Tests
+      - name: RMQ Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build
 
 
