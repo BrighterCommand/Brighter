@@ -96,8 +96,6 @@ jobs:
           --health-retries 5             
       
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup .NET Core
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
@@ -126,6 +124,11 @@ jobs:
         env:
           # get randomly assigned published ports
           RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}
+      - uses: actions/download-artifact@v2
+        with:
+          name: dotnet artifacts
+      - name: Redis Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build
 
 
 
