@@ -103,10 +103,10 @@ jobs:
         run: |  
            echo "Root Directory"
            ls -l .
-           echo "Src Directory"
-           ls -l src/
            echo "Tests Directory"
-           ls -l documentation-theme
+           ls -l tests/
+           echo "Tests Directory"
+           ls -l tests/Paramore.Brighter.MessagingGateway.Redis
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build
   
