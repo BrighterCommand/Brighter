@@ -99,6 +99,14 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: dotnet artifacts
+      - name: Install Info
+        run: |  
+           echo "Root Directory"
+           ls -l .
+           echo "Src Directory"
+           ls -l src/
+           echo "Tests Directory"
+           ls -l documentation-theme
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build
   
