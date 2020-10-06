@@ -108,7 +108,7 @@ jobs:
            echo "Tests Directory"
            ls -l tests/Paramore.Brighter.Redis.Tests
       - name: Redis Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build
+        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build
   
   rabbitmq-ci:
     runs-on: ubuntu-latest
@@ -136,7 +136,7 @@ jobs:
         with:
           name: dotnet artifacts
       - name: Redis Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build
 
 
 
