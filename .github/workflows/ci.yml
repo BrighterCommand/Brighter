@@ -106,7 +106,7 @@ jobs:
            echo "Tests Directory"
            ls -l tests/
            echo "Tests Directory"
-           ls -l tests/Paramore.Brighter.MessagingGateway.Redis
+           ls -l tests/Paramore.Brighter.Redis.Tests
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build
   
