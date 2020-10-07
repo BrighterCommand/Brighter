@@ -10,6 +10,8 @@ env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   # Disable sending usage data to Microsoft
   DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # Don't show a logo on first run of CLI
+  DOTNET_NOLOGO: true
   # GitHub Packages Feed settings
   GITHUB_FEED: https://nuget.pkg.github.com/
   GITHUB_USER: iancooper
