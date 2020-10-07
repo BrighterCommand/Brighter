@@ -58,7 +58,7 @@ jobs:
         with:
           name: dotnet artifacts
       - name: Core Tests
-        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build --logger "console;verbosity=detailed" --blame -v diag
+        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --blame -v n
 
   package:
     
@@ -121,7 +121,7 @@ jobs:
            echo "Tests Directory"
            ls -l tests/Paramore.Brighter.Redis.Tests
       - name: Redis Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build --logger "console;verbosity=detailed" --blame -v diag
+        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --blame -v n
   
   rabbitmq-ci:
     runs-on: ubuntu-latest
@@ -153,7 +153,7 @@ jobs:
         with:
           name: dotnet artifacts
       - name: RMQ Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build --logger "console;verbosity=detailed" --blame -v diag
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --blame -v n
 
 
 
