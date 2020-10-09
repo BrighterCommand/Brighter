@@ -38,15 +38,26 @@ namespace Greetings.Ports.CommandHandlers
         
         public override GreetingRequest Handle(GreetingRequest request)
         {
-            var salutation = request.Language switch
+            string salutation;
+            switch (request.Language)
             {
-                ("en-gb") => "Hello",
-                ("en-us") => "Hello",
-                ("fr-fr") => "Bonjour",
-                ("de-de") => "Hallo",
-                ("tlh") => "nuqneH",
-                _ => "Salution"
-            };
+                case ("en-gb"):
+                case ("en-us"):
+                    salutation = "Hello";
+                    break;
+                case ("fr-fr"):
+                    salutation = "Bonjour";
+                    break;
+                case ("de-de"):
+                    salutation = "Hallo";
+                    break;
+                case ("tlh"):
+                    salutation = "nuqneH";
+                    break;
+                default:
+                    salutation = "Salution";
+                    break;
+            }
 
             salutation += " " + request.Name;
 
