@@ -97,7 +97,7 @@ jobs:
       redis:  
         image: redis:latest
         ports:
-        - 6379/tcp
+        - 6379:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
@@ -123,7 +123,7 @@ jobs:
       rabbitmq:
         image: rabbitmq:latest
         ports:
-        - 5672/tcp
+        - 5672:5672
         # needed because the rabbitmq container does not provide a healthcheck
         options: >-
           --health-cmd "rabbitmqctl node_health_check"
