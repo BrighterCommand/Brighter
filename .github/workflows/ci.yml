@@ -105,21 +105,13 @@ jobs:
           --health-retries 5             
       
     steps:
+      - uses: actions/checkout@v2
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 3.1.x
-      - uses: actions/download-artifact@v2
-        with:
-          name: dotnet artifacts
-      - name: Install Info
-        run: |  
-           echo "Root Directory"
-           ls -l .
-           echo "Tests Directory"
-           ls -l tests/
-           echo "Tests Directory"
-           ls -l tests/Paramore.Brighter.Redis.Tests
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
       - name: Redis Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
   
@@ -140,18 +132,18 @@ jobs:
           --health-retries 5
 
     steps:
+      - uses: actions/checkout@v2
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 3.1.x
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
       - name: Echo RABBITMQ_PORT
         run: echo "$RABBITMQ_PORT"
         env:
           # get randomly assigned published ports
           RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}
-      - uses: actions/download-artifact@v2
-        with:
-          name: dotnet artifacts
       - name: RMQ Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
