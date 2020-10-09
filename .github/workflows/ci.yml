@@ -58,7 +58,7 @@ jobs:
         with:
           name: dotnet artifacts
       - name: Core Tests
-        run: dotnet test ./tests/Paramore.Brighter.Core.Tests/bin/Release/netcoreapp2.1/Paramore.Brighter.Core.Tests.dll --no-build --logger "console;verbosity=normal" --blame -v n
+        run: dotnet vstest ./tests/Paramore.Brighter.Core.Tests/bin/Release/netcoreapp2.1/Paramore.Brighter.Core.Tests.dll
 
   package:
     
