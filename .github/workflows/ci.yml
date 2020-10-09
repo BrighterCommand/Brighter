@@ -50,15 +50,15 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
 
     steps:
+      - uses: actions/checkout@v2
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 3.1.x
-      - uses: actions/download-artifact@v2
-        with:
-          name: dotnet artifacts
+      - name: Install dependencies
+        run: dotnet restore
       - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/bin/Release/netcoreapp2.1/Paramore.Brighter.Core.Tests.dll --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --nologo --logger "console;verbosity=normal" --blame -v n
 
   package:
     
