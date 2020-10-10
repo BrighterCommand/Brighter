@@ -17,7 +17,7 @@
         * Brighter also supports the Command Processor pattern and supports a middleware pipeline between the sender and receiver for orthogonal concerns such as logging, undo, validation, retry, and circuit breaker.
         * Brighter integrates with the Polly library and Polly policies can form part of its middleware pipeline.
         
-* When integrating two microservices using messaging, one question is how to provide a message pump that reads messages from middleware, and calls user code to process that message
+* When integrating two microservices using messaging, one question is how to abstract from the developer the code that sends and receives messages in favor of writing domain code.
 
         * A common solution is a message pump that: gets a message, translates a message, and dispatches the message to user code that then handles it 
         * Brighter provides a service activator that implements a message pump
