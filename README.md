@@ -14,18 +14,19 @@
 
     * A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
     * Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.
-    * You can write a command, that is then dispatched to only one handler.
-    * Alternatively you can write an event, that is dispatched to zero or more handlers
-    * Brighter also supports the Command Processor pattern, so that you can add middleware between the sender and receiver
+    * You can write a command, that is then dispatched to a handler that you write.
+    * Alternatively you can write an event, that is dispatched to zero or more handlers that you write.
+    * Brighter also supports the Command Processor pattern, so that you can add middleware between the sender and handler.
     * Handlers are tagged via attributes to include middleware in thier pipeline.
     * Out-of-the-box middleware is provided for logging and Polly (retry, and circuit breaker).
            
 * When integrating two microservices using messaging, one question is how to abstract from the developer the code that sends and receives messages in favor of writing domain code.
 
     * A common solution is a message pump that: gets a message, translates a message, and dispatches it to user code. 
-    * Brighter provides a service activator that implements a message pump
-    * The message pump dispatches to user code via Brighter's Command Dispatcher/Processor
-    * We hide the complexity of the pump, so that developers need only write a handler that subscribes to a message
+    * Brighter provides a service activator that implements a message pump.
+    * The message pump dispatches to user code via Brighter's Command Dispatcher/Processor.
+    * This hides the complexity of a message pump; developers need only write a handler that subscribes to a message
+    * This hides the complexity of messaging from developers who just write commands/events and handlers.
     * Developers can take full advantage of Brighter's middleware pipeline when processing messages 
     * Brighter can be configured for a variety of transports including RabbitMQ, and SNS+SQS.
   
