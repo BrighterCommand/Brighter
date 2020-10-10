@@ -1,7 +1,7 @@
 | | |
 | ------------- | ------------- |
 |![canon](https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png) |[Brighter](https://github.com/BrighterCommand/Brighter)|
-||Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker](http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern. It can be used for interoperability in a microservices architecture as well. |
+||Brighter is a Command Dispatcher and Command Processor.It can be used with an in-memory bus, or for interoperability in a microservices architecture, out of process via a wider range of middleware transports. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.svg)](https://www.nuget.org/packages/paramore.brighter/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
 | Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://paramore.readthedocs.io); [Wiki](https://github.com/BrighterCommand/Brighter/wiki)  |
@@ -9,14 +9,19 @@
 | Chat | [![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
 
-## Why a Command Dispatcher, Command Processor, and Task Queue?
-* When implementing a hexagonal architecture, one question is how to implement a port.
-	- Brighter shows how to implement ports using a Command approach (with a Command Dispatcher)
-	- This is the strategy described for services in Service Design Patterns as  [Command Invoker](http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker)
-* A command processor lets you add orthogonal concerns seperately to the processing of commands such as logging, undo, validation, retry, and circuit breaker
- 	- Brighter provides a Command Processor, using a 'Russian Doll' model to allow a pipeline of handlers to operate on a command.
-* A task queue allows a one process to send work to be handled asynchronously to another process, using a message queue as the channel, for processing. A common use case is to help a web server scale by handing off a request to another process for back-end processing. This allows both a faster ack and throttling of the request arrival rate to that which can be handled by a back end processing component. For another project with this goal, see [Celery](https://github.com/celery/celery)
- 	- Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
+## What Scenarios Can You Use Brighter in?
+* When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer.
+        - A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
+        - Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.
+        - Brighter also supports the Command Processor pattern and supports a middleware pipeline between the sender and receiver for orthogonal concerns such as logging, undo, validation, retry, and circuit breaker.
+        - Brighter integrates with the Polly library and Polly policies can form part of its middleware pipeline.
+* When integrating two microservices using messaging, one question is how to provide a message pump that reads messages from middleware, and calls user code to process that message
+        - A common solution is a message pump that: gets a message, translates a message, and dispatches the message to user code that then handles it 
+        - Brighter provides a service activator that implements a message pump
+        - The message pump dispatches to user code via Brighter's Command Dispatcher/Processor
+        - We hide the complexity of the pump, so that developers need only write a handler that subscribes to a message and configure a transport for their middleware, to begin recieving messages.
+        - This removes the need for developers to learn how to reliably deliver messages, and focus on the domain logic.
+
 
 ## Documentation
 * More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](https://github.com/BrighterCommand/Brighter)
