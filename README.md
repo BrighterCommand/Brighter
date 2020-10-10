@@ -15,6 +15,7 @@
     * A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
     * Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.
     * Brighter also supports the Command Processor pattern, so that you can add middleware between the sender and receiver
+    * Handlers are tagged via attributes to include middleware in thier pipeline.
     * Out-of-the-box middleware is provided for logging and Polly (retry, and circuit breaker).
            
 * When integrating two microservices using messaging, one question is how to abstract from the developer the code that sends and receives messages in favor of writing domain code.
