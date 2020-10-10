@@ -11,11 +11,14 @@
 
 ## What Scenarios Can You Use Brighter in?
 * When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer.
+
         * A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
         * Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.
         * Brighter also supports the Command Processor pattern and supports a middleware pipeline between the sender and receiver for orthogonal concerns such as logging, undo, validation, retry, and circuit breaker.
         * Brighter integrates with the Polly library and Polly policies can form part of its middleware pipeline.
+        
 * When integrating two microservices using messaging, one question is how to provide a message pump that reads messages from middleware, and calls user code to process that message
+
         * A common solution is a message pump that: gets a message, translates a message, and dispatches the message to user code that then handles it 
         * Brighter provides a service activator that implements a message pump
         * The message pump dispatches to user code via Brighter's Command Dispatcher/Processor
