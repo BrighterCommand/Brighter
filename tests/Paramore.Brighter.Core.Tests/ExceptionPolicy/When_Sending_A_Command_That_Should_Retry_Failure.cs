@@ -60,9 +60,9 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
                 .Handle<DivideByZeroException>()
                 .WaitAndRetry(new[]
                 {
-                    1.Seconds(),
-                    2.Seconds(),
-                    3.Seconds()
+                    10.Milliseconds(),
+                    20.Milliseconds(),
+                    30.Milliseconds()
                 }, (exception, timeSpan) =>
                 {
                     _retryCount++;
