@@ -14,6 +14,8 @@
 
     * A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
     * Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.
+    * You can write a command, that is then dispatched to only one handler.
+    * Alternatively you can write an event, that is dispatched to zero or more handlers
     * Brighter also supports the Command Processor pattern, so that you can add middleware between the sender and receiver
     * Handlers are tagged via attributes to include middleware in thier pipeline.
     * Out-of-the-box middleware is provided for logging and Polly (retry, and circuit breaker).
