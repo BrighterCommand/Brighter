@@ -139,11 +139,6 @@ jobs:
           dotnet-version: 2.1.x
       - name: Install dependencies
         run: dotnet restore
-      - name: Echo RABBITMQ_PORT
-        run: echo "$RABBITMQ_PORT"
-        env:
-          # get randomly assigned published ports
-          RABBITMQ_PORT: ${{ job.services.rabbitmq.ports[5672] }}
       - name: RMQ Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
