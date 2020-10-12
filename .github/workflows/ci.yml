@@ -159,7 +159,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
            
-     steps:
+    steps:
       - uses: actions/checkout@v2
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
