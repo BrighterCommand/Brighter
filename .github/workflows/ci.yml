@@ -142,5 +142,32 @@ jobs:
       - name: RMQ Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
+  postgres-ci:
+    runs-on: ubuntu-latest
+    needs: [test]
+  
+    services:
+      postgres:
+        image: postgres
+        ports: 
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+           
+     steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Postgres Tests
+        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
 
