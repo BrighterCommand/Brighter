@@ -50,8 +50,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _connection = new Connection<MyEvent>(new ConnectionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _newConnection = new Connection<MyEvent>(new ConnectionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _connection = new Connection<MyEvent>(new ConnectionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _newConnection = new Connection<MyEvent>(new ConnectionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection, _newConnection });
 
             var @event = new MyEvent();
@@ -60,10 +60,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
-            Task.Delay(1000).Wait();
+            Task.Delay(250).Wait();
             _dispatcher.Shut("test");
             _dispatcher.Shut("newTest");
-            Task.Delay(3000).Wait();
+            Task.Delay(1000).Wait();
             _dispatcher.Consumers.Should().HaveCount(0);
         }
 
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
-            Task.Delay(1000).Wait();
+            Task.Delay(250).Wait();
 
 
             //_should_have_consumed_the_messages_in_the_event_channel
