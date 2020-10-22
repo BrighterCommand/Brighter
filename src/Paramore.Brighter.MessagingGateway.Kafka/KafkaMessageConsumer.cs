@@ -171,7 +171,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                      _consumerConfig.GroupId, 
                      _consumerConfig.BootstrapServers,
                      consumeException.ConsumerRecord.ToString());
-                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", consumeException);
+                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
                  
             }
             catch (Exception exception)
