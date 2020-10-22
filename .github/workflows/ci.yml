@@ -149,6 +149,8 @@ jobs:
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper:latest
+        ports: 
+          - 2181:2181
         env:
          ZOOKEEPER_CLIENT_PORT: 2181
          ZOOKEEPER_TICK_TIME: 2000
@@ -159,7 +161,7 @@ jobs:
           - 9092:9092
         env:
          KAFKA_BROKER_ID: 1
-         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+         KAFKA_ZOOKEEPER_CONNECT: localhost:2181
          KAFKA_DELETE_TOPIC_ENABLE: "true"
          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
@@ -173,7 +175,7 @@ jobs:
         dotnet-version: 2.1.x
     - name: Install dependencies
       run: dotnet restore
-    - name: RMQ Transport Tests
+    - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
  
