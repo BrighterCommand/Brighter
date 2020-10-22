@@ -140,7 +140,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.serviucTests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -164,6 +164,18 @@ jobs:
          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+   
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 2.1.x
+    - name: Install dependencies
+      run: dotnet restore
+    - name: RMQ Transport Tests
+      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
  
  
   postgres-ci:
