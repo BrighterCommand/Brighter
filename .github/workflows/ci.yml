@@ -170,10 +170,10 @@ jobs:
          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
    
     steps:
-    - name: Test Connectivity to ZooKeeper
-      run: ping -c 3 zookeeper:2181
-    - name: Test Connectivity to Kafka
-      run: ping -c 3 kafka:9092
+#    - name: Test Connectivity to ZooKeeper
+#      run: ping -c 3 zookeeper:2181
+#    - name: Test Connectivity to Kafka
+#      run: ping -c 3 kafka:9092
     - uses: actions/checkout@v2
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
