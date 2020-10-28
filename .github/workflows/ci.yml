@@ -176,6 +176,10 @@ jobs:
         dotnet-version: 2.1.x
     - name: Install dependencies
       run: dotnet restore
+    - name: Test Connectivity to ZooKeeper
+      run: ping -c 3 zookeeper:2181
+    - name: Test Connectivity to Kafka
+      run: ping -c 3 kafka:9092
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
