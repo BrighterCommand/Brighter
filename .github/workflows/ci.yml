@@ -161,14 +161,18 @@ jobs:
           - 9092:9092
         env:
          KAFKA_BROKER_ID: 1
-         KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+         KAFKA_ZOOKEEPER_CONNECT: 0.0.0.0:2181
          KAFKA_DELETE_TOPIC_ENABLE: "true"
-         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://0.0.0.0:9092
          LISTENERS: PLAINTEXT://0.0.0.0:9092
          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
    
     steps:
+    - name: Sleep to let Kafka spin up
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '30s'
     - name: docker check
       run: docker ps -a
     - name: Checkout code
