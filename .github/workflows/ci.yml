@@ -162,18 +162,18 @@ jobs:
           - 9092:9092
         env:
          KAFKA_BROKER_ID: 1
-         KAFKA_ZOOKEEPER_CONNECT: localhost:2181
+         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
          KAFKA_DELETE_TOPIC_ENABLE: "true"
-         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
          LISTENERS: PLAINTEXT://0.0.0.0:9092
          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
    
     steps:
     - name: Test Connectivity to ZooKeeper
-      run: ping -c 3 localhost:2181
+      run: ping -c 3 zookeeper:2181
     - name: Test Connectivity to Kafka
-      run: ping -c 3 localhost:9092
+      run: ping -c 3 kafka:9092
     - uses: actions/checkout@v2
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
