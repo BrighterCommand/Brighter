@@ -144,7 +144,6 @@ jobs:
 
   kafka-ci:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/dotnet/core/sdk:3.1
     needs: [test]
     
     services:
