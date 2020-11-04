@@ -183,14 +183,14 @@ jobs:
          EVENTSTORE_RUN_PROJECTIONS: ALL
          EVENTSTORE_START_STANDARD_PROJECTIONS: TRUE   
      
-  steps:
-     - uses: actions/checkout@v2
-     - name: Setup .NET Core
-       uses: actions/setup-dotnet@v1
-       with:
-        dotnet-version: 2.1.x
-     - name: Install dependencies
-       run: dotnet restore
-     - name: EventStore Tests
-       run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+         dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: EventStore Tests
+        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
         
