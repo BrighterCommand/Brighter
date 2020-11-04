@@ -169,3 +169,26 @@ jobs:
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
         
+  sqlserver-ci:
+    runs-on: ubuntu-latest
+    needs: [test]
+  
+    services:
+      postgres:
+        image: microsoft/mssql-server-linux
+        ports: 
+          - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Password123!
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MSSQL Tests
+        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
