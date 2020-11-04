@@ -168,5 +168,29 @@ jobs:
         run: dotnet restore
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
-
-
+        
+  eventstore-ci:
+    runs-on: ubuntu-lastest
+    needs: [test]
+    
+    services:
+      evenstore: 
+       image: eventstore/eventstore
+       ports: 
+         - 1113:1113
+         - 2113:2113
+       env:
+         EVENTSTORE_RUN_PROJECTIONS: ALL
+         EVENTSTORE_START_STANDARD_PROJECTIONS: TRUE   
+     
+  steps:
+     - uses: actions/checkout@v2
+     - name: Setup .NET Core
+       uses: actions/setup-dotnet@v1
+       with:
+        dotnet-version: 2.1.x
+     - name: Install dependencies
+       run: dotnet restore
+     - name: EventStore Tests
+       run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
