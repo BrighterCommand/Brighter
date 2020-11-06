@@ -197,12 +197,17 @@ jobs:
     needs: [test]
   
     services:
-      mysql:
-        image: mysql
-        ports: 
-          - 3036:3036
+      mariadb:
+        image: mariadb:latest
+        ports:
+          - 3306:3306
         env:
-          MYSQL_ROOT_PASSWORD: root
+          MYSQL_USER: user
+          MYSQL_PASSWORD: password
+          MYSQL_DATABASE: test
+          MYSQL_ROOT_PASSWORD: password
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
     steps:
       - uses: actions/checkout@v2
       - name: Setup .NET Core
@@ -211,6 +216,13 @@ jobs:
           dotnet-version: 2.1.x
       - name: Install dependencies
         run: dotnet restore
+      - name: Verify MariaDB connection
+        env:
+          PORT: ${{ job.services.mariadb.ports[3306] }}
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
+            sleep 1
+          done
       - name: MySQL Tests
         run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
