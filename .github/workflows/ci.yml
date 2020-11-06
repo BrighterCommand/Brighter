@@ -201,8 +201,6 @@ jobs:
         image: dwmkerr/dynamodb
         ports: 
           - 8000:8000
-        options: >-
-         -inMemory
       
     steps:
       - uses: actions/checkout@v2
