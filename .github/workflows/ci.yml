@@ -216,7 +216,39 @@ jobs:
         run: dotnet restore
       - name: MSSQL Tests
         run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
+  mysql-ci:
+    runs-on: ubuntu-latest
+    needs: [test]
   
+    services:
+      mariadb:
+        image: mariadb:latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: BrighterTests
+          MYSQL_ROOT_PASSWORD: root
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Verify MariaDB connection
+        env:
+          PORT: ${{ job.services.mariadb.ports[3306] }}
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
+            sleep 1
+          done
+      - name: MySQL Tests
+        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
   dynamo-ci:
     runs-on: ubuntu-latest
     needs: [test]
