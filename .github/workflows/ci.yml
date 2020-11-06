@@ -232,5 +232,5 @@ jobs:
           dotnet-version: 2.1.x
       - name: Install dependencies
         run: dotnet restore
-      - name: MySQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+      - name: DynamoDB Tests
+        run: dotnet test ./tests/Paramore.Brighter.DyhnamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
