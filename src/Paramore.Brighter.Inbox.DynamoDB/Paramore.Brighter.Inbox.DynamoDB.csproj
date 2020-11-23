@@ -4,7 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.5.3.4" />
-    <PackageReference Include="AWSSDK.Core" Version="3.5.1.34" />
+    <PackageReference Include="AWSSDK.Core" Version="3.5.1.40" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
