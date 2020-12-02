@@ -191,6 +191,13 @@ jobs:
          dotnet-version: 2.1.x
       - name: Install dependencies
         run: dotnet restore
+      - name: Check the deployed service URL
+        uses: jtalk/url-health-check-action@v1.2
+        with:
+          # Check the following URLs one by one sequentially
+          url: https://localhost:2113/health/live
+          max-attempts: 5
+          retry-delay: 5s
       - name: EventStore Tests
         run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
   
