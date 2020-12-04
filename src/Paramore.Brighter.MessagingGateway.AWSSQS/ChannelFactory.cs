@@ -14,6 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ChannelFactory>);
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
+        private Connection _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
@@ -38,7 +39,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannel CreateChannel(Connection connection)
         {
+            _connection = null;
             EnsureQueue(connection);
+            _connection = connection;
             return new Channel(
                 connection.ChannelName.ToValidSQSQueueName(), 
                 _messageConsumerFactory.Create(connection), 
@@ -154,30 +157,50 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return (exists, queueUrl);
         }
 
-        public void DeleteQueue(Connection connection)
+        public void DeleteQueue()
         {
+            if (_connection == null)
+                return;
+            
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                (bool exists, string name) queueExists = QueueExists(sqsClient, connection.ChannelName.ToValidSQSQueueName());
+                (bool exists, string name) queueExists = QueueExists(sqsClient, _connection.ChannelName.ToValidSQSQueueName());
                 
                 if (queueExists.exists)
                 {
-                    sqsClient.DeleteQueueAsync(queueExists.name).Wait();
+                    try
+                    {
+                        sqsClient.DeleteQueueAsync(queueExists.name).Wait();
+                    }
+                    catch (Exception)
+                    {
+                        //don't break on an exception here, if we can't delete, just exit
+                    }
                 }
 
             }
         }
 
-        public void DeleteTopic(Connection connection)
+        public void DeleteTopic()
         {
+            if (_connection == null)
+                return;
+            
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //TODO: could be a seperate method
-                var exists = snsClient.ListTopicsAsync().Result.Topics .SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey);
+                var exists = snsClient.ListTopicsAsync().Result.Topics .SingleOrDefault(topic => topic.TopicArn == _connection.RoutingKey);
                 if (exists != null)
                 {
-                    snsClient.DeleteTopicAsync(connection.RoutingKey).Wait();
+                    try
+                    {
+                        snsClient.DeleteTopicAsync(_connection.RoutingKey).Wait();
+                    }
+                    catch (Exception)
+                    {
+                         //don't break on an exception here, if we can't delete, just exit
+                    }
                 }
             }
         }

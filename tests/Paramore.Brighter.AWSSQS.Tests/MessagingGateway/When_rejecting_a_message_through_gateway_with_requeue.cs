@@ -73,8 +73,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         public void Dispose()
         {
             //Clean up resources that we have created
-            _channelFactory.DeleteQueue(_connection);
-            _channelFactory.DeleteTopic(_connection);
+            _channelFactory.DeleteQueue();
+            _channelFactory.DeleteTopic();
         }
     }
 }
