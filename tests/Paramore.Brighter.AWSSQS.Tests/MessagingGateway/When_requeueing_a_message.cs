@@ -48,6 +48,11 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
                 _channel = _channelFactory.CreateChannel(_connection);
             }
+            else
+            {
+                throw new ConfigurationException("Could not obtain credentials from default profile");
+            }
+  
         }
 
         [Fact]
