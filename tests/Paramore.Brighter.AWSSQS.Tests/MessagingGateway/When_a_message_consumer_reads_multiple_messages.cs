@@ -44,6 +44,10 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _consumer = new SqsMessageConsumer(awsConnection, new ChannelName(name).ToValidSQSQueueName(), BUFFER_SIZE);
            
            _messageProducer = new SqsMessageProducer(awsConnection);
+           //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
+           //just for the tests, so create a new consumer from the properties
+           _consumer = new SqsMessageConsumer(awsConnection, new ChannelName(name).ToValidSQSQueueName(), BUFFER_SIZE);
+           _messageProducer = new SqsMessageProducer(awsConnection);
         }
             
         [Fact]
