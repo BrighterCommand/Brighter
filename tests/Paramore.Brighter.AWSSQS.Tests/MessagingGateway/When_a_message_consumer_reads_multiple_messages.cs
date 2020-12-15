@@ -1,4 +1,6 @@
 ﻿using System;
+using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
@@ -23,27 +25,25 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //Must have credentials stored in the SDK Credentials store or shared credentials file
             var credentialChain = new CredentialProfileStoreChain();
             
-            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
-            {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
+            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
-                ChannelFactory channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-                var name = Guid.NewGuid().ToString();
+            ChannelFactory channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+            var name = Guid.NewGuid().ToString();
                 
-                //we need the channel to create the queues and notifications
-                channelFactory.CreateChannel(new Connection<MyCommand>(
-                    name: new ConnectionName(name),
-                    channelName:new ChannelName(name),
-                    routingKey:new RoutingKey(_topicName),
-                    bufferSize: BUFFER_SIZE
-                    ));
-                
-                //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
-                //just for the tests, so create a new consumer from the properties
-                _consumer = new SqsMessageConsumer(awsConnection, new ChannelName(name).ToValidSQSQueueName(), BUFFER_SIZE);
-               
-               _messageProducer = new SqsMessageProducer(awsConnection);
-            }
+            //we need the channel to create the queues and notifications
+            channelFactory.CreateChannel(new Connection<MyCommand>(
+                name: new ConnectionName(name),
+                channelName:new ChannelName(name),
+                routingKey:new RoutingKey(_topicName),
+                bufferSize: BUFFER_SIZE
+                ));
+            
+            //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
+            //just for the tests, so create a new consumer from the properties
+            _consumer = new SqsMessageConsumer(awsConnection, new ChannelName(name).ToValidSQSQueueName(), BUFFER_SIZE);
+           
+           _messageProducer = new SqsMessageProducer(awsConnection);
         }
             
         [Fact]

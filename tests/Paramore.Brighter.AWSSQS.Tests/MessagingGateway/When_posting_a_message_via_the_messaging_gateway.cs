@@ -1,4 +1,6 @@
 ﻿using System;
+using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -35,21 +37,15 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
                 new MessageBody(JsonConvert.SerializeObject((object) _myCommand))
             );
-            
-            //Must have credentials stored in the SDK Credentials store or shared credentials file
-            var credentialChain = new CredentialProfileStoreChain();
-            
-            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
-            {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
 
-                _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
 
-                _channel = _channelFactory.CreateChannel(_connection);
-                
-                _messageProducer = new SqsMessageProducer(awsConnection);
-            }
+            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+            _channel = _channelFactory.CreateChannel(_connection);
+            _messageProducer = new SqsMessageProducer(awsConnection);
         }
+
 
 
         [Fact]
