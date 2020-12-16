@@ -54,66 +54,95 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                (bool exists, string name) queueExists = QueueExists(sqsClient, connection.ChannelName.ToValidSQSQueueName());
-                if (!queueExists.exists)
+                var queueName = connection.ChannelName.ToValidSQSQueueName();
+                var topicName = connection.RoutingKey.ToValidSNSTopicName();
+                
+                (bool exists, _) = QueueExists(sqsClient, queueName);
+                if (!exists)
                 {
-                    try
+                    CreateQueue(connection, queueName, topicName, sqsClient);
+                }
+                else
+                {
+                    _logger.Value.Debug($"Queue exists: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
+                }
+            }
+        }
+
+        private void CreateQueue(Connection connection, ChannelName queueName, RoutingKey topicName, AmazonSQSClient sqsClient)
+        {
+            _logger.Value.Debug($"Queue does not exist, creating queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
+            try
+            {
+                var request = new CreateQueueRequest(queueName)
+                {
+                    Attributes =
                     {
-                        var request = new CreateQueueRequest(connection.ChannelName.ToValidSQSQueueName())
-                        {
-                            Attributes =
-                            {
-                                {"VisibilityTimeout", connection.VisibilityTimeout.ToString()},
-                                {"ReceiveMessageWaitTimeSeconds",ToSecondsAsString(connection.TimeoutInMiliseconds) }
-                            }
-                        };
-                        var response = sqsClient.CreateQueueAsync(request).Result;
-                        var queueUrl = response.QueueUrl;
-                        if (!string.IsNullOrEmpty(queueUrl))
-                        {
-                            //topic might not exist
-                            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
-                            {
-                                var exists = snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey);
-                                if (exists == null)
-                                {
-                                    var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(connection.RoutingKey.ToValidSNSTopicName())).Result;
-                                    if (!string.IsNullOrEmpty(createTopic.TopicArn))
-                                    {
-                                        var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
-                                        //We need to support raw messages to allow the use of message attributes
-                                        snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
-                                    }
-                                }
-                            }
-                        }
-     
+                        {"VisibilityTimeout", connection.VisibilityTimeout.ToString()},
+                        {"ReceiveMessageWaitTimeSeconds", ToSecondsAsString(connection.TimeoutInMiliseconds)}
+                    },
+                    Tags =
+                    {
+                        {"Source", "Brighter"},
+                        {"Topic", $"{topicName.Value}"}
                     }
-                    catch (AggregateException ae)
+                };
+                var response = sqsClient.CreateQueueAsync(request).Result;
+                var queueUrl = response.QueueUrl;
+                if (!string.IsNullOrEmpty(queueUrl))
+                {
+                    //topic might not exist
+                    using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
-                        //TODO: We need some retry semantics here
-                        //TODO: We need to flatten the ae and handle some of these with ae.Handle((x) => {})
-                        ae.Handle(ex =>
+                        if (snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey) == null)
                         {
-                            if (ex is QueueDeletedRecentlyException)
-                            {
-                                //QueueDeletedRecentlyException - wait 30 seconds then retry
-                                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
-                                //and assume we are halfway through
-                                var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message} waiting 60s to retry";
-                                _logger.Value.Error(error);
-                                Thread.Sleep(TimeSpan.FromSeconds(30));
-                                throw new ChannelFailureException(error, ae);
-                            }
-                            else
-                            {
-                                var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} or create topic {connection.RoutingKey.ToValidSNSTopicName()} because {ae.Message}";
-                                _logger.Value.Error(error);
-                                throw new InvalidOperationException(error, ex);
-                            }
-                        });
+                            CreateTopic(topicName, sqsClient, snsClient, queueUrl);
+                        }
+                        else
+                        {
+                            _logger.Value.Debug($"Topic exists: {topicName} on {_awsConnection.Region}");
+                        }
                     }
                 }
+            }
+            catch (AggregateException ae)
+            {
+                //TODO: We need some retry semantics here
+                //TODO: We need to flatten the ae and handle some of these with ae.Handle((x) => {})
+                ae.Handle(ex =>
+                {
+                    if (ex is QueueDeletedRecentlyException)
+                    {
+                        //QueueDeletedRecentlyException - wait 30 seconds then retry
+                        //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
+                        //and assume we are halfway through
+                        var error = $"Could not create queue {queueName} because {ae.Message} waiting 60s to retry";
+                        _logger.Value.Error(error);
+                        Thread.Sleep(TimeSpan.FromSeconds(30));
+                        throw new ChannelFailureException(error, ae);
+                    }
+
+                    if (ex is AmazonSQSException)
+                    {
+                        var error = $"Could not create queue {queueName} or create topic {topicName} because {ae.Message}";
+                        _logger.Value.Error(error);
+                        throw new InvalidOperationException(error, ex);
+                    }
+
+                    return false;
+                });
+            }
+        }
+
+        private void CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient, string queueUrl)
+        {
+            _logger.Value.Debug($"Topic does not exist, creating topic: {topicName} on {_awsConnection.Region}");
+            var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
+            if (!string.IsNullOrEmpty(createTopic.TopicArn))
+            {
+                var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
+                //We need to support raw messages to allow the use of message attributes
+                snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
             }
         }
 
