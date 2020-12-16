@@ -105,6 +105,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                                 Thread.Sleep(TimeSpan.FromSeconds(30));
                                 throw new ChannelFailureException(error, ae);
                             }
+                            else
+                            {
+                                var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message} waiting 60s to retry";
+                                _logger.Value.Error(error);
+                                throw new InvalidOperationException(error, ex);
+                            }
 
                             return false;
                         });
