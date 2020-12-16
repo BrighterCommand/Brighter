@@ -107,12 +107,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                             }
                             else
                             {
-                                var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} because {ae.Message} waiting 60s to retry";
+                                var error = $"Could not create queue {connection.ChannelName.ToValidSQSQueueName()} or create topic {connection.RoutingKey.ToValidSNSTopicName()} because {ae.Message}";
                                 _logger.Value.Error(error);
                                 throw new InvalidOperationException(error, ex);
                             }
-
-                            return false;
                         });
                     }
                 }
