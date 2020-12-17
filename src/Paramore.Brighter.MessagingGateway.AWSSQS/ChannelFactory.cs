@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Linq;
 using System.Threading;
+using Amazon;
+using Amazon.Runtime.Internal;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
@@ -60,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 (bool exists, _) = QueueExists(sqsClient, queueName);
                 if (!exists)
                 {
-                    CreateQueue(connection, queueName, topicName, sqsClient);
+                    CreateQueue(sqsClient, connection, queueName, topicName, _awsConnection.Region);
                 }
                 else
                 {
@@ -69,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CreateQueue(Connection connection, ChannelName queueName, RoutingKey topicName, AmazonSQSClient sqsClient)
+        private void CreateQueue(AmazonSQSClient sqsClient, Connection connection, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
         {
             _logger.Value.Debug($"Queue does not exist, creating queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
             try
@@ -122,9 +124,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         throw new ChannelFailureException(error, ae);
                     }
 
-                    if (ex is AmazonSQSException)
+                    if (ex is AmazonSQSException || ex is HttpErrorResponseException)
                     {
-                        var error = $"Could not create queue {queueName} or create topic {topicName} because {ae.Message}";
+                        var error = $"Could not create queue {queueName} or create topic {topicName} in region {region.DisplayName} because {ae.Message}";
                         _logger.Value.Error(error);
                         throw new InvalidOperationException(error, ex);
                     }
