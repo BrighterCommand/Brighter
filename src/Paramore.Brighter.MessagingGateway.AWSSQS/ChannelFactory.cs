@@ -162,23 +162,23 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             AmazonSimpleNotificationServiceClient snsClient,
             string queueUrl)
         {
-            throw new Exception($"Trace variables during bind topic: {_channelTopicARN}, against queue {queueUrl}");
-            /*
             var subscription = snsClient.SubscribeQueueAsync(_channelTopicARN, sqsClient, queueUrl).Result;
             if (!string.IsNullOrEmpty(subscription))
             {
+                throw new Exception($"Trace variables during bind topic: {_channelTopicARN}, against queue {queueUrl}");
+            /*
                 //We need to support raw messages to allow the use of message attributes
                 var response = snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Result;
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
                     throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
                 }
+            */
             }
             else
             {
                 throw new InvalidOperationException($"Could not subscribe to topic: {_channelTopicARN} from queue: {queueUrl} in region {_awsConnection.Region}");
             }
-            */
         }
 
         private string ToSecondsAsString(int timeountInMilliseconds)
