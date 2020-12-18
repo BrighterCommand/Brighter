@@ -93,7 +93,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var queueUrl = response.QueueUrl;
                 if (!string.IsNullOrEmpty(queueUrl))
                 {
-                    //topic might not exist
+                    _logger.Value.Debug($"Queue created: {queueUrl}");
+                     //topic might not exist
                     using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
                         if (snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey) == null)
@@ -105,6 +106,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                             _logger.Value.Debug($"Topic exists: {topicName} on {_awsConnection.Region}");
                         }
                     }
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Could not create queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
                 }
             }
             catch (AggregateException ae)

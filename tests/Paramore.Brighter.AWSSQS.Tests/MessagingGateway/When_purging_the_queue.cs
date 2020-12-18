@@ -24,7 +24,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             _message = new Message(
                 new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonConvert.SerializeObject((object) myCommand))
+                new MessageBody(JsonConvert.SerializeObject(myCommand))
             );
             
             var credentialChain = new CredentialProfileStoreChain();

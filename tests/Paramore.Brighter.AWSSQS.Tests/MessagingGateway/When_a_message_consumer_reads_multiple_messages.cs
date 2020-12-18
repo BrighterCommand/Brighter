@@ -29,24 +29,27 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
             ChannelFactory channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-            var name = Guid.NewGuid().ToString();
+            var channelName = $" SQS-Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}";
+
+            _topicName = $" SQS-Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}";
                 
             //we need the channel to create the queues and notifications
             channelFactory.CreateChannel(new Connection<MyCommand>(
-                name: new ConnectionName(name),
-                channelName:new ChannelName(name),
+                name: new ConnectionName(channelName),
+                channelName:new ChannelName(channelName),
                 routingKey:new RoutingKey(_topicName),
                 bufferSize: BUFFER_SIZE
                 ));
             
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
-            _consumer = new SqsMessageConsumer(awsConnection, new ChannelName(name).ToValidSQSQueueName(), BUFFER_SIZE);
+            var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
+            _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, BUFFER_SIZE);
            
            _messageProducer = new SqsMessageProducer(awsConnection);
            //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
            //just for the tests, so create a new consumer from the properties
-           _consumer = new SqsMessageConsumer(awsConnection, new ChannelName(name).ToValidSQSQueueName(), BUFFER_SIZE);
+           _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, BUFFER_SIZE);
            _messageProducer = new SqsMessageProducer(awsConnection);
         }
             

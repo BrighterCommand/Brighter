@@ -23,7 +23,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
-        private Connection<MyCommand> _connection = new Connection<MyCommand>(channelName: new ChannelName($"{typeof(MyCommand)}.{Guid.NewGuid()}"));
+        private Connection<MyCommand> _connection; 
 
         public SqsMessageProducerSendTests()
         {
@@ -31,7 +31,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _correlationId = Guid.NewGuid();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
-            _topicName = _myCommand.GetType().FullName.ToValidSNSTopicName();
+            var channelName = $"Producer-Send-Tests-{typeof(MyCommand)}.{Guid.NewGuid()}";
+            _topicName = $"Producer-Send-Tests-{_myCommand.GetType().FullName}-{Guid.NewGuid().ToString()}";
+            _connection = new Connection<MyCommand>(
+                name: new ConnectionName(channelName),
+                channelName: new ChannelName(channelName),
+                routingKey: new RoutingKey(_topicName)
+                );
             
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
