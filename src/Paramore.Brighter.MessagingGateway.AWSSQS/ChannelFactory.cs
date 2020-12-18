@@ -19,6 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
         private Connection _connection;
         private string _channelTopicARN;
+        private string _queueUrl;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
@@ -76,6 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private void CreateQueue(AmazonSQSClient sqsClient, Connection connection, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
         {
             _logger.Value.Debug($"Queue does not exist, creating queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
+            _queueUrl = "no queue defined";
             try
             {
                 var request = new CreateQueueRequest(queueName)
@@ -92,26 +94,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     }
                 };
                 var response = sqsClient.CreateQueueAsync(request).Result;
-                var queueUrl = response.QueueUrl;
-                if (!string.IsNullOrEmpty(queueUrl))
+                _queueUrl = response.QueueUrl;
+                if (!string.IsNullOrEmpty(_queueUrl))
                 {
-                    _logger.Value.Debug($"Queue created: {queueUrl}");
-                     //topic might not exist
+                    _logger.Value.Debug($"Queue created: {_queueUrl}");
                     using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
-                        if (snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey) == null)
-                        {
-                            CreateTopic(topicName, sqsClient, snsClient, queueUrl);
-                        }
-                        else
-                        {
-                            _logger.Value.Debug($"Topic exists: {topicName} on {_awsConnection.Region}");
-                        }
+                        CreateTopic(topicName, sqsClient, snsClient);
+                        BindSubscription(sqsClient, snsClient);
                     }
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Could not create queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
+                    throw new InvalidOperationException($"Could not create queue: {queueName} subscribed to {_channelTopicARN} on {_awsConnection.Region}");
                 }
             }
             catch (AggregateException ae)
@@ -133,7 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                     if (ex is AmazonSQSException || ex is HttpErrorResponseException)
                     {
-                        var error = $"Could not create queue {queueName} or create topic {topicName} in region {region.DisplayName} because {ae.Message}";
+                        var error = $"Could not create queue {_queueUrl} subscribed to topic {topicName} in region {region.DisplayName} because {ae.Message}";
                         _logger.Value.Error(error);
                         throw new InvalidOperationException(error, ex);
                     }
@@ -143,14 +138,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient, string queueUrl)
+        private void CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            _logger.Value.Debug($"Topic does not exist, creating topic: {topicName} on {_awsConnection.Region}");
+            //topic re-creation is a no-op, so don't bother to check first as reduces latency
             var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
             if (!string.IsNullOrEmpty(createTopic.TopicArn))
             {
                 _channelTopicARN = createTopic.TopicArn;
-                BindSubscription(sqsClient, snsClient, queueUrl);
             }
             else
             {
@@ -158,26 +152,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private bool BindSubscription(AmazonSQSClient sqsClient,
-            AmazonSimpleNotificationServiceClient snsClient,
-            string queueUrl)
+        private void BindSubscription(AmazonSQSClient sqsClient,
+            AmazonSimpleNotificationServiceClient snsClient)
         {
-            var subscription = snsClient.SubscribeQueueAsync(_channelTopicARN, sqsClient, queueUrl).Result;
+            var subscription = snsClient.SubscribeQueueAsync(_channelTopicARN, sqsClient, _queueUrl).Result;
             if (!string.IsNullOrEmpty(subscription))
             {
-                throw new Exception($"Trace variables during bind topic: {_channelTopicARN}, against queue {queueUrl}");
-            /*
                 //We need to support raw messages to allow the use of message attributes
                 var response = snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Result;
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
                     throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
                 }
-            */
             }
             else
             {
-                throw new InvalidOperationException($"Could not subscribe to topic: {_channelTopicARN} from queue: {queueUrl} in region {_awsConnection.Region}");
+                throw new InvalidOperationException($"Could not subscribe to topic: {_channelTopicARN} from queue: {_queueUrl} in region {_awsConnection.Region}");
             }
         }
 
