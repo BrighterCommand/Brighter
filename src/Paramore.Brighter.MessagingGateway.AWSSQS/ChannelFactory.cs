@@ -143,8 +143,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if (!string.IsNullOrEmpty(createTopic.TopicArn))
             {
                 var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
-                //We need to support raw messages to allow the use of message attributes
-                snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
+                if (!string.IsNullOrEmpty(subscription))
+                {
+                    //We need to support raw messages to allow the use of message attributes
+                    snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Could not subscribe to topic: {topicName} from queue: {queueUrl} in region {_awsConnection.Region}");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
             }
         }
 

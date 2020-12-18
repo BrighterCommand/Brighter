@@ -17,7 +17,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             }
             
             //if not, can we grab them from environment variables - will throw
-            return (new EnvironmentVariablesAWSCredentials(), RegionEndpoint.EUWest1);
+            return (new EnvironmentVariablesAWSCredentials(), new EnvironmentVariableAWSRegion().Region);
 
         }
     }
