@@ -163,6 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             string queueUrl)
         {
             throw new Exception($"Trace variables during bind topic: {_channelTopicARN}, against queue {queueUrl}");
+            /*
             var subscription = snsClient.SubscribeQueueAsync(_channelTopicARN, sqsClient, queueUrl).Result;
             if (!string.IsNullOrEmpty(subscription))
             {
@@ -177,6 +178,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 throw new InvalidOperationException($"Could not subscribe to topic: {_channelTopicARN} from queue: {queueUrl} in region {_awsConnection.Region}");
             }
+            */
         }
 
         private string ToSecondsAsString(int timeountInMilliseconds)
