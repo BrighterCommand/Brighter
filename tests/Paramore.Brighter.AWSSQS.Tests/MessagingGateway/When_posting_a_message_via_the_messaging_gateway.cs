@@ -60,7 +60,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //arrange
             _messageProducer.Send(_message);
             
-            var message =_channel.Receive(2000);
+            var message =_channel.Receive(1000);
             
             //clear the queue
             _channel.Acknowledge(message);

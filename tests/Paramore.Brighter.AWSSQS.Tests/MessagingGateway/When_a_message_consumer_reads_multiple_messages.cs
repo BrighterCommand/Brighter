@@ -45,11 +45,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //just for the tests, so create a new consumer from the properties
             var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
             _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, BUFFER_SIZE);
-           
-           _messageProducer = new SqsMessageProducer(awsConnection);
-           //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
-           //just for the tests, so create a new consumer from the properties
-           _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, BUFFER_SIZE);
            _messageProducer = new SqsMessageProducer(awsConnection);
         }
             
@@ -89,8 +84,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 var outstandingMessageCount = MESSAGE_COUNT - messagesRecieved;
 
                 //retrieve  messages
-                var moreMessages = _consumer.Receive(10000);
-
+                var moreMessages = _consumer.Receive(1000);
+                
                 moreMessages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
                 
                 //should not receive more than buffer in one hit

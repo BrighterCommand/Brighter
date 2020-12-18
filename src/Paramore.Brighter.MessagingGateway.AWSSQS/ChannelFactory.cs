@@ -153,8 +153,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (!string.IsNullOrEmpty(subscription))
                 {
                     //We need to support raw messages to allow the use of message attributes
-                    snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
-                    return createTopic.TopicArn;
+                    var response = snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Result;
+                    if (response.HttpStatusCode == HttpStatusCode.OK)
+                    {
+                        return createTopic.TopicArn;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
+                    }
                 }
                 else
                 {
