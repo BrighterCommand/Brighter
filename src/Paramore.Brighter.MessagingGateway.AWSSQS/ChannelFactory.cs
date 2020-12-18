@@ -101,7 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     {
                         if (snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey) == null)
                         {
-                            _channelTopicARN = CreateTopic(topicName, sqsClient, snsClient, queueUrl);
+                            CreateTopic(topicName, sqsClient, snsClient, queueUrl);
                         }
                         else
                         {
@@ -143,34 +143,39 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private string CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient, string queueUrl)
+        private void CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient, string queueUrl)
         {
             _logger.Value.Debug($"Topic does not exist, creating topic: {topicName} on {_awsConnection.Region}");
             var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
             if (!string.IsNullOrEmpty(createTopic.TopicArn))
             {
-                var subscription = snsClient.SubscribeQueueAsync(createTopic.TopicArn, sqsClient, queueUrl).Result;
-                if (!string.IsNullOrEmpty(subscription))
-                {
-                    //We need to support raw messages to allow the use of message attributes
-                    var response = snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Result;
-                    if (response.HttpStatusCode == HttpStatusCode.OK)
-                    {
-                        return createTopic.TopicArn;
-                    }
-                    else
-                    {
-                        throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
-                    }
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Could not subscribe to topic: {topicName} from queue: {queueUrl} in region {_awsConnection.Region}");
-                }
+                _channelTopicARN = createTopic.TopicArn;
+                BindSubscription(sqsClient, snsClient, queueUrl);
             }
             else
             {
                 throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
+            }
+        }
+
+        private bool BindSubscription(AmazonSQSClient sqsClient,
+            AmazonSimpleNotificationServiceClient snsClient,
+            string queueUrl)
+        {
+            throw new Exception($"Trace variables during bind topic: {_channelTopicARN}, against queue {queueUrl}");
+            var subscription = snsClient.SubscribeQueueAsync(_channelTopicARN, sqsClient, queueUrl).Result;
+            if (!string.IsNullOrEmpty(subscription))
+            {
+                //We need to support raw messages to allow the use of message attributes
+                var response = snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Result;
+                if (response.HttpStatusCode != HttpStatusCode.OK)
+                {
+                    throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"Could not subscribe to topic: {_channelTopicARN} from queue: {queueUrl} in region {_awsConnection.Region}");
             }
         }
 
