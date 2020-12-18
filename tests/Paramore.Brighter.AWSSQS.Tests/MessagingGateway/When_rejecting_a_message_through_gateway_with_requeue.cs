@@ -1,4 +1,6 @@
 using System;
+using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -21,7 +23,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
-        private Connection<MyCommand> _connection = new Connection<MyCommand>(channelName: new ChannelName($"{typeof(MyCommand)}.{Guid.NewGuid()}"));
+        private Connection<MyCommand> _connection;
 
         public SqsMessageConsumerRequeueTests()
         {
@@ -29,8 +31,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _correlationId = Guid.NewGuid();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
-            _topicName = _myCommand.GetType().FullName.ToValidSNSTopicName();
-
+            var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            _topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            _connection = new Connection<MyCommand>(
+                name: new ConnectionName(channelName),
+                channelName: new ChannelName(channelName),
+                routingKey: new RoutingKey(_topicName)
+                );
             
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
@@ -40,17 +47,11 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //Must have credentials stored in the SDK Credentials store or shared credentials file
             var credentialChain = new CredentialProfileStoreChain();
             
-            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
-            {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
-                _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-                _channel = _channelFactory.CreateChannel(_connection);
-                _messageProducer = new SqsMessageProducer(awsConnection);
-            }
-            else
-            {
-                throw new ConfigurationException("Could not obtain credentials from default profile");
-            }
+            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+            _channel = _channelFactory.CreateChannel(_connection);
+            _messageProducer = new SqsMessageProducer(awsConnection);
         }
 
         [Fact]
@@ -74,8 +75,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         public void Dispose()
         {
             //Clean up resources that we have created
-            _channelFactory.DeleteQueue();
             _channelFactory.DeleteTopic();
+            _channelFactory.DeleteQueue();
         }
     }
 }
