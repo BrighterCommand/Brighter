@@ -31,8 +31,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _correlationId = Guid.NewGuid();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
-            var channelName = $"Consumer-Requeue-Tests-{typeof(MyCommand)}.{Guid.NewGuid()}";
-            _topicName = $"Consumer-Requeue-Tests-{_myCommand.GetType().FullName}-{Guid.NewGuid().ToString()}";
+            var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            _topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _connection = new Connection<MyCommand>(
                 name: new ConnectionName(channelName),
                 channelName: new ChannelName(channelName),
@@ -75,8 +75,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         public void Dispose()
         {
             //Clean up resources that we have created
-            _channelFactory.DeleteQueue();
             _channelFactory.DeleteTopic();
+            _channelFactory.DeleteQueue();
         }
     }
 }

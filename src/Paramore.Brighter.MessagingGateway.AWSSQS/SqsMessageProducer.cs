@@ -67,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         
         /// <summary>
         /// Ensures the topic. The call to create topic is idempotent and just returns the arn if it already exists. Therefore there is 
-        /// no nee to check then create if it does not exist, as this would be extral calls
+        /// no nee to check then create if it does not exist, as this would be extra calls
         /// </summary>
         /// <param name="topicName">Name of the topic.</param>
         /// <param name="client">The client.</param>

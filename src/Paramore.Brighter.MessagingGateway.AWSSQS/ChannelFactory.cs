@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using Amazon;
 using Amazon.Runtime.Internal;
@@ -17,6 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
         private Connection _connection;
+        private string _channelTopicARN;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
@@ -99,7 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     {
                         if (snsClient.ListTopicsAsync().Result.Topics.SingleOrDefault(topic => topic.TopicArn == connection.RoutingKey) == null)
                         {
-                            CreateTopic(topicName, sqsClient, snsClient, queueUrl);
+                            _channelTopicARN = CreateTopic(topicName, sqsClient, snsClient, queueUrl);
                         }
                         else
                         {
@@ -141,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient, string queueUrl)
+        private string CreateTopic(RoutingKey topicName, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient, string queueUrl)
         {
             _logger.Value.Debug($"Topic does not exist, creating topic: {topicName} on {_awsConnection.Region}");
             var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
@@ -152,6 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     //We need to support raw messages to allow the use of message attributes
                     snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true")).Wait();
+                    return createTopic.TopicArn;
                 }
                 else
                 {
@@ -227,6 +230,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     catch (Exception)
                     {
                         //don't break on an exception here, if we can't delete, just exit
+                        _logger.Value.Error($"Could not delete queue {queueExists.name}");
                     }
                 }
 
@@ -241,16 +245,27 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //TODO: could be a seperate method
-                var exists = snsClient.ListTopicsAsync().Result.Topics .SingleOrDefault(topic => topic.TopicArn == _connection.RoutingKey);
+                var exists = snsClient.ListTopicsAsync().Result.Topics .SingleOrDefault(topic => topic.TopicArn == _channelTopicARN);
                 if (exists != null)
                 {
                     try
                     {
-                        snsClient.DeleteTopicAsync(_connection.RoutingKey).Wait();
+                        var response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest{TopicArn = _channelTopicARN}).Result;
+                        foreach (var sub in response.Subscriptions)
+                        {
+                            var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest {SubscriptionArn = sub.SubscriptionArn}).Result;
+                            if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
+                            {
+                                _logger.Value.Error($"Error unsubscribing from {_channelTopicARN} for sub {sub.SubscriptionArn}");
+                            }
+                        }
+                        
+                        snsClient.DeleteTopicAsync(_channelTopicARN).Wait();
                     }
                     catch (Exception)
                     {
                          //don't break on an exception here, if we can't delete, just exit
+                         _logger.Value.Error($"Could not delete topic {_channelTopicARN}");
                     }
                 }
             }

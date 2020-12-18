@@ -31,8 +31,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _correlationId = Guid.NewGuid();
             _replyTo = "http:\\queueUrl";
             _contentType = "text\\plain";
-            var channelName = $"Producer-Send-Tests-{typeof(MyCommand)}.{Guid.NewGuid()}";
-            _topicName = $"Producer-Send-Tests-{_myCommand.GetType().FullName}-{Guid.NewGuid().ToString()}";
+            var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _connection = new Connection<MyCommand>(
                 name: new ConnectionName(channelName),
                 channelName: new ChannelName(channelName),
@@ -85,8 +85,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory.DeleteQueue();
             _channelFactory.DeleteTopic();
+            _channelFactory.DeleteQueue();
         }
         
         private DateTime RoundToSeconds(DateTime dateTime)

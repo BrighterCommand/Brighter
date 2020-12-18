@@ -11,11 +11,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Collection("AWS")]
     [Trait("Category", "AWS")]
-    public class SQSBufferedConsumerTests
+    public class SQSBufferedConsumerTests : IDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
         private SqsMessageConsumer _consumer;
         private readonly string _topicName = Guid.NewGuid().ToString().ToValidSNSTopicName();
+        private ChannelFactory _channelFactory;
         private const string CONTENT_TYPE = "text\\plain";
         private const int BUFFER_SIZE = 3;
         private const int MESSAGE_COUNT = 4;
@@ -28,13 +29,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
-            ChannelFactory channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-            var channelName = $" SQS-Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}";
-
-            _topicName = $" SQS-Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}";
+            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+            var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
                 
             //we need the channel to create the queues and notifications
-            channelFactory.CreateChannel(new Connection<MyCommand>(
+            _channelFactory.CreateChannel(new Connection<MyCommand>(
                 name: new ConnectionName(channelName),
                 channelName:new ChannelName(channelName),
                 routingKey:new RoutingKey(_topicName),
@@ -107,7 +107,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             } while (messagesRecieved < MESSAGE_COUNT);
 
         }
-
+        
+        public void Dispose()
+        {
+            //Clean up resources that we have created
+            _channelFactory.DeleteTopic();
+            _channelFactory.DeleteQueue();
+        }
     }
 }
 
