@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs, 
                 EnableAutoCommit = consumerConfiguration.EnableAutoCommit,
-                
+                AllowAutoCreateTopics = true,
                 AutoOffsetReset = consumerConfiguration.OffsetDefault 
             };
 
