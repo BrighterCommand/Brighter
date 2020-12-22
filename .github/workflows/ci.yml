@@ -3,7 +3,7 @@ name: CI
 # It creates a package on the github nuger feed for this project
 # We run tests for transports as separate jobs to create greater visibility of failure, and to parallelize
 # HINT: If you need to debug a config issue, tmate allows you to hop on to the server, check in the build
-# logs for the SSH address. It will timeout and not connect if left too long
+# logs for the SSH address to let you hop onto the box via tmate. It will timeout and not connect if left too long
 # - name: Debugging with tmate
 #   uses: mxschmitt/action-tmate@v3.1
 
@@ -167,22 +167,13 @@ jobs:
         image: confluentinc/cp-enterprise-kafka:latest
         ports:
           - 9092:9092
-          - 29092:29092
         env:
-         KAFKA_BROKER_ID: 1
-         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-         KAFKA_DELETE_TOPIC_ENABLE: "true"
-         KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092, PLAINTEXT_HOST://localhost:29092
-         KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
-         KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-         KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-         ALLOW_PLAINTEXT_LISTENER: yes
-         CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:9092
-         CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
-         CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
-         CONFLUENT_METRICS_ENABLE: 'true'
-         CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+          KAFKA_BROKER_ID: 1
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
    
     steps:
     - name: Sleep to let Kafka spin up
