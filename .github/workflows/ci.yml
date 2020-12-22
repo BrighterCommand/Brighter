@@ -154,19 +154,20 @@ jobs:
         env:
          ZOOKEEPER_CLIENT_PORT: 2181
          ZOOKEEPER_TICK_TIME: 2000
-
+         ALLOW_ANONYMOUS_LOGIN: yes
       kafka:
         image: confluentinc/cp-enterprise-kafka:latest
         ports:
           - 9092:9092
         env:
          KAFKA_BROKER_ID: 1
-         KAFKA_ZOOKEEPER_CONNECT: 0.0.0.0:2181
+         KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
          KAFKA_DELETE_TOPIC_ENABLE: "true"
-         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://0.0.0.0:9092
-         LISTENERS: PLAINTEXT://0.0.0.0:9092
+         KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+         LISTENERS: PLAINTEXT://localhost:9092
          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+         ALLOW_PLAINTEXT_LISTENER: yes
    
     steps:
     - name: Sleep to let Kafka spin up
