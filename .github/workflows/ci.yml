@@ -225,6 +225,37 @@ jobs:
       - name: Postgres Tests
         run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
         
+  eventstore-ci:
+    runs-on: ubuntu-latest
+    needs: [test]
+    
+    services:
+      evenstore: 
+       image: eventstore/eventstore
+       ports: 
+         - 1113:1113
+         - 2113:2113
+       env:
+         EVENTSTORE_RUN_PROJECTIONS: ALL
+         EVENTSTORE_START_STANDARD_PROJECTIONS: true
+         EVENTSTORE_CLUSTER_SIZE: 1
+         EVENTSTORE_EXT_TCP_PORT: 1113
+         EVENTSTORE_EXT_HTTP_PORT: 2113 
+         EVENTSTORE_INSECURE: true
+         EVENTSTORE_ENABLE_EXTERNAL_TCP: true
+         EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
+     
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+         dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: EventStore Tests
+        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
   sqlserver-ci:
     runs-on: ubuntu-latest
     needs: [test]
@@ -300,3 +331,32 @@ jobs:
         run: dotnet restore
       - name: DynamoDB Tests
         run: dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  aws-ci:
+    runs-on: ubuntu-latest
+    needs: [test]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: eu-west-1
+      AWS_DEFAULT_OUTPUT: json    
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+      - name: Copy files to the test website with the AWS CLI
+        run: |
+          aws sns list-topics
+      - name: SQS Tests
+        run: dotnet test ./tests/Paramore.Brighter.AWSSQS.Tests/Paramore.Brighter.AWSSQS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
