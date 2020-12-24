@@ -38,32 +38,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RmqMessageCreator>);
 
-        private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
-        {
-            if (false == dict.ContainsKey(key))
-            {
-                return new HeaderResult<string>(string.Empty, !dieOnMissing);
-            }
-
-            if (!(dict[key] is byte[] bytes))
-            {
-                s_logger.Value.WarnFormat("The value of header {0} could not be cast to a byte array", key);
-                return new HeaderResult<string>(null, false);
-            }
-
-            try
-            {
-                var val = Encoding.UTF8.GetString(bytes);
-                return new HeaderResult<string>(val, true);
-            }
-            catch (Exception e)
-            {
-                var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                s_logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
-                return new HeaderResult<string>(null, false);
-            }
-        }
-
         public Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
             var headers = fromQueue.BasicProperties.Headers ?? new Dictionary<string, object>();
@@ -128,6 +102,32 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             return message;
         }
 
+
+        private HeaderResult<string> ReadHeader(IDictionary<string, object> dict, string key, bool dieOnMissing = false)
+        {
+            if (false == dict.ContainsKey(key))
+            {
+                return new HeaderResult<string>(string.Empty, !dieOnMissing);
+            }
+
+            if (!(dict[key] is byte[] bytes))
+            {
+                s_logger.Value.WarnFormat("The value of header {0} could not be cast to a byte array", key);
+                return new HeaderResult<string>(null, false);
+            }
+
+            try
+            {
+                var val = Encoding.UTF8.GetString(bytes);
+                return new HeaderResult<string>(val, true);
+            }
+            catch (Exception e)
+            {
+                var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
+                s_logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
+                return new HeaderResult<string>(null, false);
+            }
+        }
 
         private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
         {

@@ -30,6 +30,7 @@ using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
@@ -37,14 +38,16 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     [Trait("Category", "Kafka")]
     public class KafkaMessageProducerSendTests : IDisposable
     {
+        private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
         private IAmAMessageProducer _producer;
         private IAmAMessageConsumer _consumer;
 
 
-        public KafkaMessageProducerSendTests()
+        public KafkaMessageProducerSendTests(ITestOutputHelper output)
         {
+            _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
@@ -82,17 +85,23 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propogate in the broker
                     messages = _consumer.Receive(1000);
+                    _consumer.Acknowledge(messages[0]);
+                    
+                    if (messages[0].Header.MessageType != MessageType.MT_NONE)
+                        break;
+                        
                 }
-                catch (ChannelFailureException)
+                catch (ChannelFailureException cfx)
                 {
                     //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                    _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
 
-            } while (messages.Length == 0 && maxTries <= 3);
-
+            } while (maxTries <= 3);
 
             messages.Length.Should().Be(1);
-            _consumer.Acknowledge(messages[0]);
+            //TODO: This won't pass until we fix the message headers
+            //messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND); 
             messages[0].Body.Value.Should().Be(message.Body.Value);
         }
 
