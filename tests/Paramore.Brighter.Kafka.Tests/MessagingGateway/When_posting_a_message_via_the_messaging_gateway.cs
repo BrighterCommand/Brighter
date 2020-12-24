@@ -24,41 +24,82 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
+using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Collection("Kafka")]
     [Trait("Category", "Kafka")]
-    public class KafkaMessageProducerSendTests : KafkaIntegrationTestBase
+    public class KafkaMessageProducerSendTests : IDisposable
     {
-        private const string Topic = "test";
+        private readonly string _queueName = Guid.NewGuid().ToString(); 
+        private readonly string _topic = Guid.NewGuid().ToString();
+        private IAmAMessageProducer _producer;
+        private IAmAMessageConsumer _consumer;
 
-        private string QueueName { get; set; }
 
         public KafkaMessageProducerSendTests()
         {
-            QueueName = Guid.NewGuid().ToString();
+            _producer = new KafkaMessageProducerFactory(
+                new KafkaMessagingGatewayConfiguration
+                {
+                    Name = "Kafka Producer Send Test",
+                    BootStrapServers = new[] {"localhost:9092"}
+                }).Create(); 
+            
+            _consumer = new KafkaMessageConsumerFactory(
+                 new KafkaMessagingGatewayConfiguration
+                 {
+                     Name = "Kafka Consumer Test",
+                     BootStrapServers = new[] { "localhost:9092" }
+                 }).Create(new Connection<MyCommand>(
+                     channelName: new ChannelName(_queueName), 
+                     routingKey: new RoutingKey(_topic)
+                     )
+             );
+  
         }
-        
-        [Theory, MemberData(nameof(ServerParameters))]
-        public void When_posting_a_message_via_the_messaging_gateway(string bootStrapServer)
+
+        [Fact]
+        public void When_posting_a_message_via_the_messaging_gateway()
         {
-            using (var consumer = this.CreateMessageConsumer<MyCommand>("TestConsumer", bootStrapServer, QueueName, Topic))
-            using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
+            var message = new Message(
+                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND),
+                new MessageBody($"test content [{_queueName}]"));
+            _producer.Send(message);
+
+            Message[] messages = new Message[0];
+            int maxTries = 0;
+            do
             {
-                var message = CreateMessage(Topic, $"test content [{QueueName}]");
-                consumer.Receive(30000); 
-                producer.Send(message);
-                var receivedMessage = consumer.Receive(30000).Single();
-                var receivedMessageData = receivedMessage.Body.Value;
+                try
+                {
+                    maxTries++;
+                    Task.Delay(500).Wait(); //Let topic propogate in the broker
+                    messages = _consumer.Receive(1000);
+                }
+                catch (ChannelFailureException)
+                {
+                    //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                }
 
-                consumer.Acknowledge(receivedMessage);
+            } while (messages.Length == 0 && maxTries <= 3);
 
-                receivedMessageData.Should().Be(message.Body.Value);
-            }
+
+            messages.Length.Should().Be(1);
+            _consumer.Acknowledge(messages[0]);
+            messages[0].Body.Value.Should().Be(message.Body.Value);
+        }
+
+        public void Dispose()
+        {
+            _producer?.Dispose();
+            _consumer?.Dispose();
         }
     }
 }
