@@ -3,7 +3,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.5.4.11" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.5.4.15" />
     <PackageReference Include="AWSSDK.Core" Version="3.5.1.56" />
   </ItemGroup>
   <ItemGroup>
