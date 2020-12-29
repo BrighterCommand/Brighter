@@ -32,8 +32,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
         private IProducer<Null, string> _producer;
+        private readonly ProducerConfig _producerConfig;
+        private readonly KafkaMessagePublisher _publisher;
         private bool _disposedValue = false;
-        private ProducerConfig _producerConfig;
 
         public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingProducerConfiguration producerConfiguration)
@@ -55,6 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
             _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
+            _publisher = new KafkaMessagePublisher(_producer);
         }
 
         public void Send(Message message)
@@ -70,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
         
         
-        public Task SendAsync(Message message)
+        public async Task SendAsync(Message message)
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
@@ -83,7 +85,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     message.Header.Topic,
                     message.Body.Value
                     );
-                return _producer.ProduceAsync(message.Header.Topic, new Message<Null, string>(){ Value = message.Body.Value});
+
+                await _publisher.PublishMessageAsync(message);
+
             }
             catch (ProduceException<Null, string> exception)
             {

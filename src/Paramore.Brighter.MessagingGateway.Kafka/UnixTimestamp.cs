@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,39 +23,26 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
-using System.Threading.Tasks;
-using FluentAssertions;
-using Xunit;
 
-namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
+namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    [Collection("Kafka")]
-    [Trait("Category", "Kafka")]
-    public class KafkaMessageProducerSupportsMultipleThreadsTests : KafkaIntegrationTestBase
+    internal static class UnixTimestamp
     {
-        [Theory, MemberData(nameof(ServerParameters))]
-        public void When_multiple_threads_try_to_post_a_message_at_the_same_time(string bootStrapServer)
-        {
-            using (var producer = CreateMessageProducer("TestProducer", bootStrapServer))
-            {
-                bool exceptionHappened = false;
-                var message = CreateMessage("nonexistenttopic", "test content");
-                try
-                {
-                    Parallel.ForEach(Enumerable.Range(0, 10), _ =>
-                    {
-                        producer.Send(message);
-                    });
-                }
-                catch (Exception)
-                {
-                    exceptionHappened = true;
-                }
+        private static readonly DateTime s_unixEpoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-                //_should_not_throw
-                exceptionHappened.Should().BeFalse();
-            }
+        public static DateTime DateTimeFromUnixTimestampSeconds(long seconds)
+        {
+            return s_unixEpoch.AddSeconds(seconds);
+        }
+
+        public static long GetCurrentUnixTimestampSeconds()
+        {
+            return (long)(DateTime.UtcNow - s_unixEpoch).TotalSeconds;
+        }
+
+        public static long GetUnixTimestampSeconds(DateTime dateTime)
+        {
+            return (long)(dateTime - s_unixEpoch).TotalSeconds;
         }
     }
 }
