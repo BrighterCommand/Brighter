@@ -100,8 +100,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             } while (maxTries <= 3);
 
             messages.Length.Should().Be(1);
-            //TODO: This won't pass until we fix the message headers
-            //messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND); 
+            messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND); 
             messages[0].Body.Value.Should().Be(message.Body.Value);
         }
 

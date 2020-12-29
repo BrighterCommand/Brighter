@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
             }
 
-            return new HeaderResult<Guid>(Guid.Empty, true);
+            return new HeaderResult<Guid>(Guid.Empty, false);
         }
         
         private HeaderResult<DateTime> ReadTimeStamp(Headers headers)
