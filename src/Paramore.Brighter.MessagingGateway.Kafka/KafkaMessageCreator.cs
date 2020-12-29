@@ -12,8 +12,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageCreator
     {
         private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<KafkaMessageCreator>);
-        
-        public Message CreateMessage(ConsumeResult<Null, string> consumeResult)
+
+        public Message CreateMessage(ConsumeResult<string, string> consumeResult)
         {
             var headers = consumeResult.Message.Headers;
             var topic = HeaderResult<string>.Empty();
@@ -21,6 +21,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var timeStamp = HeaderResult<DateTime>.Empty();
             var messageType = HeaderResult<MessageType>.Empty();
             var correlationId = HeaderResult<Guid>.Empty();
+            var partitionKey = HeaderResult<string>.Empty();
 
             Message message;
             try
@@ -30,6 +31,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 timeStamp = ReadTimeStamp(consumeResult.Message.Headers);
                 messageType = ReadMessageType(consumeResult.Message.Headers);
                 correlationId = ReadCorrelationId(consumeResult.Message.Headers);
+                partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
+
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -44,11 +47,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (correlationId.Success)
                         messageHeader.CorrelationId = correlationId.Result;
 
+                    if (partitionKey.Success)
+                        messageHeader.PartitionKey = partitionKey.Result;
+
                     message = new Message(messageHeader, new MessageBody(consumeResult.Message.Value));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header)));
                 }
-
             }
             catch (Exception e)
             {
@@ -81,19 +86,19 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 else
                 {
-                     s_logger.Value.DebugFormat("Could not parse message correlation id: {0}", correlationValue);
-                     return new HeaderResult<Guid>(Guid.Empty, false);
+                    s_logger.Value.DebugFormat("Could not parse message correlation id: {0}", correlationValue);
+                    return new HeaderResult<Guid>(Guid.Empty, false);
                 }
             }
 
             return new HeaderResult<Guid>(Guid.Empty, false);
         }
-        
+
         private HeaderResult<DateTime> ReadTimeStamp(Headers headers)
         {
             if (headers.TryGetLastBytes(HeaderNames.TIMESTAMP, out byte[] lastHeader))
             {
-                return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(BitConverter.ToInt64(lastHeader,0)), true);
+                return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(BitConverter.ToInt64(lastHeader, 0)), true);
             }
 
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
@@ -122,32 +127,47 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private HeaderResult<Guid> ReadMessageId(Headers headers)
         {
             var newMessageId = Guid.NewGuid();
-            
+
             return ReadHeader(headers, HeaderNames.MESSAGE_ID)
                 .Map(s =>
                 {
                     if (string.IsNullOrEmpty(s))
                     {
                         s_logger.Value.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
-                         return new HeaderResult<Guid>(newMessageId, true);
+                        return new HeaderResult<Guid>(newMessageId, true);
                     }
 
                     if (Guid.TryParse(s, out Guid messageId))
                     {
                         return new HeaderResult<Guid>(messageId, true);
                     }
-                    
+
                     s_logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
                     return new HeaderResult<Guid>(Guid.Empty, false);
-                     
                 });
-       }
+        }
+
+        private HeaderResult<string> ReadPartitionKey(Headers headers)
+        {
+            return ReadHeader(headers, HeaderNames.PARTITIONKEY)
+                .Map(s =>
+                {
+                    if (string.IsNullOrEmpty(s))
+                    {
+                         s_logger.Value.DebugFormat("No partition key found in message");
+                         return new HeaderResult<string>(string.Empty, true);
+                    }
+
+                    return new HeaderResult<string>(s, true);
+                });
+        }
+
 
         private static object ParseHeaderValue(object value)
         {
             return value is byte[] bytes ? Encoding.UTF8.GetString(bytes) : value;
         }
-        
+
         private HeaderResult<string> ReadHeader(Headers headers, string key, bool dieOnMissing = false)
         {
             if (headers.TryGetLastBytes(key, out byte[] lastHeader))
@@ -166,7 +186,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             else
             {
-                
                 return new HeaderResult<string>(string.Empty, !dieOnMissing);
             }
         }

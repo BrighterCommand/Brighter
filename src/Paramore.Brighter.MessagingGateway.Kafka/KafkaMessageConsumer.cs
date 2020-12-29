@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageConsumer : IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
-        private IConsumer<Null, string> _consumer;
+        private IConsumer<string, string> _consumer;
         private KafkaMessageCreator _creator;
         private readonly string _topic;
         private readonly ConsumerConfig _consumerConfig;
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
 
-            _consumer = new ConsumerBuilder<Null, string>(_consumerConfig)
+            _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
                 .SetPartitionsAssignedHandler((consumer, list) =>
                 {
                     _logger.Value.InfoFormat($"Assigned partitions: [{string.Join(", ", list)}], member id: {consumer.MemberId}");

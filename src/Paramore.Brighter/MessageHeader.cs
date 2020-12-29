@@ -122,6 +122,12 @@ namespace Paramore.Brighter
         /// <value>The reply to.</value>
         public string ReplyTo { get; set; }
 
+        /// <summary>
+        /// If we are working with consistent hashing to distribute writes across multiple channels according to the hash value of a partition key
+        /// then we need to be able to set that key, so that we can distribute writes effectively.
+        /// </summary>
+        public string PartitionKey { get; set; }
+
         public MessageHeader()
         {
         }
@@ -135,7 +141,15 @@ namespace Paramore.Brighter
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
+        /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
+        public MessageHeader(
+            Guid messageId, 
+            string topic, 
+            MessageType messageType, 
+            Guid? correlationId = null, 
+            string replyTo = null, 
+            string contentType = "text/plain",
+            string partitionKey = "")
         {
             Id = messageId;
             Topic = topic;
@@ -147,16 +161,55 @@ namespace Paramore.Brighter
             CorrelationId = correlationId ?? Guid.Empty ;
             ReplyTo = replyTo;
             ContentType = contentType;
+            PartitionKey = partitionKey;
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
-            : this(messageId, topic, messageType, correlationId, replyTo, contentType)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageHeader"/> class.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="messageType">Type of the message.</param>
+        /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
+        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
+        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+        /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
+        public MessageHeader(
+            Guid messageId, 
+            string topic, 
+            MessageType messageType, 
+            DateTime timeStamp, 
+            Guid? correlationId = null, 
+            string replyTo = null,
+            string contentType = "text/plain", 
+            string partitionKey = "")
+            : this(messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
         {
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, int handledCount, int delayedMilliseconds, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
-            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType)
+          /// <summary>
+          /// Initializes a new instance of the <see cref="MessageHeader"/> class.
+          /// </summary>
+          /// <param name="messageId">The message identifier.</param>
+          /// <param name="topic">The topic.</param>
+          /// <param name="messageType">Type of the message.</param>
+          /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
+          /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
+          /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+          /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
+          public MessageHeader(
+            Guid messageId, 
+            string topic, 
+            MessageType messageType, 
+            DateTime timeStamp, 
+            int handledCount, 
+            int delayedMilliseconds, 
+            Guid? correlationId = null, 
+            string replyTo = null, 
+            string contentType = "text/plain",
+            string partitionKey = "")
+            : this(messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType, partitionKey)
         {
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;

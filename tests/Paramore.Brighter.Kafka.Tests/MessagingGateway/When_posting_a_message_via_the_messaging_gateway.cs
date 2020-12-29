@@ -41,8 +41,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
-        private IAmAMessageProducer _producer;
-        private IAmAMessageConsumer _consumer;
+        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageConsumer _consumer;
+        private readonly string _partitionKey = Guid.NewGuid().ToString();
 
 
         public KafkaMessageProducerSendTests(ITestOutputHelper output)
@@ -72,7 +73,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             var message = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND),
+                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                {
+                    PartitionKey = _partitionKey
+                },
                 new MessageBody($"test content [{_queueName}]"));
             _producer.Send(message);
 
@@ -100,7 +104,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             } while (maxTries <= 3);
 
             messages.Length.Should().Be(1);
-            messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND); 
+            messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            messages[0].Header.PartitionKey.Should().Be(_partitionKey);
             messages[0].Body.Value.Should().Be(message.Body.Value);
         }
 

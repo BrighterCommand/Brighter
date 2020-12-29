@@ -10,7 +10,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
         public Message MapToMessage(HeartbeatReply request)
         {
             var header = new MessageHeader(
-                messageId:request.Id,
+                messageId: request.Id,
                 topic: request.SendersAddress.Topic,
                 messageType: MessageType.MT_COMMAND,
                 timeStamp: DateTime.UtcNow,

@@ -46,5 +46,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The topic
         /// </summary>
         public const string TOPIC = "Topic";
-   }
+
+        /// <summary>
+        /// The key used to partition this message
+        /// </summary>
+        public static string PARTITIONKEY = "PartitionKey";
+    }
 }

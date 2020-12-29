@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
-        private IProducer<Null, string> _producer;
+        private IProducer<string, string> _producer;
         private readonly ProducerConfig _producerConfig;
         private readonly KafkaMessagePublisher _publisher;
         private bool _disposedValue = false;
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 RetryBackoffMs = producerConfiguration.RetryBackoff
             };
 
-            _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();
+            _producer = new ProducerBuilder<string, string>(_producerConfig).Build();
             _publisher = new KafkaMessagePublisher(_producer);
         }
 

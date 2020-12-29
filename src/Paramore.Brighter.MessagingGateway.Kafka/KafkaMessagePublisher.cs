@@ -10,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessagePublisher
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessagePublisher>);
-        private readonly IProducer<Null, string> _producer;
+        private readonly IProducer<string, string> _producer;
         private static readonly string[] _headersToReset =
         {
             HeaderNames.MESSAGE_TYPE,
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         };
 
 
-        public KafkaMessagePublisher(IProducer<Null, string> producer)
+        public KafkaMessagePublisher(IProducer<string, string> producer)
         {
             _producer = producer;
         }
@@ -38,6 +38,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (message.Header.CorrelationId != Guid.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString().ToByteArray());
             
+            if (!string.IsNullOrEmpty(message.Header.PartitionKey))
+                headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());
+            
             message.Header.Bag.Each((header) => 
             {
                  if (!_headersToReset.Any(htr => htr.Equals(header.Key)))
@@ -54,9 +57,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                  }
             });
 
-            var kafkaMessage = new Message<Null, string>()
+            var kafkaMessage = new Message<string, string>()
             {   
                 Headers = headers,
+                Key = message.Header.PartitionKey,
                 Value = message.Body.Value
             };
             var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage);
