@@ -30,15 +30,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
-        private readonly KafkaMessagingConsumerConfiguration _consumerConfiguration;
+        private readonly KafkaConsumerConfiguration _consumerConfiguration;
 
         public KafkaMessageConsumerFactory(KafkaMessagingGatewayConfiguration globalConfiguration):
-            this(globalConfiguration, new KafkaMessagingConsumerConfiguration())
+            this(globalConfiguration, new KafkaConsumerConfiguration())
         {
         }
 
         public KafkaMessageConsumerFactory(KafkaMessagingGatewayConfiguration globalConfiguration,
-            KafkaMessagingConsumerConfiguration consumerConfiguration)
+            KafkaConsumerConfiguration consumerConfiguration)
         {
             _globalConfiguration = globalConfiguration;
             _consumerConfiguration = consumerConfiguration;

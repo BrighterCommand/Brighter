@@ -36,14 +36,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly KafkaMessagePublisher _publisher;
         private bool _disposedValue = false;
 
-        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
+        public KafkaMessageProducer(
+            KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaMessagingProducerConfiguration producerConfiguration)
         {
             _producerConfig = new ProducerConfig
             {
                 BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
                 ClientId = globalConfiguration.Name,
-                MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
+                MaxInFlight = producerConfiguration.MaxInFlightRequestsPerConnection,
                 QueueBufferingMaxMessages = producerConfiguration.QueueBufferingMaxMessages,
                 Acks = producerConfiguration.Acks,
                 QueueBufferingMaxKbytes = producerConfiguration.QueueBufferingMaxKbytes,
@@ -80,24 +81,46 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 _logger.Value.DebugFormat(
-                    "Sending message to Kafka. Servers {0} Topic: {1} Body: {2}", 
+                    "Sending message to Kafka. Servers {0} Topic: {1} Body: {2}",
                     _producerConfig.BootstrapServers,
                     message.Header.Topic,
                     message.Body.Value
-                    );
+                );
 
                 await _publisher.PublishMessageAsync(message);
 
             }
-            catch (ProduceException<Null, string> exception)
+            catch (ProduceException<string, string> pe)
             {
                 _logger.Value.ErrorException(
-                    "Error sending message to Kafka servers {0} because {1} ", 
-                    exception, 
-                    _producerConfig.BootstrapServers, 
-                    exception.Error.Reason
-                    );
-                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", exception);
+                    "Error sending message to Kafka servers {0} because {1} ",
+                    pe,
+                    _producerConfig.BootstrapServers,
+                    pe.Error.Reason
+                );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
+            }
+            catch (InvalidOperationException ioe)
+            {
+                _logger.Value.ErrorException(
+                    "Error sending message to Kafka servers {0} because {1} ",
+                    ioe,
+                    _producerConfig.BootstrapServers,
+                    ioe.Message
+                );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
+
+            }
+            catch (ArgumentException ae)
+            {
+                 _logger.Value.ErrorException(
+                     "Error sending message to Kafka servers {0} because {1} ",
+                     ae,
+                     _producerConfig.BootstrapServers,
+                     ae.Message
+                 );
+                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
+               
             }
         }
 

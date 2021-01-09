@@ -29,68 +29,59 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessagingProducerConfiguration
     {
         /// <summary>
-        /// Maximum number of messages allowed on the 
-        /// producer queue.
+        /// Maximum number of messages allowed on the producer queue.
         /// </summary>
-        public int? QueueBufferingMaxMessages { get; set; }
+        public int? QueueBufferingMaxMessages { get; set; } = 10;
 
         /// <summary>
-        /// Maximum total message size sum allowed on the 
-        /// producer queue.
+        /// Maximum total message size sum allowed on the producer queue.
         /// </summary>
         public int? QueueBufferingMaxKbytes { get; set; }
 
         /// <summary>
-        /// Maximum time, in milliseconds, for buffering data 
-        ///on the producer queue.
+        /// Maximum time, in milliseconds, for buffering data on the producer queue.
         /// </summary>
         public int? QueueBufferingMax { get; set; }
 
         /// <summary>
-        /// The acks parameter controls how many 
-        /// partition replicas must receive the 
-        /// record before the producer can consider 
-        /// the write successful.
+        /// The acks parameter controls how many partition replicas must receive the 
+        /// record before the producer can consider the write successful.
         /// </summary>
-        public Acks? Acks { get; set; }
+        public Acks? Acks { get; set; } = Confluent.Kafka.Acks.All;
 
         /// <summary>
         /// How many times to retry sending a failing MessageSet.
-        /// Note: retrying may cause reordering.
+        /// Note: retrying may cause reordering, set the  max in flight to 1 if using this 
         /// </summary>
-        public int? MessageSendMaxRetries { get; set; }
+        public int? MessageSendMaxRetries { get; set; } = 3;
 
         /// <summary>
-        /// The backoff time before retrying 
-        /// a message send.
+        /// The backoff time before retrying a message send.
         /// </summary>
-        public int? RetryBackoff { get; set; }
+        public int? RetryBackoff { get; set; } = 100;
+        
+        /// <summary>
+        /// Maximum number of in-flight requests the  client will send.
+        /// We default this to 1, so as to allow retries to not de-order the stream
+        /// </summary>
+        public int? MaxInFlightRequestsPerConnection { get; set; } = 1;
 
         /// <summary>
         /// Maximum number of messages batched in one MessageSet. 
         /// </summary>
-        public int? BatchNumberMessages { get; set; }
+        public int? BatchNumberMessages { get; set; } = 10;
 
         /// <summary>
-        /// The ack timeout of the producer request.
-	    /// This value is only enforced by the broker and relies 
-	    /// on Acks being != AcksEnum.None.",
+        /// The ack timeout of the producer request. This value is only enforced by the broker
+        /// \and relies on Acks being != AcksEnum.None.",
         /// </summary>
-        public int? RequestTimeout { get; set; }
+        public int? RequestTimeout { get; set; } = 500;
 
         /// <summary>
         /// Local message timeout. "
-	    /// This value is only enforced locally and limits the time a 
-	    /// produced message waits for successful delivery. 
-        ///  A time of 0 is infinite.
+        /// This value is only enforced locally and limits the time a produced message
+        /// waits for successful delivery. A time of 0 is infinite.
         /// </summary>
-        public int? MessageTimeout { get; set; }
-
-        public KafkaMessagingProducerConfiguration()
-        {
-            Acks = Confluent.Kafka.Acks.All;
-            MessageTimeout = 5000;
-        }
-
-    }
+        public int? MessageTimeout { get; set; } = 0;
+   }
 }

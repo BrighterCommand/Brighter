@@ -41,35 +41,42 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private KafkaMessageCreator _creator;
         private readonly string _topic;
         private readonly ConsumerConfig _consumerConfig;
-        private bool _autoCommitEnabled = false;
         private bool _disposedValue = false;
 
-        public KafkaMessageConsumer(string groupId, string topic, 
+        public KafkaMessageConsumer(
+            string topic, 
             KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaMessagingConsumerConfiguration consumerConfiguration)
+            KafkaConsumerConfiguration consumerConfiguration)
         {
+            if (consumerConfiguration.GroupId is null)
+            {
+                throw new ConfigurationException("You must set a GroupId for the consumer on the KafkaConsumerConfiguration");
+            }
+            
             _topic = topic;
-            _autoCommitEnabled = consumerConfiguration.EnableAutoCommit;
             _consumerConfig = new ConsumerConfig()
             {
-                GroupId = groupId,
+                GroupId = consumerConfiguration.GroupId,
                 ClientId = globalConfiguration.Name,
+                AutoOffsetReset = consumerConfiguration.OffsetDefault, 
                 BootstrapServers = string.Join(",",globalConfiguration.BootStrapServers),
-                MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
-                SessionTimeoutMs = 6000,
+                SessionTimeoutMs = consumerConfiguration.SessionTimeoutMs,
+                MaxPollIntervalMs = consumerConfiguration.MaxPollIntervalMs,
                 EnablePartitionEof = true,
-
-                /*/
-                 * By default, we always call acknowledge after processing a handler and commit then.
-                 * This has the potential to cause a lot of traffic for the Kafka cluster as every commit is a new message on the consumer_offsets topic.  
-                 * To lower the load, you can enable AutoCommit and the AutoCommitIntervalMs.  The downside being that if the consumer dies, you may process a message more than once when a new consumer resumes reading a partition.
-                 /*/
-
-                AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs, 
-                EnableAutoCommit = consumerConfiguration.EnableAutoCommit,
                 AllowAutoCreateTopics = true,
-                AutoOffsetReset = consumerConfiguration.OffsetDefault 
+                IsolationLevel = consumerConfiguration.IsolationLevel
             };
+
+            if (!consumerConfiguration.EnableAutoCommit)
+            {
+                _consumerConfig.EnableAutoOffsetStore = false;
+            }
+            else
+            {
+                _consumerConfig.EnableAutoCommit = true;
+                _consumerConfig.EnableAutoOffsetStore = true;
+                _consumerConfig.AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs, 
+            }
 
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
@@ -104,7 +111,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            if (!message.Header.Bag.TryGetValue("TopicPartitionOffset", out var bagData))
+            if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
                 return;
             var topicPartitionOffset = bagData as TopicPartitionOffset;
             _logger.Value.DebugFormat($"Commiting message {topicPartitionOffset} as read");
@@ -155,7 +162,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
 
                 _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Message.Value}");
-                _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Vallue: {consumeResult.Message.Value}");
+                _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Value: {consumeResult.Message.Value}");
 
                 return new []{_creator.CreateMessage(consumeResult)};
             }
