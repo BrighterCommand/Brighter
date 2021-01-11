@@ -38,9 +38,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private IConsumer<string, string> _consumer;
-        private KafkaMessageCreator _creator;
+        private readonly KafkaMessageCreator _creator;
         private readonly string _topic;
         private readonly ConsumerConfig _consumerConfig;
+        private bool _autoCommit = false;
         private bool _disposedValue = false;
 
         public KafkaMessageConsumer(
@@ -70,12 +71,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!consumerConfiguration.EnableAutoCommit)
             {
                 _consumerConfig.EnableAutoOffsetStore = false;
+                _autoCommit = true;
             }
             else
             {
                 _consumerConfig.EnableAutoCommit = true;
                 _consumerConfig.EnableAutoOffsetStore = true;
-                _consumerConfig.AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs, 
+                _consumerConfig.AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs;
+                _autoCommit = true;
             }
 
 
@@ -107,12 +110,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         /// <summary>
         /// Acknowledges the specified message.
+        /// If we have autocommit on, this is essentially a no-op as the offset will be auto-committed via the client
+        /// If we do not have autocommit on (the default) then this commits the message that has just been processed.
+        /// If you do use autocommit, be aware that you will need to cope with duplicates, perhaps via an Inbox
+        /// When we read a message, we store the offset of the message on the partition in the header. This enables us
+        /// to commit the message successfully after processing
         /// </summary>
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
+            if (_autoCommit)
+                return;
+            
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
                 return;
+            
             var topicPartitionOffset = bagData as TopicPartitionOffset;
             _logger.Value.DebugFormat($"Commiting message {topicPartitionOffset} as read");
             _consumer.Commit(new[] {topicPartitionOffset});
@@ -196,10 +208,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
          public void Reject(Message message, bool requeue)
-        {
-            if (!requeue && !_autoCommitEnabled)
+         {
+             
+            if (!_autoCommit && !requeue)
+            {
                 Acknowledge(message);
-        }
+            }
+         }
 
         /// <summary>
         /// Requeues the specified message.

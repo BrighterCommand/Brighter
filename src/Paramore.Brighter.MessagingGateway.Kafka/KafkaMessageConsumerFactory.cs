@@ -52,7 +52,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          public IAmAMessageConsumer Create(Connection connection)
         {
             return new KafkaMessageConsumer(
-                connection.ChannelName, //groupId,
                 connection.RoutingKey, //topic
                 _globalConfiguration, 
                 _consumerConfiguration);
