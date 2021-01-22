@@ -90,17 +90,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
     public class BrighterMessaging
     {
-        public IAmAnOutbox<Message> OutBox { get; }
-        public IAmAnOutboxAsync<Message> AsyncOutBox { get; }
-        public IAmAMessageProducer Producer { get; }
-        public IAmAMessageProducerAsync AsyncProducer { get; }
-
-        public BrighterMessaging(IAmAnOutbox<Message> outBox, IAmAnOutboxAsync<Message> asyncOutBox, IAmAMessageProducer producer, IAmAMessageProducerAsync asyncProducer)
-        {
-            OutBox = outBox;
-            AsyncOutBox = asyncOutBox;
-            Producer = producer;
-            AsyncProducer = asyncProducer;
-        }
-    }
+        public IAmAnOutbox<Message> OutBox { get; set; }
+        public IAmAnOutboxAsync<Message> AsyncOutBox { get; set; }
+        public IAmAMessageProducer Producer { get; set; }
+        public IAmAMessageProducerAsync AsyncProducer { get; set; }
+   }
 }

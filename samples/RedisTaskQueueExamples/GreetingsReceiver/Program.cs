@@ -49,7 +49,7 @@ namespace GreetingsReceiver
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(redisConsumerFactory);
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new RedisMessageProducer(redisConnection), null);
+                        options.BrighterMessaging = new BrighterMessaging {OutBox = outBox, Producer = new RedisMessageProducer(redisConnection)};
                     }).AutoFromAssemblies();
 
 

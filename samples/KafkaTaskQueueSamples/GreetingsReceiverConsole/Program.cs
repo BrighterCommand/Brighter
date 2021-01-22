@@ -22,8 +22,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
-using KafkaTaskQueueSamples.Greetings.Ports.Commands;
+using Confluent.Kafka;
+using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -33,7 +35,7 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
 
-namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
+namespace GreetingsReceiverConsole
 {
     public class Program
     {
@@ -52,23 +54,36 @@ namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
                             new ConnectionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 200)
+                            timeoutInMilliseconds: 100)
                     };
                     //create the gateway
-                    var messagingGatewayConfiguration = new KafkaMessagingGatewayConfiguration
-                    {
-                        Name = "paramore.brighter", 
-                        BootStrapServers = new[] {"localhost:9092"}
-                    };
 
-                    var consumerFactory = new KafkaMessageConsumerFactory(messagingGatewayConfiguration);
+                    var consumerFactory = new KafkaMessageConsumerFactory(new KafkaMessagingGatewayConfiguration
+                        {
+                            Name = "paramore.brighter", 
+                            BootStrapServers = new[] {"localhost:9092"}
+                        },
+                        new KafkaConsumerConfiguration
+                        {
+                            GroupId = "kafka-GreetingsReceiverConsole-Sample", 
+                            OffsetDefault = AutoOffsetReset.Earliest,
+                            CommitBatchSize = 5
+                        }    
+                    );
 
                     services.AddServiceActivator(options =>
                     {
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(consumerFactory);
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new KafkaMessageProducerFactory(messagingGatewayConfiguration).Create(), null);
+                        options.BrighterMessaging = new BrighterMessaging(){
+                            OutBox = outBox, 
+                            Producer = new KafkaMessageProducerFactory(new KafkaMessagingGatewayConfiguration
+                            {
+                                Name = "paramore.brighter", 
+                                BootStrapServers = new[] {"localhost:9092"}
+                            }).Create()
+                        };
                     }).AutoFromAssemblies();
 
 

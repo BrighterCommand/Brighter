@@ -50,9 +50,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 QueueBufferingMaxKbytes = producerConfiguration.QueueBufferingMaxKbytes,
                 MessageSendMaxRetries = producerConfiguration.MessageSendMaxRetries,
                 BatchNumMessages = producerConfiguration.BatchNumberMessages,
-                LingerMs = producerConfiguration.QueueBufferingMax,
-                RequestTimeoutMs = producerConfiguration.RequestTimeout,
-                MessageTimeoutMs = producerConfiguration.MessageTimeout,
+                LingerMs = producerConfiguration.QueueBufferingTimeMs,
+                RequestTimeoutMs = producerConfiguration.RequestTimeoutMs,
+                MessageTimeoutMs = producerConfiguration.MessageTimeoutMs,
                 RetryBackoffMs = producerConfiguration.RetryBackoff
             };
 

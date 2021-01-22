@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
@@ -34,22 +36,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// and provides the facilities to consume messages from a Kafka broker for a topic
     /// in a consumer group.
     /// </summary>
-    internal class KafkaMessageConsumer : IAmAMessageConsumer
+    public class KafkaMessageConsumer : IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private IConsumer<string, string> _consumer;
         private readonly KafkaMessageCreator _creator;
         private readonly string _topic;
         private readonly ConsumerConfig _consumerConfig;
-        private bool _autoCommit = false;
-        private bool _disposedValue = false;
+        private List<TopicPartition> _partitions = new List<TopicPartition>();
+        private readonly List<TopicPartitionOffset> _offsets = new List<TopicPartitionOffset>();
+        private bool _disposedValue;
+        private readonly long _maxBatchSize;
 
         public KafkaMessageConsumer(
             string topic, 
             KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaConsumerConfiguration consumerConfiguration)
+            KafkaConsumerConfiguration consumerTemplateConfiguration)
         {
-            if (consumerConfiguration.GroupId is null)
+            if (consumerTemplateConfiguration.GroupId is null)
             {
                 throw new ConfigurationException("You must set a GroupId for the consumer on the KafkaConsumerConfiguration");
             }
@@ -57,46 +61,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _topic = topic;
             _consumerConfig = new ConsumerConfig()
             {
-                GroupId = consumerConfiguration.GroupId,
+                GroupId = consumerTemplateConfiguration.GroupId,
                 ClientId = globalConfiguration.Name,
-                AutoOffsetReset = consumerConfiguration.OffsetDefault, 
+                AutoOffsetReset = consumerTemplateConfiguration.OffsetDefault, 
                 BootstrapServers = string.Join(",",globalConfiguration.BootStrapServers),
-                SessionTimeoutMs = consumerConfiguration.SessionTimeoutMs,
-                MaxPollIntervalMs = consumerConfiguration.MaxPollIntervalMs,
+                SessionTimeoutMs = consumerTemplateConfiguration.SessionTimeoutMs,
+                MaxPollIntervalMs = consumerTemplateConfiguration.MaxPollIntervalMs,
                 EnablePartitionEof = true,
                 AllowAutoCreateTopics = true,
-                IsolationLevel = consumerConfiguration.IsolationLevel
+                IsolationLevel = consumerTemplateConfiguration.IsolationLevel
             };
 
-            if (!consumerConfiguration.EnableAutoCommit)
-            {
-                _consumerConfig.EnableAutoOffsetStore = false;
-                _autoCommit = true;
-            }
-            else
-            {
-                _consumerConfig.EnableAutoCommit = true;
-                _consumerConfig.EnableAutoOffsetStore = true;
-                _consumerConfig.AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs;
-                _autoCommit = true;
-            }
-
+            //We don't expose these settings, because it's difficult to get this right, so we take an opinion
+            //on the strategy, which is commit that last offset for acknowledged requests when a batch of records has been
+            //processed. That is opinionated but it's difficult to write a transport for Kafka without an opinion
+            _consumerConfig.EnableAutoOffsetStore = false;
+            _consumerConfig.EnableAutoCommit = false;
+            _maxBatchSize = consumerTemplateConfiguration.CommitBatchSize;
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
-                .SetPartitionsAssignedHandler((consumer, list) =>
-                {
-                    _logger.Value.InfoFormat($"Assigned partitions: [{string.Join(", ", list)}], member id: {consumer.MemberId}");
-                })
+                .SetPartitionsAssignedHandler((consumer, list) => _partitions.AddRange(list))
                 .SetPartitionsRevokedHandler((consumer, list) =>
                 {
-                    _logger.Value.InfoFormat($"Revoked partitions: [{string.Join(", ", list)}], member id: {consumer.MemberId}");
-                })
-                .SetErrorHandler((consumer, error) =>
-                {
-                    if(error.IsBrokerError)
-                        _logger.Value.Error($"BrokerError: Member id: {consumer.MemberId}, error: {error}");
-                    else
-                        _logger.Value.Error($"ConsumeError: Member Id: {consumer.MemberId}, error: {error}");
+                    _consumer.Commit(list);
+                    var revokedPartitions = list.Select(tpo => tpo.Partition).ToList();
+                    _partitions = _partitions.Where(tp => !revokedPartitions.Contains(tp.Partition)).ToList();
                 })
                 .Build();
             
@@ -106,6 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             _creator = new KafkaMessageCreator();
         }
+
 
 
         /// <summary>
@@ -119,15 +109,41 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            if (_autoCommit)
-                return;
-            
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
-                return;
+                    return;
+
+            try
+            {
+                var topicPartitionOffset = bagData as TopicPartitionOffset;
             
-            var topicPartitionOffset = bagData as TopicPartitionOffset;
-            _logger.Value.DebugFormat($"Commiting message {topicPartitionOffset} as read");
-            _consumer.Commit(new[] {topicPartitionOffset});
+                var offset = new TopicPartitionOffset(topicPartitionOffset.TopicPartition, new Offset(topicPartitionOffset.Offset + 1));
+            
+                _logger.Value.InfoFormat($"Storing offset {new Offset(topicPartitionOffset.Offset + 1).Value} to topic {topicPartitionOffset.TopicPartition.Topic} for partition {topicPartitionOffset.TopicPartition.Partition.Value}");
+                _consumer.StoreOffset(offset);
+                _offsets.Add(offset);
+             
+                if (_offsets.Count % _maxBatchSize == 0)
+                {
+                    if (_logger.Value.IsInfoEnabled())
+                    {
+                        var offsets = _offsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                        var offsetAsString = string.Join(Environment.NewLine, offsets);
+                        _logger.Value.InfoFormat($"Commiting all offsets: {Environment.NewLine} {offsetAsString}");
+                    }
+
+                    _consumer.Commit(_offsets);
+                    _offsets.Clear();
+                }
+
+                _logger.Value.InfoFormat($"Current Kafka batch count {_offsets.Count.ToString()} and {_maxBatchSize.ToString()}");
+            }
+            catch (TopicPartitionException tpe)
+            {
+                var results = tpe.Results.Select(r =>
+                    $"Error committing topic {r.Topic} for partition {r.Partition.Value.ToString()} because {r.Error.Reason}");
+                var errorString = string.Join(Environment.NewLine, results);
+                _logger.Value.Debug($"Error committing offsets: {Environment.NewLine} {errorString}");
+            }
         }
 
         /// <summary>
@@ -157,6 +173,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             try
             {
+                LogOffSets();
+                
                 _logger.Value.DebugFormat(
                     $"Consuming messages from Kafka stream, will wait for {timeoutInMilliseconds}");
                 var consumeResult = _consumer.Consume(new TimeSpan(0, 0, 0, 0, timeoutInMilliseconds));
@@ -203,21 +221,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Rejects the specified message.
+        /// Rejects the specified message. This is just a commit of the offset to move past the record without processing it
+        /// on Kafka, as we can't requeue or delete from the queue
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
          public void Reject(Message message, bool requeue)
          {
-             
-            if (!_autoCommit && !requeue)
-            {
-                Acknowledge(message);
-            }
+            Acknowledge(message);
+            if (requeue)
+                Requeue(message);
          }
 
         /// <summary>
-        /// Requeues the specified message.
+        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
         /// </summary>
         /// <param name="message"></param>
         public void Requeue(Message message)
@@ -225,7 +242,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Requeues the specified message.
+        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
@@ -234,9 +251,53 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Task.Delay(delayMilliseconds).Wait();
             Requeue(message);
         }
-        
+
+        [Conditional("DEBUG")]
+        [DebuggerStepThrough]
+        private void LogOffSets()
+        {
+            var highestReadOffset = new Dictionary<TopicPartition, long>();
+            
+             var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(100));
+             foreach (var committedOffset in committedOffsets)
+             {
+                 if (highestReadOffset.TryGetValue(committedOffset.TopicPartition, out long offset))
+                 {
+                     if (committedOffset.Offset < offset) continue;
+                 }
+                 highestReadOffset[committedOffset.TopicPartition] = committedOffset.Offset;
+             }
+
+             foreach (KeyValuePair<TopicPartition,long> pair in highestReadOffset)
+             {
+                 var topicPartition = pair.Key;
+                 var message = $"Offset to consume from is: {pair.Value.ToString()} on partition: {topicPartition.Partition.Value.ToString()} for topic: {topicPartition.Topic}";
+                  _logger.Value.Info(message);
+             }
+        }
+
+        private void Close()
+        {
+            try
+            {
+                _consumer.Commit();
+            }
+            catch (Exception ex)
+            {
+                //this may happen if the offset is already committed
+                _logger.Value.Debug($"Error committing the current offset to Kakfa before closing: {ex.Message}");
+            }
+
+            var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(100));
+            foreach (var committedOffset in committedOffsets)
+                _logger.Value.Info(
+                    $"Committed offset: {committedOffset.Offset.Value.ToString()} on partition: {committedOffset.Partition.Value.ToString()} for topic: {committedOffset.Topic}");
+        }
+
         protected virtual void Dispose(bool disposing)
         {
+            Close();
+
             if (!_disposedValue)
             {
                 if (disposing)
@@ -249,6 +310,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+
         ~KafkaMessageConsumer()
         {
            Dispose(false);
@@ -259,5 +321,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-    }
+
+   }
 }

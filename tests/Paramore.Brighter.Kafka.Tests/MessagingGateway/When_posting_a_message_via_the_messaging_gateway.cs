@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Threading.Tasks;
+using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -59,7 +60,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                  {
                      Name = "Kafka Consumer Test",
                      BootStrapServers = new[] { "localhost:9092" }
-                 }).Create(new Connection<MyCommand>(
+                 },
+                 new KafkaConsumerConfiguration
+                 {
+                     GroupId = Guid.NewGuid().ToString(), 
+                     OffsetDefault = AutoOffsetReset.Earliest
+                 }
+                 ).Create(new Connection<MyCommand>(
                      channelName: new ChannelName(_queueName), 
                      routingKey: new RoutingKey(_topic)
                      )

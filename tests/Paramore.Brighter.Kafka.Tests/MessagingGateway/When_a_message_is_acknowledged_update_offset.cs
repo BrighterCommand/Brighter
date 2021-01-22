@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -17,6 +18,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAMessageProducer _producer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
+        private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
 
 
         public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
@@ -30,7 +32,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_a_message_is_acknowldged_update_offset()
+        public void When_a_message_is_acknowldgede_update_offset()
         {
             IAmAMessageConsumer consumer = null;
             IAmAMessageConsumer newConsumer = null;
@@ -43,9 +45,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 var message = messages.First();
                 message.Id.Should().Be(msgId);
                 consumer.Acknowledge(message);
-            
-                //Close down the consumer, offset should have been committed by acknowledge
-            
+
+                consumer.Dispose();
+
                 var msgId2 = SendMessage();
                 newConsumer = CreateConsumer();
                 var newMessages = ConsumeMessages(newConsumer);
@@ -56,7 +58,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             }
             finally
             {
-                consumer?.Dispose();
                 newConsumer?.Dispose();
             }
         }
@@ -107,7 +108,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     Name = "Kafka Consumer Test",
                     BootStrapServers = new[] { "localhost:9092" }
-                }).Create(new Connection<MyCommand>(
+                },
+                new KafkaConsumerConfiguration
+                {
+                    GroupId = _kafkaGroupId,
+                    OffsetDefault = AutoOffsetReset.Earliest,
+                    CommitBatchSize = 1
+                }
+                ).Create(new Connection<MyCommand>(
                     channelName: new ChannelName(_queueName), 
                     routingKey: new RoutingKey(_topic)
                 )

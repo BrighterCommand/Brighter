@@ -22,17 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
-using KafkaTaskQueueSamples.Greetings.Ports.Commands;
+using Greetings.Ports.Commands;
 using Newtonsoft.Json;
 using Paramore.Brighter;
 
-namespace KafkaTaskQueueSamples.Greetings.Ports.Mappers
+namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
+        private string _partitionKey = "KafkaTestQueueExample_Partition_One";
+ 
         public Message MapToMessage(GreetingEvent request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
+            header.PartitionKey = _partitionKey;
             var body = new MessageBody(JsonConvert.SerializeObject(request));
             var message = new Message(header, body);
             return message;

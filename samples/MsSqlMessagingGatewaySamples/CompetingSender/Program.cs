@@ -44,7 +44,7 @@ namespace CompetingSender
                     services.AddBrighter(options =>
                     {
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new MsSqlMessageProducer(messagingConfiguration), null);
+                        options.BrighterMessaging = new BrighterMessaging {OutBox = outBox, Producer = new MsSqlMessageProducer(messagingConfiguration)};
                     }).AutoFromAssemblies();
 
                     services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetService<IAmACommandProcessor>(),  repeatCount));

@@ -59,19 +59,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public AutoOffsetReset OffsetDefault { get; set; } = AutoOffsetReset.Earliest;
 
         /// <summary>
-        /// By default, we always call acknowledge after processing a handler and commit then.  This has the potential to cause a lot of traffic
-        /// for the Kafka cluster as every commit is a new message on the consumer_offsets topic.
-        /// To lower the load, you can enable AutoCommit.
-        /// The downside is that if there is a re-balance, any processed but not committed messages will be represented to consumers.
-        /// You will need an inbox at that point, to check for duplicates, or be idempotent
+        /// We commit processed work (marked as acked or rejected) when a batch size worth of work has been completed
+        /// If the batch size is 1, then there is a low risk of offsets not being committed and therefore duplicates appearing
+        /// in the stream, but the latency per request and load on the broker increases. As the batch size rises the risk of
+        /// a crashing worker process failing to commit a batch that is then represented rises.
         /// </summary>
-        public bool EnableAutoCommit { get; set; } = false;
-
-        /// <summary>
-        /// The frequency of auto-commits, if auto-commit is enabled. The longer the window, the more duplicates, but the lower to the load on the cluster.
-        /// We default to the Kafka default of 5s. 
-        /// </summary>
-        public int? AutoCommitIntervalMs { get; set; } = 5000;
+        public long CommitBatchSize { get; set; } = 1;
 
     }
 }

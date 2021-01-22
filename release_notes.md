@@ -19,6 +19,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  --- We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
  - Added ability to persist RabbitMQ messages
  - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
+ - Improved the Kafka Client. It now uses the publisher/creator model to ensure that a message is in Brighter format i.e. headers as well as body; updated configuration values; generally improved reliability. This is a breaking change with previous versions of the Kafka client.
+ - The class BrighterMessaging now only has a default constructor and now has setters on properties. Use the initializer syntax instead - new BrighterMessage{} to avoid having redundant constructor arguments.
 
 ## Release 8.1.1399 ##
  - Update nuget libs

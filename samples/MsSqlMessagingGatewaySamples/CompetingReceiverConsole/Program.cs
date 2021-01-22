@@ -43,7 +43,7 @@ namespace CompetingReceiverConsole
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new MsSqlMessageProducer(messagingConfiguration), null);
+                        options.BrighterMessaging = new BrighterMessaging { OutBox = outBox, Producer = new MsSqlMessageProducer(messagingConfiguration)};
                     }).AutoFromAssemblies();
 
 

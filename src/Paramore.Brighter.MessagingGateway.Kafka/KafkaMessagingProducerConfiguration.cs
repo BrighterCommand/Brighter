@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum time, in milliseconds, for buffering data on the producer queue.
         /// </summary>
-        public int? QueueBufferingMax { get; set; }
+        public int? QueueBufferingTimeMs { get; set; }
 
         /// <summary>
         /// The acks parameter controls how many partition replicas must receive the 
@@ -75,13 +75,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The ack timeout of the producer request. This value is only enforced by the broker
         /// \and relies on Acks being != AcksEnum.None.",
         /// </summary>
-        public int? RequestTimeout { get; set; } = 500;
+        public int? RequestTimeoutMs { get; set; } = 500;
 
         /// <summary>
         /// Local message timeout. "
         /// This value is only enforced locally and limits the time a produced message
         /// waits for successful delivery. A time of 0 is infinite.
         /// </summary>
-        public int? MessageTimeout { get; set; } = 0;
+        public int? MessageTimeoutMs { get; set; } = 0;
    }
 }

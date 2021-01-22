@@ -68,14 +68,14 @@ namespace GreetingsServer
 
                     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
                     ChannelFactory amAChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                    var amAMessageProducer = new RmqMessageProducer(rmqConnection);
+                    var producer = new RmqMessageProducer(rmqConnection);
 
                     services.AddServiceActivator(options =>
                     {
                         options.Connections = connections;
                         options.ChannelFactory = amAChannelFactory;
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, amAMessageProducer, null);
+                        options.BrighterMessaging = new BrighterMessaging { OutBox = outBox, Producer = producer};
                     }).AutoFromAssemblies();
 
 

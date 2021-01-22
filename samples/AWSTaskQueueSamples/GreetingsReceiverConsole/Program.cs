@@ -74,7 +74,7 @@ namespace GreetingsReceiverConsole
                             options.Connections = connections;
                             options.ChannelFactory = new ChannelFactory(awsConnection,sqsMessageConsumerFactory);
                             var outBox = new InMemoryOutbox();
-                            options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new SqsMessageProducer(awsConnection), null);
+                            options.BrighterMessaging = new BrighterMessaging {OutBox = outBox, Producer = new SqsMessageProducer(awsConnection)};
                         }).AutoFromAssemblies();
                     }
 
