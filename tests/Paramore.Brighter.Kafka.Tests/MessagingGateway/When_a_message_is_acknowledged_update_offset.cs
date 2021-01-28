@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using FluentAssertions;
@@ -25,98 +26,109 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             _output = output;
             _producer = new KafkaMessageProducerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Producer Send Test", BootStrapServers = new[] {"localhost:9092"}
-                }).Create();
+                new KafkaMessagingGatewayConfiguration {Name = "Kafka Producer Send Test", BootStrapServers = new[] {"localhost:9092"}}).Create();
         }
 
         [Fact]
         public void When_a_message_is_acknowldgede_update_offset()
         {
-            IAmAMessageConsumer consumer = null;
-            IAmAMessageConsumer newConsumer = null;
-            try
+            var groupId = Guid.NewGuid().ToString();
+            
+            //send x messages to Kafka
+            var sentMessages = new Guid[10];
+            for (int i = 0; i < 10; i++)
             {
-                var msgId = SendMessage();
-                consumer = CreateConsumer();
-                var messages = ConsumeMessages(consumer);
-
-                var message = messages.First();
-                message.Id.Should().Be(msgId);
-                consumer.Acknowledge(message);
-
-                consumer.Dispose();
-
-                var msgId2 = SendMessage();
-                newConsumer = CreateConsumer();
-                var newMessages = ConsumeMessages(newConsumer);
-
-                var secondMessage = newMessages.First();
-                secondMessage.Id.Should().Be(msgId2);
-                consumer.Acknowledge(secondMessage);
+                var msgId = Guid.NewGuid();
+                SendMessage(msgId);
+                sentMessages[i] = msgId;
             }
-            finally
+
+            //This will create, then delete the consumer
+            Message[] messages = ConsumeMessages(groupId: groupId, batchLimit: 5);
+
+            //check we read the first 5 messages
+            messages.Length.Should().Be(5);
+            for (int i = 0; i < 5; i++)
             {
-                newConsumer?.Dispose();
+                messages[i].Id.Should().Be(sentMessages[i]);
+            }
+
+            //This will create a new consumer
+            Message[] newMessages = ConsumeMessages(groupId, batchLimit: 5);
+            //check we read the first 5 messages
+            messages.Length.Should().Be(5);
+            for (int i = 0; i < 5; i++)
+            {
+                newMessages[i].Id.Should().Be(sentMessages[i+5]);
             }
         }
 
-        private Guid SendMessage()
+        private void SendMessage(Guid messageId)
         {
-            var messageId = Guid.NewGuid();
-
             _producer.Send(new Message(
-                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND)
-                {
-                    PartitionKey = _partitionKey
-                },
+                new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
                 new MessageBody($"test content [{_queueName}]")));
-
-            return messageId;
         }
 
-        private IEnumerable<Message> ConsumeMessages(IAmAMessageConsumer consumer)
+        private Message[] ConsumeMessages(string groupId, int batchLimit)
         {
-            var messages = new Message[0];
-            int maxTries = 0;
-            do
+            var consumedMessages = new List<Message>();
+            using (IAmAMessageConsumer consumer = CreateConsumer(groupId))
             {
-                try
+                for (int i = 0; i < batchLimit; i++)
                 {
-                    maxTries++;
-                    Task.Delay(500).Wait(); //Let topic propogate in the broker
-                    messages = consumer.Receive(1000);
-
-                    if (messages[0].Header.MessageType != MessageType.MT_NONE)
-                        break;
+                    consumedMessages.Add(ConsumeMessage(consumer));
                 }
-                catch (ChannelFailureException cfx)
+            }
+
+            return consumedMessages.ToArray();
+
+            Message ConsumeMessage(IAmAMessageConsumer consumer)
+            {
+                Message[] messages = {new()};
+                int maxTries = 0;
+                do
                 {
-                    //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
-                    _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
-                }
-            } while (maxTries <= 3);
+                    try
+                    {
+                        maxTries++;
+                        Task.Delay(500).Wait(); //Let topic propogate in the broker
+                        messages = consumer.Receive(1000);
 
-            return messages;
+                        if (messages[0].Header.MessageType != MessageType.MT_NONE)
+                        {
+                            consumer.Acknowledge(messages[0]);
+                            return messages[0];
+                        }
+
+                    }
+                    catch (ChannelFailureException cfx)
+                    {
+                        //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                        _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
+                    }
+                } while (maxTries <= 3);
+
+                return messages[0];
+            }
         }
 
-        private IAmAMessageConsumer CreateConsumer()
+        private IAmAMessageConsumer CreateConsumer(string groupId)
         {
             return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
+                    Name = "Kafka Consumer Test", 
+                    BootStrapServers = new[] {"localhost:9092"}
                 },
                 new KafkaConsumerConfiguration
                 {
-                    GroupId = _kafkaGroupId,
-                    OffsetDefault = AutoOffsetReset.Earliest,
-                    CommitBatchSize = 1
+                    GroupId = groupId, 
+                    OffsetDefault = AutoOffsetReset.Earliest, 
+                    CommitBatchSize = 5
                 }
-                ).Create(new Connection<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
+            ).Create(new Connection<MyCommand>(
+                    channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic)
                 )
             );
