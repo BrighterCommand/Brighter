@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_a_message_is_acknowldgede_update_offset()
+        public async Task When_a_message_is_acknowldgede_update_offset()
         {
             var groupId = Guid.NewGuid().ToString();
             
@@ -52,6 +52,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             {
                 messages[i].Id.Should().Be(sentMessages[i]);
             }
+
+            //yield to broker to catch up
+            await Task.Delay(TimeSpan.FromSeconds(5));
 
             //This will create a new consumer
             Message[] newMessages = ConsumeMessages(groupId, batchLimit: 5);
@@ -85,7 +88,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
             Message ConsumeMessage(IAmAMessageConsumer consumer)
             {
-                Message[] messages = {new()};
+                Message[] messages = new []{new Message()};
                 int maxTries = 0;
                 do
                 {
