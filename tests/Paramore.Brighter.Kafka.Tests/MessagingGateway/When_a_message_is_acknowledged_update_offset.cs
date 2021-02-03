@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 new KafkaMessagingGatewayConfiguration {Name = "Kafka Producer Send Test", BootStrapServers = new[] {"localhost:9092"}}).Create();
         }
 
-        [Fact]
+        [Fact (Skip = "Due to requirement to yield for offsets, don't run in CI. Manually enable") ]
         public async Task When_a_message_is_acknowldgede_update_offset()
         {
             var groupId = Guid.NewGuid().ToString();
