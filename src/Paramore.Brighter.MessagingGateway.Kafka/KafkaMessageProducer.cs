@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private IProducer<string, string> _producer;
         private readonly ProducerConfig _producerConfig;
         private readonly KafkaMessagePublisher _publisher;
-        private bool _disposedValue = false;
+        private bool _disposedValue;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration globalConfiguration, 

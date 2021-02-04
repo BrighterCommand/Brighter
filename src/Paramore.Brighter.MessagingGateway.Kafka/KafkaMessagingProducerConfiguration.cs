@@ -82,6 +82,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// This value is only enforced locally and limits the time a produced message
         /// waits for successful delivery. A time of 0 is infinite.
         /// </summary>
-        public int? MessageTimeoutMs { get; set; } = 0;
+        public int? MessageTimeoutMs { get; set; } = 500;
    }
 }

@@ -53,6 +53,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {"localhost:9092"}
+                },
+                new KafkaMessagingProducerConfiguration
+                {
+                    //These timeouts support running on a container using the same host as the tests, 
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000
                 }).Create(); 
             
             _consumer = new KafkaMessageConsumerFactory(

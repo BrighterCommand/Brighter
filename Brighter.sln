@@ -9,6 +9,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235D
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{329736D2-BF92-4D06-A7BF-19F4B6B64EDD}"
+ProjectSection(SolutionItems) = preProject
+	tests\README.md = tests\README.md
+EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter", "src\Paramore.Brighter\Paramore.Brighter.csproj", "{3975AC2F-C3C0-4044-AFC8-A5F2AAC565FE}"
 EndProject

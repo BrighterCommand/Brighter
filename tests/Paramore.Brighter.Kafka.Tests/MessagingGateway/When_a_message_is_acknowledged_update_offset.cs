@@ -26,10 +26,22 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             _output = output;
             _producer = new KafkaMessageProducerFactory(
-                new KafkaMessagingGatewayConfiguration {Name = "Kafka Producer Send Test", BootStrapServers = new[] {"localhost:9092"}}).Create();
+                new KafkaMessagingGatewayConfiguration
+                {
+                    Name = "Kafka Producer Send Test", 
+                    BootStrapServers = new[] {"localhost:9092"}
+                },
+                new KafkaMessagingProducerConfiguration()
+                {
+                    //These timeouts support running on a container using the same host as the tests, 
+                    //your production values ought to be lower
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000
+                }).Create();
         }
 
         [Fact (Skip = "Due to requirement to yield for offsets, don't run in CI. Manually enable") ]
+        //[Fact]
         public async Task When_a_message_is_acknowldgede_update_offset()
         {
             var groupId = Guid.NewGuid().ToString();
