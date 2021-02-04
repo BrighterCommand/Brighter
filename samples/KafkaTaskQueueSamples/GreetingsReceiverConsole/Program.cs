@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -58,17 +59,12 @@ namespace GreetingsReceiverConsole
                     };
                     //create the gateway
 
-                    var consumerFactory = new KafkaMessageConsumerFactory(new KafkaMessagingGatewayConfiguration
-                        {
-                            Name = "paramore.brighter", 
-                            BootStrapServers = new[] {"localhost:9092"}
-                        },
+                    var consumerFactory = new KafkaMessageConsumerFactory(
+                        new KafkaMessagingGatewayConfiguration {Name = "paramore.brighter", BootStrapServers = new[] {"localhost:9092"}},
                         new KafkaConsumerConfiguration
                         {
-                            GroupId = "kafka-GreetingsReceiverConsole-Sample", 
-                            OffsetDefault = AutoOffsetReset.Earliest,
-                            CommitBatchSize = 5
-                        }    
+                            GroupId = "kafka-GreetingsReceiverConsole-Sample", OffsetDefault = AutoOffsetReset.Earliest, CommitBatchSize = 5
+                        }
                     );
 
                     services.AddServiceActivator(options =>
@@ -76,13 +72,21 @@ namespace GreetingsReceiverConsole
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(consumerFactory);
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(){
-                            OutBox = outBox, 
-                            Producer = new KafkaMessageProducerFactory(new KafkaMessagingGatewayConfiguration
-                            {
-                                Name = "paramore.brighter", 
-                                BootStrapServers = new[] {"localhost:9092"}
-                            }).Create()
+                        options.BrighterMessaging = new BrighterMessaging()
+                        {
+                            OutBox = outBox,
+                            Producer = new KafkaMessageProducerFactory(
+                                new KafkaMessagingGatewayConfiguration
+                                {
+                                    Name = "paramore.brighter", 
+                                    BootStrapServers = new[] {"localhost:9092"}
+                                },
+                                new KafkaMessagingProducerConfiguration
+                                {
+                                    MessageTimeoutMs = 500, 
+                                    RequestTimeoutMs = 500
+                                }
+                            ).Create()
                         };
                     }).AutoFromAssemblies();
 
