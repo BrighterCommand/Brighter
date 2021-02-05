@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }).Create();
         }
 
-        [Fact (Skip = "Due to requirement to yield for offsets, don't run in CI. Manually enable") ]
+        //[Fact (Skip = "Due to requirement to yield for offsets, don't run in CI. Manually enable") ]
         //[Fact]
         public async Task When_a_message_is_acknowldgede_update_offset()
         {
