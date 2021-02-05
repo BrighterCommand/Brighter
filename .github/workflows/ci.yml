@@ -198,7 +198,7 @@ jobs:
     # - name: Debugging with tmate
     #   uses: mxschmitt/action-tmate@v3.1
     - name: Kafka Install Check
-      run:  kafkacat -P -b kafka -t awesome-topic  
+      run:  kafkacat -L -b localhost
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
