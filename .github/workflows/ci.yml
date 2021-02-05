@@ -178,6 +178,9 @@ jobs:
           KAFKA_DELETE_TOPIC_ENABLE: "true"
 
     steps:
+    - name: Install KafkaCat
+      run: |
+        sudo apt-get install kafkacat
     - name: Sleep to let Kafka spin up
       uses: jakejarvis/wait-action@master
       with:
@@ -187,13 +190,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v1  
       with:
         dotnet-version: 2.1.x
     - name: Install dependencies
       run: dotnet restore
     # - name: Debugging with tmate
     #   uses: mxschmitt/action-tmate@v3.1
+    - name: Kafka Install Check
+      run:  kafkacat -L -b localhost
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
