@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
@@ -84,7 +84,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             //try  to nack anything in the buffer.
             try
             {
-                var messages = _messages.ToArray();
                 foreach (var message in _messages)
                 {
                     Model.BasicNack(message.DeliveryTag, false, true);
