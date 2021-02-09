@@ -90,12 +90,11 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: nuget packages
-      - name: Push to GitHub Feed
-        run: |
-          for f in **/*.nupkg
-          do
-            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED$GITHUB_REPOSITORY
-          done
+      - name: to GitHub Feed
+        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
     
   redis-ci:
     runs-on: ubuntu-latest
