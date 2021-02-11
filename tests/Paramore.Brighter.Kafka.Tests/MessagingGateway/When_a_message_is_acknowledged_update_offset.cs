@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
@@ -20,7 +17,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAMessageProducer _producer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
-
 
         public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
         {
