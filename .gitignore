@@ -328,6 +328,6 @@ ASALocalRun/
 # MFractors (Xamarin productivity tool) working folder 
 .mfractor/
 .ionide
-./broker/data/*
+broker/
 /zoo/
-
+.DS_Store
