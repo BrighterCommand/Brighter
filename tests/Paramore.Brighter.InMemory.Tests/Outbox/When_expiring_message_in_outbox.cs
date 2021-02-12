@@ -5,7 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
 {
-    public class When_expiring_message_in_outbox
+    public class OutboxEntryTimeToLiveTests
     {
         [Fact]
         public void When_expiring_a_cache_entry_no_longer_there()
