@@ -27,7 +27,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.NoOpStore.Tests
+namespace Paramore.Brighter.InMemory.Tests
 {
     [DebuggerStepThrough]
     public static class Catch

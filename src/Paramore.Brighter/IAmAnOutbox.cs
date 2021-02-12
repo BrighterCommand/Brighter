@@ -56,6 +56,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
         void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
     }
 }

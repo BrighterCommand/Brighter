@@ -195,7 +195,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null)
         {
             DateTime sentAfter = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            return _post.Where(oe =>  oe.TimeDeposited > sentAfter)
+            return _post.Where(oe =>  oe.TimeDeposited >= sentAfter)
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
