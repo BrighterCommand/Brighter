@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Xunit;
 
@@ -107,6 +106,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
         }
         
-        
+        //TODO: We need a test to get when multiple items - do we get the right one?
+        //TODO: We need a test for any list operation that excludes some and includes others
    }
 }

@@ -24,9 +24,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -38,7 +38,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class InMemoryOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
     {
-        private readonly List<OutboxEntry> _post = new List<OutboxEntry>();
+        private readonly ConcurrentDictionary<Guid, OutboxEntry> _posts = new ConcurrentDictionary<Guid, OutboxEntry>();
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -48,6 +48,25 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
+        
+        /// <summary>
+        /// How long does an entry last in the Outbox before we delete it (defaults to 5 min)
+        /// Think about your typical data volumes over a window of time, they all use memory to store
+        /// But contrast with how long you want to be able to resend due to broker failure for.
+        /// Memory is not reclaimed until an expiration scan
+        /// </summary>
+        public TimeSpan PostTimeToLive { get; set; } = TimeSpan.FromMinutes(5);
+        
+        /// <summary>
+        /// if it has been this long since the last scan, any operation can trigger a scan of the
+        /// cache to delete existing entries (defaults to 5 mins)
+        /// Your expiration interval should greater than your time to live, and represents the frequency at which we will reclaim memory
+        /// Note that scan check is triggered by an operation on the outbox, so you will experience latency whilst the scan happens
+        /// </summary>
+        public TimeSpan ExpirationScanInterval { get; set; } = TimeSpan.FromMinutes(10);
+        
+        
+        private DateTime _lastScanAt = DateTime.UtcNow;
 
         /// <summary>
         /// Adds the specified message
@@ -56,9 +75,14 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout"></param>
         public void Add(Message message, int outBoxTimeout = -1)
         {
-            if (!_post.Exists((entry)=> entry.Message.Id == message.Id))
+            ClearExpiredMessages();
+            
+            if (!_posts.ContainsKey(message.Id))
             {
-                _post.Add(new OutboxEntry{Message = message, TimeDeposited = DateTime.UtcNow});
+                if (!_posts.TryAdd(message.Id, new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow}))
+                {
+                    throw new Exception($"Could not add message with Id: {message.Id} to outbox");
+                }
             }
         }
 
@@ -101,8 +125,10 @@ namespace Paramore.Brighter
             int outboxTimeout = -1, 
             Dictionary<string, object> args = null)
         {
+            ClearExpiredMessages();
+            
             DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
-            return _post.Where(oe =>  oe.TimeDeposited > dispatchedSince)
+            return _posts.Values.Where(oe =>  oe.TimeDeposited > dispatchedSince)
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -115,10 +141,9 @@ namespace Paramore.Brighter
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            if (!_post.Exists((entry) => entry.Message.Id == messageId))
-                return null;
-
-            return _post.Find((entry) => entry.Message.Id == messageId).Message;
+            ClearExpiredMessages();
+            
+            return _posts.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
         }
 
         /// <summary>
@@ -130,7 +155,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            return _post.Select(oe => oe.Message).Take(pageSize).ToList();
+            ClearExpiredMessages();
+            
+            return _posts.Values.Select(oe => oe.Message).Take(pageSize).ToList();
         }
          
        /// <summary>
@@ -177,12 +204,12 @@ namespace Paramore.Brighter
         /// <param name="id">The message to mark as dispatched</param>
          public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-             if (!_post.Exists((oe) => oe.Message.Id == id))
-               return;
-             
-           var post = _post.Find((entry) => entry.Message.Id == id);
-           post.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
-
+            ClearExpiredMessages();
+            
+            if (_posts.TryGetValue(id, out OutboxEntry entry))
+            {
+                entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
+            }
         }
 
         /// <summary>
@@ -194,10 +221,28 @@ namespace Paramore.Brighter
        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
+            ClearExpiredMessages();
+            
             DateTime sentAfter = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            return _post.Where(oe =>  oe.TimeDeposited >= sentAfter)
+            return _posts.Values.Where(oe =>  oe.TimeDeposited >= sentAfter)
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
+        }
+
+        private void ClearExpiredMessages()
+        {
+            var now = DateTime.Now;
+
+            if (now - _lastScanAt < ExpirationScanInterval)
+                return;
+            
+            var expiredPosts = _posts.Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive).Select(entry => entry.Key);
+            foreach (var post in expiredPosts)
+            {
+                _posts.TryRemove(post, out _);
+            }
+
+            _lastScanAt = now;
         }
     
         class OutboxEntry
