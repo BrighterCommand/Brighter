@@ -40,6 +40,8 @@ namespace Paramore.Brighter
     /// <summary>
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Outbox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
+    /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
+    /// so you can use multiple instances safely as well
     /// </summary>
     public class InMemoryOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
     {
@@ -78,12 +80,13 @@ namespace Paramore.Brighter
         public int MessageCount => _posts.Count;
 
         /// <summary>
-        /// What percentage should we compact the outbox by, when we hit the size limit
+        /// At what percentage of our size limit should we return, once we hit that limit
         /// </summary>
-        public double CompactionPercentage { get; set; }
+        public double CompactionPercentage{ get; set; }
 
 
         private DateTime _lastScanAt = DateTime.UtcNow;
+        private readonly object _cleanupRunningLockObject = new object();
 
         /// <summary>
         /// Adds the specified message
@@ -93,6 +96,7 @@ namespace Paramore.Brighter
         public void Add(Message message, int outBoxTimeout = -1)
         {
             ClearExpiredMessages();
+            EnforceCapacityLimit();
             
             if (!_posts.ContainsKey(message.Id))
             {
@@ -253,15 +257,26 @@ namespace Paramore.Brighter
             if (now - _lastScanAt < ExpirationScanInterval)
                 return;
 
-            //This is expensive, so use a background thread
-            Task.Factory.StartNew(
-                action:state => RemoveExpiredMessages((DateTime)state), 
-                state: now, 
-                cancellationToken:CancellationToken.None, 
-                creationOptions:TaskCreationOptions.DenyChildAttach, 
-                scheduler:TaskScheduler.Default);
+            if (Monitor.TryEnter(_cleanupRunningLockObject))
+            {
+                try
+                {
+                    //This is expensive, so use a background thread
+                    Task.Factory.StartNew(
+                        action: state => RemoveExpiredMessages((DateTime)state),
+                        state: now,
+                        cancellationToken: CancellationToken.None,
+                        creationOptions: TaskCreationOptions.DenyChildAttach,
+                        scheduler: TaskScheduler.Default);
 
-            _lastScanAt = now;
+                    _lastScanAt = now;
+
+                }
+                finally
+                {
+                    Monitor.Exit(_cleanupRunningLockObject);
+                }
+            }
         }
 
         private void RemoveExpiredMessages(DateTime now)
@@ -269,7 +284,52 @@ namespace Paramore.Brighter
            var expiredPosts = _posts.Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive).Select(entry => entry.Key);
             foreach (var post in expiredPosts)
             {
+                //if this fails ignore, killed by something else like compaction
                 _posts.TryRemove(post, out _);
+            }
+        }
+
+        private void EnforceCapacityLimit()
+        {
+            //Take a copy as it may change whilst we are doing the calculation, we ignore that
+            var count = MessageCount;
+            var upperSize = MessageLimit;
+
+            if (count >= upperSize)
+            {
+                if (Monitor.TryEnter(_cleanupRunningLockObject))
+                {
+                    try
+                    {
+                        int newSize = (int)(count * CompactionPercentage);
+                        int entriesToRemove = upperSize - newSize;
+
+                        Task.Factory.StartNew(
+                            action: state => Compact((int)state),
+                            state: entriesToRemove,
+                            CancellationToken.None,
+                            TaskCreationOptions.DenyChildAttach,
+                            TaskScheduler.Default);
+
+                    }
+                    finally
+                    {
+                        Monitor.Exit(_cleanupRunningLockObject);
+                    }
+                }
+            }
+        }
+
+        // Compaction algorithm is to sort into date deposited order, with oldest first
+        // Then remove entries until newsize is reached
+        private void Compact(int entriesToRemove)
+        {
+            var removalList = _posts.Values.OrderBy(entry => entry.TimeDeposited).Take(entriesToRemove).Select(entry => entry.Message.Id);
+
+            foreach (var messageId in removalList)
+            {
+                //ignore errors, likely just something else has cleared it such as TTL eviction
+                _posts.TryRemove(messageId, out _);
             }
         }
 
