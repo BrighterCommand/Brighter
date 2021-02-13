@@ -96,6 +96,21 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
     
+  in-memory:
+    runs-on: ubuntu-latest
+    needs: [test]
+
+   steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: In Memory Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n  
+        
   redis-ci:
     runs-on: ubuntu-latest
     needs: [test]
