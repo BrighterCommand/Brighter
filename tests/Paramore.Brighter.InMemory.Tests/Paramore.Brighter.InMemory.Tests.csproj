@@ -24,4 +24,8 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Folder Include="Inbox" />
+    </ItemGroup>
+
 </Project>
