@@ -2,6 +2,7 @@
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk> 
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -26,7 +27,6 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml.Serialization;
 using FluentAssertions;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Xunit;
