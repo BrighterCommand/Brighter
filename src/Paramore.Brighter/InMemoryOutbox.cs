@@ -149,7 +149,7 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
-            return _posts.Values.Where(oe =>  oe.TimeDeposited > dispatchedSince)
+            return _posts.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -244,8 +244,8 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            DateTime sentAfter = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            return _posts.Values.Where(oe =>  oe.TimeDeposited >= sentAfter)
+            DateTime sentBefore = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
+            return _posts.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.TimeDeposited <= sentBefore))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }

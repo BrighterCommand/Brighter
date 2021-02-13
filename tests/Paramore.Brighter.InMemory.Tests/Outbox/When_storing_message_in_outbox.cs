@@ -25,7 +25,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Xml.Serialization;
 using FluentAssertions;
+using Paramore.Brighter.InMemory.Tests.Builders;
 using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Outbox
@@ -98,15 +101,63 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Act
             outbox.Add(messageToAdd);
 
-            var outstandingMessages = outbox.OutstandingMessages(5000);
+            var outstandingMessages = outbox.OutstandingMessages(0);
             
             //Assert
             outstandingMessages.Count().Should().Be(1);
             outstandingMessages.First().Id.Should().Be(messageId);
 
         }
+
+        [Fact]
+        public void When_there_are_multiple_items_retrieve_by_id()
+        {
+            //Arrange
+            var outbox = new InMemoryOutbox();
+
+            var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
+            for(int i =0; i <= 4; i++)
+                outbox.Add(new MessageBuilder().WithId(messageIds[i]));
+
+            //Act 
+            var message = outbox.Get(messageIds[2]);
+            
+            //Assert
+            message.Id.Should().Be(messageIds[2]);
+        }
+
+        [Fact]
+        public void When_there_are_multiple_items_and_some_are_dispatched()
+        {
+            //Arrange
+            var outbox = new InMemoryOutbox();
+
+            var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
+            for(int i =0; i <= 4; i++)
+                outbox.Add(new MessageBuilder().WithId(messageIds[i]));
+
+            //Act 
+            var now = DateTime.UtcNow;
+            outbox.MarkDispatched(messageIds[0], now);
+            outbox.MarkDispatched(messageIds[4], now);
+
+            Task.Delay(500).Wait();
+
+            var sentMessages = outbox.DispatchedMessages(5000);
+            var outstandingMessages = outbox.OutstandingMessages(0);
+
+            //Assert
+            sentMessages.Count().Should().Be(2);
+            outstandingMessages.Count().Should().Be(3);
+            sentMessages.Any(msg => msg.Id == messageIds[0]).Should().BeTrue();
+            sentMessages.Any(msg => msg.Id == messageIds[4]).Should().BeTrue();
+            outstandingMessages.Any(msg => msg.Id == messageIds[1]).Should().BeTrue();
+            outstandingMessages.Any(msg => msg.Id == messageIds[2]).Should().BeTrue();
+            outstandingMessages.Any(msg => msg.Id == messageIds[3]).Should().BeTrue();
+
+
+        }
         
-        //TODO: We need a test to get when multiple items - do we get the right one?
         //TODO: We need a test for any list operation that excludes some and includes others
    }
 }
