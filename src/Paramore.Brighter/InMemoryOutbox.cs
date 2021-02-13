@@ -281,7 +281,11 @@ namespace Paramore.Brighter
 
         private void RemoveExpiredMessages(DateTime now)
         {
-           var expiredPosts = _posts.Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive).Select(entry => entry.Key);
+           var expiredPosts = 
+               _posts
+                   .Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive)
+                   .Select(entry => entry.Key);
+           
             foreach (var post in expiredPosts)
             {
                 //if this fails ignore, killed by something else like compaction
@@ -324,7 +328,12 @@ namespace Paramore.Brighter
         // Then remove entries until newsize is reached
         private void Compact(int entriesToRemove)
         {
-            var removalList = _posts.Values.OrderBy(entry => entry.TimeDeposited).Take(entriesToRemove).Select(entry => entry.Message.Id);
+            var removalList = 
+                _posts
+                    .Values
+                    .OrderBy(entry => entry.TimeDeposited)
+                    .Take(entriesToRemove)
+                    .Select(entry => entry.Message.Id);
 
             foreach (var messageId in removalList)
             {
