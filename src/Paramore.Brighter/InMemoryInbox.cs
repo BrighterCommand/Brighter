@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -34,11 +35,17 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class InMemoryInbox.
-    /// This is mainly intended to support developer tests where a persistent inbox is not needed
+    /// A Inbox stores <see cref="Command"/>s for diagnostics or replay.
+    /// This class is intended to be thread-safe, so you can use one InMemoryInbox across multiple performers. However, the state is not global i.e. static
+    /// so you can use multiple instances safely as well.
+    /// N.B. that the primary limitation of this in-memory inbox is that it will not work across processes. So if you use the competing consumers pattern
+    /// the consumers will not be able to determine if another consumer has already processed this command.
+    /// It is possible to use multiple performers within one process as competing consumers, and if you want to use an InMemoryInbox this is the most
+    /// viable strategy - otherwise use an out-of-process inbox that provides shared state to all consumers
     /// </summary>
     public class InMemoryInbox : IAmAnInbox, IAmAnInboxAsync
     {
-        private readonly Dictionary<string, InboxItem> _commands = new Dictionary<string, InboxItem>();
+        private readonly ConcurrentDictionary<string, InboxItem> _commands = new ConcurrentDictionary<string, InboxItem>();
 
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -61,7 +68,10 @@ namespace Paramore.Brighter
             string key = CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                _commands.Add(key, new InboxItem(typeof (T), string.Empty, contextKey));
+                if (!_commands.TryAdd(key, new InboxItem(typeof (T), string.Empty, contextKey)))
+                {
+                    throw new Exception($"Could not add command: {command.Id} to the Inbox");
+                }
             }
 
             _commands[key].CommandBody = JsonConvert.SerializeObject(command);
