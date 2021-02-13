@@ -157,7 +157,26 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
 
         }
+
+
+        [Fact]
+        public void When_paging_a_list_of_messages()
+        {
+           //Arrange
+           var outbox = new InMemoryOutbox();
+           
+           for(int i =0; i <= 8; i++) // -- nine items
+               outbox.Add(new MessageBuilder());
+
+           //Act 
+           var firstPage = outbox.Get(5, 1);
+           var secondPage = outbox.Get(5, 2);
+
+           //Assert
+           firstPage.Count().Should().Be(5);
+           secondPage.Count().Should().Be(4); // -- only 4 on the second page
+
+        }
         
-        //TODO: We need a test for any list operation that excludes some and includes others
    }
 }

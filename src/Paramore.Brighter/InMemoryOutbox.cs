@@ -177,8 +177,16 @@ namespace Paramore.Brighter
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
-            
-            return _posts.Values.Select(oe => oe.Message).Take(pageSize).ToList();
+
+            if (pageNumber == 1)
+            {
+                return _posts.Values.Select(oe => oe.Message).Take(pageSize).ToList();
+            }
+            else
+            {
+                var skipMessageCount = (pageNumber-1) * pageSize;
+                return _posts.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
+            }
         }
          
        /// <summary>
