@@ -27,8 +27,13 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Act
             outbox.Add(messageToAdd);
             
-            Task.Delay(200).Wait(); //give the entry to time to expire
-
+            Task.Delay(500).Wait(); //give the entry to time to expire
+            
+            //Trigger a cache clean
+            outbox.Get(messageId);
+            
+            Task.Delay(500).Wait(); //Give the sweep time to run
+            
             var message = outbox.Get(messageId);
             
             //Assert

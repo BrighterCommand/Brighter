@@ -21,6 +21,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+/*
+ * NOTE:
+ * Design inspired by MS System.Extensions.Caching.Memory.MemoryCache
+ */
+
 #endregion
 
 using System;
@@ -61,11 +66,23 @@ namespace Paramore.Brighter
         /// if it has been this long since the last scan, any operation can trigger a scan of the
         /// cache to delete existing entries (defaults to 5 mins)
         /// Your expiration interval should greater than your time to live, and represents the frequency at which we will reclaim memory
-        /// Note that scan check is triggered by an operation on the outbox, so you will experience latency whilst the scan happens
+        /// Note that scan check is triggered by an operation on the outbox, but it runs on a background thread to avoid latency with basic operation
         /// </summary>
         public TimeSpan ExpirationScanInterval { get; set; } = TimeSpan.FromMinutes(10);
-        
-        
+
+        public int MessageLimit { get; set; }
+
+        /// <summary>
+        /// For diagnostics 
+        /// </summary>
+        public int MessageCount => _posts.Count;
+
+        /// <summary>
+        /// What percentage should we compact the outbox by, when we hit the size limit
+        /// </summary>
+        public double CompactionPercentage { get; set; }
+
+
         private DateTime _lastScanAt = DateTime.UtcNow;
 
         /// <summary>
@@ -232,19 +249,30 @@ namespace Paramore.Brighter
         private void ClearExpiredMessages()
         {
             var now = DateTime.Now;
-
+            
             if (now - _lastScanAt < ExpirationScanInterval)
                 return;
-            
-            var expiredPosts = _posts.Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive).Select(entry => entry.Key);
+
+            //This is expensive, so use a background thread
+            Task.Factory.StartNew(
+                action:state => RemoveExpiredMessages((DateTime)state), 
+                state: now, 
+                cancellationToken:CancellationToken.None, 
+                creationOptions:TaskCreationOptions.DenyChildAttach, 
+                scheduler:TaskScheduler.Default);
+
+            _lastScanAt = now;
+        }
+
+        private void RemoveExpiredMessages(DateTime now)
+        {
+           var expiredPosts = _posts.Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive).Select(entry => entry.Key);
             foreach (var post in expiredPosts)
             {
                 _posts.TryRemove(post, out _);
             }
-
-            _lastScanAt = now;
         }
-    
+
         class OutboxEntry
         {
             public DateTime TimeDeposited { get; set; }
