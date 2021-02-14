@@ -61,7 +61,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
                 inbox.Add(command, contextKey);
             }
 
-            Task.Delay(1000).Wait();  //expire these items
+            Task.Delay(2000).Wait();  //expire these items
 
             var lateCommands = new SimpleCommand[] { new SimpleCommand(), new SimpleCommand(), new SimpleCommand()};
 
