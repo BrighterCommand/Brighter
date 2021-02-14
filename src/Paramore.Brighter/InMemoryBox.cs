@@ -7,19 +7,21 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
+    /// <summary>
+    /// An item stored in an im-memory box needs to implement this, so we know if we should delete it from the box due to time or memory pressure 
+    /// </summary>
     public interface IHaveABoxWriteTime
     {
-        /// <summary>
-        /// An identifier for the item
-        /// </summary>
-        Guid Id { get; }
-        
         /// <summary>
         /// When was this item written to the box
         /// </summary>
         DateTime WriteTime { get; }
     }
      
+    /// <summary>
+    /// Base class for in-memory inboxes, handles TTL on entries and cache clearing requirements
+    /// </summary>
+    /// <typeparam name="T">An entry in the box, needs to a writetime so we know if we can clear it from the box</typeparam>
     public class InMemoryBox<T> where T: IHaveABoxWriteTime
     {
         protected readonly ConcurrentDictionary<string, T> _requests = new ConcurrentDictionary<string, T>();

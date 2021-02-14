@@ -80,12 +80,6 @@ namespace Paramore.Brighter
         public DateTime WriteTime { get; }
 
         /// <summary>
-        /// Gets the Id
-        /// </summary>
-        /// <value>The command context key.</value>
-        public Guid Id { get; set; }
-        
-        /// <summary>
         /// The Id and the key for the context i.e. message type, that we are looking for
         /// Occurs because we may service the same message in different contexts and need to
         /// know they are all handled or not

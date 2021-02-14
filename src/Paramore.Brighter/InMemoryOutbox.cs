@@ -42,8 +42,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class OutboxEntry : IHaveABoxWriteTime
     {
-        public Guid Id => Message.Id;
-
         /// <summary>
         /// When was the message added to the outbox
         /// </summary>
