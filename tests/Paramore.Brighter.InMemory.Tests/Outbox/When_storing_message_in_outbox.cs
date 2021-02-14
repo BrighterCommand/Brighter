@@ -117,7 +117,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
             for(int i =0; i <= 4; i++)
-                outbox.Add(new MessageBuilder().WithId(messageIds[i]));
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
 
             //Act 
             var message = outbox.Get(messageIds[2]);
@@ -134,7 +134,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
             for(int i =0; i <= 4; i++)
-                outbox.Add(new MessageBuilder().WithId(messageIds[i]));
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
 
             //Act 
             var now = DateTime.UtcNow;
@@ -166,7 +166,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
            var outbox = new InMemoryOutbox();
            
            for(int i =0; i <= 8; i++) // -- nine items
-               outbox.Add(new MessageBuilder());
+               outbox.Add(new MessageTestDataBuilder());
 
            //Act 
            var firstPage = outbox.Get(5, 1);

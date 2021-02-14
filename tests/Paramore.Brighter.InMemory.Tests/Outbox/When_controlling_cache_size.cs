@@ -45,12 +45,12 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             };
             
             for(int i =1; i <= limit; i++)
-                outbox.Add(new MessageBuilder());
+                outbox.Add(new MessageTestDataBuilder());
 
             //Act
             outbox.EntryCount.Should().Be(5);
             
-            outbox.Add(new MessageBuilder());
+            outbox.Add(new MessageTestDataBuilder());
 
             Task.Delay(500).Wait(); //Allow time for compaction to run
             
@@ -74,14 +74,14 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             for (int i = 0; i <= limit - 1; i++)
             {
-                outbox.Add(new MessageBuilder().WithId(messageIds[i]));
+                outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
                 Task.Delay(1000);
             }
 
             //Act
             outbox.EntryCount.Should().Be(5);
             
-            outbox.Add(new MessageBuilder());
+            outbox.Add(new MessageTestDataBuilder());
 
             Task.Delay(500).Wait(); //Allow time for compaction to run
             

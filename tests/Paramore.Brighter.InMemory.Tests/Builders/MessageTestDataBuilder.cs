@@ -8,31 +8,31 @@ namespace Paramore.Brighter.InMemory.Tests.Builders
         public MessageBody Body { get; set; }
     }
     
-    public class MessageBuilder
+    public class MessageTestDataBuilder
     {
         private readonly MessageSpecification _specification = new MessageSpecification();
 
-        public MessageBuilder()
+        public MessageTestDataBuilder()
         {
             _specification.Header = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT); 
             _specification.Body = new MessageBody("message body");
         }
 
-        public MessageBuilder WithId(Guid id)
+        public MessageTestDataBuilder WithId(Guid id)
         {
             _specification.Header = new MessageHeader(id, _specification.Header.Topic, _specification.Header.MessageType);
             return this;
         }
 
-        public MessageBuilder With(Action<MessageSpecification> action)
+        public MessageTestDataBuilder With(Action<MessageSpecification> action)
         {
             action(_specification);
             return this;
         }
 
-        public static implicit operator Message(MessageBuilder builder)
+        public static implicit operator Message(MessageTestDataBuilder testDataBuilder)
         {
-            return new Message(builder._specification.Header, builder._specification.Body);
+            return new Message(testDataBuilder._specification.Header, testDataBuilder._specification.Body);
         } 
     }
 }
