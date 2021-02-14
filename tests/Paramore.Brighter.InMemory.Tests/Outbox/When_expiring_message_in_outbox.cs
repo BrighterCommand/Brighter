@@ -39,7 +39,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             var outbox = new InMemoryOutbox()
             {
                 //set some aggressive outbox reclamation times for the test
-                PostTimeToLive = TimeSpan.FromMilliseconds(50),
+                EntryTimeToLive = TimeSpan.FromMilliseconds(50),
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
             
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                var outbox = new InMemoryOutbox()
                {
                    //set low time to live but long sweep perioc
-                   PostTimeToLive = TimeSpan.FromMilliseconds(50),
+                   EntryTimeToLive = TimeSpan.FromMilliseconds(50),
                    ExpirationScanInterval = TimeSpan.FromMilliseconds(10000)
                };
                

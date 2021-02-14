@@ -25,7 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
@@ -33,6 +32,79 @@ using Paramore.Brighter.Inbox.Exceptions;
 
 namespace Paramore.Brighter
 {
+    /// <summary>
+    /// An item in the inbox - a message that we have received
+    /// </summary>
+    public class InboxItem : IHaveABoxWriteTime
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InboxItem"/> class.
+        /// </summary>
+        /// <param name="requestType">Type of the request.</param>
+        /// <param name="requestBody">The request body.</param>
+        /// <param name="writeTime">The request arrived at when.</param>
+        /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
+        private InboxItem(Type requestType, string requestBody, DateTime writeTime, string contextKey)
+        {
+            RequestType = requestType;
+            RequestBody = requestBody;
+            WriteTime = writeTime;
+            Key = contextKey;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="InboxItem"/> class.
+        /// </summary>
+        /// <param name="requestType">Type of the command.</param>
+        /// <param name="requestBody">The command body.</param>
+        public InboxItem(Type requestType, string requestBody, string contextKey)
+            : this(requestType, requestBody, DateTime.UtcNow, contextKey) {}
+
+        /// <summary>
+        /// Gets or sets the command body.
+        /// </summary>
+        /// <value>The command body.</value>
+        public string RequestBody { get; set; }
+        
+        /// <summary>
+        /// Gets the type of the command.
+        /// </summary>
+        /// <value>The type of the command.</value>
+        public Type RequestType { get; }
+
+        /// <summary>
+        /// Gets the command when.
+        /// </summary>
+        /// <value>The command when.</value>
+
+        public DateTime WriteTime { get; }
+
+        /// <summary>
+        /// Gets the Id
+        /// </summary>
+        /// <value>The command context key.</value>
+        public Guid Id { get; set; }
+        
+        /// <summary>
+        /// The Id and the key for the context i.e. message type, that we are looking for
+        /// Occurs because we may service the same message in different contexts and need to
+        /// know they are all handled or not
+        /// </summary>
+        string Key { get;}
+
+        /// <summary>
+        /// Convert a Guid identity and context into a key, convenience wrapper
+        /// </summary>
+        /// <param name="id">The Guid for the request</param>
+        /// <param name="contextKey">The handler this is for</param>
+        /// <returns></returns>
+        public static string CreateKey(Guid id, string contextKey)
+        {
+            return $"{id}:{contextKey}";
+        }
+    }
+    
+    
     /// <summary>
     /// Class InMemoryInbox.
     /// A Inbox stores <see cref="Command"/>s for diagnostics or replay.
@@ -43,10 +115,8 @@ namespace Paramore.Brighter
     /// It is possible to use multiple performers within one process as competing consumers, and if you want to use an InMemoryInbox this is the most
     /// viable strategy - otherwise use an out-of-process inbox that provides shared state to all consumers
     /// </summary>
-    public class InMemoryInbox : IAmAnInbox, IAmAnInboxAsync
+    public class InMemoryInbox : InMemoryBox<InboxItem>, IAmAnInbox, IAmAnInboxAsync
     {
-        private readonly ConcurrentDictionary<string, InboxItem> _commands = new ConcurrentDictionary<string, InboxItem>();
-
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
@@ -55,7 +125,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
-
+        
         /// <summary>
         /// Adds the specified identifier.
         /// </summary>
@@ -65,16 +135,18 @@ namespace Paramore.Brighter
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            string key = CreateKey(command.Id, contextKey);
+            ClearExpiredMessages();
+            
+            string key = InboxItem.CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
-                if (!_commands.TryAdd(key, new InboxItem(typeof (T), string.Empty, contextKey)))
+                if (!_requests.TryAdd(key, new InboxItem(typeof (T), string.Empty, contextKey)))
                 {
                     throw new Exception($"Could not add command: {command.Id} to the Inbox");
                 }
             }
 
-            _commands[key].CommandBody = JsonConvert.SerializeObject(command);
+            _requests[key].RequestBody = JsonConvert.SerializeObject(command);
         }
 
         /// <summary>
@@ -114,22 +186,26 @@ namespace Paramore.Brighter
         /// <exception cref="System.TypeLoadException"></exception>
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
+            ClearExpiredMessages();
+            
             if (!Exists<T>(id, contextKey))
             {
                throw new RequestNotFoundException<T>(id);
             }
 
-            var inboxItem = _commands[CreateKey(id, contextKey)];
-            if (inboxItem.CommandType != typeof (T))
-                throw new TypeLoadException(string.Format($"The type of item {id} is {inboxItem.CommandType.Name} not {typeof(T).Name}"));
+            var inboxItem = _requests[InboxItem.CreateKey(id, contextKey)];
+            if (inboxItem.RequestType != typeof (T))
+                throw new TypeLoadException(string.Format($"The type of item {id} is {inboxItem.RequestType.Name} not {typeof(T).Name}"));
 
-            return JsonConvert.DeserializeObject<T>(inboxItem.CommandBody);
+            return JsonConvert.DeserializeObject<T>(inboxItem.RequestBody);
         }
 
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            string key = CreateKey(id, contextKey);
-            return _commands.ContainsKey(key);
+            ClearExpiredMessages();
+            
+            string key = InboxItem.CreateKey(id, contextKey);
+            return _requests.ContainsKey(key);
         }
 
         /// <summary>
@@ -182,63 +258,5 @@ namespace Paramore.Brighter
             tcs.SetResult(command);
             return tcs.Task;
         }
-
-        private string CreateKey(Guid id, string contextKey)
-        {
-            return $"{id}:{contextKey}";
-        }
-
-        /// <summary>
-        /// Class InboxItem.
-        /// </summary>
-        private class InboxItem
-        {
-            /// <summary>
-            /// Initializes a new instance of the <see cref="InboxItem"/> class.
-            /// </summary>
-            /// <param name="commandType">Type of the command.</param>
-            /// <param name="commandBody">The command body.</param>
-            /// <param name="commandWhen">The command when.</param>
-            /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-            private InboxItem(Type commandType, string commandBody, DateTime commandWhen, string contextKey)
-            {
-                CommandType = commandType;
-                CommandBody = commandBody;
-                CommandWhen = commandWhen;
-                ContextKey = contextKey;
-            }
-
-            /// <summary>
-            /// Initializes a new instance of the <see cref="InboxItem"/> class.
-            /// </summary>
-            /// <param name="commandType">Type of the command.</param>
-            /// <param name="commandBody">The command body.</param>
-            public InboxItem(Type commandType, string commandBody, string contextKey)
-                : this(commandType, commandBody, DateTime.UtcNow, contextKey) {}
-
-            /// <summary>
-            /// Gets or sets the command body.
-            /// </summary>
-            /// <value>The command body.</value>
-            public string CommandBody { get; set; }
-            
-            /// <summary>
-            /// Gets the type of the command.
-            /// </summary>
-            /// <value>The type of the command.</value>
-            public Type CommandType { get; }
-
-            /// <summary>
-            /// Gets the command when.
-            /// </summary>
-            /// <value>The command when.</value>
-            public DateTime CommandWhen { get; }
-
-            /// <summary>
-            /// Gets the context key
-            /// </summary>
-            /// <value>The command context key.</value>
-            public string ContextKey { get; }
-        }
-    }
+   }
 }

@@ -37,16 +37,53 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
+   /// <summary>
+    /// An outbox entry - a message that we want to send
+    /// </summary>
+    public class OutboxEntry : IHaveABoxWriteTime
+    {
+        public Guid Id => Message.Id;
+
+        /// <summary>
+        /// When was the message added to the outbox
+        /// </summary>
+        public DateTime WriteTime { get; set; }
+        
+        /// <summary>
+        /// When was the message sent to the middleware
+        /// </summary>
+        public DateTime TimeFlushed { get; set; }
+        
+        /// <summary>
+        /// The message to be dispatched
+        /// </summary>
+        public Message Message { get; set; }
+
+        /// <summary>
+        /// The Id of the message as a string key
+        /// </summary>
+        public string Key => Message.Id.ToString();
+
+        /// <summary>
+        /// Turn a Guid into an inbox key - convenience wrapper
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public static string ConvertKey(Guid id)
+        {
+            return $"{id}";
+        }
+    }
+
+
     /// <summary>
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Outbox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well
     /// </summary>
-    public class InMemoryOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
     {
-        private readonly ConcurrentDictionary<Guid, OutboxEntry> _posts = new ConcurrentDictionary<Guid, OutboxEntry>();
-
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
@@ -55,40 +92,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
-        
-        /// <summary>
-        /// How long does an entry last in the Outbox before we delete it (defaults to 5 min)
-        /// Think about your typical data volumes over a window of time, they all use memory to store
-        /// But contrast with how long you want to be able to resend due to broker failure for.
-        /// Memory is not reclaimed until an expiration scan
-        /// </summary>
-        public TimeSpan PostTimeToLive { get; set; } = TimeSpan.FromMinutes(5);
-        
-        /// <summary>
-        /// if it has been this long since the last scan, any operation can trigger a scan of the
-        /// cache to delete existing entries (defaults to 5 mins)
-        /// Your expiration interval should greater than your time to live, and represents the frequency at which we will reclaim memory
-        /// Note that scan check is triggered by an operation on the outbox, but it runs on a background thread to avoid latency with basic operation
-        /// </summary>
-        public TimeSpan ExpirationScanInterval { get; set; } = TimeSpan.FromMinutes(10);
 
-        public int MessageLimit { get; set; }
-
-        /// <summary>
-        /// For diagnostics 
-        /// </summary>
-        public int MessageCount => _posts.Count;
-
-        /// <summary>
-        /// At what percentage of our size limit should we return, once we hit that limit
-        /// </summary>
-        public double CompactionPercentage{ get; set; }
-
-
-        private DateTime _lastScanAt = DateTime.UtcNow;
-        private readonly object _cleanupRunningLockObject = new object();
-
-        /// <summary>
+       /// <summary>
         /// Adds the specified message
         /// </summary>
         /// <param name="message"></param>
@@ -97,10 +102,11 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
-            
-            if (!_posts.ContainsKey(message.Id))
+
+            var key = OutboxEntry.ConvertKey(message.Id);
+            if (!_requests.ContainsKey(key))
             {
-                if (!_posts.TryAdd(message.Id, new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow}))
+                if (!_requests.TryAdd(key, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
                 {
                     throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                 }
@@ -149,7 +155,7 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
-            return _posts.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
+            return _requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -164,7 +170,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            return _posts.TryGetValue(messageId, out OutboxEntry entry) ? entry.Message : null;
+            return _requests.TryGetValue(OutboxEntry.ConvertKey(messageId), out OutboxEntry entry) ? entry.Message : null;
         }
 
         /// <summary>
@@ -180,12 +186,12 @@ namespace Paramore.Brighter
 
             if (pageNumber == 1)
             {
-                return _posts.Values.Select(oe => oe.Message).Take(pageSize).ToList();
+                return _requests.Values.Select(oe => oe.Message).Take(pageSize).ToList();
             }
             else
             {
                 var skipMessageCount = (pageNumber-1) * pageSize;
-                return _posts.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
+                return _requests.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
             }
         }
          
@@ -235,7 +241,7 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            if (_posts.TryGetValue(id, out OutboxEntry entry))
+            if (_requests.TryGetValue(OutboxEntry.ConvertKey(id), out OutboxEntry entry))
             {
                 entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
             }
@@ -253,108 +259,10 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             DateTime sentBefore = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            return _posts.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.TimeDeposited <= sentBefore))
+            return _requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
 
-        private void ClearExpiredMessages()
-        {
-            var now = DateTime.Now;
-            
-            if (now - _lastScanAt < ExpirationScanInterval)
-                return;
-
-            if (Monitor.TryEnter(_cleanupRunningLockObject))
-            {
-                try
-                {
-                    //This is expensive, so use a background thread
-                    Task.Factory.StartNew(
-                        action: state => RemoveExpiredMessages((DateTime)state),
-                        state: now,
-                        cancellationToken: CancellationToken.None,
-                        creationOptions: TaskCreationOptions.DenyChildAttach,
-                        scheduler: TaskScheduler.Default);
-
-                    _lastScanAt = now;
-
-                }
-                finally
-                {
-                    Monitor.Exit(_cleanupRunningLockObject);
-                }
-            }
-        }
-
-        private void RemoveExpiredMessages(DateTime now)
-        {
-           var expiredPosts = 
-               _posts
-                   .Where(entry => now - entry.Value.TimeDeposited >= PostTimeToLive)
-                   .Select(entry => entry.Key);
-           
-            foreach (var post in expiredPosts)
-            {
-                //if this fails ignore, killed by something else like compaction
-                _posts.TryRemove(post, out _);
-            }
-        }
-
-        private void EnforceCapacityLimit()
-        {
-            //Take a copy as it may change whilst we are doing the calculation, we ignore that
-            var count = MessageCount;
-            var upperSize = MessageLimit;
-
-            if (count >= upperSize)
-            {
-                if (Monitor.TryEnter(_cleanupRunningLockObject))
-                {
-                    try
-                    {
-                        int newSize = (int)(count * CompactionPercentage);
-                        int entriesToRemove = upperSize - newSize;
-
-                        Task.Factory.StartNew(
-                            action: state => Compact((int)state),
-                            state: entriesToRemove,
-                            CancellationToken.None,
-                            TaskCreationOptions.DenyChildAttach,
-                            TaskScheduler.Default);
-
-                    }
-                    finally
-                    {
-                        Monitor.Exit(_cleanupRunningLockObject);
-                    }
-                }
-            }
-        }
-
-        // Compaction algorithm is to sort into date deposited order, with oldest first
-        // Then remove entries until newsize is reached
-        private void Compact(int entriesToRemove)
-        {
-            var removalList = 
-                _posts
-                    .Values
-                    .OrderBy(entry => entry.TimeDeposited)
-                    .Take(entriesToRemove)
-                    .Select(entry => entry.Message.Id);
-
-            foreach (var messageId in removalList)
-            {
-                //ignore errors, likely just something else has cleared it such as TTL eviction
-                _posts.TryRemove(messageId, out _);
-            }
-        }
-
-        class OutboxEntry
-        {
-            public DateTime TimeDeposited { get; set; }
-            public DateTime TimeFlushed { get; set; }
-            public Message Message { get; set; }
-        }
-   }
+ }
 }

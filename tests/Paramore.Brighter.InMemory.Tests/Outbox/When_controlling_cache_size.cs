@@ -40,7 +40,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             var outbox = new InMemoryOutbox()
             {
-                MessageLimit = limit,
+                EntryLimit = limit,
                 CompactionPercentage = 0.5
             };
             
@@ -48,14 +48,14 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 outbox.Add(new MessageBuilder());
 
             //Act
-            outbox.MessageCount.Should().Be(5);
+            outbox.EntryCount.Should().Be(5);
             
             outbox.Add(new MessageBuilder());
 
             Task.Delay(500).Wait(); //Allow time for compaction to run
             
             //should clear compaction percentage from the outbox, and then add  the  new one
-            outbox.MessageCount.Should().Be(3);
+            outbox.EntryCount.Should().Be(3);
         }
 
         [Fact]
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             var outbox = new InMemoryOutbox()
             {
-                MessageLimit = limit,
+                EntryLimit = limit,
                 CompactionPercentage = 0.5
             };
 
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             }
 
             //Act
-            outbox.MessageCount.Should().Be(5);
+            outbox.EntryCount.Should().Be(5);
             
             outbox.Add(new MessageBuilder());
 
