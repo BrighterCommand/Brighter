@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.InMemory.Tests.Data;
 using Xunit;
 
@@ -29,7 +30,15 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             Task.Delay(500).Wait(); //give the entry to time to expire
             
             //Trigger a cache clean
-            var foundCommand = inbox.Get<SimpleCommand>(command.Id, contextKey);
+            SimpleCommand foundCommand = null;
+            try
+            {
+                foundCommand = inbox.Get<SimpleCommand>(command.Id, contextKey);
+            }
+            catch (Exception e) when (e is RequestNotFoundException<SimpleCommand> || e is TypeLoadException)
+            {
+                //early sweeper run means it doesn't exist already
+            }
 
             Task.Delay(500).Wait(); //Give the sweep time to run
             
