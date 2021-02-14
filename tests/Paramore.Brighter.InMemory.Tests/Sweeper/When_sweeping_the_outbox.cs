@@ -28,7 +28,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
 
             //Act
-            Task.Delay(500).Wait(); // -- let the messages expire
+            Task.Delay(1000).Wait(); // -- let the messages expire
             
             sweeper.Sweep();
             
