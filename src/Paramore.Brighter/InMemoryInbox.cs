@@ -182,24 +182,19 @@ namespace Paramore.Brighter
         {
             ClearExpiredMessages();
             
-            if (!Exists<T>(id, contextKey))
+            if (_requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
             {
-               throw new RequestNotFoundException<T>(id);
+                return JsonConvert.DeserializeObject<T>(inboxItem.RequestBody);
             }
 
-            var inboxItem = _requests[InboxItem.CreateKey(id, contextKey)];
-            if (inboxItem.RequestType != typeof (T))
-                throw new TypeLoadException(string.Format($"The type of item {id} is {inboxItem.RequestType.Name} not {typeof(T).Name}"));
-
-            return JsonConvert.DeserializeObject<T>(inboxItem.RequestBody);
+            throw new RequestNotFoundException<T>(id);
         }
 
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
-            
-            string key = InboxItem.CreateKey(id, contextKey);
-            return _requests.ContainsKey(key);
+
+            return _requests.ContainsKey(InboxItem.CreateKey(id, contextKey));
         }
 
         /// <summary>
