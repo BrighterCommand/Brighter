@@ -479,18 +479,26 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             var header = new MessageHeader(id, topic, messageType);
 
+            //new schema....we've got the extra header information
             if (dr.FieldCount > 4)
             {
-                //new schema....we've got the extra header information
-                var ordinal = dr.GetOrdinal("Timestamp");
-                var timeStamp = dr.IsDBNull(ordinal)
-                    ? DateTime.MinValue
-                    : dr.GetDateTime(ordinal);
-                header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
+                DateTime timeStamp = GetTimeStamp(dr);
+                var correlationId = GetCorrelationId(dr);
+                var replyTo = GetReplyTo(dr);
+                var contentType = GetContentType(dr);
+                
+                header = new MessageHeader(
+                    messageId:id, 
+                    topic:topic, 
+                    messageType:messageType, 
+                    timeStamp:timeStamp, 
+                    handledCount:0, 
+                   delayedMilliseconds: 0,
+                    correlationId: correlationId,
+                    replyTo: replyTo,
+                    contentType: contentType);
 
-                var i = dr.GetOrdinal("HeaderBag");
-                var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-                var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+                Dictionary<string, string> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
                     foreach (var key in dictionaryBag.Keys)
@@ -503,6 +511,50 @@ namespace Paramore.Brighter.Outbox.MsSql
             var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
+        }
+
+        private string GetContentType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
+        }
+
+        private string GetReplyTo(IDataReader dr)
+        {
+             var ordinal = dr.GetOrdinal("ReplyTo");
+             if (dr.IsDBNull(ordinal)) return null; 
+             
+             var replyTo = dr.GetString(ordinal);
+             return replyTo;
+        }
+
+        private static Dictionary<string, string> GetContextBag(IDataReader dr)
+        {
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            return dictionaryBag;
+        }
+
+        private Guid? GetCorrelationId(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("CorrelationId");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var correlationId = dr.GetGuid(ordinal);
+            return correlationId;
+        }
+
+        private static DateTime GetTimeStamp(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Timestamp");
+            var timeStamp = dr.IsDBNull(ordinal)
+                ? DateTime.MinValue
+                : dr.GetDateTime(ordinal);
+            return timeStamp;
         }
 
         private Message MapFunction(IDataReader dr)
