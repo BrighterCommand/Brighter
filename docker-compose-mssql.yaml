@@ -13,10 +13,6 @@ services:
       - ACCEPT_EULA=Y
       - SA_PASSWORD=Password123!
 
-networks:
-  kafka:
-    driver: bridge
-
 volumes:
   sqlserver-data:
     driver: local

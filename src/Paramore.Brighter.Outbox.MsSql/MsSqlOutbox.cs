@@ -440,7 +440,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
         {
             var command = connection.CreateCommand();
-            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)";
+            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
             return command;
@@ -455,6 +455,9 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateSqlParameter("Topic", message.Header.Topic),
                 CreateSqlParameter("Timestamp", message.Header.TimeStamp),
+                CreateSqlParameter("CorrelationId", message.Header.CorrelationId),
+                CreateSqlParameter("ReplyTo", message.Header.ReplyTo),
+                CreateSqlParameter("ContentType", message.Header.ContentType),
                 CreateSqlParameter("HeaderBag", bagJson),
                 CreateSqlParameter("Body", message.Body.Value)
             };

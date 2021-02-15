@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
-            //_should read the message from the sql outbox
+            //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
@@ -85,10 +85,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
              
             
             //Bag serialization
-            //_should_read_the_message_header_first_bag_item_from_the__sql_outbox
+            //should read the message header first bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            //_should_read_the_message_header_second_bag_item_from_the__sql_outbox
+            //should read the message header second bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
             _storedMessage.Header.Bag[_key2].Should().Be(_value2);
        }

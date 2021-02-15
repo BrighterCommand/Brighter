@@ -48,8 +48,16 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,
-                DateTime.UtcNow.AddDays(-1), 5, 5);
+            var messageHeader = new MessageHeader(
+                messageId:Guid.NewGuid(), 
+                topic: "test_topic", 
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1), 
+                handledCount:5, 
+                delayedMilliseconds: 5,
+                correlationId: new Guid(),
+                replyTo: "ReplyTo",
+                contentType: "text/plain");
             messageHeader.Bag.Add(key1, value1);
             messageHeader.Bag.Add(key2, value2);
 
@@ -62,20 +70,27 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id);
 
-            //_should_read_the_message_from_the__sql_outbox
+            //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
-            //_should_read_the_message_header_first_bag_item_from_the__sql_outbox
+            //should read the header from the sql outbox
+            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
+            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
+            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
+            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
+            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
+             
+            
+            //Bag serialization
+            //should read the message header first bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(key1).Should().BeTrue();
             _storedMessage.Header.Bag[key1].Should().Be(value1);
-            //_should_read_the_message_header_second_bag_item_from_the__sql_outbox
+            //should read the message header second bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(key2).Should().BeTrue();
             _storedMessage.Header.Bag[key2].Should().Be(value2);
-            //_should_read_the_message_header_timestamp_from_the__sql_outbox
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
-            //_should_read_the_message_header_topic_from_the__sql_outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            //_should_read_the_message_header_type_from_the__sql_outbox
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
+ 
         }
 
         public void Dispose()
