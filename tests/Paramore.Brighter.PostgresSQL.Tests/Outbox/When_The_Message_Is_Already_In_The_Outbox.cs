@@ -54,7 +54,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         {
             _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest));
 
-            //_should_ignore_the_duplcate_key_and_still_succeed
+            //should ignore the duplicate key and still succeed
             _exception.Should().BeNull();
         }
 

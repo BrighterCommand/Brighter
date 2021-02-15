@@ -7,6 +7,9 @@ CREATE TABLE Messages
     Topic VARCHAR(255) NULL,
     MessageType VARCHAR(32) NULL,
     Timestamp timestamptz NULL,
+    CorrelationId uuid NULL,
+    ReplyTo VARCHAR(255) NULL,
+    ContentType VARCHAR(128) NULL,
     HeaderBag TEXT NULL,
     Body TEXT NULL
 );

@@ -476,11 +476,12 @@ namespace Paramore.Brighter.Outbox.MsSql
         
         private Message MapAMessage(IDataReader dr)
         {
-            var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
-            var messageType = (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+            var id = GetMessageId(dr);
+            var messageType = GetMessageType(dr);
+            var topic = GetTopic(dr);
 
             var header = new MessageHeader(id, topic, messageType);
+            
 
             //new schema....we've got the extra header information
             if (dr.FieldCount > 4)
@@ -514,6 +515,21 @@ namespace Paramore.Brighter.Outbox.MsSql
             var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
+        }
+
+        private static string GetTopic(IDataReader dr)
+        {
+            return dr.GetString(dr.GetOrdinal("Topic"));
+        }
+
+        private static MessageType GetMessageType(IDataReader dr)
+        {
+            return (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+        }
+
+        private static Guid GetMessageId(IDataReader dr)
+        {
+            return dr.GetGuid(dr.GetOrdinal("MessageId"));
         }
 
         private string GetContentType(IDataReader dr)

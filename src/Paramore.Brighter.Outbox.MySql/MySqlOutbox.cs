@@ -533,9 +533,9 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private Message MapAMessage(IDataReader dr)
         {
-            var id = dr.GetGuid(0);
-            var messageType = (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+            var id = GetMessageId(dr);
+            var messageType = GetMessageType(dr);
+            var topic = GetTopic(dr);
 
             var header = new MessageHeader(id, topic, messageType);
 
@@ -571,7 +571,22 @@ namespace Paramore.Brighter.Outbox.MySql
 
             return new Message(header, body);
         }
-        
+
+        private static string GetTopic(IDataReader dr)
+        {
+            return dr.GetString(dr.GetOrdinal("Topic"));
+        }
+
+        private static MessageType GetMessageType(IDataReader dr)
+        {
+            return (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+        }
+
+        private static Guid GetMessageId(IDataReader dr)
+        {
+            return dr.GetGuid(0);
+        }
+
         private string GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
