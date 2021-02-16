@@ -36,7 +36,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     public class PostgreSqlOutbox : IAmAnOutbox<Message>, IAmAnOutboxViewer<Message>
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PostgreSqlOutbox>);
-        private const string PostgreSqlDuplicateKeyError_UniqueConstraintViolation = "23505";
         private readonly PostgreSqlOutboxConfiguration _configuration;
 
         public bool ContinueOnCapturedContext
@@ -73,10 +72,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     }
                     catch (PostgresException sqlException)
                     {
-                        if (sqlException.SqlState == PostgreSqlDuplicateKeyError_UniqueConstraintViolation)
+                        if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                                "PostgresSQLOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
