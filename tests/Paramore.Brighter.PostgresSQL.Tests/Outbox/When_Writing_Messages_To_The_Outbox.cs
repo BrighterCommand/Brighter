@@ -32,11 +32,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
-    [Trait("Category", "PostgreSql")]
-    [Collection("PostgreSql OutBox")]
+    [Trait("Category", "PostgresSql")]
+    [Collection("PostgresSql OutBox")]
     public class SqlOutboxWritngMessagesTests : IDisposable
     {
-        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
+        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
         private readonly Message _messageEarliest;
         private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
@@ -44,10 +44,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
         public SqlOutboxWritngMessagesTests()
         {
-            _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.SetupMessageDb();
+            _postgresSqlTestHelper = new PostgresSqlTestHelper();
+            _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
             _sqlOutbox.Add(_messageEarliest);
 
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
         private void Release()
         {
-            _PostgreSqlTestHelper.CleanUpTable();
+            _postgresSqlTestHelper.CleanUpDb();
         }
         
         public void Dispose()

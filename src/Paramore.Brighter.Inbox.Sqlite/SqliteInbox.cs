@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 var sqlAdd = GetAddSql();
                 using (var sqlcmd = connection.CreateCommand())
                 {
-                    FormatAddCommand(timeoutInMilliseconds, parameters, sqlcmd, sqlAdd);
+                    FormatAddCommand(parameters, sqlcmd, sqlAdd, timeoutInMilliseconds);
                     try
                     {
                         sqlcmd.ExecuteNonQuery();
@@ -161,7 +161,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 var sqlAdd = GetAddSql();
                 using (var sqlcmd = connection.CreateCommand())
                 {
-                    FormatAddCommand(timeoutInMilliseconds, parameters, sqlcmd, sqlAdd);
+                    FormatAddCommand(parameters, sqlcmd, sqlAdd, timeoutInMilliseconds);
                     try
                     {
                         await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -254,7 +254,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             }
         }
 
-        private void FormatAddCommand(int timeoutInMilliseconds, DbParameter[] parameters, DbCommand sqlcmd, string sqlAdd)
+        private void FormatAddCommand(DbParameter[] parameters, DbCommand sqlcmd, string sqlAdd, int timeoutInMilliseconds)
         {
             if (timeoutInMilliseconds != -1) sqlcmd.CommandTimeout = timeoutInMilliseconds;
 

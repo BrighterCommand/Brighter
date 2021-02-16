@@ -30,8 +30,8 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
-    [Trait("Category", "PostgreSql")]
-    [Collection("PostgreSql OutBox")]
+    [Trait("Category", "PostgresSql")]
+    [Collection("PostgresSql OutBox")]
     public class SqlOutboxWritingMessageTests : IDisposable
     {
         private readonly string _key1 = "name1";
@@ -41,14 +41,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private Message _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
-        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
+        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
 
         public SqlOutboxWritingMessageTests()
         {
-            _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.SetupMessageDb();
+            _postgresSqlTestHelper = new PostgresSqlTestHelper();
+            _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(), 
                 topic: "test_topic", 
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
         public void Dispose()
         {
-            _PostgreSqlTestHelper.CleanUpTable();
+            _postgresSqlTestHelper.CleanUpDb();
         }
     }
 }

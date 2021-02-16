@@ -1,6 +1,7 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2020 Ian Cooper <ian.cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -22,17 +23,20 @@ THE SOFTWARE. */
 
 #endregion
 
-namespace Paramore.Brighter.Inbox.Sqlite
+namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class SqliteInboxBuilder
+    public class PostgresSqlInboxBuilder
     {
-        const string _outboxDDL = "CREATE TABLE {0} (" +
-                "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
-                "CommandType nvarchar(256)," +
-                "CommandBody ntext," +
-                "Timestamp TIMESTAMPTZ DEFAULT Now()," +
-                "ContextKey nvarchar(256)" +
-                ")";
+        private const string _outboxDDL = @"
+                    CREATE TABLE {0}
+                        (
+                            Id BIGSERIAL PRIMARY KEY ,
+                            CommandId uuid NOT NULL ,
+                            CommandType VARCHAR(256) NULL ,
+                            CommandBody TEXT NULL ,
+                            Timestamp timestamptz  NULL ,
+                            ContextKey VARCHAR(256) NULL
+                        );";
 
         public static string GetDDL(string tableName)
         {

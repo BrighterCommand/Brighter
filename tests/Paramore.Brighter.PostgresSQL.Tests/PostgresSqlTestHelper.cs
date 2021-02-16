@@ -1,16 +1,17 @@
 ﻿using System;
 using Microsoft.Extensions.Configuration;
 using Npgsql;
+using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Outbox.PostgreSql;
 
-namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
+namespace Paramore.Brighter.PostgresSQL.Tests
 {
-    internal class PostgreSqlTestHelper
+    internal class PostgresSqlTestHelper
     {
         private readonly PostgreSqlSettings _postgreSqlSettings;
         private string _tableName;
 
-        public PostgreSqlTestHelper()
+        public PostgresSqlTestHelper()
         {
             var builder = new ConfigurationBuilder().AddEnvironmentVariables();
             var configuration = builder.Build();
@@ -22,12 +23,22 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         }
 
         public PostgreSqlOutboxConfiguration OutboxConfiguration => new PostgreSqlOutboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
+        
+        public PostgresSqlInboxConfiguration InboxConfiguration => new PostgresSqlInboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
+
 
         public void SetupMessageDb()
         {
             CreateDatabase();
             CreateOutboxTable();
         }
+        
+        public void SetupCommandDb()
+        {
+            CreateDatabase();
+            CreateInboxTable();
+        }
+
 
         private void CreateDatabase()
         {
@@ -57,19 +68,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
                 }
         }
 
-        public void CleanUpTable()
-        {
-            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
-            {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
-                    command.ExecuteNonQuery();
-                }
-            }
-        }
-
         private void CreateOutboxTable()
         {
             using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
@@ -81,6 +79,34 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = createTableSql;
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+        public void CreateInboxTable()
+        {
+            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
+            {
+                _tableName = $"command_{_tableName}";
+                var createTableSql = PostgresSqlInboxBuilder.GetDDL(_tableName);
+
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = createTableSql;
+                    command.ExecuteNonQuery();
+                }
+            }
+        }
+
+        public void CleanUpDb()
+        {
+            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
+            {
+                connection.Open();
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = $@"DROP TABLE IF EXISTS {_tableName}";
                     command.ExecuteNonQuery();
                 }
             }
