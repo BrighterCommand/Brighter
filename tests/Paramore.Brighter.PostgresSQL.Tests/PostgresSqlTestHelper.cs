@@ -10,6 +10,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
     {
         private readonly PostgreSqlSettings _postgreSqlSettings;
         private string _tableName;
+        private readonly object syncObject = new object();
 
         public PostgresSqlTestHelper()
         {
@@ -42,30 +43,33 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 
         private void CreateDatabase()
         {
-            var createDatabase = false;
-            using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
+            lock (syncObject)
             {
-                connection.Open();
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "SELECT datname FROM pg_database WHERE datname = 'brightertests';";
-                    var rowsEffected = command.ExecuteReader();
-
-                    if (!rowsEffected.HasRows)
-                        createDatabase = true;
-                }
-            }
-
-            if (createDatabase)
+                var createDatabase = false;
                 using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
                 {
                     connection.Open();
                     using (var command = connection.CreateCommand())
                     {
-                        command.CommandText = @"CREATE DATABASE brightertests";
-                        command.ExecuteNonQuery();
+                        command.CommandText = "SELECT datname FROM pg_database WHERE datname = 'brightertests';";
+                        var rowsEffected = command.ExecuteReader();
+
+                        if (!rowsEffected.HasRows)
+                            createDatabase = true;
                     }
                 }
+
+                if (createDatabase)
+                    using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsMasterConnectionString))
+                    {
+                        connection.Open();
+                        using (var command = connection.CreateCommand())
+                        {
+                            command.CommandText = @"CREATE DATABASE brightertests";
+                            command.ExecuteNonQuery();
+                        }
+                    }
+            }
         }
 
         private void CreateOutboxTable()

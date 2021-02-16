@@ -135,7 +135,7 @@ namespace Paramore.Brighter
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = "", string contentType = "text/plain")
         {
             Id = messageId;
             Topic = topic;
@@ -145,8 +145,8 @@ namespace Paramore.Brighter
             HandledCount = 0;
             DelayedMilliseconds = 0;
             CorrelationId = correlationId ?? Guid.Empty ;
-            ReplyTo = replyTo;
-            ContentType = contentType;
+            ReplyTo = replyTo ?? string.Empty;
+            ContentType = contentType ?? "text/plain";
         }
 
         public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")

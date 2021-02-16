@@ -40,7 +40,6 @@ namespace Paramore.Brighter.Inbox.Postgres
     {
         private readonly PostgresSqlInboxConfiguration _configuration;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PostgresSqlInbox>);
-        private const string PostgreSqlDuplicateKeyError_UniqueConstraintViolation = "23505";
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
         ///     synchronization context.
@@ -72,7 +71,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                   }
                   catch (PostgresException sqlException)
                   {
-                      if (sqlException.SqlState == PostgreSqlDuplicateKeyError_UniqueConstraintViolation)
+                      if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                       {
                           _logger.Value.WarnFormat(
                               "PostgresSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
@@ -124,7 +123,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 }
                 catch (PostgresException sqlException)
                 {
-                    if (sqlException.SqlState == PostgreSqlDuplicateKeyError_UniqueConstraintViolation)
+                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                     {
                         _logger.Value.WarnFormat(
                             "PostgresSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",

@@ -30,12 +30,12 @@ namespace Paramore.Brighter.Inbox.Postgres
         private const string _outboxDDL = @"
                     CREATE TABLE {0}
                         (
-                            Id BIGSERIAL PRIMARY KEY ,
                             CommandId uuid NOT NULL ,
                             CommandType VARCHAR(256) NULL ,
                             CommandBody TEXT NULL ,
                             Timestamp timestamptz  NULL ,
-                            ContextKey VARCHAR(256) NULL
+                            ContextKey VARCHAR(256) NULL,
+                            PRIMARY KEY (CommandId, ContextKey)
                         );";
 
         public static string GetDDL(string tableName)

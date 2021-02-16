@@ -179,13 +179,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             var sql =
                 string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)",
+                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)",
                     _configuration.OutboxTableName);
             return sql;
         }
 
         /// <summary>
-        /// Gets the specified message.
+        /// Gets the specified message
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
         /// <param name="outBoxTimeout">Timeout for the outbox read, defaults to library default timeout</param>
@@ -469,6 +469,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 new SqliteParameter("@MessageType", SqliteType.Text) {Value = message.Header.MessageType.ToString()},
                 new SqliteParameter("@Topic", SqliteType.Text) {Value = message.Header.Topic},
                 new SqliteParameter("@Timestamp", SqliteType.Text) {Value = message.Header.TimeStamp.ToString("s")},
+                new SqliteParameter("CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId},
+                new SqliteParameter("ReplyTo", message.Header.ReplyTo),
+                new SqliteParameter("ContentType", message.Header.ContentType),
                 new SqliteParameter("@HeaderBag", SqliteType.Text) {Value = bagJson},
                 new SqliteParameter("@Body", SqliteType.Text) {Value = message.Body.Value}
             };
@@ -493,26 +496,31 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private Message MapAMessage(IDataReader dr)
         {
-            //var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
-            var id = Guid.Parse(dr.GetString(0));
-            var messageType =
-                (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+            var id = GetMessageId(dr);
+            var messageType = GetMessageType(dr);
+            var topic = GetTopic(dr);
 
             var header = new MessageHeader(id, topic, messageType);
 
             if (dr.FieldCount > 4)
             {
-                //new schema....we've got the extra header information
-                var ordinal = dr.GetOrdinal("Timestamp");
-                var timeStamp = dr.IsDBNull(ordinal)
-                    ? DateTime.MinValue
-                    : dr.GetDateTime(ordinal);
-                header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
+                DateTime timeStamp = GetTimeStamp(dr);
+                var correlationId = GetCorrelationId(dr);
+                var replyTo = GetReplyTo(dr);
+                var contentType = GetContentType(dr);
+                
+                header = new MessageHeader(
+                    messageId:id, 
+                    topic:topic, 
+                    messageType:messageType, 
+                    timeStamp:timeStamp, 
+                    handledCount:0, 
+                    delayedMilliseconds: 0,
+                    correlationId: correlationId,
+                    replyTo: replyTo,
+                    contentType: contentType);
 
-                var i = dr.GetOrdinal("HeaderBag");
-                var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-                var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+                Dictionary<string, string> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
                     foreach (var key in dictionaryBag.Keys)
@@ -526,6 +534,66 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             return new Message(header, body);
         }
+        
+        private static string GetTopic(IDataReader dr)
+        {
+            return dr.GetString(dr.GetOrdinal("Topic"));
+        }
+
+        private static MessageType GetMessageType(IDataReader dr)
+        {
+            return (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+        }
+
+        private static Guid GetMessageId(IDataReader dr)
+        {
+           return Guid.Parse(dr.GetString(dr.GetOrdinal("MessageId")));
+        }
+
+        private string GetContentType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
+        }
+
+        private string GetReplyTo(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ReplyTo");
+            if (dr.IsDBNull(ordinal)) return null; 
+             
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
+        }
+
+        private static Dictionary<string, string> GetContextBag(IDataReader dr)
+        {
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            return dictionaryBag;
+        }
+
+        private Guid? GetCorrelationId(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("CorrelationId");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var correlationId = dr.GetGuid(ordinal);
+            return correlationId;
+        }
+
+        private static DateTime GetTimeStamp(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Timestamp");
+            var timeStamp = dr.IsDBNull(ordinal)
+                ? DateTime.MinValue
+                : dr.GetDateTime(ordinal);
+            return timeStamp;
+        }
+
 
         private Message MapFunction(IDataReader dr)
         {

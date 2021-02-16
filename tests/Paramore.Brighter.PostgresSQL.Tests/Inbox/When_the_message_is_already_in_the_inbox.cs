@@ -49,13 +49,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
 
             _pgSqlInbox = new PostgresSqlInbox(_pgTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
-            _contextKey = "context-key";
-            _pgSqlInbox.Add(_raisedCommand, _contextKey);
+            _contextKey = Guid.NewGuid().ToString();
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
+            _pgSqlInbox.Add(_raisedCommand, _contextKey);
+            
             _exception = Catch.Exception(() => _pgSqlInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate
@@ -66,9 +67,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         [Fact]
         public void When_The_Message_Is_Already_In_The_Inbox_Different_Context()
         {
-            _pgSqlInbox.Add(_raisedCommand, "some other key");
+            _pgSqlInbox.Add(_raisedCommand, _contextKey);
 
-            var storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, "some other key");
+            var newcontext = Guid.NewGuid().ToString();
+            _pgSqlInbox.Add(_raisedCommand, newcontext);
+
+            var storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, newcontext);
 
             //_should_read_the_command_from_the__dynamo_db_inbox
             AssertionExtensions.Should((object) storedCommand).NotBeNull();

@@ -42,12 +42,6 @@ namespace Paramore.Brighter.Sqlite.Tests
         {
             try
             {
-                //_sqlConnection?.Close();
-                //_sqlConnection?.Dispose();
-                //GC.Collect();  // Otherwise we can find the file handle still in use when we delete the file
-                //GC.WaitForPendingFinalizers();
-                //GC.Collect();
-
                 File.Delete(connectionStringPath);
                 Directory.Delete(connectionStringPathDir, true);
             }
