@@ -44,12 +44,23 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
         public DynamoDbOutboxWritingMessageTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
+            var messageHeader = new MessageHeader(
+                messageId:Guid.NewGuid(),
+                topic: "test_topic", 
+                messageType: MessageType.MT_DOCUMENT, 
+                timeStamp: DateTime.UtcNow.AddDays(-1), 
+                handledCount:5, 
+                delayedMilliseconds:5,
+                correlationId: Guid.NewGuid(),
+                replyTo: "ReplyAddress",
+                contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
+
+            _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
+            
             _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
  
-            _messageEarliest = new Message(messageHeader, new MessageBody("Body"));
            _dynamoDbOutbox.Add(_messageEarliest);
         }
 
