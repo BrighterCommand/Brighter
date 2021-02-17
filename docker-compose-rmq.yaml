@@ -9,7 +9,6 @@ services:
     volumes:
       - rabbitmq-home:/var/lib/rabbitmq
 
-
 volumes:
   rabbitmq-home:
     driver: local
