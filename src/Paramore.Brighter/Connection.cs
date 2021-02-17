@@ -26,6 +26,12 @@ using System;
 
 namespace Paramore.Brighter
 {
+    public enum OnMissingChannel
+    {
+        Create = 0,
+        Validate = 1
+    }
+    
     /// <summary>
     /// Class Connection.
     /// A <see cref="Connection"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
@@ -122,10 +128,15 @@ namespace Paramore.Brighter
         public int UnacceptableMessageLimit { get; }
 
         /// <summary>
-        /// For some Message Oriented Middleware this governs how long a 'lock' is held on a message for one consumer
-        /// to process. For example SQS
+        /// For some Message Oriented Middleware this governs how long, in seconds, a 'lock' is held on a message for one consumer
+        /// to process. For example SQS VisibilityTimeout
         /// </summary>
-        public int VisibilityTimeout { get; }
+        public int LockTimeout { get; }
+
+        /// <summary>
+        /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
+        /// </summary>
+        public OnMissingChannel MakeChannels { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Connection"/> class.
@@ -144,7 +155,8 @@ namespace Paramore.Brighter
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
-        /// <param name="visibilityTimeout">How long should a message remain locked for processing</param>
+        /// <param name="lockTimeout">How long should a message remain locked for processing</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public Connection(
             Type dataType,
             ConnectionName name = null,
@@ -160,7 +172,8 @@ namespace Paramore.Brighter
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             bool highAvailability = false,
-            int visibilityTimeout = 10)
+            int lockTimeout = 10,
+            OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             DataType = dataType;
             Name = name ?? new ConnectionName(dataType.FullName);
@@ -176,7 +189,8 @@ namespace Paramore.Brighter
             IsAsync = isAsync;
             ChannelFactory = channelFactory;
             HighAvailability = highAvailability;
-            VisibilityTimeout = visibilityTimeout;
+            LockTimeout = lockTimeout;
+            MakeChannels = makeChannels;
         }
     }
 
@@ -199,8 +213,9 @@ namespace Paramore.Brighter
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability"></param>
-        /// <param name="visibilityTimeout">How long should an SQS Queue message remain locked for processing</param>
-         public Connection(
+        /// <param name="lockTimeout">How long should an SQS Queue message remain locked for processing</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        public Connection(
             ConnectionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
@@ -214,7 +229,8 @@ namespace Paramore.Brighter
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             bool highAvailability = false,
-            int visibilityTimeout = 10)
+            int lockTimeout = 10,
+            OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(
                 typeof(T), 
                 name, 
@@ -230,7 +246,7 @@ namespace Paramore.Brighter
                 isAsync, 
                 channelFactory, 
                 highAvailability,
-                visibilityTimeout)
+                lockTimeout)
         {
         }
     }

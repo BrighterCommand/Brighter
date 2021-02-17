@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     Attributes =
                     {
-                        {"VisibilityTimeout", connection.VisibilityTimeout.ToString()},
+                        {"VisibilityTimeout", connection.LockTimeout.ToString()},
                         {"ReceiveMessageWaitTimeSeconds", ToSecondsAsString(connection.TimeoutInMiliseconds)}
                     },
                     Tags =
