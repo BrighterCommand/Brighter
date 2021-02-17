@@ -41,7 +41,12 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task InitializeAsync()
         {
             var endpoint = new Uri("tcp://127.0.0.1:1113");
-            var settings = ConnectionSettings.Create().KeepReconnecting().KeepRetrying().SetDefaultUserCredentials(new UserCredentials("admin", "changeit"));
+            var settings = ConnectionSettings
+                .Create()
+                .KeepReconnecting()
+                .KeepRetrying()
+                .SetDefaultUserCredentials(new UserCredentials("admin", "changeit"))
+                .UseConsoleLogger();
             var connectionName = $"M={Environment.MachineName},P={Process.GetCurrentProcess().Id},T={DateTimeOffset.UtcNow.Ticks}";
 
             Connection = EventStoreConnection.Create(settings, endpoint, connectionName);

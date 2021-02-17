@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
@@ -39,8 +40,35 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
 
-            var message1 = CreateMessage(0, StreamName);
-            var message2 = CreateMessage(1, StreamName);
+            var body = new MessageBody("{companyId:123}");
+            var header = new MessageHeader(
+                messageId:Guid.NewGuid(), 
+                topic: "Topic", 
+                messageType: MessageType.MT_EVENT,
+                timeStamp: DateTime.Now,
+                correlationId: Guid.NewGuid(),
+                replyTo:"ReplyTo",
+                contentType: "text/plain");
+            header.Bag.Add("impersonatorId", 123);
+            header.Bag.Add("eventNumber", 0);
+            header.Bag.Add("streamId", StreamName);
+            
+            var message1 = new Message(header, body);
+
+            var body1 = new MessageBody("{companyId:123}");
+            var header1 = new MessageHeader(
+                messageId:Guid.NewGuid(), 
+                topic: "Topic", 
+                messageType: MessageType.MT_EVENT,
+                timeStamp: DateTime.Now,
+                correlationId: Guid.NewGuid(),
+                replyTo:"ReplyTo",
+                contentType: "text/plain");
+            header1.Bag.Add("impersonatorId", 123);
+            header1.Bag.Add("eventNumber", 1);
+            header1.Bag.Add("streamId", StreamName);
+            
+            var message2 = new Message(header1, body1);
             
             // act
             eventStoreOutbox.Add(message1);
@@ -48,9 +76,27 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             
             // assert
             var messages = eventStoreOutbox.Get(StreamName, 0, 2);
+            
+            //should read the message from the outbox
+            messages[0].Body.Value.Should().Be(message1.Body.Value);
+            //should read the header from the outbox
+            messages[0].Header.Topic.Should().Be(message1.Header.Topic);
+            messages[0].Header.MessageType.Should().Be(message1.Header.MessageType);
+            messages[0].Header.TimeStamp.Should().Be(message1.Header.TimeStamp);
+            messages[0].Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
+            messages[0].Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
+            messages[0].Header.CorrelationId.Should().Be(message1.Header.CorrelationId);
+            messages[0].Header.ReplyTo.Should().Be(message1.Header.ReplyTo);
+            messages[0].Header.ContentType.Should().Be(message1.Header.ContentType);
+             
+            
+            //Bag serialization
+            //should read the message header first bag item from the sql outbox
+            messages[0].Header.Bag["impersonatorId"].Should().Be(123);
+            //should read the message header second bag item from the sql outbox
+            messages[0].Header.Bag["eventNumber"].Should().Be(1);
+            messages[0].Header.Bag["streamId"].Should().Be(StreamName);
 
-            messages.Count(m => MessagesEqualApartFromTimestamp(m, message1)).Should().Be(1);
-            messages.Count(m => MessagesEqualApartFromTimestamp(m, message2)).Should().Be(1);
         }
     }
 }

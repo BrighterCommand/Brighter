@@ -19,6 +19,8 @@ services:
     environment:
       - EVENTSTORE_RUN_PROJECTIONS=ALL
       - EVENTSTORE_START_STANDARD_PROJECTIONS=TRUE
+      - EVENTSTORE_INSECURE=true
+      - EVENTSTORE_DEV=true
     
   # Need to give 4GB of memory to Docker for SQL
   sqlserver:
