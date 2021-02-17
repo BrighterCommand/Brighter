@@ -173,6 +173,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Sqlite.Te
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.EventStore.Tests", "tests\Paramore.Brighter.EventStore.Tests\Paramore.Brighter.EventStore.Tests.csproj", "{E151A25D-B893-4D73-84F8-3946F0FB4CEF}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.InMemory.Tests", "tests\Paramore.Brighter.InMemory.Tests\Paramore.Brighter.InMemory.Tests.csproj", "{B853A06F-5DFD-4093-979B-B08D1BBDD2D6}"
+EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.PostgresSQL.Tests", "tests\Paramore.Brighter.PostgresSQL.Tests\Paramore.Brighter.PostgresSQL.Tests.csproj", "{C2355F42-792D-4964-B068-79186F887C6D}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Extensions.DependencyInjection", "src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj", "{35423151-4010-4986-9143-5D8029E538AE}"
