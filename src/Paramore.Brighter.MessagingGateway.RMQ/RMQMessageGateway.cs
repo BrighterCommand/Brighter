@@ -97,26 +97,27 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         }
 
         /// <summary>
-        ///     Connects the specified queue name.
+        /// Connects the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
+        /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected void EnsureChannel(string queueName = "Producer Channel")
+        protected void EnsureChannel(string queueName = "Producer Channel", OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
-            ConnectWithCircuitBreaker(queueName);
+            ConnectWithCircuitBreaker(queueName, makeExchange);
         }
 
-        private void ConnectWithCircuitBreaker(string queueName)
+        private void ConnectWithCircuitBreaker(string queueName, OnMissingChannel makeExchange)
         {
-            _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName));
+            _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, makeExchange));
         }
 
-        private void ConnectWithRetry(string queueName)
+        private void ConnectWithRetry(string queueName, OnMissingChannel makeExchange)
         {
-            _retryPolicy.Execute((ctx) => ConnectToBroker(), new Dictionary<string, object> {{"queueName", queueName}});
+            _retryPolicy.Execute((ctx) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName}});
         }
 
-        protected virtual void ConnectToBroker()
+        protected virtual void ConnectToBroker(OnMissingChannel makeExchange)
         {
             if (Channel == null || Channel.IsClosed)
             {
@@ -137,7 +138,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
-                Channel.DeclareExchangeForConnection(Connection);
+                Channel.DeclareExchangeForConnection(Connection, makeExchange);
             }
         }
 

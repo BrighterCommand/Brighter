@@ -37,7 +37,7 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
     {
         public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
-        protected override void ConnectToBroker()
+        protected override void ConnectToBroker(OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
             throw new BrokerUnreachableException(new Exception("Force Test Failure"));
         }

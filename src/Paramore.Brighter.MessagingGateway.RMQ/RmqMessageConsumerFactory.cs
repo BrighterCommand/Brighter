@@ -49,7 +49,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 connection.ChannelName, //RMQ Queue Name 
                 connection.RoutingKey, 
                 connection.IsDurable, 
-                connection.HighAvailability);
+                connection.HighAvailability,
+                 connection.MakeChannels);
         }
     }
 }

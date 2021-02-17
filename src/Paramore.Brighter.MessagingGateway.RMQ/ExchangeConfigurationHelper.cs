@@ -22,14 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     public static class ExchangeConfigurationHelper
     {
-        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
+        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection, OnMissingChannel onMissingChannel)
         {
             var arguments = new Dictionary<string, object>();
             if (connection.Exchange.SupportDelay)
@@ -37,7 +39,23 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 arguments.Add("x-delayed-type", connection.Exchange.Type);
                 connection.Exchange.Type = "x-delayed-message";
             }
-            channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false, arguments: arguments);
+
+            if (onMissingChannel == OnMissingChannel.Create)
+            {
+                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false,
+                    arguments: arguments);
+            }
+            else
+            {
+                try
+                {
+                    channel.ExchangeDeclarePassive(connection.Exchange.Name);
+                }
+                catch (Exception e)
+                {
+                    throw new BrokerUnreachableException(e);
+                }
+            }
         }
     }
 }
