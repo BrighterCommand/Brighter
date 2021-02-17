@@ -21,25 +21,67 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
+/*
+ * NOTE:
+ * Design inspired by MS System.Extensions.Caching.Memory.MemoryCache
+ */
+
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
+   /// <summary>
+    /// An outbox entry - a message that we want to send
+    /// </summary>
+    public class OutboxEntry : IHaveABoxWriteTime
+    {
+        /// <summary>
+        /// When was the message added to the outbox
+        /// </summary>
+        public DateTime WriteTime { get; set; }
+        
+        /// <summary>
+        /// When was the message sent to the middleware
+        /// </summary>
+        public DateTime TimeFlushed { get; set; }
+        
+        /// <summary>
+        /// The message to be dispatched
+        /// </summary>
+        public Message Message { get; set; }
+
+        /// <summary>
+        /// The Id of the message as a string key
+        /// </summary>
+        public string Key => Message.Id.ToString();
+
+        /// <summary>
+        /// Turn a Guid into an inbox key - convenience wrapper
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public static string ConvertKey(Guid id)
+        {
+            return $"{id}";
+        }
+    }
+
+
     /// <summary>
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into a Outbox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
+    /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
+    /// so you can use multiple instances safely as well
     /// </summary>
-    public class InMemoryOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
     {
-        private readonly List<OutboxEntry> _post = new List<OutboxEntry>();
-
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
@@ -49,16 +91,23 @@ namespace Paramore.Brighter
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
 
-        /// <summary>
+       /// <summary>
         /// Adds the specified message
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         public void Add(Message message, int outBoxTimeout = -1)
         {
-            if (!_post.Exists((entry)=> entry.Message.Id == message.Id))
+            ClearExpiredMessages();
+            EnforceCapacityLimit();
+
+            var key = OutboxEntry.ConvertKey(message.Id);
+            if (!_requests.ContainsKey(key))
             {
-                _post.Add(new OutboxEntry{Message = message, TimeDeposited = DateTime.UtcNow});
+                if (!_requests.TryAdd(key, new OutboxEntry {Message = message, WriteTime = DateTime.UtcNow}))
+                {
+                    throw new Exception($"Could not add message with Id: {message.Id} to outbox");
+                }
             }
         }
 
@@ -101,8 +150,10 @@ namespace Paramore.Brighter
             int outboxTimeout = -1, 
             Dictionary<string, object> args = null)
         {
+            ClearExpiredMessages();
+            
             DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
-            return _post.Where(oe =>  oe.TimeDeposited > dispatchedSince)
+            return _requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
@@ -115,10 +166,9 @@ namespace Paramore.Brighter
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            if (!_post.Exists((entry) => entry.Message.Id == messageId))
-                return null;
-
-            return _post.Find((entry) => entry.Message.Id == messageId).Message;
+            ClearExpiredMessages();
+            
+            return _requests.TryGetValue(OutboxEntry.ConvertKey(messageId), out OutboxEntry entry) ? entry.Message : null;
         }
 
         /// <summary>
@@ -130,7 +180,17 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            return _post.Select(oe => oe.Message).Take(pageSize).ToList();
+            ClearExpiredMessages();
+
+            if (pageNumber == 1)
+            {
+                return _requests.Values.Select(oe => oe.Message).Take(pageSize).ToList();
+            }
+            else
+            {
+                var skipMessageCount = (pageNumber-1) * pageSize;
+                return _requests.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
+            }
         }
          
        /// <summary>
@@ -177,12 +237,12 @@ namespace Paramore.Brighter
         /// <param name="id">The message to mark as dispatched</param>
          public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-             if (!_post.Exists((oe) => oe.Message.Id == id))
-               return;
-             
-           var post = _post.Find((entry) => entry.Message.Id == id);
-           post.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
-
+            ClearExpiredMessages();
+            
+            if (_requests.TryGetValue(OutboxEntry.ConvertKey(id), out OutboxEntry entry))
+            {
+                entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
+            }
         }
 
         /// <summary>
@@ -194,17 +254,13 @@ namespace Paramore.Brighter
        public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
-            DateTime sentAfter = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            return _post.Where(oe =>  oe.TimeDeposited > sentAfter)
+            ClearExpiredMessages();
+            
+            DateTime sentBefore = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
+            return _requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
-    
-        class OutboxEntry
-        {
-            public DateTime TimeDeposited { get; set; }
-            public DateTime TimeFlushed { get; set; }
-            public Message Message { get; set; }
-        }
-   }
+
+ }
 }
