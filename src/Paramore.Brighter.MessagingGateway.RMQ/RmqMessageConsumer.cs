@@ -383,7 +383,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 else
                 {
                     _logger.Value.DebugFormat("RmqMessageConsumer: Validating queue {0} on connection {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
-                    Channel.QueueDeclarePassive(_queueName);
+
+                    try
+                    {
+                        Channel.QueueDeclarePassive(_queueName);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new BrokerUnreachableException(e);
+                    }
                 }
 
 
