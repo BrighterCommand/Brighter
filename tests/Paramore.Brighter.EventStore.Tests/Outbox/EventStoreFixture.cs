@@ -76,27 +76,6 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             }
         }
         
-        protected bool MessagesEqualApartFromTimestamp(Message m1, Message m2)
-        {
-            var bodysAreEqual = m1.Body.Equals(m2.Body);
-            var headersAreEqual = m1.Id == m2.Id
-                                  && m1.Header.Topic == m2.Header.Topic
-                                  && m1.Header.MessageType == m2.Header.MessageType
-                                  && m1.Header.HandledCount == m2.Header.HandledCount
-                                  && HeaderBagsHaveTheSameContents(m1, m2);
-            return bodysAreEqual && headersAreEqual;
-        }
-        
-        private bool HeaderBagsHaveTheSameContents(Message m1, Message m2)
-        {
-            foreach (var kvp in m1.Header.Bag)
-            {
-                if (!m2.Header.Bag.TryGetValue(kvp.Key, out object secondValue)) return false;
-                if (secondValue.ToString() != kvp.Value.ToString()) return false;
-            }
-            return m1.Header.Bag.Count == m2.Header.Bag.Count;
-        }
-        
         protected Message CreateMessage(int eventNumber, string streamName)
         {
             var body = new MessageBody("{companyId:123}");
