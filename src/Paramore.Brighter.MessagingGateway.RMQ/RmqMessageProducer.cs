@@ -37,20 +37,22 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RmqMessageProducer : RMQMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
     {
-        private readonly OnMissingChannel _makeChannels;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
+        private ProducerConfiguration _producerConfiguration;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
         /// </summary>
         /// <param name="connection">The connection information needed to talk to RMQ</param>
-        /// <param name="makeChannels">If the exchange does not exist, should we create it?</param>
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection, OnMissingChannel makeChannels = OnMissingChannel.Create) 
-            : base(connection, 1)
+        /// <param name="producerConfiguration">How should we configure this producer. If not provided use default behaviours:
+        ///     Make Channels = Create
+        /// </param>
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, ProducerConfiguration producerConfiguration = null) 
+            : base(connection)
         {
-            _makeChannels = makeChannels;
+            _producerConfiguration = producerConfiguration ?? new ProducerConfiguration() {MakeChannels = OnMissingChannel.Create};
         }
 
         /// <summary>
@@ -75,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 lock (_lock)
                 {
                     _logger.Value.DebugFormat("RmqMessageProducer: Preparing  to send message via exchange {0}", Connection.Exchange.Name);
-                    EnsureChannel(makeExchange: _makeChannels);
+                    EnsureChannel(makeExchange: _producerConfiguration.MakeChannels);
                     
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 

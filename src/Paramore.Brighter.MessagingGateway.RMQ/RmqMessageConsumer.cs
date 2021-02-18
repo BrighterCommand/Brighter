@@ -50,11 +50,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private readonly string _queueName;
         private readonly RoutingKeys _routingKeys;
         private readonly bool _isDurable;
-        private readonly int _batchSize;
         private readonly RmqMessageCreator _messageCreator;
         private readonly Message _noopMessage = new Message();
         private readonly string _consumerTag;
         private OnMissingChannel _makeChannels;
+        private readonly ushort _batchSize;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
@@ -93,14 +93,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             bool highAvailability = false,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int batchSize = 1)
-            : base(connection, batchSize)
+            : base(connection)
         {
             _queueName = queueName;
             _routingKeys = new RoutingKeys(routingKeys);
             _isDurable = isDurable;
             IsQueueMirroredAcrossAllNodesInTheCluster = highAvailability;
             _messageCreator = new RmqMessageCreator();
-            _batchSize = batchSize;
+            _batchSize = Convert.ToUInt16(batchSize);
             _makeChannels = makeChannels;
             _consumerTag = Connection.Name + Guid.NewGuid();
         }
@@ -346,9 +346,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         protected virtual void CreateConsumer()
         {
-            _consumer = new PullConsumer(Channel);
-
-            Channel.BasicQos(0, (ushort)_batchSize, false);
+            _consumer = new PullConsumer(Channel, _batchSize);
 
             Channel.BasicConsume(_queueName, false, _consumerTag, SetQueueArguments(), _consumer);
 

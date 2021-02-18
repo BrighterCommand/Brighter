@@ -17,11 +17,8 @@ namespace Paramore.Brighter.ServiceActivator
         private int _milliseconds = 300;
         private string _routingKey;
         private int _buffersize = 1;
-        private bool _isHighAvailability = false;
         private int _unacceptableMessageLimit = 0;
         private bool _isAsync = false;
-        private bool _isDurable = false;
-        private int _lockTimeout = 10;
         private OnMissingChannel _makeChannel = OnMissingChannel.Create;
         private int _noOfPeformers = 1;
         private int _requeueCount = -1;
@@ -107,16 +104,6 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Whether the queue should be mirrored across nodes on the broker
-        /// </summary>
-        /// <param name="highAvailability">Should we mirror queues (defaults to false)</param>
-        public IConnectionBuilderOptionalBuild HighAvailability(bool isHighAvailability)
-        {
-            _isHighAvailability = isHighAvailability;
-            return this;
-        }
-
-        /// <summary>
         /// How many unacceptable messages on a queue before we shut down to avoid taking good messages off the queue that should be recovered later
         /// </summary>
         /// <param name="unacceptableMessageLimit">The upper bound for unacceptable messages, 0, the default indicates no limit</param>
@@ -133,29 +120,6 @@ namespace Paramore.Brighter.ServiceActivator
         public IConnectionBuilderOptionalBuild IsAsync(bool isAsync)
         {
             _isAsync = isAsync;
-            return this;
-        }
-
-        /// <summary>
-        /// is the queue definition persisted in the Broker? Used as a setting by RMQ, could be purposed to other middleware with transient queue definitions
-        /// </summary>
-        /// <param name="isDurable">Should we persist the queue definition. Defaults to false</param>
-        /// <returns></returns>
-        public IConnectionBuilderOptionalBuild IsDurable(bool isDurable)
-        {
-            _isDurable = isDurable;
-            return this;
-        }
-
-        /// <summary>
-        /// How long should should a lock be held before it times out and  makes a queue item available to be read by others
-        /// Supported by platforms like SQS which calls it VisibilityTimeout
-        /// </summary>
-        /// <param name="lockTimeout">how long to time out for, defaults to 10 seconds</param>
-        /// <returns></returns>
-        public IConnectionBuilderOptionalBuild LockTimeout(int lockTimeout)
-        {
-            _lockTimeout = lockTimeout;
             return this;
         }
 
@@ -216,10 +180,7 @@ namespace Paramore.Brighter.ServiceActivator
                 requeueCount: _requeueCount,
                 requeueDelayInMilliseconds: _requeueDelayInMilliseconds,
                 unacceptableMessageLimit: _unacceptableMessageLimit,
-                isDurable: _isDurable,
                 isAsync: _isAsync,
-                highAvailability: _isHighAvailability,
-                lockTimeout:_lockTimeout,
                 makeChannels:_makeChannel);
         }
 
@@ -267,14 +228,6 @@ namespace Paramore.Brighter.ServiceActivator
             IConnectionBuilderOptionalBuild BufferSize(int bufferSize);
 
             /// <summary>
-            /// Is the channel mirrored across node in the cluster
-            /// Required when the API for queue creation in the Message Oriented Middleware needs us to set the value
-            /// on channel (queue) creation. For example, RMQ version 2.X set high availability via the client API
-            /// though it has moved to policy in versions 3+ 
-            /// </summary>
-            IConnectionBuilderOptionalBuild HighAvailability(bool isHighAvailability);
-            
-            /// <summary>
             /// Gets the number of messages before we will terminate the channel due to high error rates
             /// </summary>
             IConnectionBuilderOptionalBuild UnacceptableMessageLimit(int unacceptableMessageLimit);
@@ -287,19 +240,6 @@ namespace Paramore.Brighter.ServiceActivator
             /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
             IConnectionBuilderOptionalBuild IsAsync(bool isAsync);
 
-            /// <summary>
-            /// Gets a value indicating whether this channel definition should survive restarts of the broker.
-            /// Used on RMQ versions prior to 4.0 but now set by policy, retained for possible future use or backward compat
-            /// </summary>
-            /// <value><c>true</c> if this definition is durable; otherwise, <c>false</c>.</value>
-            IConnectionBuilderOptionalBuild IsDurable(bool isDurable);
-            
-            /// <summary>
-            /// For some Message Oriented Middleware this governs how long a 'lock' is held on a message for one consumer
-            /// to process. For example SQS
-            /// </summary>
-            IConnectionBuilderOptionalBuild LockTimeout(int lockTimeout);
-            
             /// <summary>
             /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
             /// </summary>

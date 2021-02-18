@@ -55,18 +55,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
         protected readonly RmqMessagingGatewayConnection Connection;
-        private readonly ushort _batchSize;
         protected IModel Channel;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
-        ///     Use if you need to inject a test logger
-        ///     <param name="connection">The amqp uri and exchange to connect to</param>
+        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        ///  Use if you need to inject a test logger
         /// </summary>
-        protected RMQMessageGateway(RmqMessagingGatewayConnection connection, int batchSize = 1)
+        /// <param name="connection">The amqp uri and exchange to connect to</param>
+        /// <param name="batchSize">How many messages to read from a channel at one time. Only used by consumer, defaults to 1</param>
+        protected RMQMessageGateway(RmqMessagingGatewayConnection connection)
         {
             Connection = connection;
-            _batchSize = Convert.ToUInt16(batchSize);
 
             var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
 
@@ -131,11 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
                 Channel = connection.CreateModel();
                 
-                //set the number of messages to fetch -- defaults to 1 unless set on connection, no impact on
-                //BasicGet, only works on BasicConsume
-                Channel.BasicQos(0, _batchSize, false);
-
-                _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+               _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
                 Channel.DeclareExchangeForConnection(Connection, makeExchange);

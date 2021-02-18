@@ -44,13 +44,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(Connection connection)
         {
+            RMQConnection rmqConnection = connection as RMQConnection;  
+            if (rmqConnection == null)
+                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+            
             return new RmqMessageConsumer(
                 _rmqConnection, 
-                connection.ChannelName, //RMQ Queue Name 
-                connection.RoutingKey, 
-                connection.IsDurable, 
-                connection.HighAvailability,
-                 connection.MakeChannels);
+                rmqConnection.ChannelName, //RMQ Queue Name 
+                rmqConnection.RoutingKey, 
+                rmqConnection.IsDurable, 
+                rmqConnection.HighAvailability,
+                connection.MakeChannels);
         }
     }
 }

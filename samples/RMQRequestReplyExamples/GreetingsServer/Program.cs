@@ -51,7 +51,7 @@ namespace GreetingsServer
                 {
                     var connections = new Connection[]
                     {
-                    new Connection<GreetingRequest>(
+                    new RMQConnection<GreetingRequest>(
                         new ConnectionName("paramore.example.greeting"),
                         new ChannelName("Greeting.Request"),
                         new RoutingKey("Greeting.Request"),

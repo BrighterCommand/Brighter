@@ -53,7 +53,8 @@ namespace Paramore.Brighter
         public IAmAChannelFactory ChannelFactory { get; set; }
 
         /// <summary>
-        /// Gets the name we use for this channel.
+        /// Gets the name we use for this channel. In platforms where queues have names, will be used as the name of the queue
+        /// Note that this is not the logical endpoint that the channel consumes from, that is the RoutingKey
         /// </summary>
         /// <value>The name.</value>
         public ChannelName ChannelName { get; }
@@ -65,14 +66,6 @@ namespace Paramore.Brighter
         public Type DataType { get; }
 
         /// <summary>
-        /// Is the channel mirrored across node in the cluster
-        /// Required when the API for queue creation in the Message Oriented Middleware needs us to set the value
-        /// on channel (queue) creation. For example, RMQ version 2.X set high availability via the client API
-        /// though it has moved to policy in versions 3+ 
-        /// </summary>
-        public bool HighAvailability { get; }
-
-        /// <summary>
         /// Gets a value indicating whether this connection should use an asynchronous pipeline
         /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
         /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
@@ -80,14 +73,9 @@ namespace Paramore.Brighter
         /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
         public bool IsAsync { get; }
 
-        /// <summary>
-        /// Gets a value indicating whether this channel definition should survive restarts of the broker.
-        /// </summary>
-        /// <value><c>true</c> if this definition is durable; otherwise, <c>false</c>.</value>
-        public bool IsDurable { get; }
 
         /// <summary>
-        /// Gets or sets the name pf the connection in log output.
+        /// Gets or sets the name of the connection, for identification.
         /// </summary>
         /// <value>The name.</value>
         public ConnectionName Name { get; }
@@ -127,12 +115,7 @@ namespace Paramore.Brighter
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
-        /// <summary>
-        /// For some Message Oriented Middleware this governs how long, in seconds, a 'lock' is held on a message for one consumer
-        /// to process. For example SQS VisibilityTimeout
-        /// </summary>
-        public int LockTimeout { get; }
-
+     
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
@@ -151,11 +134,8 @@ namespace Paramore.Brighter
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isDurable">The durability of the queue definition in the broker.</param>
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
-        /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
-        /// <param name="lockTimeout">How long should a message remain locked for processing</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public Connection(
             Type dataType,
@@ -168,11 +148,8 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
-            bool isDurable = false,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            bool highAvailability = false,
-            int lockTimeout = 10,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             DataType = dataType;
@@ -185,11 +162,8 @@ namespace Paramore.Brighter
             RequeueCount = requeueCount;
             RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
             UnacceptableMessageLimit = unacceptableMessageLimit;
-            IsDurable = isDurable;
             IsAsync = isAsync;
             ChannelFactory = channelFactory;
-            HighAvailability = highAvailability;
-            LockTimeout = lockTimeout;
             MakeChannels = makeChannels;
         }
     }
@@ -209,11 +183,8 @@ namespace Paramore.Brighter
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isDurable">The durability of the queue.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
-        /// <param name="highAvailability"></param>
-        /// <param name="lockTimeout">How long should an SQS Queue message remain locked for processing</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public Connection(
             ConnectionName name = null,
@@ -225,11 +196,8 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
-            bool isDurable = false,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            bool highAvailability = false,
-            int lockTimeout = 10,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(
                 typeof(T), 
@@ -242,11 +210,8 @@ namespace Paramore.Brighter
                 requeueCount, 
                 requeueDelayInMilliseconds, 
                 unacceptableMessageLimit, 
-                isDurable, 
                 isAsync, 
                 channelFactory, 
-                highAvailability,
-                lockTimeout,
                 makeChannels)
         {
         }

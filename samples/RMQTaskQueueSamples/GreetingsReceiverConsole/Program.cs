@@ -52,7 +52,7 @@ namespace GreetingsReceiverConsole
                 {
                     var connections = new Connection[]
                     {
-                    new Connection<GreetingEvent>(
+                    new RMQConnection<GreetingEvent>(
                         new ConnectionName("paramore.example.greeting"),
                         new ChannelName("greeting.event"),
                         new RoutingKey("greeting.event"),
@@ -60,7 +60,7 @@ namespace GreetingsReceiverConsole
                         isDurable: true,
                         highAvailability: true,
                         makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
-                    new Connection<FarewellEvent>(
+                    new RMQConnection<FarewellEvent>(
                         new ConnectionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
                         new ChannelName("farewell.event"),
                         new RoutingKey("farewell.event"),

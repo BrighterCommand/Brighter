@@ -53,13 +53,13 @@ namespace GreetingsReceiverConsole
                 {
                     var connections = new Connection[]
                     {
-                        new Connection<GreetingEvent>(
+                        new SQSConnection<GreetingEvent>(
                             new ConnectionName("paramore.example.greeting"),
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            timeoutInMilliseconds: 200,
-                            isDurable: true,
-                            highAvailability: true)
+                            timeoutInMilliseconds: 20,
+                            bufferSize:10,
+                            lockTimeout:30)
                     };
 
                     //create the gateway

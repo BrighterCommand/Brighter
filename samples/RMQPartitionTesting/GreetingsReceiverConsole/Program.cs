@@ -52,10 +52,10 @@ namespace GreetingsReceiverConsole
                 {
                     var connections = new Connection[]
                     {
-                        new Connection<GreetingEvent>(
+                        new RMQConnection<GreetingEvent>(
                             new ConnectionName("paramore.example.greeting"),
-                            new ChannelName("greeting.event"),
-                            new RoutingKey("greeting.event"),
+                            channelName:new ChannelName("greeting.event"),
+                            routingKey:new RoutingKey("greeting.event"),
                             bufferSize: 10,
                             timeoutInMilliseconds: 200,
                             isDurable: true,

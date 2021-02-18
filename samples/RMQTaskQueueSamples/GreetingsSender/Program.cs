@@ -49,7 +49,10 @@ namespace GreetingsSender
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            var producer = new RmqMessageProducer(rmqConnection);
+            var producer = new RmqMessageProducer(rmqConnection, new ProducerConfiguration
+            {
+                MakeChannels =OnMissingChannel.Create
+            });
 
             serviceCollection.AddBrighter(options =>
             {
