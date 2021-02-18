@@ -246,7 +246,8 @@ namespace Paramore.Brighter
                 isAsync, 
                 channelFactory, 
                 highAvailability,
-                lockTimeout)
+                lockTimeout,
+                makeChannels)
         {
         }
     }

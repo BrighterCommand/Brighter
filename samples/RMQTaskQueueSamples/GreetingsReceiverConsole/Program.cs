@@ -58,14 +58,16 @@ namespace GreetingsReceiverConsole
                         new RoutingKey("greeting.event"),
                         timeoutInMilliseconds: 200,
                         isDurable: true,
-                        highAvailability: true),
+                        highAvailability: true,
+                        makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
                     new Connection<FarewellEvent>(
-                        new ConnectionName("paramore.example.farewell"),
+                        new ConnectionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
                         new ChannelName("farewell.event"),
                         new RoutingKey("farewell.event"),
                         timeoutInMilliseconds: 200,
                         isDurable: true,
-                        highAvailability: true)
+                        highAvailability: true,
+                        makeChannels: OnMissingChannel.Create)
                     };
 
                     var rmqConnection = new RmqMessagingGatewayConnection
