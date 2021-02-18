@@ -71,18 +71,17 @@ namespace GreetingsReceiverConsole
 
                     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+                    var outBox = new InMemoryOutbox();
                     services.AddServiceActivator(options =>
                     {
                         options.Connections = connections;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging =
-                            new BrighterMessaging(outBox, outBox, new RmqMessageProducer(rmqConnection), null);
                     }).AutoFromAssemblies();
 
+                    services.AddSingleton<IAmAnOutboxViewer<Message>>(outBox);
 
                     services.AddHostedService<ServiceActivatorHostedService>();
-                    services.AddHostedService<TimedOutboxSweeper>();
+             
 
                 })
                 .UseConsoleLifetime()

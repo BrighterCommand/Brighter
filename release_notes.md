@@ -21,6 +21,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
  - An option now exits on a connection to not declare infrastructure because it is declared elsewhere but just validate it
  - On Connection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose
+ - Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
 
 ## Release 8.1.1399 ##
  - Update nuget libs

@@ -2,11 +2,13 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
+using GreetingsReceiverConsole;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Polly.CircuitBreaker;
 using Serilog;
 
 namespace GreetingsPumper
@@ -35,10 +37,13 @@ namespace GreetingsPumper
 
                         services.AddBrighter(options =>
                         {
-                            options.BrighterMessaging = new BrighterMessaging(outbox, outbox, producer, null);
+                            options.BrighterMessaging = new BrighterMessaging(outbox, producer);
                         }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
+                        services.AddSingleton<IAmAnOutboxViewer<Message>>(outbox);
+
                         services.AddHostedService<RunCommandProcessor>();
+                        services.AddHostedService<TimedOutboxSweeper>();
                     }
                 )
                 .UseConsoleLifetime()
@@ -61,17 +66,25 @@ namespace GreetingsPumper
                 long loop = 0;
                 while (true)
                 {
-                    if (cancellationToken.IsCancellationRequested) break;
+                    try
+                    {
+                        if (cancellationToken.IsCancellationRequested) break;
 
-                    loop++;
+                        loop++;
                  
-                    Console.WriteLine($"Sending message #{loop}");
-                    _commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
+                        Console.WriteLine($"Sending message #{loop}");
+                        _commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
 
-                    if (loop % 100 != 0) continue;
+                        if (loop % 100 != 0) continue;
 
-                    Console.WriteLine("Pausing for breath...");
-                    await Task.Delay(4000, cancellationToken);
+                        Console.WriteLine("Pausing for breath...");
+                        await Task.Delay(4000, cancellationToken);
+                    }
+                    catch (BrokenCircuitException bce)
+                    {
+                        Console.WriteLine("Can't send to producer, pausing...will retry in 5 seconds");
+                        Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+                    }
                 }
             }
 
