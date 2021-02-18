@@ -59,7 +59,8 @@ namespace GreetingsReceiverConsole
                             bufferSize: 10,
                             timeoutInMilliseconds: 200,
                             isDurable: true,
-                            highAvailability: true)
+                            highAvailability: true,
+                            makeChannels: OnMissingChannel.Create)
                     };
 
                     var rmqConnection = new RmqMessagingGatewayConnection
@@ -81,10 +82,13 @@ namespace GreetingsReceiverConsole
 
 
                     services.AddHostedService<ServiceActivatorHostedService>();
+                    services.AddHostedService<TimedOutboxSweeper>();
+
                 })
                 .UseConsoleLifetime()
                 .UseSerilog()
                 .Build();
+            
 
             await host.RunAsync();
         }
