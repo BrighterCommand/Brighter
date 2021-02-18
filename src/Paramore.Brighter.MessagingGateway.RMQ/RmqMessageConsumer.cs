@@ -163,7 +163,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 _logger.Value.DebugFormat("RmqMessageConsumer: Re-queueing message {0} with a delay of {1} milliseconds", message.Id, delayMilliseconds);
                 EnsureChannel(_queueName);
-                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
+                var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 if (DelaySupported)
                 {
                     rmqMessagePublisher.RequeueMessage(message, _queueName, delayMilliseconds);

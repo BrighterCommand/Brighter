@@ -32,8 +32,11 @@ namespace GreetingsPumper
                         {
                             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                             Exchange = new Exchange("paramore.brighter.exchange")
+
                         };
-                        var producer = new RmqMessageProducer(gatewayConnection);
+                        var producer = new RmqMessageProducer(
+                            connection:gatewayConnection, 
+                            makeChannels:OnMissingChannel.Create);
 
                         services.AddBrighter(options =>
                         {
@@ -80,7 +83,7 @@ namespace GreetingsPumper
                         Console.WriteLine("Pausing for breath...");
                         await Task.Delay(4000, cancellationToken);
                     }
-                    catch (BrokenCircuitException bce)
+                    catch (BrokenCircuitException)
                     {
                         Console.WriteLine("Can't send to producer, pausing...will retry in 5 seconds");
                         Task.Delay(TimeSpan.FromSeconds(5)).Wait();

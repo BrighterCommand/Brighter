@@ -37,6 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RmqMessageProducer : RMQMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
     {
+        private readonly OnMissingChannel _makeChannels;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
@@ -45,8 +46,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
         /// </summary>
         /// <param name="connection">The connection information needed to talk to RMQ</param>
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection) : base(connection, 1)
+        /// <param name="makeChannels">If the exchange does not exist, should we create it?</param>
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, OnMissingChannel makeChannels = OnMissingChannel.Create) 
+            : base(connection, 1)
         {
+            _makeChannels = makeChannels;
         }
 
         /// <summary>
@@ -70,10 +74,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 lock (_lock)
                 {
-                    _logger.Value.DebugFormat("RmqMessageProducer: Preparing  to send message via exchange {0}",
-                        Connection.Exchange.Name);
-                    EnsureChannel();
-                    var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection.Exchange.Name);
+                    _logger.Value.DebugFormat("RmqMessageProducer: Preparing  to send message via exchange {0}", Connection.Exchange.Name);
+                    EnsureChannel(makeExchange: _makeChannels);
+                    
+                    var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 
                     message.Persist = Connection.PersistMessages;
 
@@ -81,6 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         "RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
                         message.Id, message.Body.Value, delayMilliseconds, message.Persist);
+                    
                     if (DelaySupported)
                     {
                         rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
