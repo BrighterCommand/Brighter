@@ -22,18 +22,27 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
 0. Fork the project
 0. Clone your fork
 0. Branch your fork. This is your active development branch   
-0. Use Test Driven-Development. 
-	0. New features should have a test or 
-	0. Defects should have a test
-	0. You might want to watch [this video](http://vimeo.com/68375232) to understand our preferred testing approach 
-	0. This project uses [MSpec](https://github.com/machine/machine.specifications) and [FakeItEasy](https://github.com/FakeItEasy/FakeItEasy). So should you to contribute. 
-0.  We separate the core library from add-ons. Consider if your change is really core, or could be shipped as an add-on. Let the user 'buy-in' to your feature over making them take it.
-0. Make your tests pass
+0.  We separate the core library from add-ons. 
+        0.  Consider if your change is really core, or could be shipped as an add-on. Let the user 'buy-in' to your feature over making them take it.
+        0.  Minimize your dependency on other libraries - try to limit yourself to the ones you **need** so you don't force consumers to buy a chain of dependencies
+        0.  As an example, for a transport, prefer ADO.NET over using an ORM to avoid additional dependencies on other OSS frameworks
+        0.  There are obvious exceptions, AWS SDK for AWS components for example. If in doubt ask.    
+0. If this is a Core project (Brighter or ServiceActivator) 
+        0. Use Test Driven-Development. 
+	        0. New behaviors should have a test or 
+		0. You might want to watch [this video](http://vimeo.com/68375232) to understand our preferred testing approach 
+	        0. This project uses [FakeItEasy](https://github.com/FakeItEasy/FakeItEasy). So should you to contribute.
+0. If this is a non-core project, such as a Transport or a Store
+        0. You may use a Test-After approach here if you prefer, as you are implementing a defined interface for a plug-in
+        0. Your testing strategy here may focus on protecting against regression of these components once working
+        0. Consider providing a sample to run the code
+        2. Consider chaos engineering approaches, i.e. use blockade to simulate network partitions, restart the broker etc.        
 0. Try to follow the [Microsoft .NET Framework Design Guidelines] (https://github.com/dotnet/corefx/tree/master/Documentation#coding-guidelines) when writing your code
 	0. Providing [BDD] (http://dannorth.net/introducing-bdd/) style tests should provide for the need to use scenarios to test the design of your API
-	1. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/blob/master/Documentation/coding-guidelines/coding-style.md)
-	2. You can use [codeformatter] (https://github.com/dotnet/codeformatter) if you can run VS2015 to automatically update your format
+	0. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/blob/master/Documentation/coding-guidelines/coding-style.md)
+	0. You can use [codeformatter] (https://github.com/dotnet/codeformatter) if you can run VS2015 to automatically update your format
 		3. Ensure you update the template for your copyright if using codeformatter 
+0. Make your tests pass   
 0. Commit
 	0. Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).    
 0. Merge back into your fork
