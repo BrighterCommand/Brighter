@@ -44,24 +44,24 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
         3. Consider providing a sample to run the code
         4. Consider chaos engineering approaches, i.e. use blockade to simulate network partitions, restart the broker etc.  
               
-0. Try to follow the [Microsoft .NET Framework Design Guidelines] (https://github.com/dotnet/corefx/tree/master/Documentation#coding-guidelines) when writing your code
+0. Try to follow the [Microsoft .NET Framework Design Guidelines] (https://github.com/dotnet/corefx/tree/master/Documentation#coding-guidelines)
 
 	1. Providing [BDD] (http://dannorth.net/introducing-bdd/) style tests should provide for the need to use scenarios to test the design of your API
 	2. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/blob/master/Documentation/coding-guidelines/coding-style.md)
 	3. You can use [codeformatter] (https://github.com/dotnet/codeformatter) if you can run VS2015 to automatically update your format
-		1. Ensure you update the template for your copyright if using codeformatter 
+        4. Ensure you update the template for your copyright if using codeformatter 
 		
 0. Make your tests pass   
 0. Commit
 
-	0. Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
+	1. Try to write a [good commit message](http://tbaggery.com/2008/04/19/a-note-about-git-commit-messages.html).
 	    
 0. Merge back into your fork
 0. Push to your fork
 0. Submit a pull request
 0. Sit back, and wait. 
 
-	0. Try pinging @BrighterCommmand on Twitter if you hear nothing 
+	1. Try pinging @BrighterCommmand on Twitter if you hear nothing 
 
 ### Contributor Licence Agreement ###
 To safeguard the project we ask you to sign a Contributor Licence Agreement. The goal is to let you keep your copyright, but to assign it to the project so that it can use it in perpetuity. It is still yours, but the project is not at risk from having multiple contributors holding the copyright, with anyone able to hold it to ransom by removing their grant of licence.
