@@ -26,16 +26,24 @@ using System;
 
 namespace Paramore.Brighter
 {
+    /// <summary>
+    /// What action do we take for infrastructure dependencies?
+    /// -- Create: Make the required infrastructure via SDK calls
+    /// -- Validate: Check if the infrastructure requested exists, and raise an error if not
+    /// -- Assume: Don't check or create, assume it is there, and fail fast if not. Use to removes the cost of checks for existence on platforms where this is expensive
+    /// </summary>
     public enum OnMissingChannel
     {
-        Create = 0,
-        Validate = 1
+        Create = 0, 
+        Validate = 1,
+        Assume = 2
     }
     
     /// <summary>
     /// Class Connection.
     /// A <see cref="Connection"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
-    /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s 
+    /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s
+    /// A Connection is not Gateway specific configuration, that belongs in a class derived from <see cref="IAmGatewayConfiguration"/>
     /// </summary>
     public class Connection
     {

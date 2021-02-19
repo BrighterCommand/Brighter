@@ -20,30 +20,27 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
-        private readonly MyCommand _myCommand;
-        private readonly Guid _correlationId;
-        private readonly string _replyTo;
-        private readonly string _contentType;
-        private readonly string _topicName;
-        private Connection<MyCommand> _connection; 
+        private readonly SqsConnection<MyCommand> _connection; 
 
         public SqsMessageProducerRequeueTests()
         {
-            _myCommand = new MyCommand{Value = "Test"};
-            _correlationId = Guid.NewGuid();
-            _replyTo = "http:\\queueUrl";
-            _contentType = "text\\plain";
+            MyCommand myCommand = new MyCommand{Value = "Test"};
+            Guid correlationId = Guid.NewGuid();
+            string replyTo = "http:\\queueUrl";
+            string contentType = "text\\plain";
             var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _connection = new Connection<MyCommand>(
+            string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var routingKey = new RoutingKey(topicName);
+            
+            _connection = new SqsConnection<MyCommand>(
                 name: new ConnectionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: new RoutingKey(_topicName)
+                routingKey: routingKey
                 );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
-                new MessageBody(JsonConvert.SerializeObject((object) _myCommand))
+                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageBody(JsonConvert.SerializeObject((object) myCommand))
             );
  
             //Must have credentials stored in the SDK Credentials store or shared credentials file
@@ -51,8 +48,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            _sender = new SqsMessageProducer(awsConnection);
-            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+            _sender = new SqsMessageProducer(awsConnection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(_connection);
         }
 

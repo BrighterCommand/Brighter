@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
-    public class RedisMessagingGatewayConfiguration
+    public class RedisMessagingGatewayConfiguration : IAmGatewayConfiguration
     {
         /// <summary>
         /// The default RedisClient Socket ConnectTimeout (default -1, None)

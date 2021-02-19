@@ -36,23 +36,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly KafkaMessagePublisher _publisher;
         private bool _disposedValue = false;
 
-        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaMessagingProducerConfiguration producerConfiguration)
+        public KafkaMessageProducer(
+            KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaMessagingProducerConnection producerConnection)
         {
             _producerConfig = new ProducerConfig
             {
                 BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
                 ClientId = globalConfiguration.Name,
                 MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
-                QueueBufferingMaxMessages = producerConfiguration.QueueBufferingMaxMessages,
-                Acks = producerConfiguration.Acks,
-                QueueBufferingMaxKbytes = producerConfiguration.QueueBufferingMaxKbytes,
-                MessageSendMaxRetries = producerConfiguration.MessageSendMaxRetries,
-                BatchNumMessages = producerConfiguration.BatchNumberMessages,
-                LingerMs = producerConfiguration.QueueBufferingMax,
-                RequestTimeoutMs = producerConfiguration.RequestTimeout,
-                MessageTimeoutMs = producerConfiguration.MessageTimeout,
-                RetryBackoffMs = producerConfiguration.RetryBackoff
+                QueueBufferingMaxMessages = producerConnection.QueueBufferingMaxMessages,
+                Acks = producerConnection.Acks,
+                QueueBufferingMaxKbytes = producerConnection.QueueBufferingMaxKbytes,
+                MessageSendMaxRetries = producerConnection.MessageSendMaxRetries,
+                BatchNumMessages = producerConnection.BatchNumberMessages,
+                LingerMs = producerConnection.QueueBufferingMax,
+                RequestTimeoutMs = producerConnection.RequestTimeout,
+                MessageTimeoutMs = producerConnection.MessageTimeout,
+                RetryBackoffMs = producerConnection.RetryBackoff
             };
 
             _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();

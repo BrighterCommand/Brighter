@@ -11,7 +11,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageConsumer>);
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
-        public MsSqlMessageConsumer(MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration, string topic)
+        public MsSqlMessageConsumer(
+            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration, 
+            string topic)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration);

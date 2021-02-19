@@ -101,7 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
         /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected void EnsureChannel(string queueName = "Producer Channel", OnMissingChannel makeExchange = OnMissingChannel.Create)
+        protected void EnsureBroker(string queueName = "Producer Channel", OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
             ConnectWithCircuitBreaker(queueName, makeExchange);
         }

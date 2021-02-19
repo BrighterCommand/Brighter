@@ -33,6 +33,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     {
         public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection, OnMissingChannel onMissingChannel)
         {
+            if (onMissingChannel == OnMissingChannel.Assume)
+                return;
+
+            if (onMissingChannel == OnMissingChannel.Create)
+            {
+                CreateExchange(channel, connection);
+            }
+            else if (onMissingChannel == OnMissingChannel.Validate)
+            {
+                ValidateExchange(channel, connection);
+            }
+        }
+
+        private static void CreateExchange(IModel channel, RmqMessagingGatewayConnection connection)
+        {
             var arguments = new Dictionary<string, object>();
             if (connection.Exchange.SupportDelay)
             {
@@ -40,22 +55,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 connection.Exchange.Type = "x-delayed-message";
             }
 
-            if (onMissingChannel == OnMissingChannel.Create)
+            channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false,
+                arguments: arguments);
+        }
+        private static void ValidateExchange(IModel channel, RmqMessagingGatewayConnection connection)
+        
+        {
+            try
             {
-                channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false,
-                    arguments: arguments);
+                channel.ExchangeDeclarePassive(connection.Exchange.Name);
             }
-            else
+            catch (Exception e)
             {
-                try
-                {
-                    channel.ExchangeDeclarePassive(connection.Exchange.Name);
-                }
-                catch (Exception e)
-                {
-                    throw new BrokerUnreachableException(e);
-                }
+                throw new BrokerUnreachableException(e);
             }
         }
-    }
+
+     }
 }

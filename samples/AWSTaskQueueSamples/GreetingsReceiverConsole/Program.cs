@@ -53,13 +53,12 @@ namespace GreetingsReceiverConsole
                 {
                     var connections = new Connection[]
                     {
-                        new SQSConnection<GreetingEvent>(
+                        new SqsConnection<GreetingEvent>(
                             new ConnectionName("paramore.example.greeting"),
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            timeoutInMilliseconds: 20,
-                            bufferSize:10,
-                            lockTimeout:30)
+                            bufferSize: 10,
+                            timeoutInMilliseconds: 20, lockTimeout: 30)
                     };
 
                     //create the gateway
@@ -67,12 +66,10 @@ namespace GreetingsReceiverConsole
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                        var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
-
                         services.AddServiceActivator(options =>
                         {
                             options.Connections = connections;
-                            options.ChannelFactory = new ChannelFactory(awsConnection,sqsMessageConsumerFactory);
+                            options.ChannelFactory = new ChannelFactory(awsConnection);
                             var outBox = new InMemoryOutbox();
                             options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new SqsMessageProducer(awsConnection), null);
                         }).AutoFromAssemblies();

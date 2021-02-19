@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(Connection connection)
         {
-            return new SqsMessageConsumer(_awsConnection, connection.ChannelName.ToValidSQSQueueName());
+            return new SqsMessageConsumer(_awsConnection, connection.ChannelName.ToValidSQSQueueName(), connection.RoutingKey);
         }
     }
 }

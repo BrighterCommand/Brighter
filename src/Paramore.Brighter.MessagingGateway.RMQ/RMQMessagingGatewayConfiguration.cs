@@ -28,7 +28,7 @@ using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    public class RmqMessagingGatewayConnection 
+    public class RmqMessagingGatewayConnection : IAmGatewayConfiguration 
     {
       public RmqMessagingGatewayConnection()
       {

@@ -9,10 +9,14 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageProducer>);
         private readonly MsSqlMessageQueue<Message> _sqlQ;
+        private ProducerConnection _producerConnection; // -- placeholder for future use
 
-        public MsSqlMessageProducer(MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration)
+        public MsSqlMessageProducer(
+            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
+            ProducerConnection producerConnection = null)
         {
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration);
+            _producerConnection = producerConnection ?? new ProducerConnection() {MakeChannels = OnMissingChannel.Create};
         }
 
         public void Send(Message message)

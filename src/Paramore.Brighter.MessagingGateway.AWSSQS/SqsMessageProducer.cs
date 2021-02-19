@@ -13,9 +13,7 @@
 // ***********************************************************************
 
 using System;
-using System.Net;
 using Amazon.SimpleNotificationService;
-using Amazon.SimpleNotificationService.Model;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -23,18 +21,36 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Class SqsMessageProducer.
     /// </summary>
-    public class SqsMessageProducer : IAmAMessageProducer
+    public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducer
     {
         private readonly AWSMessagingGatewayConnection _connection;
+        private readonly SqsProducerConnection _producerConnection;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageProducer>);
+        private string _topicArn;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
+        /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
+         /// </summary>
+        public SqsMessageProducer(AWSMessagingGatewayConnection connection)
+            :this(connection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Create})
+        {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
-        /// <param name="credentials">The credentials for the AWS account being used</param>
-        public SqsMessageProducer(AWSMessagingGatewayConnection connection)
+        /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
+        /// <param name="producerConnection">Configuration of a producer</param>
+        public SqsMessageProducer(AWSMessagingGatewayConnection connection, SqsProducerConnection producerConnection)
+            : base(connection)
         {
             _connection = connection;
+            _producerConnection = producerConnection;
+            
+            using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
+            {
+                _topicArn = EnsureTopic(new RoutingKey(_producerConnection.RoutingKey), _producerConnection.MakeChannels);
+            }
         }
 
         /// <summary>
@@ -48,8 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
             {
-                var topicArn = EnsureTopic(message.Header.Topic, client);
-                var publisher = new SqsMessagePublisher(topicArn, client);
+                var publisher = new SqsMessagePublisher(_topicArn, client);
                 publisher.Publish(message);
             }
         }
@@ -65,19 +80,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Send(message);
         }
         
-        /// <summary>
-        /// Ensures the topic. The call to create topic is idempotent and just returns the arn if it already exists. Therefore there is 
-        /// no nee to check then create if it does not exist, as this would be extra calls
-        /// </summary>
-        /// <param name="topicName">Name of the topic.</param>
-        /// <param name="client">The client.</param>
-        /// <returns>System.String.</returns>
-        private string EnsureTopic(string topicName, AmazonSimpleNotificationServiceClient client)
-        {
-            _logger.Value.DebugFormat("Topic with name {0} does not exist. Creating new topic", topicName);
-            var topicResult = client.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
-            return topicResult.HttpStatusCode == HttpStatusCode.OK ? topicResult.TopicArn : string.Empty;
-        }
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.

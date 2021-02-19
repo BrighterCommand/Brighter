@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
@@ -12,26 +13,21 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class ChannelFactory : IAmAChannelFactory
+    public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ChannelFactory>);
-        private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
         private Connection _connection;
-        private string _channelTopicArn;
         private string _queueUrl;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
         /// <param name="awsConnection">The details of the connection to AWS</param>
-        /// <param name="messageConsumerFactory">The messageConsumerFactory.</param>
         public ChannelFactory(
-            AWSMessagingGatewayConnection awsConnection,
-            SqsMessageConsumerFactory messageConsumerFactory)
+            AWSMessagingGatewayConnection awsConnection)
+            :base(awsConnection)
         {
-            _awsConnection = awsConnection;
-            _messageConsumerFactory = messageConsumerFactory;
+            _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
         }
 
         ///  <summary>
@@ -40,15 +36,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         ///  to create ephemeral queues, nor are there non-mirrored queues (on a single node in the cluster) where nodes
         ///  failing mean we want to create anew as we recreate. So the input factory creates the queue 
         ///  </summary>
-        /// <param name="connection">An SQSConnection, the connection parameter so create the channel with</param>
+        /// <param name="connection">An SqsConnection, the connection parameter so create the channel with</param>
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannel CreateChannel(Connection connection)
         {
-            SQSConnection sqsConnection = connection as SQSConnection;  
+            SqsConnection sqsConnection = connection as SqsConnection;  
             if (sqsConnection == null)
-                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+                throw new ConfigurationException("We expect an SqsConnection or SqsConnection<T> as a parameter");
             
             _connection = null;
+            EnsureTopic(sqsConnection);
             EnsureQueue(sqsConnection);
             _connection = connection;
             return new Channel(
@@ -57,15 +54,18 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 connection.BufferSize
                 );
         }
-
-        private void EnsureQueue(SQSConnection connection)
+        
+        private void EnsureQueue(SqsConnection connection)
         {
+            if (connection.MakeChannels == OnMissingChannel.Assume)
+                return;
+            
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
                 var queueName = connection.ChannelName.ToValidSQSQueueName();
                 var topicName = connection.RoutingKey.ToValidSNSTopicName();
-                
+
                 (bool exists, _) = QueueExists(sqsClient, queueName);
                 if (!exists)
                 {
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     {
                         CreateQueue(sqsClient, connection, queueName, topicName, _awsConnection.Region);
                     }
-                    else
+                    else if (connection.MakeChannels == OnMissingChannel.Validate)
                     {
                         var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
                         _logger.Value.Debug(message);
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CreateQueue(AmazonSQSClient sqsClient, SQSConnection connection, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
+        private void CreateQueue(AmazonSQSClient sqsClient, SqsConnection connection, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
         {
             _logger.Value.Debug($"Queue does not exist, creating queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
             _queueUrl = "no queue defined";
@@ -113,7 +113,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     _logger.Value.Debug($"Queue created: {_queueUrl}");
                     using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
-                        CheckTopic(topicName, connection.MakeChannels, sqsClient, snsClient);
                         CheckSubscription(connection.MakeChannels, sqsClient, snsClient);
                     }
                 }
@@ -151,61 +150,48 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CheckTopic(RoutingKey topicName,OnMissingChannel makeTopic, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+        private void CheckSubscription(OnMissingChannel makeSubscriptions, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            if (makeTopic == OnMissingChannel.Validate)
+            if (makeSubscriptions == OnMissingChannel.Assume)
+                return;
+            
+            if (!SubscriptionExists(sqsClient, snsClient))
             {
-                var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-                if (topic == null)
-                    throw new TopicMissingException($"Topic validation error: could not find topic {topicName.Value}. Did you want Brighter to create infrastructure?");
-            }
-            else
-            {
-                var createTopic = snsClient.CreateTopicAsync(new CreateTopicRequest(topicName)).Result;
-                if (!string.IsNullOrEmpty(createTopic.TopicArn))
-                {
-                    _channelTopicArn = createTopic.TopicArn;
-                }
-                else
-                {
-                    throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
-                }
+               if (makeSubscriptions == OnMissingChannel.Validate)
+               {
+                   throw new BrokerUnreachableException($"Subscription validation error: could not find subscription for {_queueUrl}");
+               }
+               else if (makeSubscriptions == OnMissingChannel.Create)
+               {
+                   SubscribeToTopic(sqsClient, snsClient);
+               }
             }
         }
 
-       private void CheckSubscription(OnMissingChannel makeSubscriptions, AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
-       {
-           if (makeSubscriptions == OnMissingChannel.Validate)
-           {
-               CheckForSubscription(sqsClient, snsClient);
-           }
-           else
-           {
-               SubscribeToTopic(sqsClient, snsClient);
-           }
-       }
+        private void SubscribeToTopic(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+        {
+            var subscription = snsClient.SubscribeQueueAsync(_channelTopicArn, sqsClient, _queueUrl).Result;
+            if (!string.IsNullOrEmpty(subscription))
+            {
+                //We need to support raw messages to allow the use of message attributes
+                var response = snsClient.SetSubscriptionAttributesAsync(
+                        new SetSubscriptionAttributesRequest(
+                            subscription, "RawMessageDelivery", "true")
+                    )
+                    .Result;
+                if (response.HttpStatusCode != HttpStatusCode.OK)
+                {
+                    throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException(
+                    $"Could not subscribe to topic: {_channelTopicArn} from queue: {_queueUrl} in region {_awsConnection.Region}");
+            }
+        }
 
-       private void SubscribeToTopic(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
-       {
-           var subscription = snsClient.SubscribeQueueAsync(_channelTopicArn, sqsClient, _queueUrl).Result;
-           if (!string.IsNullOrEmpty(subscription))
-           {
-               //We need to support raw messages to allow the use of message attributes
-               var response = snsClient.SetSubscriptionAttributesAsync(new SetSubscriptionAttributesRequest(subscription, "RawMessageDelivery", "true"))
-                   .Result;
-               if (response.HttpStatusCode != HttpStatusCode.OK)
-               {
-                   throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
-               }
-           }
-           else
-           {
-               throw new InvalidOperationException(
-                   $"Could not subscribe to topic: {_channelTopicArn} from queue: {_queueUrl} in region {_awsConnection.Region}");
-           }
-       }
-
-       private string ToSecondsAsString(int timeountInMilliseconds)
+        private string ToSecondsAsString(int timeountInMilliseconds)
         {
             int timeOutInSeconds = 0;
             if (timeountInMilliseconds >= 1000)
@@ -241,7 +227,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         return true;
                     }
 
-                    //we didn't expect this, so rethrow
+                    //we didn't expect this
                     return false;
                 });
             }
@@ -249,12 +235,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             return (exists, queueUrl);
         }
 
-           private void CheckForSubscription(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
-       {
-           //TODO: Check a subscription exists
-       }
+        private bool SubscriptionExists(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
+        {
+            string queueArn = GetQueueARNForChannel(sqsClient);
 
- 
+            if (queueArn == null)
+                throw new BrokerUnreachableException($"Could not find queue ARN for queue {_queueUrl}");
+
+            bool exists = false;
+            ListSubscriptionsByTopicResponse response;
+            do
+            {
+                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = _channelTopicArn}).GetAwaiter().GetResult();
+                exists = response.Subscriptions.Any(sub => (sub.Protocol.ToLower() == "sqs") && (sub.Endpoint == queueArn));
+            } while (!exists && response.NextToken != null);
+
+            return exists;
+        }
+
         public void DeleteQueue()
         {
             if (_connection == null)
@@ -299,8 +297,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     }
                     catch (Exception)
                     {
-                         //don't break on an exception here, if we can't delete, just exit
-                         _logger.Value.Error($"Could not delete topic {_channelTopicArn}");
+                        //don't break on an exception here, if we can't delete, just exit
+                        _logger.Value.Error($"Could not delete topic {_channelTopicArn}");
                     }
                 }
             }
@@ -308,25 +306,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void DeleteTopic(AmazonSimpleNotificationServiceClient snsClient)
         {
-            snsClient.DeleteTopicAsync(_channelTopicArn).Wait();
+            snsClient.DeleteTopicAsync(_channelTopicArn).GetAwaiter().GetResult();
         }
 
-        private void UnsubscribeFromTopic(AmazonSimpleNotificationServiceClient snsClient)
-        {
-            ListSubscriptionsByTopicResponse response;
-            do
-            {
-                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = _channelTopicArn}).Result;
-                foreach (var sub in response.Subscriptions)
-                {
-                    var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest {SubscriptionArn = sub.SubscriptionArn}).Result;
-                    if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
-                    {
-                        _logger.Value.Error($"Error unsubscribing from {_channelTopicArn} for sub {sub.SubscriptionArn}");
-                    }
-                }
-            } while (response.NextToken != null);
-        }
 
         private bool FindTopicByArn(AmazonSimpleNotificationServiceClient snsClient)
         {
@@ -339,5 +321,41 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             } while (!exists && response.NextToken != null);
             return exists;
         }
+        
+        private string GetQueueARNForChannel(AmazonSQSClient sqsClient)
+        {
+            var result = sqsClient.GetQueueAttributesAsync(
+                new GetQueueAttributesRequest
+                {
+                    QueueUrl = _queueUrl,
+                    AttributeNames = new List<string> {"QueueArn"}
+                }
+            ).GetAwaiter().GetResult();
+
+            if (result.HttpStatusCode == HttpStatusCode.OK)
+            {
+                return result.QueueARN;
+            }
+
+            return null; 
+        }
+        
+        private void UnsubscribeFromTopic(AmazonSimpleNotificationServiceClient snsClient)
+        {
+            ListSubscriptionsByTopicResponse response;
+            do
+            {
+                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = _channelTopicArn}).GetAwaiter().GetResult();
+                foreach (var sub in response.Subscriptions)
+                {
+                    var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest {SubscriptionArn = sub.SubscriptionArn}).GetAwaiter().GetResult();
+                    if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
+                    {
+                        _logger.Value.Error($"Error unsubscribing from {_channelTopicArn} for sub {sub.SubscriptionArn}");
+                    }
+                }
+            } while (response.NextToken != null);
+        }
+
     }
 }
