@@ -44,7 +44,7 @@ It isn't wise to build something that can be a part of someone's ecosystem witho
         3. Consider providing a sample to run the code
         4. Consider chaos engineering approaches, i.e. use blockade to simulate network partitions, restart the broker etc.  
               
-0. Try to follow the (Microsoft .NET Framework Design Guidelines) [https://github.com/dotnet/corefx/tree/master/Documentation#coding-guidelines]
+0. Try to follow the [Microsoft .NET Framework Design Guidelines] (https://github.com/dotnet/corefx/tree/master/Documentation#coding-guidelines)
 
 	1. Providing [BDD] (http://dannorth.net/introducing-bdd/) style tests should provide for the need to use scenarios to test the design of your API
 	2. Use the coding style from [dotnet/corefx] (https://github.com/dotnet/corefx/blob/master/Documentation/coding-guidelines/coding-style.md)
