@@ -55,6 +55,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public bool IsDurable { get; }
 
         /// <summary>
+        /// The maximum number of messages on the queue before we begin to reject messages
+        /// </summary>
+        public int? MaxQueueLength { get; }
+        
+        /// <summary>
         /// How long does a message live on the queue, in milliseconds, before expiring?
         /// A null value, the default, is infinite
         /// </summary>

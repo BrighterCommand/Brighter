@@ -60,6 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private readonly string _deadLetterRoutingKey;
         private readonly bool _hasDlq;
         private readonly int? _ttl;
+        private readonly int? _maxQueueLength;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -83,8 +84,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             string deadLetterQueueName = null,
             string deadLetterRoutingKey = null,
             int? ttl = null,
+            int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, makeChannels)
+            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, 
+                batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels)
         {
         }
 
@@ -100,6 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="deadLetterQueueName">The dead letter queue</param>
         /// <param name="deadLetterRoutingKey">The routing key for dead letter messages</param>
         /// <param name="ttl">How long before a message on the queue expires in milliseconds. Defaults to infinite</param>
+        /// <param name="maxQueueLength">The maximum number of messages on the queue before we begin to reject publication of messages</param>
         /// <param name="makeChannels">Should we validate or create missing channels</param>
         public RmqMessageConsumer(RmqMessagingGatewayConnection connection,
             string queueName,
@@ -110,6 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             string deadLetterQueueName = null,
             string deadLetterRoutingKey = null,
             int? ttl = null,
+            int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(connection)
         {
@@ -125,6 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _hasDlq = !string.IsNullOrEmpty(deadLetterQueueName) && !string.IsNullOrEmpty(_deadLetterRoutingKey);
             _ttl = ttl;
+            _maxQueueLength = maxQueueLength;
         }
 
         /// <summary>
@@ -468,6 +474,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             if (_ttl.HasValue)
             {
                 arguments.Add("x-message-ttl",_ttl.Value);
+            }
+
+            if (_maxQueueLength.HasValue)
+            {
+                arguments.Add("x-max-length",_maxQueueLength.Value);
+                arguments.Add("x-overflow", "reject-publish");
             }
 
             return arguments;
