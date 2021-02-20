@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private static (bool success, string topicArn) FindTopicByName(RoutingKey topicName, AmazonSimpleNotificationServiceClient snsClient)
         {
             var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-            return (topic == null, topic.TopicArn);
+            return (topic != null, topic?.TopicArn);
         }
     }
 }

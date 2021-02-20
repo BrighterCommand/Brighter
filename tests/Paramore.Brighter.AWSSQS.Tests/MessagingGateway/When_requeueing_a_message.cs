@@ -44,11 +44,14 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             );
  
             //Must have credentials stored in the SDK Credentials store or shared credentials file
-            var credentialChain = new CredentialProfileStoreChain();
+            new CredentialProfileStoreChain();
             
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            
             _sender = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            
+            //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(_subscription);
         }

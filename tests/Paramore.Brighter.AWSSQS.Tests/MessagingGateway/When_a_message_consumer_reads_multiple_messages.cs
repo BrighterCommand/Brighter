@@ -23,9 +23,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public SQSBufferedConsumerTests()
         {
-            //Must have credentials stored in the SDK Credentials store or shared credentials file
-            var credentialChain = new CredentialProfileStoreChain();
-            
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
@@ -46,7 +43,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
             var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
-            _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName,routingKey, BUFFER_SIZE);
+            _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, routingKey, BUFFER_SIZE);
            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
             

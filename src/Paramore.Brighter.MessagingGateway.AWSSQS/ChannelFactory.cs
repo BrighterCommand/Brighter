@@ -16,7 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
-        private Subscription _subscription;
+        private SqsSubscription _subscription;
         private string _queueUrl;
 
         /// <summary>
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _subscription = null;
             EnsureTopic(sqsSubscription);
             EnsureQueue(sqsSubscription);
-            _subscription = subscription;
+            _subscription = sqsSubscription;
             return new Channel(
                 subscription.ChannelName.ToValidSQSQueueName(), 
                 _messageConsumerFactory.Create(subscription), 

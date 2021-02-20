@@ -34,7 +34,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(_topicName);
             
-            SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
+            SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
@@ -48,8 +48,11 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            
+            //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
+            
             _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
 
