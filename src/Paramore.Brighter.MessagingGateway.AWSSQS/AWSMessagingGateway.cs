@@ -23,9 +23,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         protected string EnsureTopic(RoutingKey topic, OnMissingChannel makeTopic)
         {
-            if (makeTopic == OnMissingChannel.Assume)
-                _channelTopicArn = topic.Value;
-            else if (makeTopic == OnMissingChannel.Validate)
+            //on validate or assume, turn a routing key into a topicARN
+            if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
                 ValidateTopic(topic);
             else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic);
             return _channelTopicArn;

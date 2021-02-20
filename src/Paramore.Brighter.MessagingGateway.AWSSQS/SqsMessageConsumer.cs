@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             try
             {
                 client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
-                var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                var urlResponse = client.GetQueueUrlAsync(_queueName).GetAwaiter().GetResult();
 
                 _logger.Value.DebugFormat("SqsMessageConsumer: Preparing to retrieve next message from queue {0}",
                     urlResponse.QueueUrl);
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     AttributeNames = new List<string>() { "All" }
                 };
 
-                var receiveResponse = client.ReceiveMessageAsync(request).Result;
+                var receiveResponse = client.ReceiveMessageAsync(request).GetAwaiter().GetResult();
 
                 sqsMessages = receiveResponse.Messages.ToArray();
 
@@ -252,6 +252,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
+                if (topic == null)
+                    throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
                 return topic.TopicArn;
             }
         }
