@@ -59,6 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private readonly string _deadLetterQueueName;
         private readonly string _deadLetterRoutingKey;
         private readonly bool _hasDlq;
+        private readonly int? _ttl;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -71,6 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="batchSize">How many messages to retrieve at one time; ought to be size of channel buffer</param>
         /// <param name="deadLetterQueueName">The dead letter queue</param>
         /// <param name="deadLetterRoutingKey">The routing key for dead letter messages</param>
+        /// <param name="ttl">How long before a message on the queue expires in milliseconds. Defaults to infinite</param>
         /// <param name="makeChannels">Should we validate, or create missing channels</param>
         public RmqMessageConsumer(RmqMessagingGatewayConnection connection,
             string queueName,
@@ -80,8 +82,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int batchSize = 1,
             string deadLetterQueueName = null,
             string deadLetterRoutingKey = null,
+            int? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, batchSize, deadLetterQueueName, deadLetterRoutingKey, makeChannels)
+            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, makeChannels)
         {
         }
 
@@ -96,6 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="batchSize">How many messages to retrieve at one time; ought to be size of channel buffer</param>
         /// <param name="deadLetterQueueName">The dead letter queue</param>
         /// <param name="deadLetterRoutingKey">The routing key for dead letter messages</param>
+        /// <param name="ttl">How long before a message on the queue expires in milliseconds. Defaults to infinite</param>
         /// <param name="makeChannels">Should we validate or create missing channels</param>
         public RmqMessageConsumer(RmqMessagingGatewayConnection connection,
             string queueName,
@@ -105,6 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int batchSize = 1,
             string deadLetterQueueName = null,
             string deadLetterRoutingKey = null,
+            int? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(connection)
         {
@@ -119,6 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _deadLetterQueueName = deadLetterQueueName;
             _deadLetterRoutingKey = deadLetterRoutingKey;
             _hasDlq = !string.IsNullOrEmpty(deadLetterQueueName) && !string.IsNullOrEmpty(_deadLetterRoutingKey);
+            _ttl = ttl;
         }
 
         /// <summary>
@@ -457,6 +463,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 //You can set a different exchange for the DLQ to the Queue
                 arguments.Add("x-dead-letter-exchange", GetDeadletterExchangeName());
                 arguments.Add("x-dead-letter-routing-key", _deadLetterRoutingKey);
+            }
+
+            if (_ttl.HasValue)
+            {
+                arguments.Add("x-message-ttl",_ttl.Value);
             }
 
             return arguments;

@@ -57,6 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 rmqSubscription.BufferSize,
                 rmqSubscription.DeadLetterChannelName,
                 rmqSubscription.DeadLetterRoutingKey,
+                rmqSubscription.TTL,
                 subscription.MakeChannels);
         }
     }
