@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <summary>
         /// Initializes a new instance of the <see cref="MsSqlOutboxConfiguration"/> class.
         /// </summary>
-        /// <param name="connectionString">The connection string.</param>
+        /// <param name="connectionString">The subscription string.</param>
         /// <param name="outBoxTableName">Name of the outbox table.</param>
         public MsSqlOutboxConfiguration(string connectionString, string outBoxTableName)
         {
@@ -41,9 +41,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        /// Gets the connection string.
+        /// Gets the subscription string.
         /// </summary>
-        /// <value>The connection string.</value>
+        /// <value>The subscription string.</value>
         public string ConnectionString { get; private set; }
         /// <summary>
         /// Gets the name of the outbox table.

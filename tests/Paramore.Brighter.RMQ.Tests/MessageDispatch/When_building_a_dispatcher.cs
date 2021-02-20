@@ -85,13 +85,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                 .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new []
                 {
-                    new Connection<MyEvent>(
-                        new ConnectionName("foo"),
+                    new Subscription<MyEvent>(
+                        new SubscriptionName("foo"),
                         new ChannelName("mary"),
                         new RoutingKey("bob"),
                         timeoutInMilliseconds: 200),
-                    new Connection<MyEvent>(
-                        new ConnectionName("bar"),
+                    new Subscription<MyEvent>(
+                        new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
                         timeoutInMilliseconds: 200)
@@ -113,9 +113,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             AssertionExtensions.Should((object) _dispatcher.State).Be(DispatcherState.DS_AWAITING);
         }
 
-        private Connection GetConnection(string name)
+        private Subscription GetConnection(string name)
         {
-            return Enumerable.SingleOrDefault<Connection>(_dispatcher.Connections, conn => conn.Name == name);
+            return Enumerable.SingleOrDefault<Subscription>(_dispatcher.Connections, conn => conn.Name == name);
         }
     }
 }

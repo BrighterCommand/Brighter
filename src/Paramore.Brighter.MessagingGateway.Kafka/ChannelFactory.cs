@@ -39,14 +39,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Creates the input channel
         /// </summary>
-        /// <param name="connection">The connection parameters with which to create the channel</param>
+        /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns></returns>
-        public IAmAChannel CreateChannel(Connection connection)
+        public IAmAChannel CreateChannel(Subscription subscription)
         {
             return new Channel(
-                connection.ChannelName, 
-                _kafkaMessageConsumerFactory.Create(connection), 
-                connection.BufferSize);
+                subscription.ChannelName, 
+                _kafkaMessageConsumerFactory.Create(subscription), 
+                subscription.BufferSize);
         }
     }
 }

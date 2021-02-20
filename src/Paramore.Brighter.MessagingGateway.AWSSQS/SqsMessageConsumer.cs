@@ -235,7 +235,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (message.Header.Bag.ContainsKey("ReceiptHandle"))
                     message.Header.Bag.Remove("ReceiptHandle");
-                var sqsMessageProducer = new SqsMessageProducer(_awsConnection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Assume, RoutingKey = _topicArn});
+                var sqsMessageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume, RoutingKey = _topicArn});
                 sqsMessageProducer.Send(message);
 
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeued the message {0}", message.Id);

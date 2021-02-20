@@ -30,8 +30,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
             
-            SqsConnection<MyCommand> connection = new SqsConnection<MyCommand>(
-                name: new ConnectionName(channelName),
+            SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
+                name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
             );
@@ -47,8 +47,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(connection);
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _channel = _channelFactory.CreateChannel(subscription);
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
 
         [Fact]

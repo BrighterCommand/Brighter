@@ -24,33 +24,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducer
     {
         private readonly AWSMessagingGatewayConnection _connection;
-        private readonly SqsProducerConnection _producerConnection;
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageProducer>);
-        private string _topicArn;
+        private readonly string _topicArn;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
          /// </summary>
         public SqsMessageProducer(AWSMessagingGatewayConnection connection)
-            :this(connection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Create})
+            :this(connection, new SqsPublication{MakeChannels = OnMissingChannel.Create})
         {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
         /// </summary>
         /// <param name="connection">How do we connect to AWS in order to manage middleware</param>
-        /// <param name="producerConnection">Configuration of a producer</param>
-        public SqsMessageProducer(AWSMessagingGatewayConnection connection, SqsProducerConnection producerConnection)
+        /// <param name="publication">Configuration of a producer</param>
+        public SqsMessageProducer(AWSMessagingGatewayConnection connection, SqsPublication publication)
             : base(connection)
         {
             _connection = connection;
-            _producerConnection = producerConnection;
-            
-            using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
-            {
-                _topicArn = EnsureTopic(new RoutingKey(_producerConnection.RoutingKey), _producerConnection.MakeChannels);
-            }
+            _topicArn = EnsureTopic(new RoutingKey(publication.RoutingKey), publication.MakeChannels);
         }
 
         /// <summary>

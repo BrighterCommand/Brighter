@@ -27,22 +27,42 @@ using System;
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
-    /// A connection for an SQS Consumer.
+    /// A subscription for an SQS Consumer.
     /// We will create infrastructure on the basis of Make Channels
     /// Create = topic using routing key name, queue using channel name
     /// Validate = look for topic using routing key name, queue using channel name
     /// Assume = Assume Routing Key is Topic ARN, queue exists via channel name
     /// </summary>
-    public class SqsConnection : Connection
+    public class SqsSubscription : Subscription
     {
         /// <summary>
         /// This governs how long, in seconds, a 'lock' is held on a message for one consumer
         /// to process. SQS calls this the VisibilityTimeout
         /// </summary>
         public int LockTimeout { get; }
+        
+        /// <summary>
+        /// The length of time, in seconds, for which the delivery of all messages in the queue is delayed.
+        /// </summary>
+        public int DelaySeconds { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Connection"/> class.
+        /// The length of time, in seconds, for which Amazon SQS retains a message
+        /// </summary>
+        public int MessageRetentionPeriod { get; }
+        
+        /// <summary>
+        ///  The queue's policy. A valid AWS policy.
+        /// </summary>
+        public string IAMPolicy { get; }
+        
+        /// <summary>
+        /// The string that includes the parameters for the dead-letter queue functionality of the source queue as a JSON object
+        /// </summary>
+        public string RedrivePolicy { get; }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
@@ -57,9 +77,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
+        /// <param name="redrivePolicy">The string that includes the parameters for the dead-letter queue functionality of the source queue as a JSON object</param>
+        /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
+        /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
+        /// <param name="iAmPolicy">The queue's policy. A valid AWS policy.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public SqsConnection(Type dataType,
-            ConnectionName name = null,
+        public SqsSubscription(Type dataType,
+            SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int noOfPerformers = 1,
@@ -71,25 +95,32 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             int lockTimeout = 10,
+            int delaySeconds = 0,
+            int messageRetentionPeriod = 345600,
+            string iAmPolicy = null,
+            string redrivePolicy = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
             ) 
             : base(dataType, name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
         {
             LockTimeout = lockTimeout;
+            DelaySeconds = delaySeconds;
+            MessageRetentionPeriod = messageRetentionPeriod;
+            IAMPolicy = iAmPolicy;
+            RedrivePolicy = redrivePolicy;
         }
     }
     
     /// <summary>
-    /// A connection for an SQS Consumer.
+    /// A subscription for an SQS Consumer.
     /// We will create infrastructure on the basis of Make Channels
     /// Create = topic using routing key name, queue using channel name
     /// Validate = look for topic using routing key name, queue using channel name
     /// Assume = Assume Routing Key is Topic ARN, queue exists via channel name
     /// </summary>
-    /// <summary>
-    public class SqsConnection<T> : SqsConnection where T : IRequest
+    public class SqsSubscription<T> : SqsSubscription where T : IRequest
     {
-        /// Initializes a new instance of the <see cref="Connection"/> class.
+        /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
@@ -104,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public SqsConnection(ConnectionName name = null,
+        public SqsSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int noOfPerformers = 1,
@@ -116,9 +147,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             int lockTimeout = 10,
+            int delaySeconds = 0,
+            int messageRetentionPeriod = 345600,
+            string iAMPolicy = null,
+            string redrivePolicy = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
             ) 
-            : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, lockTimeout, makeChannels)
+            : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, 
+                unacceptableMessageLimit, isAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod, iAMPolicy,redrivePolicy, makeChannels)
         {
         } 
     }

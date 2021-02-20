@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class SqsProducerConnection : ProducerConnection
+    public class SqsPublication : Publication
     {
         /// <summary>
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.

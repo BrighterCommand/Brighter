@@ -27,7 +27,7 @@ using System.Xml.XPath;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    public class RMQConnection : Connection
+    public class RmqSubscription : Subscription
     {
         /// <summary>
         /// Is the channel mirrored across node in the cluster
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public bool IsDurable { get; }
         
         /// <summary>
-        /// Initializes a new instance of the <see cref="Connection"/> class.
+        /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
@@ -62,9 +62,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
         /// <param name="lockTimeout">How long should a message remain locked for processing</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public RMQConnection(
+        public RmqSubscription(
             Type dataType,
-            ConnectionName name = null, 
+            SubscriptionName name = null, 
             ChannelName channelName = null, 
             RoutingKey routingKey = null, 
             int bufferSize = 1, 
@@ -85,10 +85,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         }
     }
 
-    public class RMQConnection<T> : RMQConnection where T : IRequest
+    public class RmqSubscription<T> : RmqSubscription where T : IRequest
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Connection"/> class.
+        /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
         /// <param name="lockTimeout">How long should a message remain locked for processing</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public RMQConnection(ConnectionName name = null,
+        public RmqSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int bufferSize = 1,

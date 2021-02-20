@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
       }
 
       /// <summary>
-      /// Sets Unique name for the connection
+      /// Sets Unique name for the subscription
       /// </summary>
       public string Name { get; set; }
 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
 
         /// <summary>
-        /// Gets or sets the retry count for when a connection fails
+        /// Gets or sets the retry count for when a subscription fails
         /// </summary>
         public int ConnectionRetryCount { get; set; }
 

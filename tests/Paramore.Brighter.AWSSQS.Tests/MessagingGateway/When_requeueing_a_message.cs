@@ -20,7 +20,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
-        private readonly SqsConnection<MyCommand> _connection; 
+        private readonly SqsSubscription<MyCommand> _subscription; 
 
         public SqsMessageProducerRequeueTests()
         {
@@ -32,8 +32,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
             
-            _connection = new SqsConnection<MyCommand>(
-                name: new ConnectionName(channelName),
+            _subscription = new SqsSubscription<MyCommand>(
+                name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
                 );
@@ -48,9 +48,9 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            _sender = new SqsMessageProducer(awsConnection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _sender = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(_connection);
+            _channel = _channelFactory.CreateChannel(_subscription);
         }
 
         [Fact]

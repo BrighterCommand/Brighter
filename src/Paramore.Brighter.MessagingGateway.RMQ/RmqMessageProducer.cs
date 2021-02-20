@@ -33,36 +33,36 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class ClientRequestHandler .
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
-    /// It handles connection establishment, request sending and error handling
+    /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : RMQMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
+    public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
-        private readonly ProducerConnection _producerConnection;
+        private readonly Publication _publication;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>
-        /// <param name="connection">The connection information needed to talk to RMQ</param>
+        /// <param name="connection">The subscription information needed to talk to RMQ</param>
         ///     Make Channels = Create
         /// </param>
         public RmqMessageProducer(RmqMessagingGatewayConnection connection) 
-            : this(connection, new ProducerConnection{MakeChannels = OnMissingChannel.Create})
+            : this(connection, new Publication{MakeChannels = OnMissingChannel.Create})
         { }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>
-        /// <param name="connection">The connection information needed to talk to RMQ</param>
-        /// <param name="producerConnection">How should we configure this producer. If not provided use default behaviours:
+        /// <param name="connection">The subscription information needed to talk to RMQ</param>
+        /// <param name="publication">How should we configure this producer. If not provided use default behaviours:
         ///     Make Channels = Create
         /// </param>
-         public RmqMessageProducer(RmqMessagingGatewayConnection connection, ProducerConnection producerConnection) 
+         public RmqMessageProducer(RmqMessagingGatewayConnection connection, Publication publication) 
             : base(connection)
         {
-            _producerConnection = producerConnection;
+            _publication = publication;
         }
 
         /// <summary>
@@ -87,14 +87,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 lock (_lock)
                 {
                     _logger.Value.DebugFormat("RmqMessageProducer: Preparing  to send message via exchange {0}", Connection.Exchange.Name);
-                    EnsureBroker(makeExchange: _producerConnection.MakeChannels);
+                    EnsureBroker(makeExchange: _publication.MakeChannels);
                     
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 
                     message.Persist = Connection.PersistMessages;
 
                     _logger.Value.DebugFormat(
-                        "RmqMessageProducer: Publishing message to exchange {0} on connection {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
+                        "RmqMessageProducer: Publishing message to exchange {0} on subscription {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
                         message.Id, message.Body.Value, delayMilliseconds, message.Persist);
                     
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     }
 
                     _logger.Value.InfoFormat(
-                        "RmqMessageProducer: Published message to exchange {0} on connection {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
+                        "RmqMessageProducer: Published message to exchange {0} on subscription {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
                         message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds, message.Persist);
                 }
@@ -117,7 +117,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (IOException io)
             {
                 _logger.Value.ErrorFormat(
-                    "RmqMessageProducer: Error talking to the socket on {0}, resetting connection",
+                    "RmqMessageProducer: Error talking to the socket on {0}, resetting subscription",
                     Connection.AmpqUri.GetSanitizedUri()
                     );
                 ResetConnectionToBroker();

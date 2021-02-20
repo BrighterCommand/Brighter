@@ -50,10 +50,10 @@ namespace GreetingsReceiverConsole
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new RMQConnection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
+                        new RmqSubscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
                             channelName:new ChannelName("greeting.event"),
                             routingKey:new RoutingKey("greeting.event"),
                             bufferSize: 10,
@@ -74,7 +74,7 @@ namespace GreetingsReceiverConsole
                     var outBox = new InMemoryOutbox();
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     }).AutoFromAssemblies();
 

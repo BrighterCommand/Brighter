@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int? DefaultReceiveTimeout { get; set; }
 
         /// <summary>
-        /// Default Idle TimeOut before a connection is considered to be stale (default 240 secs)
+        /// Default Idle TimeOut before a subscription is considered to be stale (default 240 secs)
         /// </summary>
         public int? DefaultIdleTimeOutSecs { get; set; }
 
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public static int? AssumeServerVersion { get; set; }
 
         /// <summary>
-        /// How long to hold deactivated clients for before disposing their connection (default 1 min)
+        /// How long to hold deactivated clients for before disposing their subscription (default 1 min)
         /// Dispose of deactivated Clients immediately with TimeSpan.Zero
         /// </summary>
         public TimeSpan? DeactivatedClientsExpiry { get; set; }

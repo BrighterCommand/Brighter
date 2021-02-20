@@ -51,10 +51,10 @@ namespace GreetingsReceiverConsole
                 .ConfigureServices((hostContext, services) =>
 
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new SqsConnection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
+                        new SqsSubscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
@@ -68,7 +68,7 @@ namespace GreetingsReceiverConsole
 
                         services.AddServiceActivator(options =>
                         {
-                            options.Connections = connections;
+                            options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(awsConnection);
                             var outBox = new InMemoryOutbox();
                             options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new SqsMessageProducer(awsConnection), null);

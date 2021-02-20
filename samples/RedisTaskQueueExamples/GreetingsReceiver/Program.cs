@@ -26,10 +26,10 @@ namespace GreetingsReceiver
                 .ConfigureServices((hostContext, services) =>
 
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new Connection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
+                        new Subscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
                             timeoutInMilliseconds: 200)
@@ -46,7 +46,7 @@ namespace GreetingsReceiver
                     var redisConsumerFactory = new RedisMessageConsumerFactory(redisConnection);
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(redisConsumerFactory);
                         var outBox = new InMemoryOutbox();
                         options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new RedisMessageProducer(redisConnection), null);

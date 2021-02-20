@@ -25,11 +25,11 @@ THE SOFTWARE. */
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Contains configuration that is generic to producers - similar to Connection for consumers
-    /// Unlike <see cref="Connection"/>, as it is passed to a constructor it is by convention over enforced at compile time
+    /// Contains configuration that is generic to producers - similar to Subscription for consumers
+    /// Unlike <see cref="Subscription"/>, as it is passed to a constructor it is by convention over enforced at compile time
     /// Platform specific configuration goes into a <see cref="IAmGatewayConfiguration"/> derived class
     /// </summary>
-    public class ProducerConnection
+    public class Publication
     {
         /// <summary>
         /// What do we do with infrastructure dependencies for the producer?

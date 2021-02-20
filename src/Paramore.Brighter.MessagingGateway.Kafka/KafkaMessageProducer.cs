@@ -38,22 +38,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaMessagingProducerConnection producerConnection)
+            KafkaMessagingPublication publication)
         {
             _producerConfig = new ProducerConfig
             {
                 BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
                 ClientId = globalConfiguration.Name,
                 MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
-                QueueBufferingMaxMessages = producerConnection.QueueBufferingMaxMessages,
-                Acks = producerConnection.Acks,
-                QueueBufferingMaxKbytes = producerConnection.QueueBufferingMaxKbytes,
-                MessageSendMaxRetries = producerConnection.MessageSendMaxRetries,
-                BatchNumMessages = producerConnection.BatchNumberMessages,
-                LingerMs = producerConnection.QueueBufferingMax,
-                RequestTimeoutMs = producerConnection.RequestTimeout,
-                MessageTimeoutMs = producerConnection.MessageTimeout,
-                RetryBackoffMs = producerConnection.RetryBackoff
+                QueueBufferingMaxMessages = publication.QueueBufferingMaxMessages,
+                Acks = publication.Acks,
+                QueueBufferingMaxKbytes = publication.QueueBufferingMaxKbytes,
+                MessageSendMaxRetries = publication.MessageSendMaxRetries,
+                BatchNumMessages = publication.BatchNumberMessages,
+                LingerMs = publication.QueueBufferingMax,
+                RequestTimeoutMs = publication.RequestTimeout,
+                MessageTimeoutMs = publication.MessageTimeout,
+                RetryBackoffMs = publication.RetryBackoff
             };
 
             _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();

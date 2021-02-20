@@ -39,10 +39,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class RmqMessageConsumer.
     /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
-    /// inter-process communication tasks from the server. It handles connection establishment, request reception and dispatching, 
+    /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
     /// result sending, and error handling.
     /// </summary>
-    public class RmqMessageConsumer : RMQMessageGateway, IAmAMessageConsumer
+    public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageConsumer>);
 
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         private readonly bool highAvailability;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="queueName">The queue name.</param>
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
+        /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
         /// </summary>
         /// <param name="connection"></param>
         /// <param name="queueName">The queue name.</param>
@@ -216,7 +216,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public Message[] Receive(int timeoutInMilliseconds)
         {
             _logger.Value.DebugFormat(
-                "RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName,
+                "RmqMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on subscription {3}", _queueName,
                 _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
             try
@@ -234,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         messages[i] = message;
 
                         _logger.Value.InfoFormat(
-                            "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on connection {3}, message: {4}",
+                            "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on subscription {3}, message: {4}",
                             _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
                             JsonConvert.SerializeObject(message),
                             Environment.NewLine);
@@ -250,7 +250,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (EndOfStreamException endOfStreamException)
             {
                 _logger.Value.DebugException(
-                    "RmqMessageConsumer: The model closed, or the connection went away. Listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: The model closed, or the subscription went away. Listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     endOfStreamException,
                     _queueName,
                     _routingKeys,
@@ -261,7 +261,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (BrokerUnreachableException bue)
             {
                 _logger.Value.ErrorException(
-                    "RmqMessageConsumer: There broker was unreachable listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: There broker was unreachable listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     bue,
                     _queueName,
                     _routingKeys,
@@ -273,7 +273,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (AlreadyClosedException ace)
             {
                 _logger.Value.ErrorException(
-                    "RmqMessageConsumer: There connection was already closed when listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: There subscription was already closed when listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     ace,
                     _queueName,
                     _routingKeys,
@@ -285,7 +285,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (OperationInterruptedException oie)
             {
                 _logger.Value.ErrorException(
-                    "RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     oie,
                     _queueName,
                     _routingKeys,
@@ -296,7 +296,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (TimeoutException te)
             {
                 _logger.Value.ErrorException(
-                    "RmqMessageConsumer: The socket timed out whilst listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: The socket timed out whilst listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     te,
                     _queueName,
                     _routingKeys,
@@ -308,7 +308,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (NotSupportedException nse)
             {
                 _logger.Value.ErrorException(
-                    "RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     nse,
                     _queueName,
                     _routingKeys,
@@ -319,7 +319,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (BrokenCircuitException bce)
             {
                 _logger.Value.WarnFormat(
-                    "CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}",
+                    "CIRCUIT BROKEN: RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on subscription {3}",
                     _queueName,
                     _routingKeys,
                     Connection.Exchange.Name,
@@ -329,7 +329,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (Exception exception)
             {
                 _logger.Value.ErrorException(
-                    "RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on connection {3}", exception, _queueName,
+                    "RmqMessageConsumer: There was an error listening to queue {0} via exchange {1} via exchange {2} on subscription {3}", exception, _queueName,
                     _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
                 throw;
             }
@@ -358,7 +358,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 CreateConsumer();
 
                 _logger.Value.InfoFormat(
-                    "RmqMessageConsumer: Created rabbitmq channel {4} for queue {0} with routing key/s {1} via exchange {2} on connection {3}",
+                    "RmqMessageConsumer: Created rabbitmq channel {4} for queue {0} with routing key/s {1} via exchange {2} on subscription {3}",
                     _queueName,
                     _routingKeys,
                     Connection.Exchange.Name,
@@ -389,7 +389,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             _consumer.HandleBasicConsumeOk(_consumerTag);
 
-            _logger.Value.InfoFormat("RmqMessageConsumer: Created consumer for queue {0} with routing key {1} via exchange {2} on connection {3}",
+            _logger.Value.InfoFormat("RmqMessageConsumer: Created consumer for queue {0} with routing key {1} via exchange {2} on subscription {3}",
                 _queueName,
                 _routingKeys,
                 Connection.Exchange.Name,
@@ -399,7 +399,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void CreateQueue()
         {
-            _logger.Value.DebugFormat("RmqMessageConsumer: Creating queue {0} on connection {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
+            _logger.Value.DebugFormat("RmqMessageConsumer: Creating queue {0} on subscription {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
             Channel.QueueDeclare(_queueName, _isDurable, false, false, SetQueueArguments());
         }
         
@@ -413,7 +413,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         
         private void ValidateQueue()
         {
-            _logger.Value.DebugFormat("RmqMessageConsumer: Validating queue {0} on connection {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
+            _logger.Value.DebugFormat("RmqMessageConsumer: Validating queue {0} on subscription {1}", _queueName, Connection.AmpqUri.GetSanitizedUri());
 
             try
             {

@@ -46,17 +46,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Creates the input channel.
         /// </summary>
-        /// <param name="connection">An RMQConnection with parameters to create the queue with</param>
+        /// <param name="subscription">An RmqSubscription with parameters to create the queue with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Connection connection)
+        public IAmAChannel CreateChannel(Subscription subscription)
         {
-            RMQConnection rmqConnection = connection as RMQConnection;  
-            if (rmqConnection == null)
+            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             
-            return new Channel(connection.ChannelName, 
-                _messageConsumerFactory.Create(connection), 
-                connection.BufferSize);
+            return new Channel(subscription.ChannelName, 
+                _messageConsumerFactory.Create(subscription), 
+                subscription.BufferSize);
         }
     }
 }

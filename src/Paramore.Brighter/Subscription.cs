@@ -40,12 +40,12 @@ namespace Paramore.Brighter
     }
     
     /// <summary>
-    /// Class Connection.
-    /// A <see cref="Connection"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
+    /// Class Subscription.
+    /// A <see cref="Subscription"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
     /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s
-    /// A Connection is not Gateway specific configuration, that belongs in a class derived from <see cref="IAmGatewayConfiguration"/>
+    /// A Subscription is not Gateway specific configuration, that belongs in a class derived from <see cref="IAmGatewayConfiguration"/>
     /// </summary>
-    public class Connection
+    public class Subscription
     {
         /// <summary>
         /// How many messages do we store in the channel at any one time. When we read from a broker we need to balance
@@ -74,7 +74,7 @@ namespace Paramore.Brighter
         public Type DataType { get; }
 
         /// <summary>
-        /// Gets a value indicating whether this connection should use an asynchronous pipeline
+        /// Gets a value indicating whether this subscription should use an asynchronous pipeline
         /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
         /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
         /// </summary>
@@ -83,10 +83,10 @@ namespace Paramore.Brighter
 
 
         /// <summary>
-        /// Gets or sets the name of the connection, for identification.
+        /// Gets or sets the name of the subscription, for identification.
         /// </summary>
         /// <value>The name.</value>
-        public ConnectionName Name { get; }
+        public SubscriptionName Name { get; }
 
         /// <summary>
         /// Gets the no of threads that we will use to read from  this channel.
@@ -130,7 +130,7 @@ namespace Paramore.Brighter
         public OnMissingChannel MakeChannels { get; }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="Connection"/> class.
+        /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="dataType">Type of the data.</param>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
@@ -145,9 +145,9 @@ namespace Paramore.Brighter
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public Connection(
+        public Subscription(
             Type dataType,
-            ConnectionName name = null,
+            SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int bufferSize = 1,
@@ -161,7 +161,7 @@ namespace Paramore.Brighter
             OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             DataType = dataType;
-            Name = name ?? new ConnectionName(dataType.FullName);
+            Name = name ?? new SubscriptionName(dataType.FullName);
             ChannelName = channelName ?? new ChannelName(dataType.FullName);
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
             BufferSize = bufferSize;
@@ -176,11 +176,11 @@ namespace Paramore.Brighter
         }
     }
 
-    public class Connection<T> : Connection
+    public class Subscription<T> : Subscription
         where T : IRequest
     {
         /// <summary>
-        /// Initializes a new instance of the <see cref="Connection"/> class with data type T.
+        /// Initializes a new instance of the <see cref="Subscription"/> class with data type T.
         /// </summary>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
         /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
@@ -194,8 +194,8 @@ namespace Paramore.Brighter
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public Connection(
-            ConnectionName name = null,
+        public Subscription(
+            SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int noOfPerformers = 1,

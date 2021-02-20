@@ -34,11 +34,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     [Trait("Category", "RMQ")]
     public class RMQMessageGatewayConnectionPoolResetConnectionDoesNotExist
     {
-        private readonly RMQMessageGatewayConnectionPool _connectionPool;
+        private readonly RmqMessageGatewayConnectionPool _connectionPool;
 
         public RMQMessageGatewayConnectionPoolResetConnectionDoesNotExist()
         {
-            _connectionPool = new RMQMessageGatewayConnectionPool("MyConnectionName", 7);
+            _connectionPool = new RmqMessageGatewayConnectionPool("MyConnectionName", 7);
         }
 
         [Fact]

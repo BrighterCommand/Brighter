@@ -36,8 +36,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //we need the channel to create the queues and notifications
             var routingKey = new RoutingKey(_topicName);
             
-            _channelFactory.CreateChannel(new SqsConnection<MyCommand>(
-                name: new ConnectionName(channelName),
+            _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
+                name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
                 routingKey:routingKey,
                 bufferSize: BUFFER_SIZE
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //just for the tests, so create a new consumer from the properties
             var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
             _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName,routingKey, BUFFER_SIZE);
-           _messageProducer = new SqsMessageProducer(awsConnection, new SqsProducerConnection{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+           _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
             
         [Fact]

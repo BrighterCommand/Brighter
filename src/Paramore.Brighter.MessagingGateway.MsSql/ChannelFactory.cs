@@ -21,15 +21,15 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Creates the input channel
         /// </summary>
-        /// <param name="connection">The connection parameters with which to create the channel</param>
+        /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns></returns>
-        public IAmAChannel CreateChannel(Connection connection)
+        public IAmAChannel CreateChannel(Subscription subscription)
         {
-            Logger.Value.Debug($"MsSqlInputChannelFactory: create input channel {connection.ChannelName} for topic {connection.RoutingKey}");
+            Logger.Value.Debug($"MsSqlInputChannelFactory: create input channel {subscription.ChannelName} for topic {subscription.RoutingKey}");
             return new Channel(
-                connection.ChannelName,
-                _msSqlMessageConsumerFactory.Create(connection),
-                connection.BufferSize);
+                subscription.ChannelName,
+                _msSqlMessageConsumerFactory.Create(subscription),
+                subscription.BufferSize);
         }
     }
 }

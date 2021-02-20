@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var command = new MyCommand();
 
-            //two command, will be received when connection restored
+            //two command, will be received when subscription restored
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(command)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(command)));
             channel.Enqueue(message1);

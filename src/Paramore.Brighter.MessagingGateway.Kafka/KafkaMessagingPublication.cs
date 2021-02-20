@@ -26,7 +26,7 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaMessagingProducerConnection : ProducerConnection
+    public class KafkaMessagingPublication : Publication
     {
         /// <summary>
         /// Maximum number of messages allowed on the 
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public int? MessageTimeout { get; set; }
 
-        public KafkaMessagingProducerConnection()
+        public KafkaMessagingPublication()
         {
             Acks = Confluent.Kafka.Acks.All;
             MessageTimeout = 5000;

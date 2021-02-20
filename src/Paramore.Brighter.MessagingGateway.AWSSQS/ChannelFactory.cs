@@ -16,13 +16,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class ChannelFactory : AWSMessagingGateway, IAmAChannelFactory
     {
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
-        private Connection _connection;
+        private Subscription _subscription;
         private string _queueUrl;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
-        /// <param name="awsConnection">The details of the connection to AWS</param>
+        /// <param name="awsConnection">The details of the subscription to AWS</param>
         public ChannelFactory(
             AWSMessagingGatewayConnection awsConnection)
             :base(awsConnection)
@@ -36,44 +36,44 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         ///  to create ephemeral queues, nor are there non-mirrored queues (on a single node in the cluster) where nodes
         ///  failing mean we want to create anew as we recreate. So the input factory creates the queue 
         ///  </summary>
-        /// <param name="connection">An SqsConnection, the connection parameter so create the channel with</param>
+        /// <param name="subscription">An SqsSubscription, the subscription parameter so create the channel with</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Connection connection)
+        public IAmAChannel CreateChannel(Subscription subscription)
         {
-            SqsConnection sqsConnection = connection as SqsConnection;  
-            if (sqsConnection == null)
-                throw new ConfigurationException("We expect an SqsConnection or SqsConnection<T> as a parameter");
+            SqsSubscription sqsSubscription = subscription as SqsSubscription;  
+            if (sqsSubscription == null)
+                throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
             
-            _connection = null;
-            EnsureTopic(sqsConnection);
-            EnsureQueue(sqsConnection);
-            _connection = connection;
+            _subscription = null;
+            EnsureTopic(sqsSubscription);
+            EnsureQueue(sqsSubscription);
+            _subscription = subscription;
             return new Channel(
-                connection.ChannelName.ToValidSQSQueueName(), 
-                _messageConsumerFactory.Create(connection), 
-                connection.BufferSize
+                subscription.ChannelName.ToValidSQSQueueName(), 
+                _messageConsumerFactory.Create(subscription), 
+                subscription.BufferSize
                 );
         }
         
-        private void EnsureQueue(SqsConnection connection)
+        private void EnsureQueue(SqsSubscription subscription)
         {
-            if (connection.MakeChannels == OnMissingChannel.Assume)
+            if (subscription.MakeChannels == OnMissingChannel.Assume)
                 return;
             
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                var queueName = connection.ChannelName.ToValidSQSQueueName();
-                var topicName = connection.RoutingKey.ToValidSNSTopicName();
+                var queueName = subscription.ChannelName.ToValidSQSQueueName();
+                var topicName = subscription.RoutingKey.ToValidSNSTopicName();
 
                 (bool exists, _) = QueueExists(sqsClient, queueName);
                 if (!exists)
                 {
-                    if (connection.MakeChannels == OnMissingChannel.Create)
+                    if (subscription.MakeChannels == OnMissingChannel.Create)
                     {
-                        CreateQueue(sqsClient, connection, queueName, topicName, _awsConnection.Region);
+                        CreateQueue(sqsClient, subscription, queueName, topicName, _awsConnection.Region);
                     }
-                    else if (connection.MakeChannels == OnMissingChannel.Validate)
+                    else if (subscription.MakeChannels == OnMissingChannel.Validate)
                     {
                         var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
                         _logger.Value.Debug(message);
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CreateQueue(AmazonSQSClient sqsClient, SqsConnection connection, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
+        private void CreateQueue(AmazonSQSClient sqsClient, SqsSubscription subscription, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
         {
             _logger.Value.Debug($"Queue does not exist, creating queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
             _queueUrl = "no queue defined";
@@ -97,8 +97,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     Attributes =
                     {
-                        {"VisibilityTimeout", connection.LockTimeout.ToString()},
-                        {"ReceiveMessageWaitTimeSeconds", ToSecondsAsString(connection.TimeoutInMiliseconds)}
+                        {"VisibilityTimeout", subscription.LockTimeout.ToString()},
+                        {"ReceiveMessageWaitTimeSeconds", ToSecondsAsString(subscription.TimeoutInMiliseconds)}
                     },
                     Tags =
                     {
@@ -113,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     _logger.Value.Debug($"Queue created: {_queueUrl}");
                     using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
-                        CheckSubscription(connection.MakeChannels, sqsClient, snsClient);
+                        CheckSubscription(subscription.MakeChannels, sqsClient, snsClient);
                     }
                 }
                 else
@@ -255,13 +255,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public void DeleteQueue()
         {
-            if (_connection == null)
+            if (_subscription == null)
                 return;
             
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                (bool exists, string name) queueExists = QueueExists(sqsClient, _connection.ChannelName.ToValidSQSQueueName());
+                (bool exists, string name) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
                 
                 if (queueExists.exists)
                 {
@@ -281,7 +281,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         public void DeleteTopic()
         {
-            if (_connection == null)
+            if (_subscription == null)
                 return;
             
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))

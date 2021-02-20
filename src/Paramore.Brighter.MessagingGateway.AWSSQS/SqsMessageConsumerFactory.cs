@@ -35,11 +35,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="connection">The queue to connect to</param>
+        /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(Connection connection)
+        public IAmAMessageConsumer Create(Subscription subscription)
         {
-            return new SqsMessageConsumer(_awsConnection, connection.ChannelName.ToValidSQSQueueName(), connection.RoutingKey);
+            return new SqsMessageConsumer(_awsConnection, subscription.ChannelName.ToValidSQSQueueName(), subscription.RoutingKey);
         }
     }
 }

@@ -28,9 +28,9 @@ namespace Paramore.Brighter.ServiceActivator
         public static IConnectionBuilderName With => new ConnectionBuilder();
 
         /// <summary>
-        /// The name of the connection - used for identification
+        /// The name of the subscription - used for identification
         /// </summary>
-        /// <param name="name">The name to give this connection</param>
+        /// <param name="name">The name to give this subscription</param>
         /// <returns></returns>
        public IConnectionBuilderChannelFactory ConnectionName(string name)
         {
@@ -167,10 +167,10 @@ namespace Paramore.Brighter.ServiceActivator
             return this;
         }
 
-        public Connection Build()
+        public Subscription Build()
         {
-            return new Connection(_type,
-                new ConnectionName(_name),
+            return new Subscription(_type,
+                new SubscriptionName(_name),
                 new ChannelName(_channelName),
                 new RoutingKey(_routingKey),
                 channelFactory:_channelFactory,
@@ -211,7 +211,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public interface IConnectionBuilderOptionalBuild
         {
-            Connection Build();
+            Subscription Build();
             
             /// <summary>
             /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
@@ -233,7 +233,7 @@ namespace Paramore.Brighter.ServiceActivator
             IConnectionBuilderOptionalBuild UnacceptableMessageLimit(int unacceptableMessageLimit);
 
             /// <summary>
-            /// Gets a value indicating whether this connection should use an asynchronous pipeline
+            /// Gets a value indicating whether this subscription should use an asynchronous pipeline
             /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
             /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
             /// </summary>

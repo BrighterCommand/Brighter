@@ -46,7 +46,7 @@ namespace Paramore.Brighter.ServiceActivator
 
     /// <summary>
     /// Class Consumer.
-    /// Manages the message pump used to read messages for a channel. Creation establishes the message pump for a given connection and channel. Open runs the
+    /// Manages the message pump used to read messages for a channel. Creation establishes the message pump for a given subscription and channel. Open runs the
     /// message pump, which begins consuming messages from the channel; it returns the TPL Task used to run the message pump thread so that it can be
     /// Waited on by callers. Shut closes the message pump.
     /// 
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <value>The name.</value>
         public ConsumerName Name { get; }
 
-        public ConnectionName ConnectionName { get; set; }
+        public SubscriptionName SubscriptionName { get; set; }
         /// <summary>
         /// Gets the performer.
         /// </summary>
@@ -83,13 +83,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Initializes a new instance of the <see cref="Consumer"/> class.
         /// </summary>
         /// <param name="name">The name.</param>
-        /// <param name="connectionName">The name of the associated connection.</param>
+        /// <param name="subscriptionName">The name of the associated subscription.</param>
         /// <param name="channel">The channel.</param>
         /// <param name="messagePump">The message pump.</param>
-        public Consumer(ConsumerName name, ConnectionName connectionName, IAmAChannel channel, IAmAMessagePump messagePump)
+        public Consumer(ConsumerName name, SubscriptionName subscriptionName, IAmAChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
-            ConnectionName = connectionName;
+            SubscriptionName = subscriptionName;
             Performer = new Performer(channel, messagePump);
             State = ConsumerState.Shut;
         }

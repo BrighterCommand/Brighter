@@ -30,7 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
-        /// <param name="rmqConnection">The connection to the broker hosting the queue</param>
+        /// <param name="rmqConnection">The subscription to the broker hosting the queue</param>
         /// </summary>
         public RmqMessageConsumerFactory(RmqMessagingGatewayConnection  rmqConnection)
         {
@@ -40,21 +40,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="connection">The queue to connect to</param>
+        /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer.</returns>
-        public IAmAMessageConsumer Create(Connection connection)
+        public IAmAMessageConsumer Create(Subscription subscription)
         {
-            RMQConnection rmqConnection = connection as RMQConnection;  
-            if (rmqConnection == null)
+            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             
             return new RmqMessageConsumer(
                 _rmqConnection, 
-                rmqConnection.ChannelName, //RMQ Queue Name 
-                rmqConnection.RoutingKey, 
-                rmqConnection.IsDurable, 
-                rmqConnection.HighAvailability,
-                connection.MakeChannels);
+                rmqSubscription.ChannelName, //RMQ Queue Name 
+                rmqSubscription.RoutingKey, 
+                rmqSubscription.IsDurable, 
+                rmqSubscription.HighAvailability,
+                subscription.MakeChannels);
         }
     }
 }

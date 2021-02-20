@@ -148,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Store the actual message content to Redis - we only want one copy, regardless of number of queues
         /// </summary>
-        /// <param name="client">The connection to Redis</param>
+        /// <param name="client">The subscription to Redis</param>
         /// <param name="redisMessage">The message to write to Redis</param>
         /// <param name="msgId">The id to store it under</param>
         protected void StoreMessage(IRedisClient client, string redisMessage, long msgId)

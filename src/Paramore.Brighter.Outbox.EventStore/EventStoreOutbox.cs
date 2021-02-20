@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <summary>
         ///     Initializes a new instance of the <see cref="EventStoreOutbox" /> class.
         /// </summary>
-        /// <param name="eventStore">The active connection to an Event Store instance.</param>
+        /// <param name="eventStore">The active subscription to an Event Store instance.</param>
         public EventStoreOutbox(IEventStoreConnection eventStore)
         {
             _eventStore = eventStore;

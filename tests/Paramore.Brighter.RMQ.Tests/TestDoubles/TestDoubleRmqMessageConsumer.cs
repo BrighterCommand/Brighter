@@ -30,7 +30,7 @@ using RabbitMQ.Client.Exceptions;
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     /*
-     * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure
+     * Use to force a failure mirroring a RabbitMQ subscription failure for testing flow of failure
      */
 
     internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer

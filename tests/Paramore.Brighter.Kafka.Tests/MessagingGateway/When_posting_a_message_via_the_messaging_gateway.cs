@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                  {
                      Name = "Kafka Consumer Test",
                      BootStrapServers = new[] { "localhost:9092" }
-                 }).Create(new Connection<MyCommand>(
+                 }).Create(new Subscription<MyCommand>(
                      channelName: new ChannelName(_queueName), 
                      routingKey: new RoutingKey(_topic)
                      )

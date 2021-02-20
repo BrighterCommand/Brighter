@@ -21,7 +21,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 Exchange = new Exchange(Guid.NewGuid().ToString())
             };
 
-            _messageProducer = new RmqMessageProducer(rmqConnection, new ProducerConnection{MakeChannels = OnMissingChannel.Validate});
+            _messageProducer = new RmqMessageProducer(rmqConnection, new Publication{MakeChannels = OnMissingChannel.Validate});
 
         }
         

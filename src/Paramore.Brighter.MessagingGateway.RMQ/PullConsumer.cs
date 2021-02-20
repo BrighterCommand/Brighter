@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public PullConsumer(IModel channel, ushort batchSize)
             : base(channel)
         {
-            //set the number of messages to fetch -- defaults to 1 unless set on connection, no impact on
+            //set the number of messages to fetch -- defaults to 1 unless set on subscription, no impact on
             //BasicGet, only works on BasicConsume
             channel.BasicQos(0, batchSize, false);
         }
