@@ -46,8 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        public void Reject(Message message, bool requeue)
+        public void Reject(Message message)
         {
             Logger.Value.Info(
                 $"MsSqlMessagingConsumer: rejecting message with topic {message.Header.Topic} and id {message.Id.ToString()}, NOT IMPLEMENTED");

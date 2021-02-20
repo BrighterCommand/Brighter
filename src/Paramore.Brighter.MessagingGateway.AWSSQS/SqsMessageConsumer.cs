@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Class SqsMessageConsumer.
     /// </summary>
-    public class SqsMessageConsumer : IAmAMessageConsumer 
+    public class SqsMessageConsumer : IAmAMessageConsumer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageConsumer>);
 
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public Message[] Receive(int timeoutInMilliseconds)
         {
             AmazonSQSClient client = null;
-            Amazon.SQS.Model.Message[] sqsMessages; 
+            Amazon.SQS.Model.Message[] sqsMessages;
             try
             {
                 client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region);
@@ -74,14 +74,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds,
-                    MessageAttributeNames = new List<string>() { "All" },
-                    AttributeNames = new List<string>() { "All" }
+                    MessageAttributeNames = new List<string>() {"All"},
+                    AttributeNames = new List<string>() {"All"}
                 };
 
                 var receiveResponse = client.ReceiveMessageAsync(request).GetAwaiter().GetResult();
 
                 sqsMessages = receiveResponse.Messages.ToArray();
-
             }
             catch (InvalidOperationException ioe)
             {
@@ -90,12 +89,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (OperationCanceledException oce)
             {
-                 _logger.Value.DebugFormat("SqsMessageConsumer: Could not find messages to retrieve");
+                _logger.Value.DebugFormat("SqsMessageConsumer: Could not find messages to retrieve");
                 throw new ChannelFailureException("Error connecting to SQS, see inner exception for details", oce);
             }
             catch (Exception e)
             {
-                 _logger.Value.ErrorException("SqsMessageConsumer: There was an error listening to queue {0} ", e, _queueName );
+                _logger.Value.ErrorException("SqsMessageConsumer: There was an error listening to queue {0} ", e, _queueName);
                 throw;
             }
             finally
@@ -109,13 +108,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
 
             var messages = new Message[sqsMessages.Length];
-            for(int i = 0; i < sqsMessages.Length; i++)
+            for (int i = 0; i < sqsMessages.Length; i++)
             {
                 var message = new SqsMessageCreator().CreateMessage(sqsMessages[i]);
                 _logger.Value.InfoFormat("SqsMessageConsumer: Received message from queue {0}, message: {1}{2}",
                     _queueName, Environment.NewLine, JsonConvert.SerializeObject(message));
                 messages[i] = message;
-
             }
 
             return messages;
@@ -127,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            if(!message.Header.Bag.ContainsKey("ReceiptHandle"))
+            if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
                 return;
 
             var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
@@ -139,12 +137,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
                     client.DeleteMessageAsync(new DeleteMessageRequest(urlResponse.QueueUrl, receiptHandle)).Wait();
 
-                    _logger.Value.InfoFormat("SqsMessageConsumer: Deleted the message {0} with receipt handle {1} on the queue {2}", message.Id, receiptHandle, urlResponse.QueueUrl);
+                    _logger.Value.InfoFormat("SqsMessageConsumer: Deleted the message {0} with receipt handle {1} on the queue {2}", message.Id, receiptHandle,
+                        urlResponse.QueueUrl);
                 }
             }
             catch (Exception exception)
             {
-                _logger.Value.ErrorException("SqsMessageConsumer: Error during deleting the message {0} with receipt handle {1} on the queue {2}", exception, message.Id, receiptHandle, _queueName);
+                _logger.Value.ErrorException("SqsMessageConsumer: Error during deleting the message {0} with receipt handle {1} on the queue {2}", exception,
+                    message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
@@ -153,8 +153,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        public void Reject(Message message, bool requeue)
+        public void Reject(Message message)
         {
             if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
                 return;
@@ -163,12 +162,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             try
             {
-                _logger.Value.InfoFormat("SqsMessageConsumer: Rejecting the message {0} with receipt handle {1} on the queue {2} with requeue paramter {3}", message.Id, receiptHandle, _queueName, requeue);
-                
+                _logger.Value.InfoFormat(
+                    "SqsMessageConsumer: Rejecting the message {0} with receipt handle {1} on the queue {2}",
+                    message.Id, receiptHandle, _queueName
+                    );
+
                 using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
                 {
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    if (requeue)
+                    //TODO: Check for DLQ instead
+                    if (true)
                     {
                         client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
                     }
@@ -178,15 +181,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     }
                 }
 
-                _logger.Value.InfoFormat("SqsMessageConsumer: Message {0} with receipt handle {1} on the queue {2} with requeue paramter {3} has been rejected", message.Id, receiptHandle, _queueName, requeue);
+                _logger.Value.InfoFormat(
+                    "SqsMessageConsumer: Message {0} with receipt handle {1} on the queue {2} with requeue paramter {3} has been rejected",
+                    message.Id, receiptHandle, _queueName
+                    );
             }
             catch (Exception exception)
             {
-                _logger.Value.ErrorException("SqsMessageConsumer: Error during rejecting the message {0} with receipt handle {1} on the queue {2}", exception, message.Id, receiptHandle, _queueName);
+                _logger.Value.ErrorException("SqsMessageConsumer: Error during rejecting the message {0} with receipt handle {1} on the queue {2}", exception,
+                    message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
-        
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
@@ -227,26 +234,31 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public void Requeue(Message message, int delayMilliseconds)
         {
+            if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
+                return;
+
+            var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
+
             try
             {
-                Reject(message, false);
-
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeueing the message {0}", message.Id);
 
-                if (message.Header.Bag.ContainsKey("ReceiptHandle"))
-                    message.Header.Bag.Remove("ReceiptHandle");
-                var sqsMessageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume, RoutingKey = _topicArn});
-                sqsMessageProducer.Send(message);
+                using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
+                {
+                    var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
+                    client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
+                }
 
                 _logger.Value.InfoFormat("SqsMessageConsumer: requeued the message {0}", message.Id);
             }
             catch (Exception exception)
             {
-                _logger.Value.ErrorException("SqsMessageConsumer: Error purging queue {0}", exception, _queueName);
+                _logger.Value.ErrorException("SqsMessageConsumer: Error during requeing the message {0} with receipt handle {1} on the queue {2}", exception,
+                    message.Id, receiptHandle, _queueName);
                 throw;
             }
         }
-        
+
         private string FindTopicArnByName(RoutingKey topicName)
         {
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
@@ -263,7 +275,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         public void Dispose()
         {
-            
         }
     }
 }

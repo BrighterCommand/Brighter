@@ -42,7 +42,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <value><c>true</c> if this definition is durable; otherwise, <c>false</c>.</value>
         public bool IsDurable { get; }
-        
+
+        /// <summary>
+        /// The name of  the queue to send rejects messages to
+        /// </summary>
+        public ChannelName DeadLetterChannelName { get; }
+
+        /// <summary>
+        /// The routing key for dead letter messages
+        /// </summary>
+        public string DeadLetterRoutingKey { get; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
@@ -61,9 +71,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
         /// <param name="lockTimeout">How long should a message remain locked for processing</param>
+        /// <param name="deadLetterChannelName">The dead letter channel </param>
+        /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public RmqSubscription(
-            Type dataType,
+            Type dataType, 
             SubscriptionName name = null, 
             ChannelName channelName = null, 
             RoutingKey routingKey = null, 
@@ -77,9 +89,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             bool isAsync = false, 
             IAmAChannelFactory channelFactory = null, 
             bool highAvailability = false, 
+            ChannelName deadLetterChannelName = null, 
+            string deadLetterRoutingKey = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
         {
+            DeadLetterRoutingKey = deadLetterRoutingKey;
+            DeadLetterChannelName = deadLetterChannelName;
             HighAvailability = highAvailability;
             IsDurable = isDurable;
         }
@@ -104,6 +120,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
         /// <param name="lockTimeout">How long should a message remain locked for processing</param>
+        /// <param name="deadLetterChannelName">The dead letter channel </param>
+        /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public RmqSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
@@ -118,9 +136,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             bool highAvailability = false,
+            ChannelName deadLetterChannelName = null, 
+            string deadLetterRoutingKey = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
-                unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability,makeChannels)
+                unacceptableMessageLimit, isDurable, isAsync, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, makeChannels)
         { }
 
     }

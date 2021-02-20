@@ -55,8 +55,21 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 connection.Exchange.Type = "x-delayed-message";
             }
 
-            channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false,
+            channel.ExchangeDeclare(
+                connection.Exchange.Name, 
+                connection.Exchange.Type, 
+                connection.Exchange.Durable, 
+                autoDelete: false,
                 arguments: arguments);
+
+            if (connection.DeadLetterExchange != null)
+            {
+                 channel.ExchangeDeclare(
+                     connection.DeadLetterExchange.Name, 
+                     connection.DeadLetterExchange.Type, 
+                     connection.DeadLetterExchange.Durable, 
+                     autoDelete: false);
+            }
         }
         private static void ValidateExchange(IModel channel, RmqMessagingGatewayConnection connection)
         
@@ -64,6 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             try
             {
                 channel.ExchangeDeclarePassive(connection.Exchange.Name);
+                if (connection.DeadLetterExchange != null) channel.ExchangeDeclarePassive(connection.DeadLetterExchange.Name);
             }
             catch (Exception e)
             {

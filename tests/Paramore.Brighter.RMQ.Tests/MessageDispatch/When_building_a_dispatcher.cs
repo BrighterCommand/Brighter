@@ -85,12 +85,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                 .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new []
                 {
-                    new Subscription<MyEvent>(
+                    new RmqSubscription<MyEvent>(
                         new SubscriptionName("foo"),
                         new ChannelName("mary"),
                         new RoutingKey("bob"),
                         timeoutInMilliseconds: 200),
-                    new Subscription<MyEvent>(
+                    new RmqSubscription<MyEvent>(
                         new SubscriptionName("bar"),
                         new ChannelName("alice"),
                         new RoutingKey("simon"),
