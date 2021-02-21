@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {
             RmqSubscription rmqSubscription = subscription as RmqSubscription;  
             if (rmqSubscription == null)
-                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+                throw new ConfigurationException("We expect an RmqSubscription or RmqSubscription<T> as a parameter");
 
             var messageConsumer = _messageConsumerFactory.Create(rmqSubscription);
             

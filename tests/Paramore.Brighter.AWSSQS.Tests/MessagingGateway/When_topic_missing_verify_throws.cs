@@ -1,9 +1,7 @@
-﻿using System;
-using System.Linq;
+﻿
+using System;
 using Amazon;
 using Amazon.Runtime;
-using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;

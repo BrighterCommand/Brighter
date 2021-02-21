@@ -59,9 +59,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             : this(redisMessagingGatewayConfiguration, new Publication {MakeChannels = OnMissingChannel.Create})
         {}
         
-         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, Publication publication)
+         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, Publication publication = null)
             : base(redisMessagingGatewayConfiguration)
-        {}
+         {
+             _publication = publication;
+         }
 
         public void Dispose()
         {

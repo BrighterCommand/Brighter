@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaMessagingPublication publication)
+            KafkaPublication publication)
         {
             _producerConfig = new ProducerConfig
             {
