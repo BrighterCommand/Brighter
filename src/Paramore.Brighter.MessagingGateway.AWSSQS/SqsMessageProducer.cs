@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             : base(connection)
         {
             _connection = connection;
-            _topicArn = EnsureTopic(new RoutingKey(publication.RoutingKey), publication.MakeChannels);
+            _topicArn = EnsureTopic(new RoutingKey(publication.RoutingKey), publication.SnsAttributes, publication.MakeChannels);
         }
 
         /// <summary>

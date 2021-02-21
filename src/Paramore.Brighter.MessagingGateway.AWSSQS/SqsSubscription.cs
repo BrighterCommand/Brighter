@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using Amazon.SimpleNotificationService.Model;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -61,6 +63,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// The policy that controls when we send messages to a DLQ after too many requeue attempts
         /// </summary>
         public RedrivePolicy RedrivePolicy { get; }
+        
+        /// <summary>
+        /// The attributes of the topic. If TopicARN is set we will always assume that we do not
+        /// need to create or validate the SNS Topic
+        /// </summary>
+        public SnsAttributes SnsAttributes { get; }
+
+        /// <summary>
+        /// A list of resource tags to use when creating the queue
+        /// </summary>
+        public Dictionary<string, string> Tags { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -82,6 +95,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
         /// <param name="iAmPolicy">The queue's policy. A valid AWS policy.</param>
         /// <param name="redrivePolicy">The policy that controls when and where requeued messages are sent to the DLQ</param>
+        /// <param name="snsAttributes">The attributes of the Topic, either ARN if created, or attributes for creation</param>
+        /// <param name="tags">Resource tags to be added to the queue</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public SqsSubscription(Type dataType,
             SubscriptionName name = null,
@@ -100,6 +115,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int messageRetentionPeriod = 345600,
             string iAmPolicy = null,
             RedrivePolicy redrivePolicy = null,
+            SnsAttributes snsAttributes = null,
+            Dictionary<string,string> tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
         )
             : base(dataType, name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
@@ -110,6 +127,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             MessageRetentionPeriod = messageRetentionPeriod;
             IAMPolicy = iAmPolicy;
             RedrivePolicy = redrivePolicy;
+            SnsAttributes = snsAttributes;
+            Tags = tags;
         }
     }
 
@@ -140,7 +159,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
         /// <param name="iAmPolicy">The queue's policy. A valid AWS policy.</param>
         /// <param name="redrivePolicy">The policy that controls when and where requeued messages are sent to the DLQ</param>
+        /// <param name="snsAttributes">The attributes of the Topic, either ARN if created, or attributes for creation</param>
+        /// <param name="tags">Resource tags to be added to the queue</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        
         public SqsSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
@@ -157,11 +179,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int messageRetentionPeriod = 345600,
             string iAmPolicy = null,
             RedrivePolicy redrivePolicy = null,
+            SnsAttributes snsAttributes = null,
+            Dictionary<string,string> tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
         )
             : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
                 unacceptableMessageLimit, isAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod, iAmPolicy,redrivePolicy,
-                makeChannels)
+                snsAttributes, tags, makeChannels)
         {
         }
     }

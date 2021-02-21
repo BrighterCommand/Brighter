@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             SqsSubscription sqsSubscription = subscription as SqsSubscription;
             _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
             
-            EnsureTopic(_subscription.RoutingKey, _subscription.MakeChannels);
+            EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.MakeChannels);
             EnsureQueue();
             
             return new Channel(
@@ -112,15 +112,21 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 attributes.Add("ReceiveMessageWaitTimeSeconds", ToSecondsAsString(_subscription.TimeoutInMiliseconds));
                 attributes.Add("VisibilityTimeout", _subscription.LockTimeout.ToString());
 
+                var tags = new Dictionary<string, string>();
+                tags.Add("Source","Brighter");
+                if (_subscription.Tags != null)
+                {
+                    foreach (var tag in _subscription.Tags)
+                    {
+                        tags.Add(tag.Key, tag.Value);
+                    }
+                }
+
                 var request = new CreateQueueRequest(_subscription.ChannelName.Value)
                 {
                     Attributes = attributes,
-                    Tags =
-                    {
-                        {"Source", "Brighter"},
-                        {"Topic", $"{_subscription.RoutingKey.Value}"}
-                    }
-                };
+                    Tags = tags
+               };
                 var response = sqsClient.CreateQueueAsync(request).GetAwaiter().GetResult();
                 _queueUrl = response.QueueUrl;
 

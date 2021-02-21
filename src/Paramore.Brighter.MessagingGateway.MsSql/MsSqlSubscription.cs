@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.MessagingGateway.Redis
+namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class RedisSubscription : Subscription
+    public class MsSqlSubscription : Subscription
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public RedisSubscription(
+        public MsSqlSubscription(
             Type dataType, 
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
     }
 
-    public class RedisSubscription<T> : RedisSubscription where T : IRequest
+    public class MsSqlSubscription<T> : MsSqlSubscription where T : IRequest
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        public RedisSubscription(
+        public MsSqlSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
             RoutingKey routingKey = null, 
@@ -98,5 +98,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
         {
         }
+       
     }
 }

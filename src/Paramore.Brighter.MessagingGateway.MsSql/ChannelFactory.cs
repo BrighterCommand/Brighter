@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Initializes a new instance of the <see cref="KafkaInputChannelFactory"/> class.
         /// </summary>
-        /// <param name="kafkaMessageConsumerFactory">The messageConsumerFactory.</param>
+        /// <param name="msSqlMessageConsumerFactory"></param>
         public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)
         {
             _msSqlMessageConsumerFactory = msSqlMessageConsumerFactory ??
@@ -25,6 +25,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <returns></returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
+            MsSqlSubscription rmqSubscription = subscription as MsSqlSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
+            
             Logger.Value.Debug($"MsSqlInputChannelFactory: create input channel {subscription.ChannelName} for topic {subscription.RoutingKey}");
             return new Channel(
                 subscription.ChannelName,
