@@ -16,11 +16,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _awsConnection = awsConnection;
         }
 
-        protected string EnsureTopic(SqsSubscription sqsSubscription)
-        {
-            return EnsureTopic(sqsSubscription.RoutingKey, sqsSubscription.MakeChannels);
-        }
-
         protected string EnsureTopic(RoutingKey topic, OnMissingChannel makeTopic)
         {
             //on validate or assume, turn a routing key into a topicARN

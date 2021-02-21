@@ -14,7 +14,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Amazon.SQS.Model;
@@ -24,7 +23,7 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     /// <summary>
-    /// Class SqsMessageConsumer.
+    /// Read messages from an SQS queue
     /// </summary>
     public class SqsMessageConsumer : IAmAMessageConsumer
     {
@@ -33,31 +32,34 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly string _queueName;
         private readonly int _batchSize;
+        private readonly bool _hasDlq;
         private readonly Message _noopMessage = new Message();
-        private RoutingKey _topicArn;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageConsumer"/> class.
         /// </summary>
         /// <param name="awsConnection">The awsConnection details used to connect to the SQS queue.</param>
         /// <param name="queueName">The name of the SQS Queue</param>
-        /// <param name="routingKey"></param>
+        /// <param name="routingKey">the SNS Topic we subscribe to</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
-        public SqsMessageConsumer(AWSMessagingGatewayConnection awsConnection,
+        /// <param name="hasDLQ">Do we have a DLQ attached to this queue?</param>
+        public SqsMessageConsumer(
+            AWSMessagingGatewayConnection awsConnection,
             string queueName,
             RoutingKey routingKey,
-            int batchSize = 1)
+            int batchSize = 1,
+            bool hasDLQ = false)
         {
             _awsConnection = awsConnection;
             _queueName = queueName;
             _batchSize = batchSize;
-            _topicArn = new RoutingKey(FindTopicArnByName(routingKey));
+            _hasDlq = hasDLQ;
         }
 
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout 
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds. Anytyhing greater than 0 uses long-polling  </param>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             AmazonSQSClient client = null;
@@ -170,8 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 using (var client = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
                 {
                     var urlResponse = client.GetQueueUrlAsync(_queueName).Result;
-                    //TODO: Check for DLQ instead
-                    if (true)
+                    if (_hasDlq)
                     {
                         client.ChangeMessageVisibilityAsync(new ChangeMessageVisibilityRequest(urlResponse.QueueUrl, receiptHandle, 0)).Wait();
                     }

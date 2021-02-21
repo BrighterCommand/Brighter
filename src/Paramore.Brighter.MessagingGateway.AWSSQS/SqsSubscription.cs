@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// to process. SQS calls this the VisibilityTimeout
         /// </summary>
         public int LockTimeout { get; }
-        
+
         /// <summary>
         /// The length of time, in seconds, for which the delivery of all messages in the queue is delayed.
         /// </summary>
@@ -50,16 +51,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// The length of time, in seconds, for which Amazon SQS retains a message
         /// </summary>
         public int MessageRetentionPeriod { get; }
-        
+
         /// <summary>
         ///  The queue's policy. A valid AWS policy.
         /// </summary>
         public string IAMPolicy { get; }
-        
+
         /// <summary>
-        /// The string that includes the parameters for the dead-letter queue functionality of the source queue as a JSON object
+        /// The policy that controls when we send messages to a DLQ after too many requeue attempts
         /// </summary>
-        public string RedrivePolicy { get; }
+        public RedrivePolicy RedrivePolicy { get; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -77,10 +78,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
-        /// <param name="redrivePolicy">The string that includes the parameters for the dead-letter queue functionality of the source queue as a JSON object</param>
         /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
         /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
         /// <param name="iAmPolicy">The queue's policy. A valid AWS policy.</param>
+        /// <param name="redrivePolicy">The policy that controls when and where requeued messages are sent to the DLQ</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public SqsSubscription(Type dataType,
             SubscriptionName name = null,
@@ -98,10 +99,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int delaySeconds = 0,
             int messageRetentionPeriod = 345600,
             string iAmPolicy = null,
-            string redrivePolicy = null,
+            RedrivePolicy redrivePolicy = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
-            ) 
-            : base(dataType, name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
+        )
+            : base(dataType, name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
+                unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
         {
             LockTimeout = lockTimeout;
             DelaySeconds = delaySeconds;
@@ -110,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             RedrivePolicy = redrivePolicy;
         }
     }
-    
+
     /// <summary>
     /// A subscription for an SQS Consumer.
     /// We will create infrastructure on the basis of Make Channels
@@ -134,6 +136,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
+        /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
+        /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
+        /// <param name="iAmPolicy">The queue's policy. A valid AWS policy.</param>
+        /// <param name="redrivePolicy">The policy that controls when and where requeued messages are sent to the DLQ</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public SqsSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
@@ -149,13 +155,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int lockTimeout = 10,
             int delaySeconds = 0,
             int messageRetentionPeriod = 345600,
-            string iAMPolicy = null,
-            string redrivePolicy = null,
+            string iAmPolicy = null,
+            RedrivePolicy redrivePolicy = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
-            ) 
-            : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, 
-                unacceptableMessageLimit, isAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod, iAMPolicy,redrivePolicy, makeChannels)
+        )
+            : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
+                unacceptableMessageLimit, isAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod, iAmPolicy,redrivePolicy,
+                makeChannels)
         {
-        } 
+        }
     }
 }

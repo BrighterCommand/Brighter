@@ -9,6 +9,7 @@ using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -18,6 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly SqsMessageConsumerFactory _messageConsumerFactory;
         private SqsSubscription _subscription;
         private string _queueUrl;
+        private string _dlqARN;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
@@ -25,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="awsConnection">The details of the subscription to AWS</param>
         public ChannelFactory(
             AWSMessagingGatewayConnection awsConnection)
-            :base(awsConnection)
+            : base(awsConnection)
         {
             _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
         }
@@ -40,40 +42,44 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
-            SqsSubscription sqsSubscription = subscription as SqsSubscription;  
-            if (sqsSubscription == null)
-                throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+            SqsSubscription sqsSubscription = subscription as SqsSubscription;
+            _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
             
-            _subscription = null;
-            EnsureTopic(sqsSubscription);
-            EnsureQueue(sqsSubscription);
-            _subscription = sqsSubscription;
+            EnsureTopic(_subscription.RoutingKey, _subscription.MakeChannels);
+            EnsureQueue();
+            
             return new Channel(
-                subscription.ChannelName.ToValidSQSQueueName(), 
-                _messageConsumerFactory.Create(subscription), 
+                subscription.ChannelName.ToValidSQSQueueName(),
+                _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
-                );
+            );
         }
-        
-        private void EnsureQueue(SqsSubscription subscription)
+
+        private void EnsureQueue()
         {
-            if (subscription.MakeChannels == OnMissingChannel.Assume)
+            if (_subscription.MakeChannels == OnMissingChannel.Assume)
                 return;
-            
+
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
-                var queueName = subscription.ChannelName.ToValidSQSQueueName();
-                var topicName = subscription.RoutingKey.ToValidSNSTopicName();
+                var queueName = _subscription.ChannelName.ToValidSQSQueueName();
+                var topicName = _subscription.RoutingKey.ToValidSNSTopicName();
 
                 (bool exists, _) = QueueExists(sqsClient, queueName);
                 if (!exists)
                 {
-                    if (subscription.MakeChannels == OnMissingChannel.Create)
+                    if (_subscription.MakeChannels == OnMissingChannel.Create)
                     {
-                        CreateQueue(sqsClient, subscription, queueName, topicName, _awsConnection.Region);
+                        if (_subscription.RedrivePolicy != null)
+                        {
+                            CreateDLQ(sqsClient);
+                        }
+                        
+                        CreateQueue(sqsClient);
+     
                     }
-                    else if (subscription.MakeChannels == OnMissingChannel.Validate)
+                    else if (_subscription.MakeChannels == OnMissingChannel.Validate)
                     {
                         var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
                         _logger.Value.Debug(message);
@@ -87,66 +93,123 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void CreateQueue(AmazonSQSClient sqsClient, SqsSubscription subscription, ChannelName queueName, RoutingKey topicName, RegionEndpoint region)
+        private void CreateQueue(AmazonSQSClient sqsClient)
         {
-            _logger.Value.Debug($"Queue does not exist, creating queue: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
-            _queueUrl = "no queue defined";
+            _logger.Value.Debug($"Queue does not exist, creating queue: {_subscription.ChannelName.Value} subscribed to {_subscription.RoutingKey.Value} on {_awsConnection.Region}");
+            _queueUrl = null;
             try
             {
-                var request = new CreateQueueRequest(queueName)
+                var attributes = new Dictionary<string, string>();
+                if (_subscription.RedrivePolicy != null && _dlqARN != null)
                 {
-                    Attributes =
-                    {
-                        {"VisibilityTimeout", subscription.LockTimeout.ToString()},
-                        {"ReceiveMessageWaitTimeSeconds", ToSecondsAsString(subscription.TimeoutInMiliseconds)}
-                    },
+                    var policy = new {maxReceiveCount = _subscription.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = _dlqARN};
+                    attributes.Add("RedrivePolicy", JsonConvert.SerializeObject(policy));
+                }
+                
+                attributes.Add("DelaySeconds", _subscription.DelaySeconds.ToString());
+                attributes.Add("MessageRetentionPeriod", _subscription.MessageRetentionPeriod.ToString());
+                if (_subscription.IAMPolicy != null )attributes.Add("Policy", _subscription.IAMPolicy);
+                attributes.Add("ReceiveMessageWaitTimeSeconds", ToSecondsAsString(_subscription.TimeoutInMiliseconds));
+                attributes.Add("VisibilityTimeout", _subscription.LockTimeout.ToString());
+
+                var request = new CreateQueueRequest(_subscription.ChannelName.Value)
+                {
+                    Attributes = attributes,
                     Tags =
                     {
                         {"Source", "Brighter"},
-                        {"Topic", $"{topicName.Value}"}
+                        {"Topic", $"{_subscription.RoutingKey.Value}"}
                     }
                 };
-                var response = sqsClient.CreateQueueAsync(request).Result;
+                var response = sqsClient.CreateQueueAsync(request).GetAwaiter().GetResult();
                 _queueUrl = response.QueueUrl;
+
                 if (!string.IsNullOrEmpty(_queueUrl))
                 {
                     _logger.Value.Debug($"Queue created: {_queueUrl}");
                     using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
-                        CheckSubscription(subscription.MakeChannels, sqsClient, snsClient);
+                        CheckSubscription(_subscription.MakeChannels, sqsClient, snsClient);
                     }
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Could not create queue: {queueName} subscribed to {_channelTopicArn} on {_awsConnection.Region}");
+                    throw new InvalidOperationException($"Could not create queue: {_subscription.ChannelName.Value} subscribed to {_channelTopicArn} on {_awsConnection.Region}");
                 }
             }
-            catch (AggregateException ae)
+            catch (QueueDeletedRecentlyException ex)
             {
-                //TODO: We need some retry semantics here
-                //TODO: We need to flatten the ae and handle some of these with ae.Handle((x) => {})
-                ae.Handle(ex =>
+                //QueueDeletedRecentlyException - wait 30 seconds then retry
+                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
+                //and assume we are halfway through
+                var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
+                _logger.Value.Error(error);
+                Thread.Sleep(TimeSpan.FromSeconds(30));
+                throw new ChannelFailureException(error, ex);
+            }
+            catch (AmazonSQSException ex)
+            {
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
+                _logger.Value.Error(error);
+                throw new InvalidOperationException(error, ex);
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
+                _logger.Value.Error(error);
+                throw new InvalidOperationException(error, ex);
+            }
+        }
+
+        private void CreateDLQ(AmazonSQSClient sqsClient)
+        {
+            try
+            {
+                var request = new CreateQueueRequest(_subscription.RedrivePolicy.DeadlLetterQueueName.Value);
+
+                var createDeadLetterQueueResponse = sqsClient.CreateQueueAsync(request).GetAwaiter().GetResult();
+
+                var queueUrl = createDeadLetterQueueResponse.QueueUrl;
+
+                if (!string.IsNullOrEmpty(queueUrl))
                 {
-                    if (ex is QueueDeletedRecentlyException)
+                    //We need the ARN of the dead letter queue to configure the queue redrive policy, not the name 
+                    var attributesRequest = new GetQueueAttributesRequest
                     {
-                        //QueueDeletedRecentlyException - wait 30 seconds then retry
-                        //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
-                        //and assume we are halfway through
-                        var error = $"Could not create queue {queueName} because {ae.Message} waiting 60s to retry";
-                        _logger.Value.Error(error);
-                        Thread.Sleep(TimeSpan.FromSeconds(30));
-                        throw new ChannelFailureException(error, ae);
-                    }
+                        QueueUrl = queueUrl, 
+                        AttributeNames = new List<string> {"QueueArn"}
+                    };
+                    var attributesResponse = sqsClient.GetQueueAttributesAsync(attributesRequest).GetAwaiter().GetResult();
 
-                    if (ex is AmazonSQSException || ex is HttpErrorResponseException)
-                    {
-                        var error = $"Could not create queue {_queueUrl} subscribed to topic {topicName} in region {region.DisplayName} because {ae.Message}";
-                        _logger.Value.Error(error);
-                        throw new InvalidOperationException(error, ex);
-                    }
+                    if (attributesResponse.HttpStatusCode != HttpStatusCode.OK)
+                        throw new InvalidOperationException($"Could not find ARN of DLQ, status: {attributesResponse.HttpStatusCode}");
 
-                    return false;
-                });
+                    _dlqARN = attributesResponse.QueueARN;
+                }
+                else 
+                    throw new InvalidOperationException($"Could not find create DLQ, status: {createDeadLetterQueueResponse.HttpStatusCode}"); 
+            }
+            catch (QueueDeletedRecentlyException ex)
+            {
+                //QueueDeletedRecentlyException - wait 30 seconds then retry
+                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
+                //and assume we are halfway through
+                var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
+                _logger.Value.Error(error);
+                Thread.Sleep(TimeSpan.FromSeconds(30));
+                throw new ChannelFailureException(error, ex);
+            }
+            catch (AmazonSQSException ex)
+            {
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
+                _logger.Value.Error(error);
+                throw new InvalidOperationException(error, ex);
+            }
+            catch (HttpErrorResponseException ex)
+            {
+                var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
+                _logger.Value.Error(error);
+                throw new InvalidOperationException(error, ex);
             }
         }
 
@@ -154,17 +217,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (makeSubscriptions == OnMissingChannel.Assume)
                 return;
-            
+
             if (!SubscriptionExists(sqsClient, snsClient))
             {
-               if (makeSubscriptions == OnMissingChannel.Validate)
-               {
-                   throw new BrokerUnreachableException($"Subscription validation error: could not find subscription for {_queueUrl}");
-               }
-               else if (makeSubscriptions == OnMissingChannel.Create)
-               {
-                   SubscribeToTopic(sqsClient, snsClient);
-               }
+                if (makeSubscriptions == OnMissingChannel.Validate)
+                {
+                    throw new BrokerUnreachableException($"Subscription validation error: could not find subscription for {_queueUrl}");
+                }
+                else if (makeSubscriptions == OnMissingChannel.Create)
+                {
+                    SubscribeToTopic(sqsClient, snsClient);
+                }
             }
         }
 
@@ -257,12 +320,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (_subscription == null)
                 return;
-            
+
             using (var sqsClient = new AmazonSQSClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 //Does the queue exist - this is an HTTP call, we should cache the results for a period of time
                 (bool exists, string name) queueExists = QueueExists(sqsClient, _subscription.ChannelName.ToValidSQSQueueName());
-                
+
                 if (queueExists.exists)
                 {
                     try
@@ -275,7 +338,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         _logger.Value.Error($"Could not delete queue {queueExists.name}");
                     }
                 }
-
             }
         }
 
@@ -283,7 +345,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (_subscription == null)
                 return;
-            
+
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 bool exists = FindTopicByArn(snsClient);
@@ -319,17 +381,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 response = snsClient.ListTopicsAsync().GetAwaiter().GetResult();
                 exists = response.Topics.Any(topic => topic.TopicArn == _channelTopicArn);
             } while (!exists && response.NextToken != null);
+
             return exists;
         }
-        
+
         private string GetQueueARNForChannel(AmazonSQSClient sqsClient)
         {
             var result = sqsClient.GetQueueAttributesAsync(
-                new GetQueueAttributesRequest
-                {
-                    QueueUrl = _queueUrl,
-                    AttributeNames = new List<string> {"QueueArn"}
-                }
+                new GetQueueAttributesRequest {QueueUrl = _queueUrl, AttributeNames = new List<string> {"QueueArn"}}
             ).GetAwaiter().GetResult();
 
             if (result.HttpStatusCode == HttpStatusCode.OK)
@@ -337,9 +396,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return result.QueueARN;
             }
 
-            return null; 
+            return null;
         }
-        
+
         private void UnsubscribeFromTopic(AmazonSimpleNotificationServiceClient snsClient)
         {
             ListSubscriptionsByTopicResponse response;
@@ -356,6 +415,5 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
             } while (response.NextToken != null);
         }
-
     }
 }

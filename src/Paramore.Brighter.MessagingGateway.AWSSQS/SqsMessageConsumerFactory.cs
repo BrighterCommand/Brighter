@@ -39,7 +39,16 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
-            return new SqsMessageConsumer(_awsConnection, subscription.ChannelName.ToValidSQSQueueName(), subscription.RoutingKey);
+            SqsSubscription sqsSubscription = subscription as SqsSubscription;
+            if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+            
+            return new SqsMessageConsumer(
+                awsConnection: _awsConnection, 
+                queueName:subscription.ChannelName.ToValidSQSQueueName(), 
+                routingKey:subscription.RoutingKey, 
+                batchSize: subscription.BufferSize,
+                hasDLQ: sqsSubscription.RedrivePolicy == null
+                );
         }
     }
 }
