@@ -18,13 +18,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="connection">The queue to connect to</param>
+        /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer</returns>
-         public IAmAMessageConsumer Create(Connection connection)
+         public IAmAMessageConsumer Create(Subscription subscription)
         {
-            if (connection.ChannelName == null) throw new ArgumentNullException(nameof(connection.ChannelName));
-            Logger.Value.Debug($"MsSqlMessageConsumerFactory: create consumer for topic {connection.ChannelName}");
-            return new MsSqlMessageConsumer(_msSqlMessagingGatewayConfiguration, connection.ChannelName);
+            if (subscription.ChannelName == null) throw new ArgumentNullException(nameof(subscription.ChannelName));
+            Logger.Value.Debug($"MsSqlMessageConsumerFactory: create consumer for topic {subscription.ChannelName}");
+            return new MsSqlMessageConsumer(_msSqlMessagingGatewayConfiguration, subscription.ChannelName);
         }
     }
 }

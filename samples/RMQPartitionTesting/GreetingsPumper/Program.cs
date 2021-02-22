@@ -2,11 +2,13 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
+using GreetingsReceiverConsole;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Polly.CircuitBreaker;
 using Serilog;
 
 namespace GreetingsPumper
@@ -30,15 +32,28 @@ namespace GreetingsPumper
                         {
                             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                             Exchange = new Exchange("paramore.brighter.exchange")
+
                         };
-                        var producer = new RmqMessageProducer(gatewayConnection);
+                        var producer = new RmqMessageProducer(
+                            connection:gatewayConnection, 
+                            new Publication
+                            {
+                                MakeChannels =OnMissingChannel.Create
+                            });
 
                         services.AddBrighter(options =>
                         {
+<<<<<<< HEAD
                             options.BrighterMessaging = new BrighterMessaging { OutBox = outbox, Producer = producer};
+=======
+                            options.BrighterMessaging = new BrighterMessaging(outbox, producer);
+>>>>>>> optional-declare
                         }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
+                        services.AddSingleton<IAmAnOutboxViewer<Message>>(outbox);
+
                         services.AddHostedService<RunCommandProcessor>();
+                        services.AddHostedService<TimedOutboxSweeper>();
                     }
                 )
                 .UseConsoleLifetime()
@@ -61,17 +76,25 @@ namespace GreetingsPumper
                 long loop = 0;
                 while (true)
                 {
-                    if (cancellationToken.IsCancellationRequested) break;
+                    try
+                    {
+                        if (cancellationToken.IsCancellationRequested) break;
 
-                    loop++;
+                        loop++;
                  
-                    Console.WriteLine($"Sending message #{loop}");
-                    _commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
+                        Console.WriteLine($"Sending message #{loop}");
+                        _commandProcessor.Post(new GreetingEvent($"Ian #{loop}"));
 
-                    if (loop % 100 != 0) continue;
+                        if (loop % 100 != 0) continue;
 
-                    Console.WriteLine("Pausing for breath...");
-                    await Task.Delay(4000, cancellationToken);
+                        Console.WriteLine("Pausing for breath...");
+                        await Task.Delay(4000, cancellationToken);
+                    }
+                    catch (BrokenCircuitException)
+                    {
+                        Console.WriteLine("Can't send to producer, pausing...will retry in 5 seconds");
+                        Task.Delay(TimeSpan.FromSeconds(5)).Wait();
+                    }
                 }
             }
 

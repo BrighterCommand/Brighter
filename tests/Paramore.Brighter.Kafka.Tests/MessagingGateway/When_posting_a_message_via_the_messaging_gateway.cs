@@ -67,13 +67,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                  {
                      Name = "Kafka Consumer Test",
                      BootStrapServers = new[] { "localhost:9092" }
-                 },
-                 new KafkaConsumerConfiguration
-                 {
-                     GroupId = Guid.NewGuid().ToString(), 
-                     OffsetDefault = AutoOffsetReset.Earliest
-                 }
-                 ).Create(new Connection<MyCommand>(
+                 })
+                .Create(new KafkaSubscription<MyCommand>(
                      channelName: new ChannelName(_queueName), 
                      routingKey: new RoutingKey(_topic)
                      )

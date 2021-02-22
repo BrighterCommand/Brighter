@@ -50,23 +50,25 @@ namespace GreetingsReceiverConsole
                 .ConfigureServices((hostContext, services) =>
 
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                    new Connection<GreetingEvent>(
-                        new ConnectionName("paramore.example.greeting"),
-                        new ChannelName("greeting.event"),
-                        new RoutingKey("greeting.event"),
-                        timeoutInMilliseconds: 200,
-                        isDurable: true,
-                        highAvailability: true),
-                    new Connection<FarewellEvent>(
-                        new ConnectionName("paramore.example.farewell"),
-                        new ChannelName("farewell.event"),
-                        new RoutingKey("farewell.event"),
-                        timeoutInMilliseconds: 200,
-                        isDurable: true,
-                        highAvailability: true)
-                    };
+                        new RmqSubscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
+                            new ChannelName("greeting.event"),
+                            new RoutingKey("greeting.event"),
+                            timeoutInMilliseconds: 200,
+                            isDurable: true,
+                            highAvailability: true,
+                            makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                        new RmqSubscription<FarewellEvent>(
+                            new SubscriptionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                            new ChannelName("farewell.event"),
+                            new RoutingKey("farewell.event"),
+                            timeoutInMilliseconds: 200,
+                            isDurable: true,
+                            highAvailability: true,
+                            makeChannels: OnMissingChannel.Create)
+                        };
 
                     var rmqConnection = new RmqMessagingGatewayConnection
                     {
@@ -78,7 +80,7 @@ namespace GreetingsReceiverConsole
 
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                         var outBox = new InMemoryOutbox();
                         options.BrighterMessaging = new BrighterMessaging { OutBox = outBox, Producer = new RmqMessageProducer(rmqConnection)};

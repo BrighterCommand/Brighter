@@ -226,12 +226,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-         public void Reject(Message message, bool requeue)
-         {
-            Acknowledge(message);
-            if (requeue)
-                Requeue(message);
-         }
+         public void Reject(Message message)
+        {
+            if (!_autoCommitEnabled)
+                Acknowledge(message);
+        }
 
         /// <summary>
         /// Requeues the specified message. A no-op on Kafka as the stream is immutable

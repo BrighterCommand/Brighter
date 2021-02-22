@@ -1,7 +1,6 @@
-#region Licence
-
+﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,36 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using FluentAssertions;
-using Xunit;
-
-namespace Paramore.Brighter.NoOpStore.Tests.Outbox
+namespace Paramore.Brighter
 {
-    public class NoOutboxReadTests
+    /// <summary>
+    /// Contains configuration that is generic to producers - similar to Subscription for consumers
+    /// Unlike <see cref="Subscription"/>, as it is passed to a constructor it is by convention over enforced at compile time
+    /// Platform specific configuration goes into a <see cref="IAmGatewayConfiguration"/> derived class
+    /// </summary>
+    public class Publication
     {
-        private readonly NoOpOutbox _noOpStore;
-        private Exception _exception;
-        private IList<Message> _messages;
-
-        public NoOutboxReadTests()
-        {
-            _noOpStore = new NoOpOutbox();
-            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _noOpStore.Add(messageEarliest);
-        }
-
-        [Fact]
-        public void When_reading_from_noopstore()
-        {
-            _exception = Catch.Exception(() => _messages = _noOpStore.Get());
-
-            //_should_not_cause_exception
-            _exception.Should().BeNull();
-            //_should_return_empty_list
-            _messages.Should().NotBeNull();
-            _messages.Should().BeEmpty();
-        }
-   }
+        /// <summary>
+        /// What do we do with infrastructure dependencies for the producer?
+        /// </summary>
+        public OnMissingChannel MakeChannels { get; set; } 
+        
+    }
 }

@@ -21,6 +21,17 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
  - Improved the Kafka Client. It now uses the publisher/creator model to ensure that a message is in Brighter format i.e. headers as well as body; updated configuration values; generally improved reliability. This is a breaking change with previous versions of the Kafka client.
  - The class BrighterMessaging now only has a default constructor and now has setters on properties. Use the initializer syntax instead - new BrighterMessage{} to avoid having redundant constructor arguments.
+ - Changes to how we configure transports - renaming classes and extending their functionality
+ --- Connection is renamed to Subscription
+ --- Added a matching Publication for producers
+ --- Base class includes the attributes that Brighter Core (Brighter & ServiceActivator) need
+ --- Derived classes contain transport specific details
+ --- On SQSConnection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose 
+ --- Seperated from GatewayConfiguration, that now has a marker interface, used to connect to the Gateway and not about how we publish or subscribe
+ --- We now have the option to declare infastructure separately and Validate or Assume it exists, still have an option to Create which is the default
+ --- We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)  
+ --- Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
+ - Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
 
 ## Release 8.1.1399 ##
  - Update nuget libs

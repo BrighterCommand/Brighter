@@ -22,14 +22,31 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     public static class ExchangeConfigurationHelper
     {
-        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection)
+        public static void DeclareExchangeForConnection(this IModel channel, RmqMessagingGatewayConnection connection, OnMissingChannel onMissingChannel)
+        {
+            if (onMissingChannel == OnMissingChannel.Assume)
+                return;
+
+            if (onMissingChannel == OnMissingChannel.Create)
+            {
+                CreateExchange(channel, connection);
+            }
+            else if (onMissingChannel == OnMissingChannel.Validate)
+            {
+                ValidateExchange(channel, connection);
+            }
+        }
+
+        private static void CreateExchange(IModel channel, RmqMessagingGatewayConnection connection)
         {
             var arguments = new Dictionary<string, object>();
             if (connection.Exchange.SupportDelay)
@@ -37,7 +54,36 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 arguments.Add("x-delayed-type", connection.Exchange.Type);
                 connection.Exchange.Type = "x-delayed-message";
             }
-            channel.ExchangeDeclare(connection.Exchange.Name, connection.Exchange.Type, connection.Exchange.Durable, autoDelete: false, arguments: arguments);
+
+            channel.ExchangeDeclare(
+                connection.Exchange.Name, 
+                connection.Exchange.Type, 
+                connection.Exchange.Durable, 
+                autoDelete: false,
+                arguments: arguments);
+
+            if (connection.DeadLetterExchange != null)
+            {
+                 channel.ExchangeDeclare(
+                     connection.DeadLetterExchange.Name, 
+                     connection.DeadLetterExchange.Type, 
+                     connection.DeadLetterExchange.Durable, 
+                     autoDelete: false);
+            }
         }
-    }
+        private static void ValidateExchange(IModel channel, RmqMessagingGatewayConnection connection)
+        
+        {
+            try
+            {
+                channel.ExchangeDeclarePassive(connection.Exchange.Name);
+                if (connection.DeadLetterExchange != null) channel.ExchangeDeclarePassive(connection.DeadLetterExchange.Name);
+            }
+            catch (Exception e)
+            {
+                throw new BrokerUnreachableException(e);
+            }
+        }
+
+     }
 }

@@ -18,40 +18,38 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
-        private MyCommand _myCommand;
-        private readonly Guid _correlationId;
-        private readonly string _replyTo;
-        private readonly string _contentType;
-        private readonly string _topicName;
-        private Connection<MyCommand> _connection;
+        private readonly MyCommand _myCommand;
 
         public SqsMessageConsumerRequeueTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
-            _correlationId = Guid.NewGuid();
-            _replyTo = "http:\\queueUrl";
-            _contentType = "text\\plain";
+            Guid correlationId = Guid.NewGuid();
+            string replyTo = "http:\\queueUrl";
+            string contentType = "text\\plain";
             var channelName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _connection = new Connection<MyCommand>(
-                name: new ConnectionName(channelName),
+            string topicName = $"Consumer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var routingKey = new RoutingKey(topicName);
+            
+            SqsSubscription<MyCommand> subscription = new(
+                name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: new RoutingKey(_topicName)
-                );
+                routingKey: routingKey
+            );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
+                new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
                 new MessageBody(JsonConvert.SerializeObject((object) _myCommand))
             );
             
             //Must have credentials stored in the SDK Credentials store or shared credentials file
-            var credentialChain = new CredentialProfileStoreChain();
-            
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-            _channel = _channelFactory.CreateChannel(_connection);
-            _messageProducer = new SqsMessageProducer(awsConnection);
+            
+            //We need to do this manually in a test - will create the channel from subscriber parameters
+            _channelFactory = new ChannelFactory(awsConnection);
+            _channel = _channelFactory.CreateChannel(subscription);
+            
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
 
         [Fact]

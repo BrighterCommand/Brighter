@@ -35,5 +35,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public string[] BootStrapServers { get; set; }
 
+        /// <summary>
+        /// Maximum number of in-flight requests the 
+        /// client will send. 
+        /// This setting applies per broker subscription.
+        /// </summary>
+        public int? MaxInFlightRequestsPerConnection { get; set; }
+       
     }
 }

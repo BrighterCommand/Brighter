@@ -27,8 +27,8 @@ using System;
 namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
-    /// Class ConnectionName.
-    /// Value type that stores the name of a connection. Immutable.
+    /// Class SubscriptionName.
+    /// Value type that stores the name of a subscription. Immutable.
     /// </summary>
     public class ConsumerName : IEquatable<ConsumerName>
     {
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Gets the connection name as a string.
+        /// Gets the subscription name as a string.
         /// </summary>
         /// <value>The value.</value>
         public string Value
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="ConnectionName"/> to <see cref="System.String"/>.
+        /// Performs an implicit conversion from <see cref="SubscriptionName"/> to <see cref="System.String"/>.
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Does the connection name match?
+        /// Does the subscription name match?
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Does the connection name match?
+        /// Does the subscription name match?
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Implements the ==. Does the connection name match?
+        /// Implements the ==. Does the subscription name match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
@@ -117,7 +117,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Implements the !=. Does the connection name not match?
+        /// Implements the !=. Does the subscription name not match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>

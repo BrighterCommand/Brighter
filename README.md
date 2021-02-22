@@ -10,7 +10,7 @@
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kakfa, redis, c#, command, command dispatcher, command  processor, queue, distributed |
 
 ## What Scenarios Can You Use Brighter in?
-* When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer.
+* When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer (sometimes called a mediator).
 
     * A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
     * Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.

@@ -23,29 +23,28 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public SQSBufferedConsumerTests()
         {
-            //Must have credentials stored in the SDK Credentials store or shared credentials file
-            var credentialChain = new CredentialProfileStoreChain();
-            
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
-            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
+            _channelFactory = new ChannelFactory(awsConnection);
             var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
                 
             //we need the channel to create the queues and notifications
-            _channelFactory.CreateChannel(new Connection<MyCommand>(
-                name: new ConnectionName(channelName),
+            var routingKey = new RoutingKey(_topicName);
+            
+            _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
+                name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
-                routingKey:new RoutingKey(_topicName),
+                routingKey:routingKey,
                 bufferSize: BUFFER_SIZE
                 ));
             
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
             var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
-            _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, BUFFER_SIZE);
-           _messageProducer = new SqsMessageProducer(awsConnection);
+            _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, routingKey, BUFFER_SIZE);
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
             
         [Fact]

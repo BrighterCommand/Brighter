@@ -49,10 +49,10 @@ namespace GreetingsReceiverConsole
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new Connection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
+                        new Subscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
                             timeoutInMilliseconds: 100)
@@ -69,7 +69,7 @@ namespace GreetingsReceiverConsole
 
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(consumerFactory);
                         var outBox = new InMemoryOutbox();
                         options.BrighterMessaging = new BrighterMessaging()

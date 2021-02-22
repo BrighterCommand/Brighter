@@ -28,7 +28,7 @@ using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    public class RmqMessagingGatewayConnection 
+    public class RmqMessagingGatewayConnection : IAmGatewayConfiguration 
     {
       public RmqMessagingGatewayConnection()
       {
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
       }
 
       /// <summary>
-      /// Sets Unique name for the connection
+      /// Sets Unique name for the subscription
       /// </summary>
       public string Name { get; set; }
 
@@ -53,6 +53,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public Exchange Exchange { get; set; }
 
         /// <summary>
+        /// The exchange used for any dead letter queue
+        /// </summary>
+        public Exchange DeadLetterExchange { get; set; }
+        
+        /// <summary>
         /// Gets or sets the Heartbeat in seconds. Defaults to 20.
         /// </summary>
         public ushort Heartbeat { get; set; } = 20;
@@ -61,6 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Gets or sets whether to persist messages. Defaults to false.
         /// </summary>
         public bool PersistMessages { get; set; }
+
     }
 
     /// <summary>
@@ -85,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
 
         /// <summary>
-        /// Gets or sets the retry count for when a connection fails
+        /// Gets or sets the retry count for when a subscription fails
         /// </summary>
         public int ConnectionRetryCount { get; set; }
 

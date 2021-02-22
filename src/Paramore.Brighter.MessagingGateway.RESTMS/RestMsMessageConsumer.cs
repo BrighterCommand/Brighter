@@ -187,9 +187,8 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
         /// <exception cref="System.NotImplementedException"></exception>
-        public void Reject(Message message, bool requeue)
+        public void Reject(Message message)
         {
         }
 

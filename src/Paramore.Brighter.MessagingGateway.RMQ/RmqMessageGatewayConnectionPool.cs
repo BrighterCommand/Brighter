@@ -34,24 +34,24 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// <summary>
     /// Class MessageGatewayConnectionPool.
     /// </summary>
-    public class RMQMessageGatewayConnectionPool
+    public class RmqMessageGatewayConnectionPool
     {
         private readonly string _connectionName;
         private readonly ushort _connectionHeartbeat;
         private static readonly Dictionary<string, PooledConnection> s_connectionPool = new Dictionary<string, PooledConnection>();
         private static readonly object s_lock = new object();
-        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RMQMessageGatewayConnectionPool>);
+        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RmqMessageGatewayConnectionPool>);
         private static readonly Random jitter = new Random();
 
-        public RMQMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
+        public RmqMessageGatewayConnectionPool(string connectionName, ushort connectionHeartbeat)
         {
             _connectionName = connectionName;
             _connectionHeartbeat = connectionHeartbeat;
         }
         
         /// <summary>
-        /// Return matching RabbitMQ connection if exist (match by amqp scheme)
-        /// or create new connection to RabbitMQ (thread-safe)
+        /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
+        /// or create new subscription to RabbitMQ (thread-safe)
         /// </summary>
         /// <param name="connectionFactory"></param>
         /// <returns></returns>
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
                 catch (BrokerUnreachableException exception)
                 {
-                    s_logger.Value.ErrorException("RMQMessageGatewayConnectionPool: Failed to reset connection to Rabbit MQ endpoint {0}", exception, connectionFactory.Endpoint);
+                    s_logger.Value.ErrorException("RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {0}", exception, connectionFactory.Endpoint);
         }
             }
         }
@@ -100,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             TryRemoveConnection(connectionId);
 
-            s_logger.Value.DebugFormat("RMQMessageGatewayConnectionPool: Creating connection to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
+            s_logger.Value.DebugFormat("RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
 
             connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(_connectionHeartbeat);
             connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
@@ -109,12 +109,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             var connection = connectionFactory.CreateConnection(_connectionName);
 
-            s_logger.Value.DebugFormat("RMQMessageGatewayConnectionPool: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
+            s_logger.Value.DebugFormat("RmqMessageGatewayConnectionPool: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
 
 
             void ShutdownHandler(object sender, ShutdownEventArgs e)
             {
-                s_logger.Value.WarnFormat("RMQMessageGatewayConnectionPool: The connection {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
+                s_logger.Value.WarnFormat("RmqMessageGatewayConnectionPool: The subscription {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
 
                 lock (s_lock)
                 {

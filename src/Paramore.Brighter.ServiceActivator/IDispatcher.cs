@@ -55,15 +55,15 @@ namespace Paramore.Brighter.ServiceActivator
         Task End();
 
         /// <summary>
-        /// Opens the specified connection.
+        /// Opens the specified subscription.
         /// </summary>
-        /// <param name="connection">The connection.</param>
-        void Open(Connection connection);
+        /// <param name="subscription">The subscription.</param>
+        void Open(Subscription subscription);
 
         /// <summary>
-        /// Opens the specified connection name.
+        /// Opens the specified subscription name.
         /// </summary>
-        /// <param name="connectionName">Name of the connection.</param>
+        /// <param name="connectionName">Name of the subscription.</param>
         void Open(string connectionName);
 
         /// <summary>
@@ -72,15 +72,15 @@ namespace Paramore.Brighter.ServiceActivator
         void Receive();
 
         /// <summary>
-        /// Shuts the specified connection.
+        /// Shuts the specified subscription.
         /// </summary>
-        /// <param name="connection">The connection.</param>
-        void Shut(Connection connection);
+        /// <param name="subscription">The subscription.</param>
+        void Shut(Subscription subscription);
 
         /// <summary>
-        /// Shuts the specified connection name.
+        /// Shuts the specified subscription name.
         /// </summary>
-        /// <param name="connectionName">Name of the connection.</param>
+        /// <param name="connectionName">Name of the subscription.</param>
         void Shut(string connectionName);
     }
 }

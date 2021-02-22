@@ -38,7 +38,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmACommandProcessor _commandProcessor;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmAChannelFactory _defaultChannelFactory;
-        private IEnumerable<Connection> _connections;
+        private IEnumerable<Subscription> _connections;
 
         private DispatchBuilder() { }
 
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="connections">The connections.</param>
         /// <returns>IAmADispatchBuilder.</returns>
-        public IAmADispatchBuilder Connections(IEnumerable<Connection> connections)
+        public IAmADispatchBuilder Connections(IEnumerable<Subscription> connections)
         {
             _connections = connections;
 
@@ -165,7 +165,7 @@ namespace Paramore.Brighter.ServiceActivator
         ///// </summary>
         ///// <param name="connections"></param>
         ///// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Connections(IEnumerable<Connection> connections);
+        IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);
     }
 
     /// <summary>

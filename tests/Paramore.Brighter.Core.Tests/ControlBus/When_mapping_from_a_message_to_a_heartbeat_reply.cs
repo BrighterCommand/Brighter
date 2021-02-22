@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         private readonly IAmAMessageMapper<HeartbeatReply> _mapper;
         private readonly Message _message;
         private HeartbeatReply _request;
-        private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConsumerName\": \"Test.Connection\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConsumerName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
+        private const string MESSAGE_BODY = "{\r\n  \"HostName\": \"Test.Hostname\",\r\n  \"Consumers\": [\r\n    {\r\n      \"ConsumerName\": \"Test.Subscription\",\r\n      \"State\": 1\r\n    },\r\n    {\r\n      \"ConsumerName\": \"More.Consumers\",\r\n      \"State\": 0\r\n    }\r\n  ]\r\n}";
         private const string TOPIC = "test.topic";
         private readonly Guid _correlationId = Guid.NewGuid();
 
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             // _should_set_the_hostName
             _request.HostName.Should().Be("Test.Hostname");
             // _should_contain_the_consumers
-            _request.Consumers.Should().Contain(rc => rc.ConsumerName == "Test.Connection" && rc.State == ConsumerState.Open);
+            _request.Consumers.Should().Contain(rc => rc.ConsumerName == "Test.Subscription" && rc.State == ConsumerState.Open);
             _request.Consumers.Should().Contain(rc => rc.ConsumerName == "More.Consumers" && rc.State == ConsumerState.Shut);
         }
    }

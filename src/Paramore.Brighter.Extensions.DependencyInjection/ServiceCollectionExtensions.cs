@@ -90,9 +90,37 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
     public class BrighterMessaging
     {
-        public IAmAnOutbox<Message> OutBox { get; set; }
-        public IAmAnOutboxAsync<Message> AsyncOutBox { get; set; }
-        public IAmAMessageProducer Producer { get; set; }
-        public IAmAMessageProducerAsync AsyncProducer { get; set; }
-   }
+        public IAmAnOutbox<Message> OutBox { get; }
+        public IAmAnOutboxAsync<Message> AsyncOutBox { get; }
+        public IAmAMessageProducer Producer { get; }
+        public IAmAMessageProducerAsync AsyncProducer { get; }
+
+        /// <summary>
+        /// Constructor for use with a Producer
+        /// </summary>
+        /// <param name="outBox">The outbox to store messages - use InMemoryInbox if you do not require a persistent outbox</param>
+        /// <param name="asyncOutBox">The outbox to store messages - use InMemoryInbox if you do not require a persistent outbox</param>
+        /// <param name="producer">The Message producer</param>
+        /// <param name="asyncProducer">The Message producer's async interface</param>
+        public BrighterMessaging(IAmAnOutbox<Message> outBox, IAmAnOutboxAsync<Message> asyncOutBox, IAmAMessageProducer producer, IAmAMessageProducerAsync asyncProducer)
+        {
+            OutBox = outBox;
+            AsyncOutBox = asyncOutBox;
+            Producer = producer;
+            AsyncProducer = asyncProducer;
+        }
+
+        /// <summary>
+        /// Simplified constructor - we
+        /// </summary>
+        /// <param name="outbox">The outbox</param>
+        /// <param name="producer">Producer</param>
+        public BrighterMessaging(IAmAnOutbox<Message> outbox, IAmAMessageProducer producer)
+        {
+            OutBox = outbox;
+            if (outbox is IAmAnOutboxAsync<Message> outboxAsync) AsyncOutBox = outboxAsync;
+            Producer = producer;
+            if (producer is IAmAMessageProducerAsync producerAsync) AsyncProducer = producerAsync;
+        }
+    }
 }

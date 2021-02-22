@@ -21,12 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
 using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    public class KafkaMessagingProducerConfiguration
+    public class KafkaPublication : Publication
     {
         /// <summary>
         /// Maximum number of messages allowed on the producer queue.
@@ -82,6 +81,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// This value is only enforced locally and limits the time a produced message
         /// waits for successful delivery. A time of 0 is infinite.
         /// </summary>
-        public int? MessageTimeoutMs { get; set; } = 500;
-   }
+        public int? MessageTimeout { get; set; }
+
+        public KafkaPublication()
+        {
+            Acks = Confluent.Kafka.Acks.All;
+            MessageTimeout = 5000;
+        }
+
+    }
 }

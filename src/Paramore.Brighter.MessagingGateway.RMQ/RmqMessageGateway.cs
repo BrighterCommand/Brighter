@@ -33,7 +33,7 @@ using RabbitMQ.Client.Events;
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
-    ///     Class RMQMessageGateway.
+    ///     Class RmqMessageGateway.
     ///     Base class for messaging gateway used by a <see cref="Brighter.Channel" /> to communicate with a RabbitMQ server,
     ///     to consume messages from the server or
     ///     <see cref="CommandProcessor.Post{T}" /> to send a message to the RabbitMQ server.
@@ -42,31 +42,30 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     ///     So to listen for messages on that Topic you need to bind to the matching queue name.
     ///     The configuration holds a &lt;serviceActivatorConnections&gt; section which in turn contains a &lt;connections&gt;
     ///     collection that contains a set of connections.
-    ///     Each connection identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
+    ///     Each subscription identifies a mapping between a queue name and a <see cref="IRequest" /> derived type. At runtime we
     ///     read this list and listen on the associated channels.
     ///     The <see cref="MessagePump" /> then uses the <see cref="IAmAMessageMapper" /> associated with the configured
     ///     request type in <see cref="IAmAMessageMapperRegistry" /> to translate between the
     ///     on-the-wire message and the <see cref="Command" /> or <see cref="Event" />
     /// </summary>
-    public class RMQMessageGateway : IDisposable
+    public class RmqMessageGateway : IDisposable
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RMQMessageGateway>);
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageGateway>);
         private readonly Policy _circuitBreakerPolicy;
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
         protected readonly RmqMessagingGatewayConnection Connection;
-        private readonly ushort _batchSize;
         protected IModel Channel;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="RMQMessageGateway" /> class.
-        ///     Use if you need to inject a test logger
-        ///     <param name="connection">The amqp uri and exchange to connect to</param>
+        /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
+        ///  Use if you need to inject a test logger
         /// </summary>
-        protected RMQMessageGateway(RmqMessagingGatewayConnection connection, int batchSize = 1)
+        /// <param name="connection">The amqp uri and exchange to connect to</param>
+        /// <param name="batchSize">How many messages to read from a channel at one time. Only used by consumer, defaults to 1</param>
+        protected RmqMessageGateway(RmqMessagingGatewayConnection connection)
         {
             Connection = connection;
-            _batchSize = Convert.ToUInt16(batchSize);
 
             var connectionPolicyFactory = new ConnectionPolicyFactory(Connection);
 
@@ -97,67 +96,64 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         }
 
         /// <summary>
-        ///     Connects the specified queue name.
+        /// Connects the specified queue name.
         /// </summary>
-        /// <param name="queueName">Name of the queue.</param>
+        /// <param name="queueName">Name of the queue. For producer use default of "Producer Channel". Passed to Polly for debugging</param>
+        /// <param name="makeExchange">Do we create the exchange if it does not exist</param>
         /// <returns><c>true</c> if XXXX, <c>false</c> otherwise.</returns>
-        protected void EnsureChannel(string queueName = "Producer Channel")
+        protected void EnsureBroker(string queueName = "Producer Channel", OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
-            ConnectWithCircuitBreaker(queueName);
+            ConnectWithCircuitBreaker(queueName, makeExchange);
         }
 
-        private void ConnectWithCircuitBreaker(string queueName)
+        private void ConnectWithCircuitBreaker(string queueName, OnMissingChannel makeExchange)
         {
-            _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName));
+            _circuitBreakerPolicy.Execute(() => ConnectWithRetry(queueName, makeExchange));
         }
 
-        private void ConnectWithRetry(string queueName)
+        private void ConnectWithRetry(string queueName, OnMissingChannel makeExchange)
         {
-            _retryPolicy.Execute((ctx) => ConnectToBroker(), new Dictionary<string, object> {{"queueName", queueName}});
+            _retryPolicy.Execute((ctx) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName}});
         }
 
-        protected virtual void ConnectToBroker()
+        protected virtual void ConnectToBroker(OnMissingChannel makeExchange)
         {
             if (Channel == null || Channel.IsClosed)
             {
-                var connection = new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
+                var connection = new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).GetConnection(_connectionFactory);
 
                 connection.ConnectionBlocked += HandleBlocked;
                 connection.ConnectionUnblocked += HandleUnBlocked;
 
-                _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on connection {0}",
+                _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on subscription {0}",
                     Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
                 
-                //set the number of messages to fetch -- defaults to 1 unless set on connection, no impact on
-                //BasicGet, only works on BasicConsume
-                Channel.BasicQos(0, _batchSize, false);
-
-                _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on connection {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
+               _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on subscription {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
-                Channel.DeclareExchangeForConnection(Connection);
+                Channel.DeclareExchangeForConnection(Connection, makeExchange);
             }
         }
 
         private void HandleBlocked(object sender, ConnectionBlockedEventArgs args)
         {
-            _logger.Value.WarnFormat("RMQMessagingGateway: Connection to {0} blocked. Reason: {1}", 
+            _logger.Value.WarnFormat("RMQMessagingGateway: Subscription to {0} blocked. Reason: {1}", 
                 Connection.AmpqUri.GetSanitizedUri(), args.Reason);
         }
 
         private void HandleUnBlocked(object sender, EventArgs args)
         {
-            _logger.Value.InfoFormat("RMQMessagingGateway: Connection to {0} unblocked", Connection.AmpqUri.GetSanitizedUri());
+            _logger.Value.InfoFormat("RMQMessagingGateway: Subscription to {0} unblocked", Connection.AmpqUri.GetSanitizedUri());
         }
 
         protected void ResetConnectionToBroker()
         {
-            new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
+            new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).ResetConnection(_connectionFactory);
         }
 
-        ~RMQMessageGateway()
+        ~RmqMessageGateway()
         {
             Dispose(false);
         }
@@ -171,7 +167,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 Channel?.Dispose();
                 Channel = null;
 
-                new RMQMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
+                new RmqMessageGatewayConnectionPool(Connection.Name, Connection.Heartbeat).RemoveConnection(_connectionFactory);
             }
         }
     }

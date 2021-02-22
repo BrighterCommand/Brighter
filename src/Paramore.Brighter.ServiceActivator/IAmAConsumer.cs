@@ -10,7 +10,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <value>The name.</value>
         ConsumerName Name { get; }
-        ConnectionName ConnectionName { get; set; }
+        SubscriptionName SubscriptionName { get; set; }
 
         /// <summary>
         /// Gets the performer.

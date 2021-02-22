@@ -34,8 +34,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="connection">The queue to connect to</param>
+        /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer</returns>
-        IAmAMessageConsumer Create(Connection connection);
+        IAmAMessageConsumer Create(Subscription subscription);
     }
 }

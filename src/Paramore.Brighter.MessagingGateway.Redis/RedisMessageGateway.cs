@@ -32,17 +32,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         protected TimeSpan MessageTimeToLive;
         protected static Lazy<RedisManagerPool> Pool;
         protected string Topic;
-        protected readonly RedisMessagingGatewayConfiguration GatewayConfiguration;
+        private readonly RedisMessagingGatewayConfiguration _gatewayConfiguration;
 
         protected RedisMessageGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
         {
-            GatewayConfiguration = redisMessagingGatewayConfiguration;
+            _gatewayConfiguration = redisMessagingGatewayConfiguration;
             
             Pool = new Lazy<RedisManagerPool>(() =>
             {
                 OverrideRedisClientDefaults();
 
-                return new RedisManagerPool(GatewayConfiguration.RedisConnectionString, new RedisPoolConfig());
+                return new RedisManagerPool(_gatewayConfiguration.RedisConnectionString, new RedisPoolConfig());
             });
  
         }
@@ -80,76 +80,75 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         protected void OverrideRedisClientDefaults()
         {
-            if (GatewayConfiguration.BackoffMultiplier.HasValue)
+            if (_gatewayConfiguration.BackoffMultiplier.HasValue)
             {
-                RedisConfig.BackOffMultiplier = GatewayConfiguration.BackoffMultiplier.Value;
+                RedisConfig.BackOffMultiplier = _gatewayConfiguration.BackoffMultiplier.Value;
             }
 
-            if (GatewayConfiguration.DeactivatedClientsExpiry.HasValue)
+            if (_gatewayConfiguration.DeactivatedClientsExpiry.HasValue)
             {
-                RedisConfig.DeactivatedClientsExpiry = GatewayConfiguration.DeactivatedClientsExpiry.Value;
+                RedisConfig.DeactivatedClientsExpiry = _gatewayConfiguration.DeactivatedClientsExpiry.Value;
             }
 
-            if (GatewayConfiguration.DefaultConnectTimeout.HasValue)
+            if (_gatewayConfiguration.DefaultConnectTimeout.HasValue)
             {
-                RedisConfig.DefaultConnectTimeout = GatewayConfiguration.DefaultConnectTimeout.Value;
+                RedisConfig.DefaultConnectTimeout = _gatewayConfiguration.DefaultConnectTimeout.Value;
             }
 
-            if (GatewayConfiguration.DefaultIdleTimeOutSecs.HasValue)
+            if (_gatewayConfiguration.DefaultIdleTimeOutSecs.HasValue)
             {
-                RedisConfig.DefaultIdleTimeOutSecs = GatewayConfiguration.DefaultIdleTimeOutSecs.Value;
+                RedisConfig.DefaultIdleTimeOutSecs = _gatewayConfiguration.DefaultIdleTimeOutSecs.Value;
             }
 
-            if (GatewayConfiguration.DefaultReceiveTimeout.HasValue)
+            if (_gatewayConfiguration.DefaultReceiveTimeout.HasValue)
             {
-                RedisConfig.DefaultReceiveTimeout = GatewayConfiguration.DefaultReceiveTimeout.Value;
+                RedisConfig.DefaultReceiveTimeout = _gatewayConfiguration.DefaultReceiveTimeout.Value;
             }
 
-            if (GatewayConfiguration.DefaultRetryTimeout.HasValue)
+            if (_gatewayConfiguration.DefaultRetryTimeout.HasValue)
             {
-                RedisConfig.DefaultRetryTimeout = GatewayConfiguration.DefaultRetryTimeout.Value;
+                RedisConfig.DefaultRetryTimeout = _gatewayConfiguration.DefaultRetryTimeout.Value;
             }
 
-            if (GatewayConfiguration.DefaultSendTimeout.HasValue)
+            if (_gatewayConfiguration.DefaultSendTimeout.HasValue)
             {
-                RedisConfig.DefaultSendTimeout = GatewayConfiguration.DefaultSendTimeout.Value;
+                RedisConfig.DefaultSendTimeout = _gatewayConfiguration.DefaultSendTimeout.Value;
             }
 
-            if (GatewayConfiguration.DisableVerboseLogging.HasValue)
+            if (_gatewayConfiguration.DisableVerboseLogging.HasValue)
             {
-                RedisConfig.EnableVerboseLogging = !GatewayConfiguration.DisableVerboseLogging.Value;
+                RedisConfig.EnableVerboseLogging = !_gatewayConfiguration.DisableVerboseLogging.Value;
             }
 
-            if (GatewayConfiguration.HostLookupTimeoutMs.HasValue)
+            if (_gatewayConfiguration.HostLookupTimeoutMs.HasValue)
             {
-                RedisConfig.HostLookupTimeoutMs = GatewayConfiguration.HostLookupTimeoutMs.Value;
+                RedisConfig.HostLookupTimeoutMs = _gatewayConfiguration.HostLookupTimeoutMs.Value;
             }
 
-            if (GatewayConfiguration.MaxPoolSize.HasValue)
+            if (_gatewayConfiguration.MaxPoolSize.HasValue)
             {
-                RedisConfig.DefaultMaxPoolSize = GatewayConfiguration.MaxPoolSize;
+                RedisConfig.DefaultMaxPoolSize = _gatewayConfiguration.MaxPoolSize;
             }
 
-            if (GatewayConfiguration.MessageTimeToLive.HasValue)
+            if (_gatewayConfiguration.MessageTimeToLive.HasValue)
             {
-                MessageTimeToLive = GatewayConfiguration.MessageTimeToLive.Value;
+                MessageTimeToLive = _gatewayConfiguration.MessageTimeToLive.Value;
             }
             else
             {
                 MessageTimeToLive = TimeSpan.FromMinutes(10);
             }
 
-            if (GatewayConfiguration.VerifyMasterConnections.HasValue)
+            if (_gatewayConfiguration.VerifyMasterConnections.HasValue)
             {
-                RedisConfig.VerifyMasterConnections = GatewayConfiguration.VerifyMasterConnections.Value;
+                RedisConfig.VerifyMasterConnections = _gatewayConfiguration.VerifyMasterConnections.Value;
             }
-
-      }
+        }
         
         /// <summary>
         /// Store the actual message content to Redis - we only want one copy, regardless of number of queues
         /// </summary>
-        /// <param name="client">The connection to Redis</param>
+        /// <param name="client">The subscription to Redis</param>
         /// <param name="redisMessage">The message to write to Redis</param>
         /// <param name="msgId">The id to store it under</param>
         protected void StoreMessage(IRedisClient client, string redisMessage, long msgId)

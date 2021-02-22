@@ -51,15 +51,14 @@ namespace GreetingsReceiverConsole
                 .ConfigureServices((hostContext, services) =>
 
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new Connection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
+                        new SqsSubscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
-                            timeoutInMilliseconds: 200,
-                            isDurable: true,
-                            highAvailability: true)
+                            bufferSize: 10,
+                            timeoutInMilliseconds: 20, lockTimeout: 30)
                     };
 
                     //create the gateway
@@ -67,12 +66,10 @@ namespace GreetingsReceiverConsole
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                        var sqsMessageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
-
                         services.AddServiceActivator(options =>
                         {
-                            options.Connections = connections;
-                            options.ChannelFactory = new ChannelFactory(awsConnection,sqsMessageConsumerFactory);
+                            options.Subscriptions = subscriptions;
+                            options.ChannelFactory = new ChannelFactory(awsConnection);
                             var outBox = new InMemoryOutbox();
                             options.BrighterMessaging = new BrighterMessaging {OutBox = outBox, Producer = new SqsMessageProducer(awsConnection)};
                         }).AutoFromAssemblies();

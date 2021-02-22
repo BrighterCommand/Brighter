@@ -27,7 +27,6 @@ env:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -49,7 +48,6 @@ jobs:
             tests/
   
   test:
-
     runs-on: ubuntu-latest
     needs: [build]
 
@@ -69,7 +67,6 @@ jobs:
         run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal" --blame -v n
 
   package:
-    
     runs-on: ubuntu-latest
     needs: [test]
     
@@ -90,13 +87,27 @@ jobs:
       - uses: actions/download-artifact@v2
         with:
           name: nuget packages
-      - name: Push to GitHub Feed
-        run: |
-          for f in **/*.nupkg
-          do
-            curl -vX PUT -u "$GITHUB_USER:$GITHUB_TOKEN" -F package=@$f $GITHUB_FEED$GITHUB_REPOSITORY
-          done
+      - name: to GitHub Feed
+        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
     
+  memory:
+    runs-on: ubuntu-latest
+    needs: [test]
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 2.1.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: In Memory Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n  
+        
   redis-ci:
     runs-on: ubuntu-latest
     needs: [test]
@@ -178,6 +189,9 @@ jobs:
           KAFKA_DELETE_TOPIC_ENABLE: "true"
 
     steps:
+    - name: Install KafkaCat
+      run: |
+        sudo apt-get install kafkacat
     - name: Sleep to let Kafka spin up
       uses: jakejarvis/wait-action@master
       with:
@@ -187,13 +201,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v1  
       with:
         dotnet-version: 2.1.x
     - name: Install dependencies
       run: dotnet restore
     # - name: Debugging with tmate
     #   uses: mxschmitt/action-tmate@v3.1
+    - name: Kafka Install Check
+      run:  kafkacat -L -b localhost
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
