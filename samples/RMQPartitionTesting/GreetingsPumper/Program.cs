@@ -43,11 +43,7 @@ namespace GreetingsPumper
 
                         services.AddBrighter(options =>
                         {
-<<<<<<< HEAD
-                            options.BrighterMessaging = new BrighterMessaging { OutBox = outbox, Producer = producer};
-=======
                             options.BrighterMessaging = new BrighterMessaging(outbox, producer);
->>>>>>> optional-declare
                         }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
                         services.AddSingleton<IAmAnOutboxViewer<Message>>(outbox);
