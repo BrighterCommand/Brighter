@@ -20,6 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public string DeliveryPolicy { get; set; } = null;
 
         /// <summary>
+        /// The JSON serialization of the topic's access control policy.
         /// The policy that defines who can access your topic. By default, only the topic owner can publish or subscribe to the topic.
         /// Ignored if TopicARN is set
         /// </summary>

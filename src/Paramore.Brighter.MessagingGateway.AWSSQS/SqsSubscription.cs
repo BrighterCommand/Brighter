@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public int MessageRetentionPeriod { get; }
 
         /// <summary>
-        ///  The queue's policy. A valid AWS policy.
+        ///  The JSON serialization of the queue's access control policy.
         /// </summary>
         public string IAMPolicy { get; }
 
