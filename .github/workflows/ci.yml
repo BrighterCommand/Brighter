@@ -31,10 +31,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 5.0.x
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Build
@@ -57,10 +57,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Core Tests
@@ -99,10 +103,14 @@ jobs:
     
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -125,10 +133,14 @@ jobs:
       
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -152,10 +164,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
@@ -200,10 +216,14 @@ jobs:
       run: docker ps -a
     - name: Checkout code
       uses: actions/checkout@v2
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v1  
+    - name: Setup dotnet 3.1
+      uses: actions/setup-dotnet@v1
       with:
-        dotnet-version: 2.1.x
+        dotnet-version: '3.1.x'
+    - name: Setup dotnet 5.0.x
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
     - name: Install dependencies
       run: dotnet restore
     # - name: Debugging with tmate
@@ -233,10 +253,14 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -264,10 +288,14 @@ jobs:
      
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-         dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: EventStore Tests
@@ -287,10 +315,14 @@ jobs:
           SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -312,10 +344,14 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -340,10 +376,14 @@ jobs:
       
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -360,10 +400,14 @@ jobs:
       
     steps:
       - uses: actions/checkout@v2
-      - name: Setup .NET Core
+      - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 2.1.x
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials

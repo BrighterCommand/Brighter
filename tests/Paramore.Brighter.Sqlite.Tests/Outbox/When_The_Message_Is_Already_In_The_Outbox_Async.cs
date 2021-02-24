@@ -45,7 +45,12 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
             _sqlOutbox = new SqliteOutbox(new SqliteOutboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _messageEarliest = new Message(
+                new MessageHeader(
+                    Guid.NewGuid(), 
+                    "test_topic", 
+                    MessageType.MT_DOCUMENT), 
+                new MessageBody("message body"));
         }
 
         [Fact]
@@ -55,7 +60,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             _exception = await Catch.ExceptionAsync(() => _sqlOutbox.AddAsync(_messageEarliest));
 
-            //_should_ignore_the_duplcate_key_and_still_succeed
+            //should ignore the duplcate key and still succeed
             _exception.Should().BeNull();
         }
 

@@ -71,12 +71,12 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageHeader : IEquatable<MessageHeader>
     {
-        public DateTime TimeStamp { get; private set; }
+        public DateTime TimeStamp { get; set; }
         /// <summary>
         /// Gets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
-        public Guid Id { get; private set; }
+        public Guid Id { get; set; }
         /// <summary>
         /// Gets the topic.
         /// </summary>
@@ -86,12 +86,13 @@ namespace Paramore.Brighter
         /// Gets the type of the message. Used for routing the message to a handler
         /// </summary>
         /// <value>The type of the message.</value>
-        public MessageType MessageType { get; private set; }
+        public MessageType MessageType { get; set; }
+
         /// <summary>
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; private set; }
+        public Dictionary<string, object> Bag { get; } = new Dictionary<string, object>();
         /// <summary>
         /// Gets the number of times this message has been seen 
         /// </summary>
@@ -122,9 +123,10 @@ namespace Paramore.Brighter
         /// <value>The reply to.</value>
         public string ReplyTo { get; set; }
 
-        public MessageHeader()
-        {
-        }
+        /// <summary>
+        /// Intended for serialization, prefer a parameterized constructor in application code as a better 'pit of success'
+        /// </summary>
+        public MessageHeader() {}
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
@@ -135,18 +137,17 @@ namespace Paramore.Brighter
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
-        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
+        public MessageHeader(Guid messageId, string topic, MessageType messageType, Guid? correlationId = null, string replyTo = "", string contentType = "text/plain")
         {
             Id = messageId;
             Topic = topic;
             MessageType = messageType;
-            Bag = new Dictionary<string, object>();
             TimeStamp = RoundToSeconds(DateTime.UtcNow);
             HandledCount = 0;
             DelayedMilliseconds = 0;
             CorrelationId = correlationId ?? Guid.Empty ;
-            ReplyTo = replyTo;
-            ContentType = contentType;
+            ReplyTo = replyTo ?? string.Empty;
+            ContentType = contentType ?? "text/plain";
         }
 
         public MessageHeader(Guid messageId, string topic, MessageType messageType, DateTime timeStamp, Guid? correlationId = null, string replyTo = null, string contentType = "text/plain")
@@ -160,6 +161,33 @@ namespace Paramore.Brighter
         {
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
+        }
+        
+        /// <summary>
+        /// Create a copy of the header that allows manipulation of bag contents.
+        /// </summary>
+        /// <returns></returns>
+        public MessageHeader Copy()
+        {
+            var newHeader = new MessageHeader
+            {
+                Id = Id,
+                Topic = $"{Topic}",
+                MessageType = MessageType,
+                TimeStamp = TimeStamp,
+                HandledCount = 0,
+                DelayedMilliseconds = 0,
+                CorrelationId = CorrelationId,
+                ReplyTo = $"{ReplyTo}",
+                ContentType = $"{ContentType}"
+            };
+
+            foreach (var item in Bag)
+            {
+                newHeader.Bag.Add(item.Key, item.Value);
+            }
+
+            return newHeader;
         }
 
 
@@ -243,5 +271,6 @@ namespace Paramore.Brighter
         {
             HandledCount++;
         }
-    }
+
+   }
 }

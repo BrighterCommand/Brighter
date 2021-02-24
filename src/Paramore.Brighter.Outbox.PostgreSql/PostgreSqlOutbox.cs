@@ -36,7 +36,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     public class PostgreSqlOutbox : IAmAnOutbox<Message>, IAmAnOutboxViewer<Message>
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PostgreSqlOutbox>);
-        private const string PostgreSqlDuplicateKeyError_UniqueConstraintViolation = "23505";
         private readonly PostgreSqlOutboxConfiguration _configuration;
 
         public bool ContinueOnCapturedContext
@@ -73,10 +72,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     }
                     catch (PostgresException sqlException)
                     {
-                        if (sqlException.SqlState == PostgreSqlDuplicateKeyError_UniqueConstraintViolation)
+                        if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                         {
                             _logger.Value.WarnFormat(
-                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                                "PostgresSQLOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -160,7 +159,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             var sql = string.Format(
-                "SELECT Id, MessageId, Topic, MessageType, Timestamp, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId",
+                "SELECT Id, MessageId, Topic, MessageType, Timestamp, Correlationid, ReplyTo, ContentType, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId",
                 _configuration.OutboxTableName);
             var parameters = new[] {CreateNpgsqlParameter("MessageId", messageId)};
 
@@ -219,7 +218,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private NpgsqlParameter CreateNpgsqlParameter(string parametername, object value)
         {
-            return new NpgsqlParameter(parametername, value);
+            if (value != null)
+                return new NpgsqlParameter(parametername, value);
+            else
+                return new NpgsqlParameter(parametername, DBNull.Value);
         }
 
         private void CreatePagedDispatchedCommand(NpgsqlCommand command, double millisecondsDispatchedSince,
@@ -297,7 +299,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             var command = connection.CreateCommand();
             var sql = string.Format(
-                "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamptz, @HeaderBag, @Body)",
+                "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamptz, @CorrelationId, @ReplyTo, @ContentType,  @HeaderBag, @Body)",
                 _configuration.OutboxTableName);
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -313,7 +315,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 CreateNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateNpgsqlParameter("Topic", message.Header.Topic),
                 new NpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz) {Value = message.Header.TimeStamp},
-                CreateNpgsqlParameter("HeaderBag", bagjson), CreateNpgsqlParameter("Body", message.Body.Value)
+                CreateNpgsqlParameter("CorrelationId", message.Header.CorrelationId),
+                CreateNpgsqlParameter("ReplyTo", message.Header.ReplyTo),
+                CreateNpgsqlParameter("ContentType", message.Header.ContentType),
+                CreateNpgsqlParameter("HeaderBag", bagjson), 
+                CreateNpgsqlParameter("Body", message.Body.Value)
             };
             return parameters;
         }
@@ -343,18 +349,27 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private Message MapAMessage(IDataReader dr)
         {
-            var id = dr.GetGuid(dr.GetOrdinal("MessageId"));
-            var messageType = (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-            var topic = dr.GetString(dr.GetOrdinal("Topic"));
+            var id = GetMessageId(dr);
+            var messageType = GetMessageType(dr);
+            var topic = GetTopic(dr);
 
-            var ordinal = dr.GetOrdinal("Timestamp");
-            var timeStamp = (dr.IsDBNull(ordinal) ? DateTime.MinValue : dr.GetDateTime(ordinal)).ToUniversalTime();
+            DateTime timeStamp = GetTimeStamp(dr);
+            var correlationId = GetCorrelationId(dr);
+            var replyTo = GetReplyTo(dr);
+            var contentType = GetContentType(dr);
+                
+            var header = new MessageHeader(
+                messageId:id, 
+                topic:topic, 
+                messageType:messageType, 
+                timeStamp:timeStamp, 
+                handledCount:0, 
+                delayedMilliseconds: 0,
+                correlationId: correlationId,
+                replyTo: replyTo,
+                contentType: contentType);
 
-            var header = new MessageHeader(id, topic, messageType, timeStamp, 0, 0);
-
-            var i = dr.GetOrdinal("HeaderBag");
-            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            Dictionary<string, string> dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
                 foreach (var key in dictionaryBag.Keys)
@@ -368,6 +383,67 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return new Message(header, body);
         }
 
+        private static string GetTopic(IDataReader dr)
+        {
+            return dr.GetString(dr.GetOrdinal("Topic"));
+        }
+
+        private static MessageType GetMessageType(IDataReader dr)
+        {
+            return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+        }
+
+        private static Guid GetMessageId(IDataReader dr)
+        {
+            return dr.GetGuid(dr.GetOrdinal("MessageId"));
+        }
+
+        private string GetContentType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
+        }
+
+        private string GetReplyTo(IDataReader dr)
+        {
+             var ordinal = dr.GetOrdinal("ReplyTo");
+             if (dr.IsDBNull(ordinal)) return null; 
+             
+             var replyTo = dr.GetString(ordinal);
+             return replyTo;
+        }
+
+        private static Dictionary<string, string> GetContextBag(IDataReader dr)
+        {
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            return dictionaryBag;
+        }
+
+        private Guid? GetCorrelationId(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("CorrelationId");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var correlationId = dr.GetGuid(ordinal);
+            return correlationId;
+        }
+
+        private static DateTime GetTimeStamp(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Timestamp");
+            var timeStamp = dr.IsDBNull(ordinal)
+                ? DateTime.MinValue
+                : dr.GetDateTime(ordinal);
+            return timeStamp;
+        }
+
     }
+    
+    
 }
 
