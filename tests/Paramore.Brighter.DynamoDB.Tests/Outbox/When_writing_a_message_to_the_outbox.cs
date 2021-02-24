@@ -44,12 +44,23 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
         public DynamoDbOutboxWritingMessageTests()
         {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT, DateTime.UtcNow.AddDays(-1), 5, 5);
+            var messageHeader = new MessageHeader(
+                messageId:Guid.NewGuid(),
+                topic: "test_topic", 
+                messageType: MessageType.MT_DOCUMENT, 
+                timeStamp: DateTime.UtcNow.AddDays(-1), 
+                handledCount:5, 
+                delayedMilliseconds:5,
+                correlationId: Guid.NewGuid(),
+                replyTo: "ReplyAddress",
+                contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
+
+            _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
+            
             _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
  
-            _messageEarliest = new Message(messageHeader, new MessageBody("Body"));
            _dynamoDbOutbox.Add(_messageEarliest);
         }
 
@@ -58,20 +69,26 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         {
             _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
 
-            //_should_read_the_message_from_the__sql_outbox
+            //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
-            //_should_read_the_message_header_first_bag_item_from_the__sql_outbox
+            //should read the header from the sql outbox
+            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
+            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
+            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
+            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
+            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
+            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
+             
+            
+            //Bag serialization
+            //should read the message header first bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            //_should_read_the_message_header_second_bag_item_from_the__sql_outbox
+            //should read the message header second bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
             _storedMessage.Header.Bag[_key2].Should().Be(_value2);
-            //_should_read_the_message_header_timestamp_from_the__sql_outbox
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
-            //_should_read_the_message_header_topic_from_the__sql_outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            //_should_read_the_message_header_type_from_the__sql_outbox
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
         }
     }
 }

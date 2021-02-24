@@ -33,11 +33,11 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
-    [Trait("Category", "PostgreSql")]
-    [Collection("PostgreSql OutBox")]
+    [Trait("Category", "PostgresSql")]
+    [Collection("PostgresSql OutBox")]
     public class PostgreSqlOutboxRangeRequestTests : IDisposable
     {
-        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
+        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private IEnumerable<Message> _messages;
@@ -45,10 +45,10 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
         public PostgreSqlOutboxRangeRequestTests()
         {
-            _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.SetupMessageDb();
+            _postgresSqlTestHelper = new PostgresSqlTestHelper();
+            _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
@@ -64,17 +64,17 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         {
             _messages = _sqlOutbox.Get(1, 3);
 
-            //_should_fetch_1_message
+            //should fetch 1 message
             _messages.Should().HaveCount(1);
-            //_should_fetch_expected_message
+            //should fetch expected message
             _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
-            //_should_not_fetch_null_messages
+            //should not fetch null messages
             _messages.Should().NotBeNull();
         }
 
         public void Dispose()
         {
-            _PostgreSqlTestHelper.CleanUpTable();
+            _postgresSqlTestHelper.CleanUpDb();
         }
     }
 }

@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+ dynamo:
+    image: dwmkerr/dynamodb
+    command: "-inMemory"
+    hostname: dynamo
+    volumes:
+      - dynamodb:/data
+    ports:
+      - "8000:8000"
+  
+volumes:
+  dynamodb:
+    driver: local
+  

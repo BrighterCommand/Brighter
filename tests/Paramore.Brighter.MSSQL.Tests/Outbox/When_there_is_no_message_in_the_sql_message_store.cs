@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
-            //_should_return_a_empty_message
+            //should return an empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
 
