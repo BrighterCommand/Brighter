@@ -29,14 +29,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
-        private readonly KafkaConsumerConfiguration _consumerConfiguration;
+        private readonly KafkaMessagingGatewayConfiguration _configuration;
 
-        public KafkaMessageConsumerFactory(KafkaMessagingGatewayConfiguration globalConfiguration,
-            KafkaConsumerConfiguration consumerConfiguration)
+        public KafkaMessageConsumerFactory(
+            KafkaMessagingGatewayConfiguration configuration
+            )
         {
-            _globalConfiguration = globalConfiguration;
-            _consumerConfiguration = consumerConfiguration;
+            _configuration = configuration;
         }
 
         /// <summary>
@@ -44,13 +43,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer</returns>
-         public IAmAMessageConsumer Create(Subscription subscription)
+        public IAmAMessageConsumer Create(Subscription subscription)
         {
+            KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
+            if (kafkaSubscription == null)
+                throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
+            
             return new KafkaMessageConsumer(
-                subscription.ChannelName, //groupId,
-                subscription.RoutingKey, //topic
-                _globalConfiguration, 
-                _consumerConfiguration);
+                configuration: _configuration, 
+                routingKey:kafkaSubscription.RoutingKey, //topic
+                groupId: kafkaSubscription.GroupId, 
+                offsetDefault: kafkaSubscription.OffsetDefault,
+                sessionTimeoutMs: kafkaSubscription.SessionTimeoutMs,
+                maxPollIntervalMs: kafkaSubscription.MaxPollIntervalMs,
+                isolationLevel: kafkaSubscription.IsolationLevel,
+                commitBatchSize: kafkaSubscription.CommitBatchSize,
+                makeChannels: kafkaSubscription.MakeChannels
+                );
         }
     }
 }

@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private IConsumer<string, string> _consumer;
         private readonly KafkaMessageCreator _creator;
-        private readonly string _topic;
+        private readonly RoutingKey _topic;
         private readonly ConsumerConfig _consumerConfig;
         private List<TopicPartition> _partitions = new List<TopicPartition>();
         private readonly List<TopicPartitionOffset> _offsets = new List<TopicPartitionOffset>();
@@ -49,35 +49,50 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly long _maxBatchSize;
 
         public KafkaMessageConsumer(
-            string topic, 
-            KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaConsumerConfiguration consumerTemplateConfiguration)
+            KafkaMessagingGatewayConfiguration configuration,
+            RoutingKey routingKey,
+            string groupId,
+            AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
+            int sessionTimeoutMs = 10000,
+            int maxPollIntervalMs = 10000,
+            IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
+            long commitBatchSize = 10,
+            OnMissingChannel makeChannels = OnMissingChannel.Create
+            )
         {
-            if (consumerTemplateConfiguration.GroupId is null)
+            if (configuration is null)
             {
-                throw new ConfigurationException("You must set a GroupId for the consumer on the KafkaConsumerConfiguration");
+                throw new ConfigurationException("You must set a KafkaMessaginGatewayConfiguration to connect to a broker");
             }
             
-            _topic = topic;
-            _consumerConfig = new ConsumerConfig()
+            if (routingKey is null)
             {
-                GroupId = consumerTemplateConfiguration.GroupId,
-                ClientId = globalConfiguration.Name,
-                AutoOffsetReset = consumerTemplateConfiguration.OffsetDefault, 
-                BootstrapServers = string.Join(",",globalConfiguration.BootStrapServers),
-                SessionTimeoutMs = consumerTemplateConfiguration.SessionTimeoutMs,
-                MaxPollIntervalMs = consumerTemplateConfiguration.MaxPollIntervalMs,
+                throw new ConfigurationException("You must set a RoutingKey as the Topic for the consumer");
+            }
+            
+            if (groupId is null)
+            {
+                throw new ConfigurationException("You must set a GroupId for the consumer");
+            }
+            
+            _topic = routingKey;
+            _consumerConfig = new ConsumerConfig
+            {
+                GroupId = groupId,
+                ClientId = configuration.Name,
+                AutoOffsetReset = offsetDefault,
+                BootstrapServers = string.Join(",", configuration.BootStrapServers),
+                SessionTimeoutMs = sessionTimeoutMs,
+                MaxPollIntervalMs = maxPollIntervalMs,
                 EnablePartitionEof = true,
-                AllowAutoCreateTopics = true,
-                IsolationLevel = consumerTemplateConfiguration.IsolationLevel
+                AllowAutoCreateTopics = makeChannels == OnMissingChannel.Create,
+                IsolationLevel = isolationLevel,
+                //We commit the last offset for acknowledged requests when a batch of records has been processed. 
+                EnableAutoOffsetStore = false,
+                EnableAutoCommit = false,
             };
 
-            //We don't expose these settings, because it's difficult to get this right, so we take an opinion
-            //on the strategy, which is commit that last offset for acknowledged requests when a batch of records has been
-            //processed. That is opinionated but it's difficult to write a transport for Kafka without an opinion
-            _consumerConfig.EnableAutoOffsetStore = false;
-            _consumerConfig.EnableAutoCommit = false;
-            _maxBatchSize = consumerTemplateConfiguration.CommitBatchSize;
+            _maxBatchSize = commitBatchSize;
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
                 .SetPartitionsAssignedHandler((consumer, list) => _partitions.AddRange(list))
@@ -90,8 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 .Build();
             
             _logger.Value.InfoFormat($"Kakfa consumer subscribing to {_topic}");
-
-            _consumer.Subscribe(new []{ _topic });
+            _consumer.Subscribe(new []{ _topic.Value });
 
             _creator = new KafkaMessageCreator();
         }
@@ -228,8 +242,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
          public void Reject(Message message)
         {
-            if (!_autoCommitEnabled)
-                Acknowledge(message);
+            Acknowledge(message);
         }
 
         /// <summary>

@@ -42,18 +42,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             _producerConfig = new ProducerConfig
             {
+                BatchNumMessages = publication.BatchNumberMessages,
+                Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
                 BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
                 ClientId = globalConfiguration.Name,
-                MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
-                QueueBufferingMaxMessages = publication.QueueBufferingMaxMessages,
-                Acks = publication.Acks,
-                QueueBufferingMaxKbytes = publication.QueueBufferingMaxKbytes,
+                MaxInFlight = publication.MaxInFlightRequestsPerConnection,
+                LingerMs = publication.QueueBufferingTimeMs,
+                MessageTimeoutMs = publication.MessageTimeoutMs,
                 MessageSendMaxRetries = publication.MessageSendMaxRetries,
-                BatchNumMessages = publication.BatchNumberMessages,
-                LingerMs = publication.QueueBufferingMax,
-                RequestTimeoutMs = publication.RequestTimeout,
-                MessageTimeoutMs = publication.MessageTimeout,
-                RetryBackoffMs = publication.RetryBackoff
+                Partitioner = (Confluent.Kafka.Partitioner)((int)publication.Partitioner),
+                QueueBufferingMaxMessages = publication.QueueBufferingMaxMessages,
+                QueueBufferingMaxKbytes = publication.QueueBufferingMaxKbytes,
+                RequestTimeoutMs = publication.RequestTimeoutMs,
+                RetryBackoffMs = publication.RetryBackoff,
+                TransactionalId = publication.TransactionalId,
             };
 
             _producer = new ProducerBuilder<string, string>(_producerConfig).Build();

@@ -36,7 +36,7 @@ namespace Tests
                 {
                     var outBox = new InMemoryOutbox();
                     var producer = new FakeProducer();
-                    options.BrighterMessaging = new BrighterMessaging { OutBox = outBox, Producer = producer};
+                    options.BrighterMessaging = new BrighterMessaging(outBox, producer);
                 })
                 .AutoFromAssemblies();
 

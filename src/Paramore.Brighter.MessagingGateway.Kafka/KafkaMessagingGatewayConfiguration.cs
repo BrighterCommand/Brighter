@@ -23,24 +23,55 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    //Maps to Confluent's Kafka's Client Config enum, but we don't want to take a direct dependency on that here
+    
+    /// <summary>
+    /// What is the security protocol used to authenticate the client with the broker
+    /// </summary>
+    public enum SaslMechanism
+    {
+        Gssapi,
+        Plain,
+        ScramSha256,
+        ScramSha512,
+        OAuthBearer,
+    }
+    
+    public enum SecurityProtocol
+    {
+        Plaintext,
+        Ssl,
+        SaslPlaintext,
+        SaslSsl,
+    }
+    
     public class KafkaMessagingGatewayConfiguration
     {
-        /// <summary>
-        /// Client identifier.
-        /// </summary>
-        public string Name { get; set; }
-
         /// <summary>
         /// Initial list of brokers as a list of broker host or host:port. "
         /// </summary>
         public string[] BootStrapServers { get; set; }
 
-        /// <summary>
-        /// Maximum number of in-flight requests the 
-        /// client will send. 
-        /// This setting applies per broker subscription.
-        /// </summary>
-        public int? MaxInFlightRequestsPerConnection { get; set; }
-       
+         /// <summary>
+         /// Client identifier.
+         /// </summary>
+         public string Name { get; set; }
+
+         /// <summary>
+         /// The Sasl mechanism by which the client connects to the broker
+         /// </summary>
+         public SaslMechanism? SaslMechanisms { get; set; } = null;
+
+         /// <summary>
+         /// What is the security protocol used by the broker
+         /// </summary>
+         public SecurityProtocol? SecurityProtocol { get; set; } = null;
+
+         /// <summary>
+         /// Where is the CA certificate located
+         /// Windows - not needed, looked up in certificate store
+         /// 
+         /// </summary>
+         public string SslCaLocation { get; set; } = null;
     }
 }

@@ -49,45 +49,43 @@ namespace GreetingsReceiverConsole
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var subscriptions = new Subscription[]
+                    var subscriptions = new KafkaSubscription[]
                     {
-                        new Subscription<GreetingEvent>(
+                        new KafkaSubscription<GreetingEvent>(
                             new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName("greeting.event"),
-                            new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 100)
+                            channelName: new ChannelName("greeting.event"),
+                            routingKey: new RoutingKey("greeting.event"),
+                            groupId: "kafka-GreetingsReceiverConsole-Sample",
+                            timeoutInMilliseconds: 100,
+                            offsetDefault: AutoOffsetReset.Earliest,
+                            commitBatchSize:5)
                     };
+                    
                     //create the gateway
-
                     var consumerFactory = new KafkaMessageConsumerFactory(
-                        new KafkaMessagingGatewayConfiguration {Name = "paramore.brighter", BootStrapServers = new[] {"localhost:9092"}},
-                        new KafkaConsumerConfiguration
-                        {
-                            GroupId = "kafka-GreetingsReceiverConsole-Sample", OffsetDefault = AutoOffsetReset.Earliest, CommitBatchSize = 5
-                        }
-                    );
+                        new KafkaMessagingGatewayConfiguration {Name = "paramore.brighter", BootStrapServers = new[] {"localhost:9092"}}
+                   );
 
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(consumerFactory);
                         var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging()
-                        {
-                            OutBox = outBox,
-                            Producer = new KafkaMessageProducerFactory(
+                        options.BrighterMessaging = new BrighterMessaging(
+                            outBox,
+                            new KafkaMessageProducerFactory(
                                 new KafkaMessagingGatewayConfiguration
                                 {
                                     Name = "paramore.brighter", 
                                     BootStrapServers = new[] {"localhost:9092"}
                                 },
-                                new KafkaMessagingProducerConfiguration
+                                new KafkaPublication()
                                 {
                                     MessageTimeoutMs = 500, 
                                     RequestTimeoutMs = 500
                                 }
                             ).Create()
-                        };
+                        );
                     }).AutoFromAssemblies();
 
 

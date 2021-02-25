@@ -35,7 +35,7 @@ namespace GreetingsPumper
                         services.AddBrighter(options =>
                         {
                             var outBox = new InMemoryOutbox();
-                            options.BrighterMessaging = new BrighterMessaging {OutBox = outBox, Producer = producer};
+                            options.BrighterMessaging = new BrighterMessaging(outBox, producer);
                         }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
                     }
 

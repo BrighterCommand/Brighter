@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaMessagingProducerConfiguration()
+                new KafkaPublication()
                 {
                     //These timeouts support running on a container using the same host as the tests, 
                     //your production values ought to be lower
@@ -131,18 +131,16 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 {
                     Name = "Kafka Consumer Test", 
                     BootStrapServers = new[] {"localhost:9092"}
-                },
-                new KafkaConsumerConfiguration
-                {
-                    GroupId = groupId, 
-                    OffsetDefault = AutoOffsetReset.Earliest, 
-                    CommitBatchSize = 5
-                }
-            ).Create(new Connection<MyCommand>(
+                })
+                .Create(new KafkaSubscription<MyCommand>
+                (
+                    name: new SubscriptionName("Paramore.Brighter.Tests"),
                     channelName: new ChannelName(_queueName),
-                    routingKey: new RoutingKey(_topic)
-                )
-            );
+                    routingKey: new RoutingKey(_topic),
+                    groupId: groupId,
+                    offsetDefault: AutoOffsetReset.Earliest,
+                    commitBatchSize:5
+                ));
         }
 
         public void Dispose()

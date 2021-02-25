@@ -107,7 +107,7 @@ namespace GreetingsSender.Adapters
                                 Name = "paramore.brighter.greetingsender", 
                                 BootStrapServers = new[] {"localhost:9092"}
                             },
-                            new KafkaMessagingProducerConfiguration()
+                            new KafkaPublication()
                             {
                                 MessageSendMaxRetries = 3,
                                 MessageTimeoutMs = 1000,
@@ -120,11 +120,7 @@ namespace GreetingsSender.Adapters
                     services.AddBrighter(options =>
                     {
                         options.PolicyRegistry = policyRegistry;
-                        options.BrighterMessaging = new BrighterMessaging
-                        {
-                            OutBox = new InMemoryOutbox(), 
-                            Producer = producer
-                        };
+                        options.BrighterMessaging = new BrighterMessaging(new InMemoryOutbox(), producer);
                     }).MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
                     services.AddHostedService<TimedMessageGenerator>();
