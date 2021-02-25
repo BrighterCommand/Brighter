@@ -83,7 +83,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 var outstandingMessageCount = MESSAGE_COUNT - messagesRecieved;
 
                 //retrieve  messages
-                var moreMessages = _consumer.Receive(1000);
+                var moreMessages = _consumer.Receive(10000);
                 
                 moreMessages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
                 
