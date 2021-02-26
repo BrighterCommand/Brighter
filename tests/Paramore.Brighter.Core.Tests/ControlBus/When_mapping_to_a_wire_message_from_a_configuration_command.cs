@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _mapper = new ConfigurationCommandMessageMapper();
 
             //"{\"Type\":1,\"SubscriptionName\":\"getallthethings\",\"Id\":\"XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\"}"
-            _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {ConnectionName = "getallthethings"};
+            _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {SubscriptionName = "getallthethings"};
         }
 
 
