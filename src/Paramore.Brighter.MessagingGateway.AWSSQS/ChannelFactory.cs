@@ -11,6 +11,9 @@ using Amazon.SQS;
 using Amazon.SQS.Model;
 using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
+using Polly;
+using Polly.Contrib.WaitAndRetry;
+using Polly.Retry;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -20,6 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private SqsSubscription _subscription;
         private string _queueUrl;
         private string _dlqARN;
+        private RetryPolicy _retryPolicy;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
@@ -30,6 +34,15 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             : base(awsConnection)
         {
             _messageConsumerFactory = new SqsMessageConsumerFactory(awsConnection);
+            var delay = Backoff.LinearBackoff(TimeSpan.FromSeconds(2), retryCount: 3, factor: 2.0, fastFirst: true);
+            _retryPolicy = Policy
+                .Handle<InvalidOperationException>()
+                .WaitAndRetry(new[]
+                {
+                    TimeSpan.FromSeconds(1),
+                    TimeSpan.FromSeconds(5),
+                    TimeSpan.FromSeconds(10)
+                });
         }
 
         ///  <summary>
@@ -42,17 +55,22 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
-            SqsSubscription sqsSubscription = subscription as SqsSubscription;
-            _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
-            
-            EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.MakeChannels);
-            EnsureQueue();
-            
-            return new Channel(
-                subscription.ChannelName.ToValidSQSQueueName(),
-                _messageConsumerFactory.Create(subscription),
-                subscription.BufferSize
-            );
+            var channel = _retryPolicy.Execute(() =>
+            {
+                SqsSubscription sqsSubscription = subscription as SqsSubscription;
+                _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
+
+                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.MakeChannels);
+                EnsureQueue();
+
+                return new Channel(
+                    subscription.ChannelName.ToValidSQSQueueName(),
+                    _messageConsumerFactory.Create(subscription),
+                    subscription.BufferSize
+                );
+            });
+
+            return channel;
         }
 
         private void EnsureQueue()
