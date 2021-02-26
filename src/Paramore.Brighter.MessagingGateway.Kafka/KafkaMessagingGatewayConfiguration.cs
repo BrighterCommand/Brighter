@@ -21,6 +21,8 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     //Maps to Confluent's Kafka's Client Config enum, but we don't want to take a direct dependency on that here
@@ -51,6 +53,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Initial list of brokers as a list of broker host or host:port. "
         /// </summary>
         public string[] BootStrapServers { get; set; }
+        
+        /// <summary>
+        /// A comma-separated list of debug contexts to enable.  Producer: broker, topic, msg. Consumer: consumer, cgrp, topic, fetch
+        /// </summary>
+        public string Debug { get; set; } = String.Empty;
 
          /// <summary>
          /// Client identifier.
@@ -63,15 +70,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          public SaslMechanism? SaslMechanisms { get; set; } = null;
 
          /// <summary>
+         /// This client's Kerberos principal name.
+         /// </summary>
+         public string SaslKerberosPrincipal { get; set; } = null;
+         
+         /// <summary>
+         /// SASL username for use with PLAIN and SASL-SCRAM
+         /// </summary>
+         public string SaslUsername { get; set; }
+         
+         /// <summary>
+         /// SASL password for use with PLAIN and SASL-SCRAM 
+         /// </summary>
+         public string SaslPassword { get; set; }
+
+         /// <summary>
          /// What is the security protocol used by the broker
          /// </summary>
          public SecurityProtocol? SecurityProtocol { get; set; } = null;
 
          /// <summary>
          /// Where is the CA certificate located
-         /// Windows - not needed, looked up in certificate store
-         /// 
          /// </summary>
          public string SslCaLocation { get; set; } = null;
+
+         
+         
+         
+         
     }
 }

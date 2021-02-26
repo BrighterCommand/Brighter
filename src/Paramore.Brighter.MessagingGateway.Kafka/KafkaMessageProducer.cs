@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
         private IProducer<string, string> _producer;
         private readonly ProducerConfig _producerConfig;
-        private readonly KafkaMessagePublisher _publisher;
+        private KafkaMessagePublisher _publisher;
         private bool _disposedValue;
 
         public KafkaMessageProducer(
@@ -41,11 +41,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             KafkaPublication publication)
         {
             _producerConfig = new ProducerConfig
+            (
+                new ClientConfig
+                {
+                    Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
+                    BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers), 
+                    ClientId = globalConfiguration.Name,
+                    Debug = globalConfiguration.Debug,
+                }
+            )
             {
                 BatchNumMessages = publication.BatchNumberMessages,
-                Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
-                BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
-                ClientId = globalConfiguration.Name,
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
                 LingerMs = publication.QueueBufferingTimeMs,
                 MessageTimeoutMs = publication.MessageTimeoutMs,
@@ -57,10 +63,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 RetryBackoffMs = publication.RetryBackoff,
                 TransactionalId = publication.TransactionalId,
             };
+            
+       }
+        
+        /// <summary>
+        /// There are a **lot** of properties that we can set to configure Kafka. We expose only those of high importance
+        /// This gives you a chance to set additional parameter before we create the producer. Because it depends on the Confluent
+        /// client, we recommend using our version of the properties, which would persist if we changed clients.
+        /// This is for properties we **don't** expose
+        /// </summary>
+        /// <param name="configHook"></param>
+        public void ConfigHook(Action<ProducerConfig> configHook)
+        {
+            configHook(_producerConfig);
+        }
 
+        /// <summary>
+        /// Initialize the producer => two stage construction to allow for a hook if needed
+        /// </summary>
+        public void Init()
+        {
             _producer = new ProducerBuilder<string, string>(_producerConfig).Build();
             _publisher = new KafkaMessagePublisher(_producer);
         }
+ 
 
         public void Send(Message message)
         {
@@ -150,5 +176,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-    }
+
+   }
 }
