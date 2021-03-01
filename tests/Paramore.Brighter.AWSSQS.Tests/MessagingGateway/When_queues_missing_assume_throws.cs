@@ -37,25 +37,22 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
+            //create the topic, we want the queue to be the issue
+            _messageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            
+            _channelFactory = new ChannelFactory(_awsConnection);
+            var channel = _channelFactory.CreateChannel(_subscription);
+            
             //We need to create the topic at least, to check the queues
             _messageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
-            var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
-            _consumer = new SqsMessageConsumer(_awsConnection, sqsQueueName, routingKey);
+            _consumer = new SqsMessageConsumer(_awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }
 
         [Fact]
         public void When_queues_missing_assume_throws()
         {
-            //We have no queues so we should throw
-            //We need to do this manually in a test - will create the channel from subscriber parameters
-            _channelFactory = new ChannelFactory(_awsConnection);
-            
-            //This checks the topic but otherwise is a no-op with assume
-            var channel = _channelFactory.CreateChannel(_subscription);
-            
             //we will try to get the queue url, and fail because it does not exist
             Assert.Throws<QueueDoesNotExistException>(() => _consumer.Receive(1000));
-             
         }
  
         public void Dispose()

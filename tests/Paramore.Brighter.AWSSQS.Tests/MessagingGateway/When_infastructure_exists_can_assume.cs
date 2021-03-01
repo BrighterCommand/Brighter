@@ -53,15 +53,14 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //Now change the subscription to validate, just check what we made
             subscription = new(
                 name: new SubscriptionName(channelName),
-                channelName: new ChannelName(channelName),
+                channelName: _channel.Name,
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Assume
             );
             
             _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume, RoutingKey = routingKey});
-            
-            var sqsQueueName = new ChannelName(channelName).ToValidSQSQueueName();
-            _consumer = new SqsMessageConsumer(awsConnection, sqsQueueName, routingKey);
+
+            _consumer = new SqsMessageConsumer(awsConnection, _channel.Name.ToValidSQSQueueName(), routingKey);
         }
 
         [Fact]

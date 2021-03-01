@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             //_should_rehydrate_the_command_type
             _command.Type.Should().Be(ConfigurationCommandType.CM_STARTALL);
             // _should_rehydrate_the_connection_name
-            _command.ConnectionName.Should().Be("getallthethings");
+            _command.SubscriptionName.Should().Be("getallthethings");
         }
     }
 }
