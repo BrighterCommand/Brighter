@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <summary>
         /// Initializes a new instance of the <see cref="MsSqlInboxConfiguration"/> class.
         /// </summary>
-        /// <param name="connectionString">The connection string.</param>
+        /// <param name="connectionString">The subscription string.</param>
         /// <param name="inBoxTableName">Name of the InBox table.</param>
         public MsSqlInboxConfiguration(string connectionString, string inBoxTableName)
         {
@@ -44,9 +44,9 @@ namespace Paramore.Brighter.Inbox.MsSql
         }
 
         /// <summary>
-        /// Gets the connection string.
+        /// Gets the subscription string.
         /// </summary>
-        /// <value>The connection string.</value>
+        /// <value>The subscription string.</value>
         public string ConnectionString { get; private set; }
 
         /// <summary>

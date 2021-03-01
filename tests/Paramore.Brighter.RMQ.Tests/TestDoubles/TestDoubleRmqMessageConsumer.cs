@@ -30,14 +30,14 @@ using RabbitMQ.Client.Exceptions;
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
     /*
-     * Use to force a failure mirroring a RabbitMQ connection failure for testing flow of failure
+     * Use to force a failure mirroring a RabbitMQ subscription failure for testing flow of failure
      */
 
     internal class BrokerUnreachableRmqMessageConsumer : RmqMessageConsumer
     {
         public BrokerUnreachableRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
-        protected override void ConnectToBroker()
+        protected override void ConnectToBroker(OnMissingChannel makeExchange = OnMissingChannel.Create)
         {
             throw new BrokerUnreachableException(new Exception("Force Test Failure"));
         }
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
     {
         public AlreadyClosedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
-        protected override void EnsureChannelBind()
+        protected override void EnsureChannel()
         {
             throw new AlreadyClosedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
         }
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
     {
         public OperationInterruptedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable,isHighAvailability) { }
 
-        protected override void EnsureChannelBind()
+        protected override void EnsureChannel()
         {
             throw new OperationInterruptedException(new ShutdownEventArgs(ShutdownInitiator.Application, 0, "test"));
         }
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
     {
         public NotSupportedRmqMessageConsumer(RmqMessagingGatewayConnection connection, string queueName, string routingKey, bool isDurable, ushort preFetchSize, bool isHighAvailability) : base(connection, queueName, routingKey, isDurable, isHighAvailability) { }
 
-        protected override void EnsureChannelBind()
+        protected override void EnsureChannel()
         {
             throw new NotSupportedException();
         }

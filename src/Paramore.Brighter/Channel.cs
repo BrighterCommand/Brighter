@@ -133,7 +133,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            _messageConsumer.Reject(message, true);
+            _messageConsumer.Reject(message);
         }
 
         /// <summary>

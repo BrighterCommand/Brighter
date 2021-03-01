@@ -36,23 +36,24 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly KafkaMessagePublisher _publisher;
         private bool _disposedValue = false;
 
-        public KafkaMessageProducer(KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaMessagingProducerConfiguration producerConfiguration)
+        public KafkaMessageProducer(
+            KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaPublication publication)
         {
             _producerConfig = new ProducerConfig
             {
                 BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers),
                 ClientId = globalConfiguration.Name,
                 MaxInFlight = globalConfiguration.MaxInFlightRequestsPerConnection,
-                QueueBufferingMaxMessages = producerConfiguration.QueueBufferingMaxMessages,
-                Acks = producerConfiguration.Acks,
-                QueueBufferingMaxKbytes = producerConfiguration.QueueBufferingMaxKbytes,
-                MessageSendMaxRetries = producerConfiguration.MessageSendMaxRetries,
-                BatchNumMessages = producerConfiguration.BatchNumberMessages,
-                LingerMs = producerConfiguration.QueueBufferingMax,
-                RequestTimeoutMs = producerConfiguration.RequestTimeout,
-                MessageTimeoutMs = producerConfiguration.MessageTimeout,
-                RetryBackoffMs = producerConfiguration.RetryBackoff
+                QueueBufferingMaxMessages = publication.QueueBufferingMaxMessages,
+                Acks = publication.Acks,
+                QueueBufferingMaxKbytes = publication.QueueBufferingMaxKbytes,
+                MessageSendMaxRetries = publication.MessageSendMaxRetries,
+                BatchNumMessages = publication.BatchNumberMessages,
+                LingerMs = publication.QueueBufferingMax,
+                RequestTimeoutMs = publication.RequestTimeout,
+                MessageTimeoutMs = publication.MessageTimeout,
+                RetryBackoffMs = publication.RetryBackoff
             };
 
             _producer = new ProducerBuilder<Null, string>(_producerConfig).Build();

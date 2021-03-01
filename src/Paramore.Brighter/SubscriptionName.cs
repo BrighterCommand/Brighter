@@ -27,24 +27,24 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class ConnectionName.
-    /// Value type that stores the name of a connection. Immutable.
+    /// Class SubscriptionName.
+    /// Value type that stores the name of a subscription. Immutable.
     /// </summary>
-    public class ConnectionName : IEquatable<ConnectionName>
+    public class SubscriptionName : IEquatable<SubscriptionName>
     {
         private readonly string _name;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionName"/> class.
+        /// Initializes a new instance of the <see cref="SubscriptionName"/> class.
         /// </summary>
         /// <param name="name">The name.</param>
-        public ConnectionName(string name)
+        public SubscriptionName(string name)
         {
             _name = name;
         }
 
         /// <summary>
-        /// Gets the connection name as a string.
+        /// Gets the subscription name as a string.
         /// </summary>
         /// <value>The value.</value>
         public string Value
@@ -62,21 +62,21 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="ConnectionName"/> to <see cref="System.String"/>.
+        /// Performs an implicit conversion from <see cref="SubscriptionName"/> to <see cref="System.String"/>.
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>
-        public static implicit operator string (ConnectionName rhs)
+        public static implicit operator string (SubscriptionName rhs)
         {
             return rhs.ToString();
         }
 
         /// <summary>
-        /// Does the connection name match?
+        /// Does the subscription name match?
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
-        public bool Equals(ConnectionName other)
+        public bool Equals(SubscriptionName other)
         {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
@@ -84,7 +84,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Does the connection name match?
+        /// Does the subscription name match?
         /// </summary>
         /// <param name="obj">The object to compare with the current object.</param>
         /// <returns><c>true</c> if the specified <see cref="System.Object" /> is equal to this instance; otherwise, <c>false</c>.</returns>
@@ -93,7 +93,7 @@ namespace Paramore.Brighter
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((ConnectionName)obj);
+            return Equals((SubscriptionName)obj);
         }
 
         /// <summary>
@@ -106,23 +106,23 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Implements the ==. Does the connection name match?
+        /// Implements the ==. Does the subscription name match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator ==(ConnectionName left, ConnectionName right)
+        public static bool operator ==(SubscriptionName left, SubscriptionName right)
         {
             return Equals(left, right);
         }
 
         /// <summary>
-        /// Implements the !=. Does the connection name not match?
+        /// Implements the !=. Does the subscription name not match?
         /// </summary>
         /// <param name="left">The left.</param>
         /// <param name="right">The right.</param>
         /// <returns>The result of the operator.</returns>
-        public static bool operator !=(ConnectionName left, ConnectionName right)
+        public static bool operator !=(SubscriptionName left, SubscriptionName right)
         {
             return !Equals(left, right);
         }

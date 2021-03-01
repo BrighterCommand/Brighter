@@ -5,6 +5,6 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
     public class ServiceActivatorOptions : BrighterOptions
     {
-        public IEnumerable<Connection> Connections { get; set; } = new List<Connection>();
+        public IEnumerable<Subscription> Subscriptions { get; set; } = new List<Subscription>();
     }
 }

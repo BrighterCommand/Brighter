@@ -188,9 +188,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-         public void Reject(Message message, bool requeue)
+         public void Reject(Message message)
         {
-            if (!requeue && !_autoCommitEnabled)
+            if (!_autoCommitEnabled)
                 Acknowledge(message);
         }
 

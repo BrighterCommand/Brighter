@@ -50,16 +50,17 @@ namespace GreetingsReceiverConsole
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new Connection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
-                            new ChannelName("greeting.event"),
-                            new RoutingKey("greeting.event"),
+                        new RmqSubscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
+                            channelName:new ChannelName("greeting.event"),
+                            routingKey:new RoutingKey("greeting.event"),
                             bufferSize: 10,
                             timeoutInMilliseconds: 200,
                             isDurable: true,
-                            highAvailability: true)
+                            highAvailability: true,
+                            makeChannels: OnMissingChannel.Create)
                     };
 
                     var rmqConnection = new RmqMessagingGatewayConnection
@@ -70,21 +71,23 @@ namespace GreetingsReceiverConsole
 
                     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+                    var outBox = new InMemoryOutbox();
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging =
-                            new BrighterMessaging(outBox, outBox, new RmqMessageProducer(rmqConnection), null);
                     }).AutoFromAssemblies();
 
+                    services.AddSingleton<IAmAnOutboxViewer<Message>>(outBox);
 
                     services.AddHostedService<ServiceActivatorHostedService>();
+             
+
                 })
                 .UseConsoleLifetime()
                 .UseSerilog()
                 .Build();
+            
 
             await host.RunAsync();
         }

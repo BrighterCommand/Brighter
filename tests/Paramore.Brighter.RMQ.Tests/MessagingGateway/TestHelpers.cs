@@ -50,7 +50,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             {
                 using (var channel = connection.CreateModel())
                 {
-                    channel.DeclareExchangeForConnection(_connection);
+                    channel.DeclareExchangeForConnection(_connection, OnMissingChannel.Create);
                     channel.QueueDeclare(_channelName, false, false, false, null);
                     if (_routingKeys.Any())
                     {

@@ -41,8 +41,7 @@ namespace Paramore.Brighter
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        void Reject(Message message, bool requeue);
+        void Reject(Message message);
 
         /// <summary>
         /// Purges the specified queue name.

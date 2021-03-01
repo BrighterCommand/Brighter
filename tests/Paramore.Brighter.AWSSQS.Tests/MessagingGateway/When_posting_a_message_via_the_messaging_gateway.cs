@@ -23,7 +23,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly string _replyTo;
         private readonly string _contentType;
         private readonly string _topicName;
-        private Connection<MyCommand> _connection; 
 
         public SqsMessageProducerSendTests()
         {
@@ -33,11 +32,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _contentType = "text\\plain";
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-            _connection = new Connection<MyCommand>(
-                name: new ConnectionName(channelName),
+            var routingKey = new RoutingKey(_topicName);
+            
+            SqsSubscription<MyCommand> subscription = new(
+                name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
-                routingKey: new RoutingKey(_topicName)
-                );
+                routingKey: routingKey
+            );
             
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
@@ -47,9 +48,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-            _channel = _channelFactory.CreateChannel(_connection);
-            _messageProducer = new SqsMessageProducer(awsConnection);
+            
+            //We need to do this manually in a test - will create the channel from subscriber parameters
+            _channelFactory = new ChannelFactory(awsConnection);
+            _channel = _channelFactory.CreateChannel(subscription);
+            
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
         }
 
 

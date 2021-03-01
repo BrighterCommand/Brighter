@@ -50,10 +50,10 @@ namespace GreetingsReceiverConsole
                 .ConfigureServices((hostContext, services) =>
 
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                        new Connection<GreetingEvent>(
-                            new ConnectionName("paramore.example.greeting"),
+                        new Subscription<GreetingEvent>(
+                            new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
                             timeoutInMilliseconds: 200)
@@ -66,7 +66,7 @@ namespace GreetingsReceiverConsole
                     var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
                         var outBox = new InMemoryOutbox();
                         options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new MsSqlMessageProducer(messagingConfiguration), null);

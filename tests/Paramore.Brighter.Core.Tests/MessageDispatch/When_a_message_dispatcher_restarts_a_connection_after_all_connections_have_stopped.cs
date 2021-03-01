@@ -39,8 +39,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
         private readonly IAmACommandProcessor _commandProcessor;
-        private readonly Connection _connection;
-        private readonly Connection _newConnection;
+        private readonly Subscription _subscription;
+        private readonly Subscription _newSubscription;
 
         public DispatcherRestartConnectionTests()
         {
@@ -50,9 +50,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _connection = new Connection<MyEvent>(new ConnectionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _newConnection = new Connection<MyEvent>(new ConnectionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Connection> { _connection, _newConnection });
+            _subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _newSubscription = new Subscription<MyEvent>(new SubscriptionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { _subscription, _newSubscription });
 
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);

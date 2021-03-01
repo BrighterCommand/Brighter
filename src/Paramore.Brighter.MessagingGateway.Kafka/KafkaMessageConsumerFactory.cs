@@ -47,13 +47,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="connection">The queue to connect to</param>
+        /// <param name="subscription">The queue to connect to</param>
         /// <returns>IAmAMessageConsumer</returns>
-         public IAmAMessageConsumer Create(Connection connection)
+         public IAmAMessageConsumer Create(Subscription subscription)
         {
             return new KafkaMessageConsumer(
-                connection.ChannelName, //groupId,
-                connection.RoutingKey, //topic
+                subscription.ChannelName, //groupId,
+                subscription.RoutingKey, //topic
                 _globalConfiguration, 
                 _consumerConfiguration);
         }

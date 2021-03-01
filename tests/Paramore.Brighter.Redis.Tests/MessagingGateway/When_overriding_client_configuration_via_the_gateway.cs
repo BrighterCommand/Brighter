@@ -32,19 +32,19 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             
             using (var gateway = new TestRedisGateway(configuration))
             {
-            //Redis Config is static, so we can just look at the values we should have initialized
-            RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
-            RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
-            RedisConfig.DeactivatedClientsExpiry.Should().Be(configuration.DeactivatedClientsExpiry.Value);
-            RedisConfig.DefaultConnectTimeout.Should().Be(configuration.DefaultConnectTimeout.Value);
-            RedisConfig.DefaultIdleTimeOutSecs.Should().Be(configuration.DefaultIdleTimeOutSecs.Value);
-            RedisConfig.DefaultReceiveTimeout.Should().Be(configuration.DefaultReceiveTimeout.Value);
-            RedisConfig.DefaultSendTimeout.Should().Be(configuration.DefaultSendTimeout.Value);
-            RedisConfig.EnableVerboseLogging.Should().Be(!configuration.DisableVerboseLogging.Value);
-            RedisConfig.HostLookupTimeoutMs.Should().Be(configuration.HostLookupTimeoutMs.Value);
-            RedisConfig.DefaultMaxPoolSize.Should().Be(configuration.MaxPoolSize.Value);
-            gateway.MessageTimeToLive.Should().Be(configuration.MessageTimeToLive.Value);
-            RedisConfig.VerifyMasterConnections.Should().Be(configuration.VerifyMasterConnections.Value);
+                //Redis Config is static, so we can just look at the values we should have initialized
+                RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
+                RedisConfig.BackOffMultiplier.Should().Be(configuration.BackoffMultiplier.Value);
+                RedisConfig.DeactivatedClientsExpiry.Should().Be(configuration.DeactivatedClientsExpiry.Value);
+                RedisConfig.DefaultConnectTimeout.Should().Be(configuration.DefaultConnectTimeout.Value);
+                RedisConfig.DefaultIdleTimeOutSecs.Should().Be(configuration.DefaultIdleTimeOutSecs.Value);
+                RedisConfig.DefaultReceiveTimeout.Should().Be(configuration.DefaultReceiveTimeout.Value);
+                RedisConfig.DefaultSendTimeout.Should().Be(configuration.DefaultSendTimeout.Value);
+                RedisConfig.EnableVerboseLogging.Should().Be(!configuration.DisableVerboseLogging.Value);
+                RedisConfig.HostLookupTimeoutMs.Should().Be(configuration.HostLookupTimeoutMs.Value);
+                RedisConfig.DefaultMaxPoolSize.Should().Be(configuration.MaxPoolSize.Value);
+                gateway.MessageTimeToLive.Should().Be(configuration.MessageTimeToLive.Value);
+                RedisConfig.VerifyMasterConnections.Should().Be(configuration.VerifyMasterConnections.Value);
             }
         }
 
