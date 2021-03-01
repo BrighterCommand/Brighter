@@ -76,7 +76,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             
             _topic = routingKey;
-            _consumerConfig = new ConsumerConfig
+            
+            _consumerConfig = new ConsumerConfig(
+                new ClientConfig
+                {
+                    BootstrapServers = string.Join(",", configuration.BootStrapServers), 
+                    ClientId = configuration.Name,
+                    Debug = configuration.Debug,
+                    SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                    SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                    SaslUsername = configuration.SaslUsername,
+                    SaslPassword = configuration.SaslPassword,
+                    SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                    SslCaLocation = configuration.SslCaLocation
+            })
             {
                 GroupId = groupId,
                 ClientId = configuration.Name,

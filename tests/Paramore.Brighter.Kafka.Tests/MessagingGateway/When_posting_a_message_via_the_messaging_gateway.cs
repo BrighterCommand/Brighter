@@ -47,6 +47,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public KafkaMessageProducerSendTests(ITestOutputHelper output)
         {
+            const string groupId = "Kafka Message Producer Send Test";
             _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -70,7 +71,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                  })
                 .Create(new KafkaSubscription<MyCommand>(
                      channelName: new ChannelName(_queueName), 
-                     routingKey: new RoutingKey(_topic)
+                     routingKey: new RoutingKey(_topic),
+                     groupId: groupId
                      )
              );
   

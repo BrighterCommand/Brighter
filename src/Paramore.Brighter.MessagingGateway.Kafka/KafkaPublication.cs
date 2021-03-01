@@ -99,19 +99,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum total message size sum allowed on the producer queue.
         /// </summary>
-        public int QueueBufferingMaxKbytes { get; set; }
+        public int QueueBufferingMaxKbytes { get; set; } = 1048576;
 
         /// <summary>
         /// Maximum time, in milliseconds, for buffering data on the producer queue.
         /// </summary>
-        public int QueueBufferingTimeMs { get; set; }
+        public int LingerMs { get; set; } = 5;
         
         /// <summary>
         /// The backoff time before retrying a message send.
         /// </summary>
         public int RetryBackoff { get; set; } = 100;
-        
-       
 
         /// <summary>
         /// The ack timeout of the producer request. This value is only enforced by the broker
@@ -124,6 +122,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <returns></returns>
         public string TransactionalId { get; set; }
-
    }
 }

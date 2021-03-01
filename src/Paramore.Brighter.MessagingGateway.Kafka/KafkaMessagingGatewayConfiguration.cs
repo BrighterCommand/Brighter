@@ -53,11 +53,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Initial list of brokers as a list of broker host or host:port. "
         /// </summary>
         public string[] BootStrapServers { get; set; }
-        
+
         /// <summary>
         /// A comma-separated list of debug contexts to enable.  Producer: broker, topic, msg. Consumer: consumer, cgrp, topic, fetch
         /// </summary>
-        public string Debug { get; set; } = String.Empty;
+        public string Debug { get; set; } = null; 
 
          /// <summary>
          /// Client identifier.

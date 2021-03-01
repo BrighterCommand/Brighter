@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _disposedValue;
 
         public KafkaMessageProducer(
-            KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaMessagingGatewayConfiguration configuration, 
             KafkaPublication publication)
         {
             _producerConfig = new ProducerConfig
@@ -45,15 +45,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 new ClientConfig
                 {
                     Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
-                    BootstrapServers = string.Join(",", globalConfiguration.BootStrapServers), 
-                    ClientId = globalConfiguration.Name,
-                    Debug = globalConfiguration.Debug,
+                    BootstrapServers = string.Join(",", configuration.BootStrapServers), 
+                    ClientId = configuration.Name,
+                    Debug = configuration.Debug,
+                    SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                    SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                    SaslUsername = configuration.SaslUsername,
+                    SaslPassword = configuration.SaslPassword,
+                    SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                    SslCaLocation = configuration.SslCaLocation
                 }
             )
             {
                 BatchNumMessages = publication.BatchNumberMessages,
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
-                LingerMs = publication.QueueBufferingTimeMs,
+                LingerMs = publication.LingerMs,
                 MessageTimeoutMs = publication.MessageTimeoutMs,
                 MessageSendMaxRetries = publication.MessageSendMaxRetries,
                 Partitioner = (Confluent.Kafka.Partitioner)((int)publication.Partitioner),
