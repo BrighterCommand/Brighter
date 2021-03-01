@@ -164,14 +164,14 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
             // a base naming scheme to allow centralized management.
-            var connectionsConfiguration = new Connection[]
+            var connectionsConfiguration = new Subscription[]
             {
-                new Connection<ConfigurationCommand>(
-                    new ConnectionName($"{hostName}.{CONFIGURATION}"),
+                new Subscription<ConfigurationCommand>(
+                    new SubscriptionName($"{hostName}.{CONFIGURATION}"),
                     new ChannelName($"{hostName}.{CONFIGURATION}"),
                     new RoutingKey($"{hostName}.{CONFIGURATION}")),
-                new Connection<HeartbeatRequest>(
-                    new ConnectionName($"{hostName}.{HEARTBEAT}"),
+                new Subscription<HeartbeatRequest>(
+                    new SubscriptionName($"{hostName}.{HEARTBEAT}"),
                     new ChannelName($"{hostName}.{HEARTBEAT}"),
                     new RoutingKey($"{hostName}.{HEARTBEAT}"))
             };

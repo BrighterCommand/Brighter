@@ -37,8 +37,8 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
 {
     public class HeartbeatMessageTests
     {
-        private const string TEST_FIRST_CONNECTION_NAME = "Test.First.Connection";
-        private const string TEST_SECOND_CONNECTION_NAME = "Test.Second.Connection";
+        private const string TEST_FIRST_CONNECTION_NAME = "Test.First.Subscription";
+        private const string TEST_SECOND_CONNECTION_NAME = "Test.Second.Subscription";
         private const string TEST_ROUTING_KEY = "test.routing.key";
         private readonly SpyCommandProcessor _spyCommandProcessor = new SpyCommandProcessor();
         private readonly Guid _correlationId = Guid.NewGuid();

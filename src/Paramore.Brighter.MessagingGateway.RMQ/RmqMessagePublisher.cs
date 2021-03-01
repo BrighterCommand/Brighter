@@ -29,6 +29,7 @@ using System.Linq;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
+using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -49,31 +50,32 @@ internal class RmqMessagePublisher
         };
 
         private readonly IModel _channel;
-        private readonly string _exchangeName;
+        private RmqMessagingGatewayConnection _connection;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessagePublisher"/> class.
         /// </summary>
         /// <param name="channel">The channel.</param>
-        /// <param name="exchangeName">Name of the exchange.</param>
+        /// <param name="connection">The exchange we want to talk to.</param>
+        /// <param name="makeChannel">Do we create the exchange, if it does not exist? Note that without a bound consumer, messages are discarded</param>
         /// <exception cref="System.ArgumentNullException">
         /// channel
         /// or
         /// exchangeName
         /// </exception>
-        public RmqMessagePublisher(IModel channel, string exchangeName) 
+        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection) 
         {
             if (channel is null)
             {
                 throw new ArgumentNullException(nameof(channel));
             }
-            if (exchangeName is null)
+            if (connection is null)
             {
-                throw new ArgumentNullException(nameof(exchangeName));
+                throw new ArgumentNullException(nameof(connection));
             }
 
             _channel = channel;
-            _exchangeName = exchangeName;
+            _connection = connection;
         }
 
         /// <summary>
@@ -108,7 +110,7 @@ internal class RmqMessagePublisher
                 headers.Add(HeaderNames.DELAY_MILLISECONDS, delayMilliseconds);
 
             _channel.BasicPublish(
-                _exchangeName,
+                _connection.Exchange.Name,
                 message.Header.Topic,
                 false,
                 CreateBasicProperties(
@@ -122,7 +124,7 @@ internal class RmqMessagePublisher
                 message.Body.Bytes);
         }
 
-        /// <summary>
+       /// <summary>
         /// Requeues the message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -200,7 +202,7 @@ internal class RmqMessagePublisher
 
             return basicProperties;
         }
-
+        
         /// <summary>
         /// Supports the AMQP 0-8/0-9 standard entry types S, I, D, T
         /// and F, as well as the QPid-0-8 specific b, d, f, l, s, t

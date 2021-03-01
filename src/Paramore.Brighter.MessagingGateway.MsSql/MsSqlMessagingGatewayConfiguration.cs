@@ -5,7 +5,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     /// <summary>
     ///     Class MsSqlMessagingGatewayConfiguration
     /// </summary>
-    public class MsSqlMessagingGatewayConfiguration
+    public class MsSqlMessagingGatewayConfiguration : IAmGatewayConfiguration
     {
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlMessagingGatewayConfiguration"/>

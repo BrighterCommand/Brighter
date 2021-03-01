@@ -3,7 +3,7 @@ using Amazon.Runtime;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class AWSMessagingGatewayConnection
+    public class AWSMessagingGatewayConnection : IAmGatewayConfiguration
     {
         public AWSMessagingGatewayConnection(AWSCredentials credentials, RegionEndpoint region)
         {

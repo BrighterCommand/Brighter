@@ -106,7 +106,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The message read from the list</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            _logger.Value.DebugFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on connection {3}", _queueName, Topic);
+            _logger.Value.DebugFormat("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on subscription {3}", _queueName, Topic);
 
             if (_inflight.Any())
             {
@@ -154,8 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// This a 'do nothing operation' as we have already popped
         /// </summary>
         /// <param name="message"></param>
-        /// <param name="requeue"></param>
-        public void Reject(Message message, bool requeue)
+        public void Reject(Message message)
         {
             _inflight.Remove(message.Id);
         }

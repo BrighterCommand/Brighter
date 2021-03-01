@@ -39,8 +39,8 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _mapper = new ConfigurationCommandMessageMapper();
 
-            //"{\"Type\":1,\"ConnectionName\":\"getallthethings\",\"Id\":\"XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\"}"
-            _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {ConnectionName = "getallthethings"};
+            //"{\"Type\":1,\"SubscriptionName\":\"getallthethings\",\"Id\":\"XXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX\"}"
+            _command = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL) {SubscriptionName = "getallthethings"};
         }
 
 
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             //_should_serialize_the_message_type_to_the_header
             _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_connection_name_to_the_message_body
-            _message.Body.Value.Should().Contain("\"ConnectionName\":\"getallthethings\"");
+            _message.Body.Value.Should().Contain("\"SubscriptionName\":\"getallthethings\"");
             //_should_serialize_the_message_id_to_the_message_body
             _message.Body.Value.Should().Contain($"\"Id\":\"{_command.Id}\"");
         }

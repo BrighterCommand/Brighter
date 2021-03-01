@@ -57,7 +57,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the connections.
         /// </summary>
         /// <value>The connections.</value>
-        public IEnumerable<Connection> Connections { get; private set; }
+        public IEnumerable<Subscription> Connections { get; private set; }
 
         /// <summary>
         /// Gets the <see cref="Consumer"/>s
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.ServiceActivator
         public Dispatcher(
             IAmACommandProcessor commandProcessor, 
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IEnumerable<Connection> connections)
+            IEnumerable<Subscription> connections)
         {
             CommandProcessor = commandProcessor;
             Connections = connections;
@@ -117,24 +117,24 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Opens the specified connection by name 
+        /// Opens the specified subscription by name 
         /// </summary>
-        /// <param name="connectionName">The name of the connection</param>
+        /// <param name="connectionName">The name of the subscription</param>
         public void Open(string connectionName)
         {
             Open(Connections.SingleOrDefault(c => c.Name == connectionName));
         }
 
         /// <summary>
-        /// Opens the specified connection.
+        /// Opens the specified subscription.
         /// </summary>
-        /// <param name="connection">The connection.</param>
-        public void Open(Connection connection)
+        /// <param name="subscription">The subscription.</param>
+        public void Open(Subscription subscription)
         {
-            _logger.Value.InfoFormat("Dispatcher: Opening connection {0}", connection.Name);
+            _logger.Value.InfoFormat("Dispatcher: Opening subscription {0}", subscription.Name);
 
-            AddConnectionToConnections(connection);
-            var addedConsumers = CreateConsumers(new[] { connection });
+            AddConnectionToConnections(subscription);
+            var addedConsumers = CreateConsumers(new[] { subscription });
 
             switch (State)
             {
@@ -156,11 +156,11 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private void AddConnectionToConnections(Connection connection)
+        private void AddConnectionToConnections(Subscription subscription)
         {
-            if (Connections.All(c => c.Name != connection.Name))
+            if (Connections.All(c => c.Name != subscription.Name))
             {
-                Connections = new List<Connection>(Connections) { connection };
+                Connections = new List<Subscription>(Connections) { subscription };
             }
         }
 
@@ -174,24 +174,24 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Shuts the specified connection by name
+        /// Shuts the specified subscription by name
         /// </summary>
-        /// <param name="connectionName">The name of the connection</param>
+        /// <param name="connectionName">The name of the subscription</param>
         public void Shut(string connectionName)
         {
             Shut(Connections.SingleOrDefault(c => c.Name == connectionName));
         }
 
         /// <summary>
-        /// Shuts the specified connection.
+        /// Shuts the specified subscription.
         /// </summary>
-        /// <param name="connection">The connection.</param>
-        public void Shut(Connection connection)
+        /// <param name="subscription">The subscription.</param>
+        public void Shut(Subscription subscription)
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                _logger.Value.InfoFormat("Dispatcher: Stopping connection {0}", connection.Name);
-                var consumersForConnection = Consumers.Where(consumer => consumer.ConnectionName == connection.Name).ToArray();
+                _logger.Value.InfoFormat("Dispatcher: Stopping subscription {0}", subscription.Name);
+                var consumersForConnection = Consumers.Where(consumer => consumer.SubscriptionName == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
                 {
@@ -227,7 +227,7 @@ namespace Paramore.Brighter.ServiceActivator
                             var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
                             if (consumer != null)
                             {
-                                _logger.Value.DebugFormat("Dispatcher: Removing a consumer with connection name {0}", consumer.Name);
+                                _logger.Value.DebugFormat("Dispatcher: Removing a consumer with subscription name {0}", consumer.Name);
                                 consumer.Dispose();
 
                                 _consumers.TryRemove(consumer.Name, out consumer);
@@ -253,7 +253,7 @@ namespace Paramore.Brighter.ServiceActivator
             TaskCreationOptions.LongRunning);
         }
 
-        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Connection> connections)
+        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> connections)
         {
             var list = new List<Consumer>();
             connections.Each(connection =>
@@ -261,7 +261,7 @@ namespace Paramore.Brighter.ServiceActivator
                 for (var i = 0; i < connection.NoOfPeformers; i++)
                 {
                     int performer = i;
-                    _logger.Value.InfoFormat("Dispatcher: Creating consumer number {0} for connection: {1}", performer + 1, connection.Name);
+                    _logger.Value.InfoFormat("Dispatcher: Creating consumer number {0} for subscription: {1}", performer + 1, connection.Name);
                     var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
                     var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessor, _messageMapperRegistry, connection);
 

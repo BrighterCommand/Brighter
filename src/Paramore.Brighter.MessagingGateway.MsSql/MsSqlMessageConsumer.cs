@@ -11,7 +11,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageConsumer>);
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
-        public MsSqlMessageConsumer(MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration, string topic)
+        public MsSqlMessageConsumer(
+            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration, 
+            string topic)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration);
@@ -44,8 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-        public void Reject(Message message, bool requeue)
+        public void Reject(Message message)
         {
             Logger.Value.Info(
                 $"MsSqlMessagingConsumer: rejecting message with topic {message.Header.Topic} and id {message.Id.ToString()}, NOT IMPLEMENTED");

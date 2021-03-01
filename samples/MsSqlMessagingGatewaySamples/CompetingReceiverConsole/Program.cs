@@ -26,10 +26,10 @@ namespace CompetingReceiverConsole
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var connections = new Connection[]
+                    var subscriptions = new Subscription[]
                     {
-                    new Connection<CompetingConsumerCommand>(
-                        new ConnectionName("paramore.example.multipleconsumer.command"),
+                    new Subscription<CompetingConsumerCommand>(
+                        new SubscriptionName("paramore.example.multipleconsumer.command"),
                         new ChannelName("multipleconsumer.command"),
                         new RoutingKey("multipleconsumer.command"),
                         timeoutInMilliseconds: 200)
@@ -40,7 +40,7 @@ namespace CompetingReceiverConsole
 
                     services.AddServiceActivator(options =>
                     {
-                        options.Connections = connections;
+                        options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
                         var outBox = new InMemoryOutbox();
                         options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new MsSqlMessageProducer(messagingConfiguration), null);

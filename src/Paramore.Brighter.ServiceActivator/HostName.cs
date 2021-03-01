@@ -64,7 +64,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Performs an implicit conversion from <see cref="ConnectionName" /> to <see cref="System.String" />.
+        /// Performs an implicit conversion from <see cref="SubscriptionName" /> to <see cref="System.String" />.
         /// </summary>
         /// <param name="rhs">The RHS.</param>
         /// <returns>The result of the conversion.</returns>

@@ -19,7 +19,7 @@ namespace Events.Ports.CommandHandlers
         {
             try
             {
-                // Let's simulate that some connection is failing and retry later
+                // Let's simulate that some subscription is failing and retry later
                 if (Generator.Next(100) % 10 == 0) throw new Exception("some exception occurred");
                 Console.WriteLine($"command number {command.CommandNumber}");
                 _commandCounter.CountCommand();
