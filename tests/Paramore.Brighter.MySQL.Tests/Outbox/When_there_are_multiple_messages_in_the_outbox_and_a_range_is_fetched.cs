@@ -67,11 +67,11 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             messages = _mySqlOutbox.Get(1, 3);
 
-            //_should_fetch_1_message
+            //should fetch 1 message
             messages.Should().HaveCount(1);
-            //_should_fetch_expected_message
+            //should fetch expected message
             messages.First().Header.Topic.Should().Be(_TopicLastMessage);
-            //_should_not_fetch_null_messages
+            //should not fetch null messages
             messages.Should().NotBeNull();
         }
 

@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 "CommandId uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY," +
                 "CommandType nvarchar(256)," +
                 "CommandBody ntext," +
-                "Timestamp dateTime," +
+                "Timestamp TIMESTAMPTZ DEFAULT Now()," +
                 "ContextKey nvarchar(256)" +
                 ")";
 
