@@ -22,8 +22,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Confluent.Kafka.Admin;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -32,30 +35,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
         private IProducer<string, string> _producer;
+        private ClientConfig _clientConfig;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _disposedValue;
+        private KafkaPublication _publication;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
             KafkaPublication publication)
         {
-            _producerConfig = new ProducerConfig
-            (
-                new ClientConfig
-                {
-                    Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
-                    BootstrapServers = string.Join(",", configuration.BootStrapServers), 
-                    ClientId = configuration.Name,
-                    Debug = configuration.Debug,
-                    SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
-                    SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
-                    SaslUsername = configuration.SaslUsername,
-                    SaslPassword = configuration.SaslPassword,
-                    SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
-                    SslCaLocation = configuration.SslCaLocation
-                }
-            )
+            _clientConfig = new ClientConfig
+            {
+                Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
+                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
+                ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation,
+                SslKeyLocation = configuration.SslKeystoreLocation,
+                    
+            };
+            
+            _producerConfig = new ProducerConfig(_clientConfig)
             {
                 BatchNumMessages = publication.BatchNumberMessages,
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
@@ -69,8 +75,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 RetryBackoffMs = publication.RetryBackoff,
                 TransactionalId = publication.TransactionalId,
             };
-            
-       }
+
+            _publication = publication;
+        }
         
         /// <summary>
         /// There are a **lot** of properties that we can set to configure Kafka. We expose only those of high importance
@@ -91,6 +98,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             _producer = new ProducerBuilder<string, string>(_producerConfig).Build();
             _publisher = new KafkaMessagePublisher(_producer);
+
+            EnsureTopic();
         }
  
 
@@ -181,6 +190,80 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             Dispose(true);
             GC.SuppressFinalize(this);
+        }
+
+        private void EnsureTopic()
+        {
+            if (_publication.MakeChannels == OnMissingChannel.Assume)
+                return;
+
+            if (_publication.MakeChannels == OnMissingChannel.Validate || _publication.MakeChannels == OnMissingChannel.Create)
+            {
+                var topicExists = FindTopic();
+                if (!topicExists && _publication.MakeChannels == OnMissingChannel.Validate)
+                    throw new ChannelFailureException($"Topic: {_publication.Topic.Value} does not exist");
+                if (!topicExists && _publication.MakeChannels == OnMissingChannel.Create)
+                    MakeTopic().GetAwaiter().GetResult();
+            }
+        }
+
+        private async Task MakeTopic()
+        {
+
+            using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
+            {
+                try
+                {
+                    await adminClient.CreateTopicsAsync(new List<TopicSpecification> {
+                        new TopicSpecification
+                        {
+                            Name = _publication.Topic.Value, 
+                            NumPartitions = _publication.NumPartitions, 
+                            ReplicationFactor = _publication.ReplicationFactor
+                        } });
+                }
+                catch (CreateTopicsException e)
+                {
+                    if (e.Results[0].Error.Code != ErrorCode.TopicAlreadyExists)
+                    {
+                        throw new ChannelFailureException($"An error occured creating topic {_publication.Topic.Value}: {e.Results[0].Error.Reason}");
+                    }
+
+                    _logger.Value.Debug("Topic already exists");
+                }
+            }
+        }
+
+        private bool FindTopic()
+        {
+            using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
+            {
+                try
+                {
+                    var metadata = adminClient.GetMetadata(_publication.Topic.Value, TimeSpan.FromMilliseconds(_publication.TopicFindTimeoutMs));
+                    //confirm we are in the list
+                    var matchingTopics = metadata.Topics.Where(tp => tp.Topic ==_publication.Topic.Value).ToArray();
+                    if (matchingTopics.Length > 0)
+                    {
+                        var matchingTopic = matchingTopics[0];
+                        if (matchingTopic.Error == null) return true;
+                        if (matchingTopic.Error.Code == ErrorCode.UnknownTopicOrPart)
+                            return false;
+                        else
+                        {
+                            _logger.Value.Warn($"Topic {matchingTopic.Topic} is in error with code: {matchingTopic.Error.Code} and reason: {matchingTopic.Error.Reason}");
+                            return false;
+                        }
+
+                    }
+
+                    return false;
+                }
+                catch (Exception e)
+                {
+                    throw new ChannelFailureException($"Could not find topic", e);
+                }
+            } 
         }
 
    }

@@ -67,7 +67,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// a crashing worker process failing to commit a batch that is then represented rises.
         /// </summary>
         public long CommitBatchSize { get; set; } = 10;
-        
+
+        /// <summary>
+        /// How long before we time out when we are reading the committed offsets back (mainly used for debugging)
+        /// </summary>
+        public int ReadCommittedOffsetsTimeOutMs { get; set; } = 5000;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>

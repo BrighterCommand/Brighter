@@ -67,7 +67,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         private bool EnableIdempotence { get; set; } = true;
         
-        /// <summary>
+         /// <summary>
+         /// Maximum time, in milliseconds, for buffering data on the producer queue.
+         /// </summary>
+         public int LingerMs { get; set; } = 5;
+
+         /// <summary>
         /// How many times to retry sending a failing MessageSet.
         /// Note: retrying may cause reordering, set the  max in flight to 1 if using this 
         /// </summary>
@@ -85,6 +90,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// We default this to 1, so as to allow retries to not de-order the stream
         /// </summary>
         public int MaxInFlightRequestsPerConnection { get; set; } = 1;
+
+        /// <summary>
+        /// How many partitions on this topic?
+        /// </summary>
+        public int NumPartitions { get; set; } = 1;
         
         /// <summary>
         /// How do we partition - defaults to consistent random
@@ -102,10 +112,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public int QueueBufferingMaxKbytes { get; set; } = 1048576;
 
         /// <summary>
-        /// Maximum time, in milliseconds, for buffering data on the producer queue.
+        /// What is the replication factor? How many nodes is the topic copied to on the broker?
         /// </summary>
-        public int LingerMs { get; set; } = 5;
-        
+        public short ReplicationFactor { get; set; } = 1;
+
         /// <summary>
         /// The backoff time before retrying a message send.
         /// </summary>
@@ -118,9 +128,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public int RequestTimeoutMs { get; set; } = 500;
         
         /// <summary>
+        /// What is the Topic we wish to publish to. Required for topic creation
+        /// </summary>
+        public RoutingKey Topic { get; set; }
+
+
+        /// <summary>
+        /// How long to wait when asking for topic metadata
+        /// </summary>
+        public double TopicFindTimeoutMs { get; set; } = 5000;
+        
+        /// <summary>
         /// The unique identifier for this producer, used with transactions
         /// </summary>
         /// <returns></returns>
         public string TransactionalId { get; set; }
-   }
+
+    }
 }

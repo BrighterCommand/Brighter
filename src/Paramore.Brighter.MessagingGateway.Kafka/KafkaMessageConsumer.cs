@@ -47,6 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly List<TopicPartitionOffset> _offsets = new List<TopicPartitionOffset>();
         private bool _disposedValue;
         private readonly long _maxBatchSize;
+        private readonly int _readCommittedOffsetsTimeoutMs;
 
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -57,6 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int maxPollIntervalMs = 10000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             long commitBatchSize = 10,
+            int readCommittedOffsetsTimeoutMs = 5000,
             OnMissingChannel makeChannels = OnMissingChannel.Create
             )
         {
@@ -106,6 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
             _maxBatchSize = commitBatchSize;
+            _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
                 .SetPartitionsAssignedHandler((consumer, list) => _partitions.AddRange(list))
@@ -122,8 +125,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             _creator = new KafkaMessageCreator();
         }
-
-
 
         /// <summary>
         /// Acknowledges the specified message.
@@ -281,24 +282,32 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         [DebuggerStepThrough]
         private void LogOffSets()
         {
-            var highestReadOffset = new Dictionary<TopicPartition, long>();
+            try
+            {
+                var highestReadOffset = new Dictionary<TopicPartition, long>();
             
-             var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(100));
-             foreach (var committedOffset in committedOffsets)
-             {
-                 if (highestReadOffset.TryGetValue(committedOffset.TopicPartition, out long offset))
-                 {
-                     if (committedOffset.Offset < offset) continue;
-                 }
-                 highestReadOffset[committedOffset.TopicPartition] = committedOffset.Offset;
-             }
+                var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(_readCommittedOffsetsTimeoutMs));
+                foreach (var committedOffset in committedOffsets)
+                {
+                    if (highestReadOffset.TryGetValue(committedOffset.TopicPartition, out long offset))
+                    {
+                        if (committedOffset.Offset < offset) continue;
+                    }
+                    highestReadOffset[committedOffset.TopicPartition] = committedOffset.Offset;
+                }
 
-             foreach (KeyValuePair<TopicPartition,long> pair in highestReadOffset)
-             {
-                 var topicPartition = pair.Key;
-                 var message = $"Offset to consume from is: {pair.Value.ToString()} on partition: {topicPartition.Partition.Value.ToString()} for topic: {topicPartition.Topic}";
-                  _logger.Value.Info(message);
-             }
+                foreach (KeyValuePair<TopicPartition,long> pair in highestReadOffset)
+                {
+                    var topicPartition = pair.Key;
+                    var message = $"Offset to consume from is: {pair.Value.ToString()} on partition: {topicPartition.Partition.Value.ToString()} for topic: {topicPartition.Topic}";
+                    _logger.Value.Info(message);
+                }
+            }
+            catch (KafkaException ke)
+            {
+                //This is only loggin for debug, so skip errors here
+                _logger.Value.Debug($"kafka error logging the offsets: {ke.Message}");
+            }
         }
 
         private void Close()
@@ -306,17 +315,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 _consumer.Commit();
+                
+                var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(_readCommittedOffsetsTimeoutMs));
+                foreach (var committedOffset in committedOffsets)
+                    _logger.Value.Info(
+                        $"Committed offset: {committedOffset.Offset.Value.ToString()} on partition: {committedOffset.Partition.Value.ToString()} for topic: {committedOffset.Topic}");
+
             }
             catch (Exception ex)
             {
                 //this may happen if the offset is already committed
                 _logger.Value.Debug($"Error committing the current offset to Kakfa before closing: {ex.Message}");
             }
-
-            var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(100));
-            foreach (var committedOffset in committedOffsets)
-                _logger.Value.Info(
-                    $"Committed offset: {committedOffset.Offset.Value.ToString()} on partition: {committedOffset.Partition.Value.ToString()} for topic: {committedOffset.Topic}");
         }
 
         protected virtual void Dispose(bool disposing)

@@ -94,9 +94,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          /// </summary>
          public string SslCaLocation { get; set; } = null;
 
+         /// <summary>
+         /// Path to client's keystore
+         /// </summary>
+         public string SslKeystoreLocation { get; set; } = null;
          
-         
-         
-         
+         /// <summary>
+         /// Password to keystore
+         /// </summary>
+         public string SslKeystorePassword { get; set; } = null;
+
     }
 }

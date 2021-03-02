@@ -58,6 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 maxPollIntervalMs: kafkaSubscription.MaxPollIntervalMs,
                 isolationLevel: kafkaSubscription.IsolationLevel,
                 commitBatchSize: kafkaSubscription.CommitBatchSize,
+                readCommittedOffsetsTimeoutMs: kafkaSubscription.ReadCommittedOffsetsTimeOutMs,
                 makeChannels: kafkaSubscription.MakeChannels
                 );
         }
