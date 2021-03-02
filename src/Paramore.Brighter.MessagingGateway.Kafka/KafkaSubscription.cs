@@ -29,29 +29,37 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaSubscription : Subscription
     {
-          /// <summary>
+        /// <summary>
+        /// <summary>
+        /// We commit processed work (marked as acked or rejected) when a batch size worth of work has been completed
+        /// If the batch size is 1, then there is a low risk of offsets not being committed and therefore duplicates appearing
+        /// in the stream, but the latency per request and load on the broker increases. As the batch size rises the risk of
+        /// a crashing worker process failing to commit a batch that is then represented rises.
+        /// </summary>
+        public long CommitBatchSize { get; set; } = 10;
+        
+        /// <summary>
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
         /// We do not default this value, and expect you to set it
         /// </summary>
         public string GroupId { get; set; }
 
         /// <summary>
-        /// If Kafka does not receive a heartbeat from the consumer within this time window, trigger a re-balance
-        /// Default is Kafka default of 10s
+        /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
         /// </summary>
-        public int SessionTimeoutMs { get; set; } = 10000;
-
+        public IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
+        
         /// <summary>
         /// How often the consumer needs to poll for new messages to be considered alive, polling greater than this interval triggers a rebalance
         /// Uses Kafka default of 300000
         /// </summary>
         public int MaxPollIntervalMs { get; set; } = 300000;
-
-        /// <summary>
-        /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
-        /// </summary>
-        public IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
         
+        /// <summary>
+        /// How many partitions on this topic?
+        /// </summary>
+        public int NumPartitions { get; set; } = 1;
+
         /// <summary>
         /// What do we do if there is no offset stored in ZooKeeper for this consumer
         /// AutoOffsetReset.Earlist -  (default) Begin reading the stream from the start
@@ -61,17 +69,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public AutoOffsetReset OffsetDefault { get; set; } = AutoOffsetReset.Earliest;
 
         /// <summary>
-        /// We commit processed work (marked as acked or rejected) when a batch size worth of work has been completed
-        /// If the batch size is 1, then there is a low risk of offsets not being committed and therefore duplicates appearing
-        /// in the stream, but the latency per request and load on the broker increases. As the batch size rises the risk of
-        /// a crashing worker process failing to commit a batch that is then represented rises.
-        /// </summary>
-        public long CommitBatchSize { get; set; } = 10;
-
-        /// <summary>
         /// How long before we time out when we are reading the committed offsets back (mainly used for debugging)
         /// </summary>
         public int ReadCommittedOffsetsTimeOutMs { get; set; } = 5000;
+        
+        /// <summary>
+        /// What is the replication factor? How many nodes is the topic copied to on the broker?
+        /// </summary>
+        public short ReplicationFactor { get; set; } = 1;
+        
+        /// <summary>
+        /// If Kafka does not receive a heartbeat from the consumer within this time window, trigger a re-balance
+        /// Default is Kafka default of 10s
+        /// </summary>
+        public int SessionTimeoutMs { get; set; } = 10000;
+        
+        /// <summary>
+        /// How long to wait when asking for topic metadata
+        /// </summary>
+        public int TopicFindTimeoutMs { get; set; } = 5000;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -93,7 +109,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="maxPollIntervalMs">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
         /// <param name="isAsync">Is this channel read asynchronously</param>
-        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
+        /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>       /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public KafkaSubscription (
             Type dataType, 
@@ -113,6 +130,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int maxPollIntervalMs = 300000, 
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             bool isAsync = false, 
+            int numOfPartitions = 1,
+            short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
@@ -124,12 +143,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MaxPollIntervalMs = maxPollIntervalMs;
             OffsetDefault = offsetDefault;
             SessionTimeoutMs = sessionTimeoutMs;
+            NumPartitions = numOfPartitions;
+            ReplicationFactor = replicationFactor;
         }
     }
 
     public class KafkaSubscription<T> : KafkaSubscription where T : IRequest
     {
-         /// <summary>
+        /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
@@ -148,8 +169,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="maxPollIntervalMs">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
         /// <param name="isAsync">Is this channel read asynchronously</param>
-        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
+        /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         public KafkaSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -167,10 +190,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int maxPollIntervalMs = 300000, 
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             bool isAsync = false, 
+            int numOfPartitions = 1,
+            short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, sessionTimeoutMs, maxPollIntervalMs, isolationLevel, isAsync, channelFactory, makeChannels)
+                requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, sessionTimeoutMs, 
+                maxPollIntervalMs, isolationLevel, isAsync, numOfPartitions, replicationFactor, channelFactory, makeChannels)
         {
         }
     }

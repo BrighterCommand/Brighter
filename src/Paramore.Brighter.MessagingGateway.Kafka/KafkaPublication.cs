@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Will adjust the following if not set:
         /// `max.in.flight.requests.per.connection=5` (must be less than or equal to 5), `retries=INT32_MAX` (must be greater than 0), `acks=all`, `queuing.strategy=fifo`. 
         /// </summary>
-        private bool EnableIdempotence { get; set; } = true;
+        public bool EnableIdempotence { get; set; } = true;
         
          /// <summary>
          /// Maximum time, in milliseconds, for buffering data on the producer queue.
@@ -132,11 +132,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public RoutingKey Topic { get; set; }
 
-
         /// <summary>
         /// How long to wait when asking for topic metadata
         /// </summary>
-        public double TopicFindTimeoutMs { get; set; } = 5000;
+        public int TopicFindTimeoutMs { get; set; } = 5000;
         
         /// <summary>
         /// The unique identifier for this producer, used with transactions

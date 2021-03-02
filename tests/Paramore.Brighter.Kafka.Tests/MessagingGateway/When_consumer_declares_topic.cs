@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Collection("Kafka")]
     [Trait("Category", "Kafka")]
-    public class KafkaConfluentProducerSendTests : IDisposable
+    public class KafkaConsumerDeclareTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
@@ -46,65 +47,41 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-        public KafkaConfluentProducerSendTests(ITestOutputHelper output)
+        public KafkaConsumerDeclareTests (ITestOutputHelper output)
         {
-            string SupplyCertificateLocation()
-            {
-                //For different platforms, we have to figure out how to get the connection right
-                //see: https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/csharp.html
-                
-                return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
-            }
-            
-            // -- Confluent supply these values, see their .NET examples for your account
-            // You need to set those values as environment variables, which we then read, in order
-            // to run these tests
-
             const string groupId = "Kafka Message Producer Send Test";
-            string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
-            string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
-            string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
-            
             _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test",
-                    BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = SecurityProtocol.SaslSsl,
-                    SaslMechanisms = SaslMechanism.Plain,
-                    SaslUsername = userName,
-                    SaslPassword = password,
-                    SslCaLocation = SupplyCertificateLocation()
-                    
+                    BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication()
+                new KafkaPublication
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
-                    ReplicationFactor = 3,
+                    ReplicationFactor = 1,
                     //These timeouts support running on a container using the same host as the tests, 
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
-                    MakeChannels = OnMissingChannel.Create,
+                    MakeChannels = OnMissingChannel.Assume //This will not make the topic
                }).Create(); 
             
+            //This should force creation of the topic - will fail if no topic creation code
             _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test",
-                    BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = SecurityProtocol.SaslSsl,
-                    SaslMechanisms = SaslMechanism.Plain,
-                    SaslUsername = userName,
-                    SaslPassword = password,
-                    SslCaLocation = SupplyCertificateLocation()
+                    BootStrapServers = new[] {"localhost:9092"}
                 })
                 .Create(new KafkaSubscription<MyCommand>(
                      channelName: new ChannelName(_queueName), 
                      routingKey: new RoutingKey(_topic),
                      groupId: groupId,
+                     numOfPartitions: 1,
+                     replicationFactor: 1,
                      makeChannels: OnMissingChannel.Create
                      )
              );
@@ -112,7 +89,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_posting_a_message_to_a_confluent_cluster()
+        public void When_a_consumer_declares_topics()
         {
             var message = new Message(
                 new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
@@ -120,6 +97,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
+            
+            //This should fail, if consumer can't create the topic as set to Assume
             _producer.Send(message);
 
             Message[] messages = new Message[0];

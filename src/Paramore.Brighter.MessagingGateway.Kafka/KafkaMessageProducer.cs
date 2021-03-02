@@ -22,24 +22,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
-using Confluent.Kafka.Admin;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal class KafkaMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+    internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
         private IProducer<string, string> _producer;
-        private ClientConfig _clientConfig;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _disposedValue;
-        private KafkaPublication _publication;
 
         public KafkaMessageProducer(
             KafkaMessagingGatewayConfiguration configuration, 
@@ -64,6 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _producerConfig = new ProducerConfig(_clientConfig)
             {
                 BatchNumMessages = publication.BatchNumberMessages,
+                EnableIdempotence = publication.EnableIdempotence,
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
                 LingerMs = publication.LingerMs,
                 MessageTimeoutMs = publication.MessageTimeoutMs,
@@ -76,7 +71,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 TransactionalId = publication.TransactionalId,
             };
 
-            _publication = publication;
+            MakeChannels = publication.MakeChannels;
+            Topic = publication.Topic;
+            NumPartitions = publication.NumPartitions;
+            ReplicationFactor = publication.ReplicationFactor;
+            TopicFindTimeoutMs = publication.TopicFindTimeoutMs;
         }
         
         /// <summary>
@@ -105,7 +104,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public void Send(Message message)
         {
-            SendAsync(message).Wait();
+            SendAsync(message).GetAwaiter().GetResult();
         }
 
         
@@ -191,80 +190,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-        private void EnsureTopic()
-        {
-            if (_publication.MakeChannels == OnMissingChannel.Assume)
-                return;
-
-            if (_publication.MakeChannels == OnMissingChannel.Validate || _publication.MakeChannels == OnMissingChannel.Create)
-            {
-                var topicExists = FindTopic();
-                if (!topicExists && _publication.MakeChannels == OnMissingChannel.Validate)
-                    throw new ChannelFailureException($"Topic: {_publication.Topic.Value} does not exist");
-                if (!topicExists && _publication.MakeChannels == OnMissingChannel.Create)
-                    MakeTopic().GetAwaiter().GetResult();
-            }
-        }
-
-        private async Task MakeTopic()
-        {
-
-            using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
-            {
-                try
-                {
-                    await adminClient.CreateTopicsAsync(new List<TopicSpecification> {
-                        new TopicSpecification
-                        {
-                            Name = _publication.Topic.Value, 
-                            NumPartitions = _publication.NumPartitions, 
-                            ReplicationFactor = _publication.ReplicationFactor
-                        } });
-                }
-                catch (CreateTopicsException e)
-                {
-                    if (e.Results[0].Error.Code != ErrorCode.TopicAlreadyExists)
-                    {
-                        throw new ChannelFailureException($"An error occured creating topic {_publication.Topic.Value}: {e.Results[0].Error.Reason}");
-                    }
-
-                    _logger.Value.Debug("Topic already exists");
-                }
-            }
-        }
-
-        private bool FindTopic()
-        {
-            using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
-            {
-                try
-                {
-                    var metadata = adminClient.GetMetadata(_publication.Topic.Value, TimeSpan.FromMilliseconds(_publication.TopicFindTimeoutMs));
-                    //confirm we are in the list
-                    var matchingTopics = metadata.Topics.Where(tp => tp.Topic ==_publication.Topic.Value).ToArray();
-                    if (matchingTopics.Length > 0)
-                    {
-                        var matchingTopic = matchingTopics[0];
-                        if (matchingTopic.Error == null) return true;
-                        if (matchingTopic.Error.Code == ErrorCode.UnknownTopicOrPart)
-                            return false;
-                        else
-                        {
-                            _logger.Value.Warn($"Topic {matchingTopic.Topic} is in error with code: {matchingTopic.Error.Code} and reason: {matchingTopic.Error.Reason}");
-                            return false;
-                        }
-
-                    }
-
-                    return false;
-                }
-                catch (Exception e)
-                {
-                    throw new ChannelFailureException($"Could not find topic", e);
-                }
-            } 
-        }
-
-   }
+    }
 }

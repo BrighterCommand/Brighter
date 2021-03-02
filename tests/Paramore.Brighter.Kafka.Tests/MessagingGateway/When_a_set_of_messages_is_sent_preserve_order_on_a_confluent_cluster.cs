@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using FluentAssertions;
@@ -11,36 +12,53 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
-    public class KafkaMessageConsumerPreservesOrder : IDisposable
+    public class KafkaMessageConsumerConfluentPreservesOrder : IDisposable
     {
+        private const string _groupId = "Kafka Message Producer Assume Topic Test";
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAMessageProducer _producer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
+        private readonly string _bootStrapServer;
+        private readonly string _userName;
+        private readonly string _password;
 
 
-        public KafkaMessageConsumerPreservesOrder (ITestOutputHelper output)
+        public KafkaMessageConsumerConfluentPreservesOrder(ITestOutputHelper output)
         {
+            // -- Confluent supply these values, see their .NET examples for your account
+            // You need to set those values as environment variables, which we then read, in order
+            // to run these tests
+
+            _bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
+            _userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
+            _password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
+            
             _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Producer Send Test", 
-                    BootStrapServers = new[] {"localhost:9092"},
+                    Name = "Kafka Producer Send Test",
+                    BootStrapServers = new[] {_bootStrapServer},
+                    SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
+                    SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
+                    SaslUsername = _userName,
+                    SaslPassword = _password,
+                    SslCaLocation = SupplyCertificateLocation()
                     
                 },
                 new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
-                    ReplicationFactor = 1,
+                    ReplicationFactor = 3,
                     //These timeouts support running on a container using the same host as the tests, 
                     //your production values ought to be lower
-                    MessageTimeoutMs = 2000,
-                    RequestTimeoutMs = 2000,
-                    MakeChannels = OnMissingChannel.Create
+                    MessageTimeoutMs = 10000,
+                    RequestTimeoutMs = 10000,
+                    MakeChannels = OnMissingChannel.Create //This will not make the topic
                 }
                 ).Create();
         }
@@ -130,27 +148,40 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private IAmAMessageConsumer CreateConsumer()
         {
             return new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Consumer Test",
-                    BootStrapServers = new[] { "localhost:9092" }
-                })
+                    new KafkaMessagingGatewayConfiguration
+                    {
+                        Name = "Kafka Producer Send Test",
+                        BootStrapServers = new[] {_bootStrapServer},
+                        SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
+                        SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
+                        SaslUsername = _userName,
+                        SaslPassword = _password,
+                        SslCaLocation = SupplyCertificateLocation()
+                    
+                    })
                 .Create(new KafkaSubscription<MyCommand>(
-                        name: new SubscriptionName("Paramore.Brighter.Tests"),
-                        channelName: new ChannelName(_queueName),
-                        routingKey: new RoutingKey(_topic),
-                        groupId: _kafkaGroupId,
-                        offsetDefault: AutoOffsetReset.Earliest,
-                        commitBatchSize:1,
-                        numOfPartitions: 1,
-                        replicationFactor: 1,
-                        makeChannels: OnMissingChannel.Create
+                    channelName: new ChannelName(_queueName), 
+                    routingKey: new RoutingKey(_topic),
+                    groupId: _groupId,
+                    offsetDefault: AutoOffsetReset.Earliest,
+                    commitBatchSize:1,
+                    numOfPartitions: 1,
+                    replicationFactor: 3,
+                    makeChannels: OnMissingChannel.Create
                     ));
         }
 
         public void Dispose()
         {
             _producer?.Dispose();
+        }
+        
+        private string SupplyCertificateLocation()
+        {
+            //For different platforms, we have to figure out how to get the connection right
+            //see: https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/csharp.html
+                
+            return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
         }
     }
 }

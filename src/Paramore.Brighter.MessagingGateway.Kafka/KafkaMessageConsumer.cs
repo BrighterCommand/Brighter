@@ -36,9 +36,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// and provides the facilities to consume messages from a Kafka broker for a topic
     /// in a consumer group.
     /// </summary>
-    public class KafkaMessageConsumer : IAmAMessageConsumer
+    public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumer
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private IConsumer<string, string> _consumer;
         private readonly KafkaMessageCreator _creator;
         private readonly RoutingKey _topic;
@@ -59,6 +58,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             long commitBatchSize = 10,
             int readCommittedOffsetsTimeoutMs = 5000,
+            int numPartitions = 1,
+            short replicationFactor = 1,
+            int topicFindTimeoutMs = 10000,
             OnMissingChannel makeChannels = OnMissingChannel.Create
             )
         {
@@ -78,20 +80,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             
             _topic = routingKey;
-            
-            _consumerConfig = new ConsumerConfig(
-                new ClientConfig
-                {
-                    BootstrapServers = string.Join(",", configuration.BootStrapServers), 
-                    ClientId = configuration.Name,
-                    Debug = configuration.Debug,
-                    SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
-                    SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
-                    SaslUsername = configuration.SaslUsername,
-                    SaslPassword = configuration.SaslPassword,
-                    SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
-                    SslCaLocation = configuration.SslCaLocation
-            })
+
+            _clientConfig = new ClientConfig
+            {
+                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
+                ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation
+            };
+            _consumerConfig = new ConsumerConfig(_clientConfig)
             {
                 GroupId = groupId,
                 ClientId = configuration.Name,
@@ -100,7 +102,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SessionTimeoutMs = sessionTimeoutMs,
                 MaxPollIntervalMs = maxPollIntervalMs,
                 EnablePartitionEof = true,
-                AllowAutoCreateTopics = makeChannels == OnMissingChannel.Create,
+                AllowAutoCreateTopics = false, //We will do this explicit always so as to allow us to set parameters for the topic
                 IsolationLevel = isolationLevel,
                 //We commit the last offset for acknowledged requests when a batch of records has been processed. 
                 EnableAutoOffsetStore = false,
@@ -124,6 +126,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _consumer.Subscribe(new []{ _topic.Value });
 
             _creator = new KafkaMessageCreator();
+            
+            MakeChannels = makeChannels;
+            Topic = routingKey;
+            NumPartitions = numPartitions;
+            ReplicationFactor = replicationFactor;
+            TopicFindTimeoutMs = topicFindTimeoutMs;
+            
+            EnsureTopic();
         }
 
         /// <summary>
