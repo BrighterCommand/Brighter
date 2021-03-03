@@ -228,14 +228,15 @@ jobs:
       run: dotnet restore
     # - name: Debugging with tmate
     #   uses: mxschmitt/action-tmate@v3.1
-    - name: Kafka Install Check
-      run:  kafkacat -L -b localhost
+    # - name: Kafka Install Check
+    # run:  kafkacat -L -b localhost
     - name: Kafka Transport Tests
-      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
       env:
         CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
         CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
         CONFLUENT_SASL_USERNAME: ${{ secrets.CONFLUENT_SASL_USERNAME }}
+      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+     
  
  
   postgres-ci:
