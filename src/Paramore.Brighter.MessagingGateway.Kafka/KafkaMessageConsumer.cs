@@ -21,9 +21,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Logging;
@@ -43,10 +45,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly RoutingKey _topic;
         private readonly ConsumerConfig _consumerConfig;
         private List<TopicPartition> _partitions = new List<TopicPartition>();
-        private readonly List<TopicPartitionOffset> _offsets = new List<TopicPartitionOffset>();
-        private bool _disposedValue;
+        private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new ConcurrentBag<TopicPartitionOffset>();
         private readonly long _maxBatchSize;
         private readonly int _readCommittedOffsetsTimeoutMs;
+        private DateTime _lastFlushAt = DateTime.UtcNow;
+        private readonly TimeSpan _sweepUncommittedInterval;
+        private readonly object _flushLock = new object();
+        private bool _disposedValue;
 
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -57,6 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int maxPollIntervalMs = 10000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             long commitBatchSize = 10,
+            int sweepUncommittedOffsetsIntervalMs = 30000,
             int readCommittedOffsetsTimeoutMs = 5000,
             int numPartitions = 1,
             short replicationFactor = 1,
@@ -110,6 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
 
             _maxBatchSize = commitBatchSize;
+            _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsIntervalMs);
             _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
@@ -149,7 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (!message.Header.Bag.TryGetValue(HeaderNames.PARTITION_OFFSET, out var bagData))
                     return;
-
+            
             try
             {
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
@@ -158,22 +165,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             
                 _logger.Value.InfoFormat($"Storing offset {new Offset(topicPartitionOffset.Offset + 1).Value} to topic {topicPartitionOffset.TopicPartition.Topic} for partition {topicPartitionOffset.TopicPartition.Partition.Value}");
                 _consumer.StoreOffset(offset);
-                _offsets.Add(offset);
-             
-                if (_offsets.Count % _maxBatchSize == 0)
-                {
-                    if (_logger.Value.IsInfoEnabled())
-                    {
-                        var offsets = _offsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-                        var offsetAsString = string.Join(Environment.NewLine, offsets);
-                        _logger.Value.InfoFormat($"Commiting all offsets: {Environment.NewLine} {offsetAsString}");
-                    }
+                _offsetStorage.Add(offset);
 
-                    _consumer.Commit(_offsets);
-                    _offsets.Clear();
-                }
+                if (_offsetStorage.Count % _maxBatchSize == 0)
+                    FlushOffsets();
+                else
+                    SweepOffsets();
 
-                _logger.Value.InfoFormat($"Current Kafka batch count {_offsets.Count.ToString()} and {_maxBatchSize.ToString()}");
+                _logger.Value.InfoFormat($"Current Kafka batch count {_offsetStorage.Count.ToString()} and {_maxBatchSize.ToString()}");
             }
             catch (TopicPartitionException tpe)
             {
@@ -184,7 +183,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-        /// <summary>
+       /// <summary>
         /// Rejects the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -317,6 +316,81 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 //This is only loggin for debug, so skip errors here
                 _logger.Value.Debug($"kafka error logging the offsets: {ke.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Mainly used diagnostically in tests - how many offsets do we have now?
+        /// </summary>
+        /// <returns></returns>
+        public int StoredOffsets()
+        {
+            return _offsetStorage.Count;
+        }
+        
+        /// <summary>
+        /// We commit a batch size worth at a time; this may be called from the sweeper thread, and we don't want it to
+        /// loop endlessly over the offset list as new items are added, which will trigger a commit anyway. So we limit
+        /// the trigger to only commit a batch size worth
+        /// </summary>
+        private void CommitOffsets(DateTime flushTime)
+        {
+           if (_logger.Value.IsInfoEnabled())
+           {
+               var offsets = _offsetStorage.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+               var offsetAsString = string.Join(Environment.NewLine, offsets);
+               _logger.Value.InfoFormat($"Commiting all offsets: {Environment.NewLine} {offsetAsString}");
+           }
+            
+           var listOffsets = new List<TopicPartitionOffset>();
+           for (int i = 0; i < _maxBatchSize; i++)
+           {
+               bool hasOffsets = _offsetStorage.TryTake(out var offset);
+               if (hasOffsets)
+                   listOffsets.Add(offset);
+               else
+                   break;
+
+           }
+           _consumer.Commit(listOffsets);
+           _lastFlushAt = flushTime;
+           Monitor.Exit(_flushLock);
+        }
+
+        // The batch size has been exceeded, so flush our offsets
+        private void FlushOffsets()
+        {
+            var now = DateTime.Now;
+            if (Monitor.TryEnter(_flushLock))
+            {
+                //This is expensive, so use a background thread
+                Task.Factory.StartNew(
+                    action: state => CommitOffsets((DateTime)state),
+                    state: now,
+                    cancellationToken: CancellationToken.None,
+                    creationOptions: TaskCreationOptions.DenyChildAttach,
+                    scheduler: TaskScheduler.Default);
+            } 
+        }
+
+        //If it is has been too long since we flushed, flush now to prevent offsets accumulating 
+        private void SweepOffsets()
+        {
+            var now = DateTime.UtcNow;
+
+            if (Monitor.TryEnter(_flushLock))
+            {
+
+                if (now - _lastFlushAt < _sweepUncommittedInterval)
+                    return;
+
+                //This is expensive, so use a background thread
+                Task.Factory.StartNew(
+                    action: state => CommitOffsets((DateTime)state),
+                    state: now,
+                    cancellationToken: CancellationToken.None,
+                    creationOptions: TaskCreationOptions.DenyChildAttach,
+                    scheduler: TaskScheduler.Default);
             }
         }
 

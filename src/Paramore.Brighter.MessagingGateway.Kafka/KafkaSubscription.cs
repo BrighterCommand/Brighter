@@ -54,7 +54,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Uses Kafka default of 300000
         /// </summary>
         public int MaxPollIntervalMs { get; set; } = 300000;
-        
+
+
         /// <summary>
         /// How many partitions on this topic?
         /// </summary>
@@ -83,6 +84,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Default is Kafka default of 10s
         /// </summary>
         public int SessionTimeoutMs { get; set; } = 10000;
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public int SweepUncommittedOffsetsIntervalMs { get; set; } = 30000;
         
         /// <summary>
         /// How long to wait when asking for topic metadata
@@ -107,6 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="commitBatchSize">How often should we commit offsets?</param>
         /// <param name="sessionTimeoutMs">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group</param>
         /// <param name="maxPollIntervalMs">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance</param>
+        /// <param name="sweepUncommittedOffsetsIntervalMs">How often do we commit offsets that have yet to be saved</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
@@ -128,6 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             long commitBatchSize = 10,
             int sessionTimeoutMs = 10000,
             int maxPollIntervalMs = 300000, 
+            int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             bool isAsync = false, 
             int numOfPartitions = 1,
@@ -141,6 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             GroupId = groupId;
             IsolationLevel = isolationLevel;
             MaxPollIntervalMs = maxPollIntervalMs;
+            SweepUncommittedOffsetsIntervalMs = sweepUncommittedOffsetsIntervalMs;
             OffsetDefault = offsetDefault;
             SessionTimeoutMs = sessionTimeoutMs;
             NumPartitions = numOfPartitions;
@@ -167,6 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="commitBatchSize">How often should we commit offsets?</param>
         /// <param name="sessionTimeoutMs">What is the heartbeat interval for this consumer, after which Kafka will assume dead and rebalance the consumer group</param>
         /// <param name="maxPollIntervalMs">How often does the consumer poll for a message to be considered alive, after which Kafka will assume dead and rebalance</param>
+        /// <param name="sweepUncommittedOffsetsIntervalMs">How often do we commit offsets that have yet to be saved</param>
         /// <param name="isolationLevel">Should we read messages that are not on all replicas? May cause duplicates.</param>
         /// <param name="isAsync">Is this channel read asynchronously</param>
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
@@ -187,7 +197,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             long commitBatchSize = 10,
             int sessionTimeoutMs = 10000,
-            int maxPollIntervalMs = 300000, 
+            int maxPollIntervalMs = 300000,
+            int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
             bool isAsync = false, 
             int numOfPartitions = 1,
@@ -196,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
                 requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, sessionTimeoutMs, 
-                maxPollIntervalMs, isolationLevel, isAsync, numOfPartitions, replicationFactor, channelFactory, makeChannels)
+                maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, numOfPartitions, replicationFactor, channelFactory, makeChannels)
         {
         }
     }
