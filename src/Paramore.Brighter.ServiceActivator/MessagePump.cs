@@ -22,12 +22,17 @@ namespace Paramore.Brighter.ServiceActivator
         protected IAmACommandProcessor _commandProcessor;
 
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
+        private readonly bool _runAsync;
         private int _unacceptableMessageCount = 0;
 
-        public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
+        public MessagePump(
+            IAmACommandProcessor commandProcessor, 
+            IAmAMessageMapper<TRequest> messageMapper,
+            bool runAsync = false)
         {
-            _commandProcessor = commandProcessor;
+            _commandProcessor = commandProcessor; 
             _messageMapper = messageMapper;
+            _runAsync = runAsync;
         }
 
         public int TimeoutInMilliseconds { get; set; }
@@ -40,7 +45,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public IAmAChannel Channel { get; set; }
 
-        public Task Run()
+        public async Task Run()
         {
             do
             {
@@ -117,7 +122,7 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     var request = TranslateMessage(message);
-                    DispatchRequest(message.Header, request);
+                    await DispatchRequest(message.Header, request);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -166,7 +171,6 @@ namespace Paramore.Brighter.ServiceActivator
 
             _logger.Value.DebugFormat("MessagePump0: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
             
-            return Task.CompletedTask;
         }
 
         protected void AcknowledgeMessage(Message message)
@@ -181,20 +185,29 @@ namespace Paramore.Brighter.ServiceActivator
             return RequeueCount != -1;
         }
         
-        protected void DispatchRequest(MessageHeader messageHeader, TRequest request)
+        protected async Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
+            var messageType = messageHeader.MessageType;
+            
+            if (_runAsync)
+            {
+                await DispatchAsync(request, messageType);
+            }
+            else
+            {
+                await DispatchSync(request, messageType);
+            }
+        }
+
+        private Task DispatchSync(TRequest request, MessageType messageType)
+        {
+            var tcs = new TaskCompletionSource<object>();
+
             _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
-            if (messageHeader.MessageType == MessageType.MT_COMMAND && request is IEvent)
-            {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id, MessageType.MT_COMMAND));
-            }
-            if (messageHeader.MessageType == MessageType.MT_EVENT && request is ICommand)
-            {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id, MessageType.MT_EVENT));
-            }
+            ValidateMessageType(messageType, request);
 
-            switch (messageHeader.MessageType)
+            switch (messageType)
             {
                 case MessageType.MT_COMMAND:
                 {
@@ -208,8 +221,38 @@ namespace Paramore.Brighter.ServiceActivator
                     break;
                 }
             }
+
+            tcs.SetResult(new object());
+            return tcs.Task;
         }
- 
+        
+        //TODO: Try to see if this runs if we force the threadpool callback first
+        //Then we can see if we can allow an STA model
+        private async Task DispatchAsync(TRequest request, MessageType messageType)
+        {
+            var tcs = new TaskCompletionSource<object>();
+
+            _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+
+            ValidateMessageType(messageType, request);
+
+            switch (messageType)
+            {
+                case MessageType.MT_COMMAND:
+                {
+                     await _commandProcessor.SendAsync(request, continueOnCapturedContext: false);
+                     break;
+                }
+                case MessageType.MT_DOCUMENT:
+                case MessageType.MT_EVENT:
+                {
+                     await _commandProcessor.PublishAsync(request, continueOnCapturedContext: false);
+                     break;
+                }
+            }
+
+        }
+
         protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
@@ -318,5 +361,19 @@ namespace Paramore.Brighter.ServiceActivator
             return false;
         }
 
+        private void ValidateMessageType(MessageType messageType, TRequest request)
+        {
+            if (messageType == MessageType.MT_COMMAND && request is IEvent)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id,
+                    MessageType.MT_COMMAND));
+            }
+
+            if (messageType == MessageType.MT_EVENT && request is ICommand)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id,
+                    MessageType.MT_EVENT));
+            }
+        }
    }
 }

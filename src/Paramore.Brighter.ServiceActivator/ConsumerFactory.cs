@@ -33,7 +33,10 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly Subscription _subscription;
         private readonly ConsumerName _consumerName;
 
-        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Subscription subscription)
+        public ConsumerFactory(
+            IAmACommandProcessor commandProcessor, 
+            IAmAMessageMapperRegistry messageMapperRegistry, 
+            Subscription subscription)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
@@ -53,7 +56,7 @@ namespace Paramore.Brighter.ServiceActivator
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, _subscription.RunAsync);
         }
    }
 }

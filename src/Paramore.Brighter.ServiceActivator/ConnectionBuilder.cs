@@ -180,7 +180,7 @@ namespace Paramore.Brighter.ServiceActivator
                 requeueCount: _requeueCount,
                 requeueDelayInMilliseconds: _requeueDelayInMilliseconds,
                 unacceptableMessageLimit: _unacceptableMessageLimit,
-                isAsync: _isAsync,
+                runAsync: _isAsync,
                 makeChannels:_makeChannel);
         }
 
