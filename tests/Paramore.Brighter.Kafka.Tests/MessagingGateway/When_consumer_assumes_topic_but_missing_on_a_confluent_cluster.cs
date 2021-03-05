@@ -91,28 +91,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     RequestTimeoutMs = 10000,
                     MakeChannels = OnMissingChannel.Assume //This will not make the topic
                }).Create(); 
-            
-            //This should force creation of the topic - will fail if no topic creation code
-            _consumer = new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Producer Send Test",
-                    BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = SecurityProtocol.SaslSsl,
-                    SaslMechanisms = SaslMechanism.Plain,
-                    SaslUsername = userName,
-                    SaslPassword = password,
-                    SslCaLocation = SupplyCertificateLocation()
-                })
-                .Create(new KafkaSubscription<MyCommand>(
-                     channelName: new ChannelName(_queueName), 
-                     routingKey: new RoutingKey(_topic),
-                     groupId: groupId,
-                     numOfPartitions: 1,
-                     replicationFactor: 3,
-                     makeChannels: OnMissingChannel.Assume //This will not make the topic
-                     )
-             );
   
         }
 

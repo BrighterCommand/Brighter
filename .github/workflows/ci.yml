@@ -180,7 +180,12 @@ jobs:
   kafka-ci:
     runs-on: ubuntu-latest
     needs: [test]
-    
+    env:
+      CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
+      CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
+      CONFLUENT_SASL_USERNAME: ${{ secrets.CONFLUENT_SASL_USERNAME }}
+
+
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper:latest
@@ -202,7 +207,7 @@ jobs:
           KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
-          KAFKA_DELETE_TOPIC_ENABLE: "true"
+          KAFKA_DELETE_TOPIC_ENABLE: "false"
 
     steps:
     - name: Install KafkaCat
@@ -226,17 +231,8 @@ jobs:
         dotnet-version: 5.0.x
     - name: Install dependencies
       run: dotnet restore
-    # - name: Debugging with tmate
-    #   uses: mxschmitt/action-tmate@v3.1
-    # - name: Kafka Install Check
-    # run:  kafkacat -L -b localhost
     - name: Kafka Transport Tests
-      env:
-        CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
-        CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
-        CONFLUENT_SASL_USERNAME: ${{ secrets.CONFLUENT_SASL_USERNAME }}
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
-     
  
  
   postgres-ci:

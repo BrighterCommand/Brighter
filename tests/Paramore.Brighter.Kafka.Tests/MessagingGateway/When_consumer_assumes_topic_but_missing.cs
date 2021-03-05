@@ -45,7 +45,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAMessageProducer _producer;
-        private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
         public KafkaProducerAssumeTests(ITestOutputHelper output)
@@ -70,26 +69,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     MakeChannels = OnMissingChannel.Assume //This will not make the topic
                }).Create(); 
             
-            //This should force creation of the topic - will fail if no topic creation code
-            _consumer = new KafkaMessageConsumerFactory(
-                new KafkaMessagingGatewayConfiguration
-                {
-                    Name = "Kafka Producer Send Test",
-                    BootStrapServers = new[] {"localhost:9092"}
-                })
-                .Create(new KafkaSubscription<MyCommand>(
-                     channelName: new ChannelName(_queueName), 
-                     routingKey: new RoutingKey(_topic),
-                     groupId: groupId,
-                     numOfPartitions: 1,
-                     replicationFactor: 3,
-                     makeChannels: OnMissingChannel.Assume //This will not make the topic
-                     )
-             );
-  
         }
 
-        [Fact]
+        [Fact(Skip = "Does not fail on docker container as has topic creation set to true")]
         public void When_a_consumer_declares_topics()
         {
             var message = new Message(
@@ -99,26 +81,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 },
                 new MessageBody($"test content [{_queueName}]"));
             
-            var failure = false;
-            try
-            {
-                _producer.Send(message);
-            }
-            catch (ChannelFailureException cfe)
-            {
-                if (cfe.InnerException is ProduceException<string, string>)
-                    failure = true;
-            }
-            
-            //This ought to throw an exception, but the Confluent Container is setup to create topics automatically
-            //So it does not matter what we do, the producer will create this is on a send
-            Assert.False(failure);
+            var failure = Assert.Throws<ChannelFailureException>(() => _producer.Send(message));
+            Assert.IsType<ProduceException<string, string>>(failure.InnerException);
         }
 
         public void Dispose()
         {
             _producer?.Dispose();
-            _consumer?.Dispose();
         }
     }
 }
