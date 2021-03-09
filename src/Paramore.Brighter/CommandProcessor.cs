@@ -308,6 +308,8 @@ namespace Paramore.Brighter
             _outboxTimeout = outboxTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            ConfigurePublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -352,6 +354,7 @@ namespace Paramore.Brighter
             _outboxTimeout = outboxTimeout;
             _inboxConfiguration = inboxConfiguration;
             
+            ConfigurePublisherCallbackMaybe();
             ConfigureAsyncPublisherCalllbackMaybe();
         }
 
@@ -663,15 +666,7 @@ namespace Paramore.Brighter
 
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {
-                    producer.OnMessagePublished += async delegate(bool success, Guid id)
-                    {
-                        if (success)
-                        {
-                            _logger.Value.InfoFormat("Sent message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
-                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
-                        }
-                    };
-                    
+                    //mark dispatch handled by a callback - set in constructor
                     await RetryAndBreakCircuitAsync(
                             async ct =>
                                 await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
@@ -827,6 +822,9 @@ namespace Paramore.Brighter
         
         private void ConfigureAsyncPublisherCalllbackMaybe()
         {
+            if (_asyncMessageProducer == null)
+                return;
+            
             if (_asyncMessageProducer is ISupportPublishConfirmation producer)
             {
                 producer.OnMessagePublished += async delegate(bool success, Guid id)
@@ -843,6 +841,9 @@ namespace Paramore.Brighter
         
         private void ConfigurePublisherCallbackMaybe()
         {
+            if (_messageProducer == null)
+                return;
+            
             if (_messageProducer is ISupportPublishConfirmation producer)
             {
                 producer.OnMessagePublished += delegate(bool success, Guid id)
