@@ -70,22 +70,6 @@ namespace GreetingsReceiverConsole
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(consumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(
-                            outBox,
-                            new KafkaMessageProducerFactory(
-                                new KafkaMessagingGatewayConfiguration
-                                {
-                                    Name = "paramore.brighter", 
-                                    BootStrapServers = new[] {"localhost:9092"}
-                                },
-                                new KafkaPublication()
-                                {
-                                    MessageTimeoutMs = 500, 
-                                    RequestTimeoutMs = 500
-                                }
-                            ).Create()
-                        );
                     }).AutoFromAssemblies();
 
 

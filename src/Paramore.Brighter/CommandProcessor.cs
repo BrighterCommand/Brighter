@@ -617,8 +617,23 @@ namespace Paramore.Brighter
                 
                 _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
 
-                RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
-                Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
+                if (_messageProducer is ISupportPublishConfirmation producer)
+                {   
+                     producer.OnMessagePublished += delegate(bool success, Guid id)
+                     {
+                         if (success)
+                         {
+                             _logger.Value.InfoFormat("Sent message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
+                         }
+                     };
+                     RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+                }
+                else
+                {
+                    RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+                    Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
+                }
             }
 
         }
@@ -643,12 +658,37 @@ namespace Paramore.Brighter
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
                 
                 _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
-             
-                await RetryAndBreakCircuitAsync(
-                    async ct => await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext), 
-                    continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
-                await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
+                if (_messageProducer is ISupportPublishConfirmation producer)
+                {
+                    producer.OnMessagePublished += async delegate(bool success, Guid id)
+                    {
+                        if (success)
+                        {
+                            _logger.Value.InfoFormat("Sent message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
+                        }
+                    };
+                    
+                    await RetryAndBreakCircuitAsync(
+                            async ct =>
+                                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                            continueOnCapturedContext,
+                            cancellationToken)
+                        .ConfigureAwait(continueOnCapturedContext);
+                }
+                else
+                {
+
+                    await RetryAndBreakCircuitAsync(
+                            async ct =>
+                                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                            continueOnCapturedContext,
+                            cancellationToken)
+                        .ConfigureAwait(continueOnCapturedContext);
+
+                    await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
+                }
             }
 
 
@@ -725,7 +765,7 @@ namespace Paramore.Brighter
                     Send(response);
                 }
 
-                 _logger.Value.InfoFormat("Deleting queue for routingkey: {0}", routingKey);
+                _logger.Value.InfoFormat("Deleting queue for routingkey: {0}", routingKey);
                 
                 return response;
                 

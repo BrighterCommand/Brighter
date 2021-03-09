@@ -103,10 +103,20 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
+
+            bool messagePublished = false;
+            var producerConfirm = _producer as ISupportPublishConfirmation;
+            producerConfirm.OnMessagePublished += delegate(bool success, Guid id)
+            {
+                if (success) messagePublished = true;
+            };
             
-            //This should fail, if consumer can't create the topic as set to Assume
-            var failure = Assert.Throws<ChannelFailureException>(() => _producer.Send(message));
-            Assert.IsType<ProduceException<string, string>>(failure.InnerException);
+            _producer.Send(message);
+
+            //Give this a chance to succeed - will fail
+            Task.Delay(5000);
+
+            messagePublished.Should().BeFalse();
         }
 
         public void Dispose()

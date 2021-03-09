@@ -71,7 +71,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             
         }
 
-        [Fact(Skip = "Does not fail on docker container as has topic creation set to true")]
+        //[Fact(Skip = "Does not fail on docker container as has topic creation set to true")]
+        [Fact]
         public void When_a_consumer_declares_topics()
         {
             var message = new Message(
@@ -81,8 +82,19 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 },
                 new MessageBody($"test content [{_queueName}]"));
             
-            var failure = Assert.Throws<ChannelFailureException>(() => _producer.Send(message));
-            Assert.IsType<ProduceException<string, string>>(failure.InnerException);
+            bool messagePublished = false;
+            var producerConfirm = _producer as ISupportPublishConfirmation;
+            producerConfirm.OnMessagePublished += delegate(bool success, Guid id)
+            {
+                if (success) messagePublished = true;
+            };
+            
+            _producer.Send(message);
+
+            //Give this a chance to succeed - will fail
+            Task.Delay(5000);
+
+            messagePublished.Should().BeFalse();
         }
 
         public void Dispose()

@@ -42,7 +42,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private IConsumer<string, string> _consumer;
         private readonly KafkaMessageCreator _creator;
-        private readonly RoutingKey _topic;
         private readonly ConsumerConfig _consumerConfig;
         private List<TopicPartition> _partitions = new List<TopicPartition>();
         private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new ConcurrentBag<TopicPartitionOffset>();
@@ -85,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException("You must set a GroupId for the consumer");
             }
             
-            _topic = routingKey;
+            Topic = routingKey;
 
             _clientConfig = new ClientConfig
             {
@@ -129,8 +128,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 })
                 .Build();
             
-            _logger.Value.InfoFormat($"Kakfa consumer subscribing to {_topic}");
-            _consumer.Subscribe(new []{ _topic.Value });
+            _logger.Value.InfoFormat($"Kakfa consumer subscribing to {Topic}");
+            _consumer.Subscribe(new []{ Topic.Value });
 
             _creator = new KafkaMessageCreator();
             
@@ -238,7 +237,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                  _logger.Value.ErrorException(
                      "KafkaMessageConsumer: There was an error listening to topic {0} with groupId {1) on bootstrap servers: {2) and consumer record {3}", 
                      consumeException, 
-                     _topic, 
+                     Topic, 
                      _consumerConfig.GroupId, 
                      _consumerConfig.BootstrapServers,
                      consumeException.ConsumerRecord.ToString());
@@ -250,7 +249,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 _logger.Value.ErrorException(
                     "KafkaMessageConsumer: There was an error listening to topic {0} with groupId {1) on bootstrap servers: {2)", 
                     exception, 
-                    _topic, 
+                    Topic, 
                     _consumerConfig.GroupId, 
                     _consumerConfig.BootstrapServers);
                 throw;

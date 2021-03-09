@@ -25,7 +25,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _producer = producer;
         }
 
-        public async Task PublishMessageAsync(Message message)
+        public void PublishMessage(Message message, Action<DeliveryReport<string, string>> deliveryReport)
+        {
+            var kafkaMessage = BuildMessage(message);
+            
+            _producer.Produce(message.Header.Topic, kafkaMessage, deliveryReport);
+        }
+
+        public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, string>> deliveryReport)
+        {
+            var kafkaMessage = BuildMessage(message);
+            
+            var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage);
+            deliveryReport(deliveryResult);
+        }
+
+        private static Message<string, string> BuildMessage(Message message)
         {
             var headers = new Headers()
             {
@@ -37,37 +52,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (message.Header.CorrelationId != Guid.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString().ToByteArray());
-            
+
             if (!string.IsNullOrEmpty(message.Header.PartitionKey))
                 headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());
-            
-            message.Header.Bag.Each((header) => 
+
+            message.Header.Bag.Each((header) =>
             {
-                 if (!_headersToReset.Any(htr => htr.Equals(header.Key)))
-                 {
-                     switch (header.Value)
-                     {
-                         case string stringValue:
+                if (!_headersToReset.Any(htr => htr.Equals(header.Key)))
+                {
+                    switch (header.Value)
+                    {
+                        case string stringValue:
                             headers.Add(header.Key, stringValue.ToByteArray());
                             break;
-                         case int intValue:
-                             headers.Add(header.Key, BitConverter.GetBytes(intValue));
-                             break;
-                     }
-                 }
+                        case int intValue:
+                            headers.Add(header.Key, BitConverter.GetBytes(intValue));
+                            break;
+                    }
+                }
             });
 
             var kafkaMessage = new Message<string, string>()
-            {   
+            {
                 Headers = headers,
                 Key = message.Header.PartitionKey,
                 Value = message.Body.Value
             };
-            var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage);
-            if (deliveryResult.Status != PersistenceStatus.Persisted)
-            {
-                throw new ChannelFailureException($"The message was not persisted to Kafka");
-            }
+            return kafkaMessage;
         }
     }
 }

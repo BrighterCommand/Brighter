@@ -22,14 +22,16 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync
+    internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
+        public event Action<bool, Guid> OnMessagePublished;
         private IProducer<string, string> _producer;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
@@ -39,6 +41,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             KafkaMessagingGatewayConfiguration configuration, 
             KafkaPublication publication)
         {
+            if (string.IsNullOrEmpty(publication.Topic))
+                throw new ConfigurationException("Topic is required for a publication");
+            
             _clientConfig = new ClientConfig
             {
                 Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
@@ -104,9 +109,54 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         public void Send(Message message)
         {
-            SendAsync(message).GetAwaiter().GetResult();
-        }
+            if (message == null)
+                throw new ArgumentNullException(nameof(message));
 
+            try
+            {
+                _logger.Value.DebugFormat(
+                    "Sending message to Kafka. Servers {0} Topic: {1} Body: {2}",
+                    _producerConfig.BootstrapServers,
+                    message.Header.Topic,
+                    message.Body.Value
+                );
+
+                _publisher.PublishMessage(message, report => PublishResults(report.Status, report.Headers));
+
+            }
+            catch (ProduceException<string, string> pe)
+            {
+                _logger.Value.ErrorException(
+                    "Error sending message to Kafka servers {0} because {1} ",
+                    pe,
+                    _producerConfig.BootstrapServers,
+                    pe.Error.Reason
+                );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", pe);
+            }
+            catch (InvalidOperationException ioe)
+            {
+                _logger.Value.ErrorException(
+                    "Error sending message to Kafka servers {0} because {1} ",
+                    ioe,
+                    _producerConfig.BootstrapServers,
+                    ioe.Message
+                );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ioe);
+
+            }
+            catch (ArgumentException ae)
+            {
+                _logger.Value.ErrorException(
+                    "Error sending message to Kafka servers {0} because {1} ",
+                    ae,
+                    _producerConfig.BootstrapServers,
+                    ae.Message
+                );
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
+               
+            }
+        }
         
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
@@ -129,7 +179,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     message.Body.Value
                 );
 
-                await _publisher.PublishMessageAsync(message);
+                await _publisher.PublishMessageAsync(message, result => PublishResults(result.Status, result.Headers) );
 
             }
             catch (ProduceException<string, string> pe)
@@ -190,5 +240,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
+        
+        private void PublishResults(PersistenceStatus status, Headers headers)
+        {
+            if (status == PersistenceStatus.Persisted)
+            {
+                if (headers.TryGetLastBytes(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
+                {
+                    var val = messageIdBytes.FromByteArray();
+                    if (!string.IsNullOrEmpty(val) && (Guid.TryParse(val, out Guid messageId)))
+                    {
+                        Task.Run(() => OnMessagePublished?.Invoke(true, messageId));
+                        return;
+                    }
+                }
+            }
+            
+            OnMessagePublished?.Invoke(false, Guid.Empty);
+        }
+
+
+
     }
 }
