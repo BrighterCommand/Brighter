@@ -267,7 +267,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
             }
             
-            OnMessagePublished?.Invoke(false, Guid.Empty);
+            Task.Run((() =>OnMessagePublished?.Invoke(false, Guid.Empty)));
         }
 
 
