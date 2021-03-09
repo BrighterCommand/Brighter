@@ -41,12 +41,13 @@ namespace GreetingsSender.Adapters
         
         private void DoWork(object state)
         {
-            var messageId = Guid.NewGuid();
             _iteration++;
 
-            _processor.Post(new GreetingEvent{ Id = messageId, Greeting = $"Hello # {_iteration}"});
+            var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid(), Greeting = $"Hello # {_iteration}"};
+            
+            _processor.Post(greetingEvent);
            
-            _logger.LogInformation($"Sent message with id {_iteration}");
+            _logger.LogInformation($"Sending message with id {greetingEvent.Id} and greeting {greetingEvent.Greeting}");
         }
 
         public void Dispose()

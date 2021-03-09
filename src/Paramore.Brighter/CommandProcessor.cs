@@ -199,7 +199,10 @@ namespace Paramore.Brighter
             _messageProducer = messageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            ConfigurePublisherCallbackMaybe();
         }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -231,6 +234,8 @@ namespace Paramore.Brighter
             _asyncMessageProducer = asyncMessageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+
+            ConfigureAsyncPublisherCalllbackMaybe();
         }
 
         /// <summary>
@@ -266,6 +271,8 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
+            
+            ConfigurePublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -344,6 +351,8 @@ namespace Paramore.Brighter
             _asyncMessageProducer = asyncMessageProducer;
             _outboxTimeout = outboxTimeout;
             _inboxConfiguration = inboxConfiguration;
+            
+            ConfigureAsyncPublisherCalllbackMaybe();
         }
 
         /// <summary>
@@ -619,15 +628,8 @@ namespace Paramore.Brighter
 
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {   
-                     producer.OnMessagePublished += delegate(bool success, Guid id)
-                     {
-                         if (success)
-                         {
-                             _logger.Value.InfoFormat("Sent message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
-                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
-                         }
-                     };
-                     RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+                    //mark dispatch handled by a callback - set in constructor
+                    RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
                 }
                 else
                 {
@@ -787,6 +789,7 @@ namespace Paramore.Brighter
         {
             if (_disposed)
                 return;
+            
 
             if (disposing)
             {
@@ -820,6 +823,38 @@ namespace Paramore.Brighter
             await _policyRegistry.Get<AsyncPolicy>(CIRCUITBREAKERASYNC)
                 .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
+        }
+        
+        private void ConfigureAsyncPublisherCalllbackMaybe()
+        {
+            if (_asyncMessageProducer is ISupportPublishConfirmation producer)
+            {
+                producer.OnMessagePublished += async delegate(bool success, Guid id)
+                {
+                    if (success)
+                    {
+                        _logger.Value.InfoFormat("Sent message: Id:{0}", id.ToString());
+                        if (_asyncOutbox != null)
+                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
+                    }
+                };
+            }
+        }
+        
+        private void ConfigurePublisherCallbackMaybe()
+        {
+            if (_messageProducer is ISupportPublishConfirmation producer)
+            {
+                producer.OnMessagePublished += delegate(bool success, Guid id)
+                {
+                    if (success)
+                    {
+                        _logger.Value.InfoFormat("Sent message: Id:{0}", id.ToString());
+                        if (_outBox != null)
+                            Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
+                    }
+                };
+            }
         }
 
         private void Retry(Action send)
