@@ -112,6 +112,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 //We commit the last offset for acknowledged requests when a batch of records has been processed. 
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = false,
+                // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
+                PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
             };
 
             _maxBatchSize = commitBatchSize;
@@ -124,7 +126,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     _consumer.Commit(list);
                     var revokedPartitions = list.Select(tpo => tpo.Partition).ToList();
+                    
+                    _logger.Value.InfoFormat("Partitions for consumer revoked {0", string.Join(",", revokedPartitions.Select(p => p.Value.ToString())));
+                    
                     _partitions = _partitions.Where(tp => !revokedPartitions.Contains(tp.Partition)).ToList();
+                })
+                .SetPartitionsLostHandler((consumer, list) =>
+                {
+                    var lostPartitions = list.Select(tpo => tpo.Partition).ToList();
+                    
+                    _logger.Value.InfoFormat("Partitions for consumer lost {0", string.Join(",", lostPartitions.Select(p => p.Value.ToString())));
+                    
+                    _partitions = _partitions.Where(tp => !lostPartitions.Contains(tp.Partition)).ToList();
                 })
                 .Build();
             
@@ -210,7 +223,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 LogOffSets();
-                
+
                 _logger.Value.DebugFormat(
                     $"Consuming messages from Kafka stream, will wait for {timeoutInMilliseconds}");
                 var consumeResult = _consumer.Consume(new TimeSpan(0, 0, 0, 0, timeoutInMilliseconds));
@@ -230,28 +243,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Message.Value}");
                 _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Value: {consumeResult.Message.Value}");
 
-                return new []{_creator.CreateMessage(consumeResult)};
+                return new[] {_creator.CreateMessage(consumeResult)};
             }
             catch (ConsumeException consumeException)
             {
-                 _logger.Value.ErrorException(
-                     "KafkaMessageConsumer: There was an error listening to topic {0} with groupId {1) on bootstrap servers: {2) and consumer record {3}", 
-                     consumeException, 
-                     Topic, 
-                     _consumerConfig.GroupId, 
-                     _consumerConfig.BootstrapServers,
-                     consumeException.ConsumerRecord.ToString());
-                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
-                 
+                _logger.Value.ErrorException(
+                    $"KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {_consumerConfig.GroupId} on bootstrap servers: {_consumerConfig.BootstrapServers})",
+                    consumeException);
+                throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
+
+            }
+            catch (KafkaException kafkaException)
+            {
+                _logger.Value.ErrorException(
+                    $"KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {_consumerConfig.GroupId} on bootstrap servers: {_consumerConfig.BootstrapServers})",
+                    kafkaException);
+                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
+                    throw;
+                
+                throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
             }
             catch (Exception exception)
             {
                 _logger.Value.ErrorException(
-                    "KafkaMessageConsumer: There was an error listening to topic {0} with groupId {1) on bootstrap servers: {2)", 
-                    exception, 
-                    Topic, 
-                    _consumerConfig.GroupId, 
-                    _consumerConfig.BootstrapServers);
+                    $"KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {_consumerConfig.GroupId} on bootstrap servers: {_consumerConfig.BootstrapServers})", 
+                    exception);
                 throw;
             }
         }

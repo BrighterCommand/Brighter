@@ -156,6 +156,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
                
             }
+            catch (KafkaException kafkaException)
+            {
+                _logger.Value.ErrorException(
+                    $"KafkaMessageProducer: There was an error sending to topic {Topic})",
+                    kafkaException);
+                
+                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
+                    throw;
+                
+                throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
+            }
         }
         
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
