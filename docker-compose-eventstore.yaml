@@ -2,7 +2,7 @@ version: '3'
 
 services:
   eventstore:
-    image: eventstore/eventstore
+    image: eventstore/eventstore:release-5.0.9
     ports:
       - "1113:1113" # TCP (default 1113)
       - "2113:2113" # HTTP (default 2113)
