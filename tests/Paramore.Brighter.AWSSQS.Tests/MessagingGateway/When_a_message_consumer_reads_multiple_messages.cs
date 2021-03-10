@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
@@ -15,7 +18,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
     {
         private readonly SqsMessageProducer _messageProducer;
         private SqsMessageConsumer _consumer;
-        private readonly string _topicName = Guid.NewGuid().ToString().ToValidSNSTopicName();
+        private readonly string _topicName; 
         private ChannelFactory _channelFactory;
         private const string CONTENT_TYPE = "text\\plain";
         private const int BUFFER_SIZE = 3;
@@ -37,13 +40,19 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
                 routingKey:routingKey,
-                bufferSize: BUFFER_SIZE
+                bufferSize: BUFFER_SIZE,
+                makeChannels: OnMissingChannel.Create
                 ));
             
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, BUFFER_SIZE);
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _messageProducer = new SqsMessageProducer(awsConnection, 
+                new SqsPublication
+                {
+                    MakeChannels = OnMissingChannel.Create, 
+                    RoutingKey = routingKey
+                });
         }
             
         [Fact]
@@ -76,28 +85,37 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _messageProducer.Send(messageFour);
 
 
-            int messagesRecieved = 0;
+            int iteration = 0;
+            var messagesReceived = new List<Message>();
+            var messagesReceivedCount = messagesReceived.Count;
             do
             {
-                var outstandingMessageCount = MESSAGE_COUNT - messagesRecieved;
+                iteration++;
+                var outstandingMessageCount = MESSAGE_COUNT - messagesReceivedCount;
 
                 //retrieve  messages
-                var moreMessages = _consumer.Receive(10000);
+                var messages = _consumer.Receive(10000);
                 
-                moreMessages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
+                messages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
                 
                 //should not receive more than buffer in one hit
-                moreMessages.Length.Should().BeLessOrEqualTo(BUFFER_SIZE);
+                messages.Length.Should().BeLessOrEqualTo(BUFFER_SIZE);
 
+                var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
                 foreach (var message in moreMessages)
                 {
-                    //this will be MT_NONE for an empty message
-                    message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-                    _consumer.Acknowledge(message);
+                    messagesReceived.Add(message);
+                   _consumer.Acknowledge(message);
                 }
+                 
+                messagesReceivedCount = messagesReceived.Count;
+                
+                Task.Delay(1000).Wait();
 
-                messagesRecieved += moreMessages.Length;
-            } while (messagesRecieved < MESSAGE_COUNT);
+            } while ((iteration <= 5) && (messagesReceivedCount <  MESSAGE_COUNT));
+    
+
+            messagesReceivedCount.Should().Be(4);
 
         }
         
