@@ -28,7 +28,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v2
         with:
@@ -51,6 +51,7 @@ jobs:
   
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [build]
 
     strategy:
@@ -74,6 +75,7 @@ jobs:
 
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     steps:
@@ -87,6 +89,7 @@ jobs:
       
   prerelease:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [package]
     
     steps:
@@ -101,6 +104,7 @@ jobs:
     
   memory:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     steps:
@@ -120,6 +124,7 @@ jobs:
         
   redis-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     services:
@@ -150,6 +155,7 @@ jobs:
   
   rabbitmq-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
 
     services:
@@ -181,8 +187,8 @@ jobs:
 
   kafka-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
-    
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper:latest
@@ -235,10 +241,9 @@ jobs:
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
- 
- 
   postgres-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -270,6 +275,7 @@ jobs:
         
   eventstore-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     services:
@@ -305,6 +311,7 @@ jobs:
   
   sqlserver-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -332,6 +339,7 @@ jobs:
         
   mysql-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -368,6 +376,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -393,6 +402,7 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
