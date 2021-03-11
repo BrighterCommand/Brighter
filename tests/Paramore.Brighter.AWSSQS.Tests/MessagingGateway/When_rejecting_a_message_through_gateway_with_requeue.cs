@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
@@ -60,6 +61,9 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             var message = _channel.Receive(1000);
             
             _channel.Reject(message);
+
+            //Let the timeout change
+            Task.Delay(TimeSpan.FromMilliseconds(3000));
 
             //should requeue_the_message
             message = _channel.Receive(3000);
