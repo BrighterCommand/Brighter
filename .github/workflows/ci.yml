@@ -31,6 +31,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Setup dotnet 5.0.x
         uses: actions/setup-dotnet@v1
         with:
@@ -272,7 +274,7 @@ jobs:
     
     services:
       evenstore: 
-       image: eventstore/eventstore
+       image: eventstore/eventstore:release-5.0.9
        ports: 
          - 1113:1113
          - 2113:2113
@@ -306,8 +308,8 @@ jobs:
     needs: [test]
   
     services:
-      postgres:
-        image: microsoft/mssql-server-linux
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server
         ports: 
           - 1433:1433
         env:
