@@ -10,7 +10,7 @@ services:
       - rabbitmq-home:/var/lib/rabbitmq
 
   eventstore:
-    image: eventstore/eventstore
+    image: eventstore/eventstore:release-5.0.9
     ports:
       - "1113:1113" # TCP (default 1113)
       - "2113:2113" # HTTP (default 2113)
@@ -26,9 +26,9 @@ services:
         - EVENTSTORE_ENABLE_EXTERNAL_TCP=true
         - EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP=true
     
-  # Need to give 4GB of memory to Docker for SQL
+  # Need to give 2GB of memory to Docker for SQL
   sqlserver:
-    image: microsoft/mssql-server-linux
+    image: mcr.microsoft.com/mssql/server
     ports:
       - "1433:1433"
     volumes:
