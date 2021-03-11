@@ -41,14 +41,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     [Trait("Category", "Kafka")]
     public class KafkaConfluentProducerAssumeTests : IDisposable
     {
-        private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAMessageProducer _producer;
-        private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-        public KafkaConfluentProducerAssumeTests (ITestOutputHelper output)
+        public KafkaConfluentProducerAssumeTests ()
         {
             string SupplyCertificateLocation()
             {
@@ -62,12 +60,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             // You need to set those values as environment variables, which we then read, in order
             // to run these tests
 
-            const string groupId = "Kafka Message Producer Assume Topic Test";
             string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
             string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
-            _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
@@ -122,7 +118,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public void Dispose()
         {
             _producer?.Dispose();
-            _consumer?.Dispose();
         }
     }
 }
