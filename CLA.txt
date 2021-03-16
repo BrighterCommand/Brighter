@@ -1,6 +1,6 @@
 Paramore 
 Explorations of the Ports and Adapters and CQRS architectural styles for .NET, Intended as reusable libraries and supporting examples 
-View the Project on GitHub iancooper/Paramore Paramore Home Brighter Home 
+View the Project on GitHub BrighterCommand/Brighter
 
 Paramore.Brighter Individual Contributor License Agreement 
 Thank you for your interest in contributing to Paramore.Brighter ("We" or "Us"). 
