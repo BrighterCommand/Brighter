@@ -9,6 +9,6 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AMQPNetLite" Version="2.4.1" />
+    <PackageReference Include="AMQPNetLite" Version="2.4.2" />
   </ItemGroup>
 </Project>
