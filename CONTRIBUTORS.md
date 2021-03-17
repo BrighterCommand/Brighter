@@ -124,7 +124,7 @@ Brighter contributors (sorted alphabeticaly)
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
   
-**[Sagar Sahay](https://github.com/sagarSahay)  
+**[Sagar Sahay](https://github.com/sagarSahay)**  
  * New ASB Transport
   
 **[Tim Seaward](https://github.com/Drawaes)**
