@@ -1,0 +1,45 @@
+---
+version: '2'
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    network_mode: host
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 22181
+
+  kafka-1:
+    image: confluentinc/cp-enterprise-kafka:latest
+    ports:
+      - "9092:9092"
+    networks:
+      - kafka
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: localhost:22181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:19092
+
+  kafka-2:
+    image: confluentinc/cp-enterprise-kafka:latest
+    ports:
+      - "9093:9092"    
+    networks:
+      - kafka
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: localhost:22181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:29092
+
+  kafka-3:
+    image: confluentinc/cp-enterprise-kafka:latest
+    ports:
+      - "9094:9092"
+    networks:
+      - kafka
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: localhost:22181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:39092
+
+networks:
+  kafka:
+    driver: bridge

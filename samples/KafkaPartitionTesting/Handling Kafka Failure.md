@@ -1,28 +1,16 @@
-# RMQ Clustering and Failure
+# Kafka Clustering and Failure
 ## Mirrored and local queues
 
-1. A queue is local to a node, unless it is marked high-availability in which case it is mirrored across all nodes
-    * A non-ha queue can be recreated on a new node if the queue is non-durable i.e. the subscription dies with the node, so it is ok to recreate elsewhere
-2. So although an ha queue is one strategy to cope with node failure, you could opt for non-ha, non durable.
-    * Constraints: You may get message loss whilst there is no subscribing queue i.e. node is down, new queue not created; in addition, you have to start consumers before producers
-3. With an ha queue if you connect to a mirror, the channel actually publishes and consumers from the master 
-    * For this to work, the routing data, the Exchange, is replicated to all nodes in the cluster
-4. Publisher Confirms: let your app know when a message has been passed from the master to mirrors
-    * If an ha queue’s master fails before the message has been routed to the mirror that will be become the new master, the publisher confirmation will never arrive and you’ll know that the message may have been lost.
-5. If an ha queue loses a mirror, any consumers attached to the mirror don’t notice the loss. That’s because technically they’re attached to the master.
-6. But if the node hosting the master fails, all of the queue’s consumers need to reattach to start listening to the new master. 
-    * For consumers that were connected through the node that actually failed, this isn’t hard. Since they’ve lost their TCP connection to the node, they’ll automatically pick up the new queue master when they reattach to a new node in the cluster.
-    * For consumers that were attached to a mirror through a node that didn’t fail, RabbitMQ will send those consumers a consumer cancellation notification telling them they’re no longer attached to the queue master
-    * The default basic consumer in the RMQ .NET Client will set the consumer to isrunning false at this point (and the derived queuing basic consumer will close the shared queue).
-7. Rabbit can’t tell the difference between acknowledgements that were lost during the failover and messages that weren’t acknowledged at all. So to be safe, consumed but unacknowledged messages are requeued to their original positions in the queue
-8. Transaction: ensures the published message has been routed to a queue, before continuing
-9. Publisher Confirm: notify when the published message is delivered to all nodes
-10. RAM node: reduce time to replicate exchange data to all nodes by putting some nodes in memory; must have one, should have two disk nodes at least.
-    * Mainly useful in RPC scenarios where private queues being regularly created and destroyed
+1: A Kafka topic is divided into partitions. Each partition preserves ordering within the partition.
+2: A partition is written to at least one node, but can have replicas on other nodes.
+3: A partition has a leader node, and followers. All events are written to and consumed from the leader, other replicas are there for availability.
+4: An in-sync replica (ISR) is either the leader or a follower that has fetched the most recent messages in the last 10s and sent a heartbeat within 6 seconds.
+5: Kafka does not wait to confirm writes out of sync replicas.
+6: A new leader is always from an ISR
+7: Electing a leader requires connection to Zookeeper (unless unclean leader election is configured)
+8: Kafka was designed as CA, to run in a data-centre. Zookeeper is designed as CP, it drops nodes that are partitioned. The combination of Zookeeper and Kafka is CP - the ISR pool only includes consistent nodes, we can't reach those that become inconsistent.
 
 
-## Clustering across Multiple AZs
-https://techblog.bozho.net/rabbitmq-in-multiple-aws-availability-zones/
 
 ## Simulating partitions for testing the cluster
 We are going to use Blockade, running against our docker containers, to simulate failures
