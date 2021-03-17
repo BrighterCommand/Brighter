@@ -10,5 +10,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <PackageReference Include="AMQPNetLite" Version="2.4.2" />
   </ItemGroup>
 </Project>
