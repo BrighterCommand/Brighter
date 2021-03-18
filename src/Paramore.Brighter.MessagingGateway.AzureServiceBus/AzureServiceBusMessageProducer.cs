@@ -15,11 +15,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
         private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
         private const int TopicConnectionRetryCount = 5;
+        private readonly OnMissingChannel _makeChannel;
 
-        public AzureServiceBusMessageProducer(IManagementClientWrapper managementClientWrapper, ITopicClientProvider topicClientProvider)
+        public AzureServiceBusMessageProducer(IManagementClientWrapper managementClientWrapper, ITopicClientProvider topicClientProvider, OnMissingChannel makeChannel = OnMissingChannel.Create)
         {
             _managementClientWrapper = managementClientWrapper;
             _topicClientProvider = topicClientProvider;
+            _makeChannel = makeChannel;
         }
 
         public void Send(Message message)
@@ -88,7 +90,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private void EnsureTopicExists(string topic)
         {
-            if (_topicCreated)
+            if (_topicCreated || _makeChannel.Equals(OnMissingChannel.Assume))
                 return;
 
             try
@@ -97,6 +99,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 {
                     _topicCreated = true;
                     return;
+                }
+
+                if (_makeChannel.Equals(OnMissingChannel.Validate))
+                {
+                    throw new ChannelFailureException($"Topic {topic} does not exist and missing channel mode set to Validate.");
                 }
 
                 _managementClientWrapper.CreateTopic(topic);

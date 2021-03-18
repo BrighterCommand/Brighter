@@ -20,7 +20,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _topicClientProvider = new Mock<ITopicClientProvider>();
             _topicClient = new Mock<ITopicClient>();
 
-            _producer = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper.Object, _topicClientProvider.Object);
+            _producer = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper.Object, _topicClientProvider.Object, OnMissingChannel.Create);
         }
 
         [Fact]
@@ -192,6 +192,16 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")));
 
             _topicClient.Verify(topicClient => topicClient.Send(It.IsAny<Microsoft.Azure.ServiceBus.Message>()), Times.Once);
+        }
+
+        [Fact]
+        public void When_the_topic_does_not_exist_and_Missing_is_set_to_Validate_an_exception_is_raised()
+        {
+            var messageBody = Encoding.UTF8.GetBytes("A message body");
+
+            var producerValidate = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper.Object, _topicClientProvider.Object, OnMissingChannel.Validate);
+
+            Assert.Throws<ChannelFailureException>(() => producerValidate.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON"))));
         }
     }
 }
