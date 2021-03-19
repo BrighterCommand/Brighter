@@ -28,9 +28,11 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
       - name: Setup dotnet 5.0.x
         uses: actions/setup-dotnet@v1
         with:
@@ -49,6 +51,7 @@ jobs:
   
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [build]
 
     strategy:
@@ -72,6 +75,7 @@ jobs:
 
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     steps:
@@ -85,6 +89,7 @@ jobs:
       
   prerelease:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [package]
     
     steps:
@@ -99,6 +104,7 @@ jobs:
     
   memory:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     steps:
@@ -118,6 +124,7 @@ jobs:
         
   redis-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     services:
@@ -148,6 +155,7 @@ jobs:
   
   rabbitmq-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
 
     services:
@@ -179,8 +187,8 @@ jobs:
 
   kafka-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
-    
     services:
       zookeeper:
         image: confluentinc/cp-zookeeper:latest
@@ -233,10 +241,9 @@ jobs:
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
 
- 
- 
   postgres-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -268,11 +275,12 @@ jobs:
         
   eventstore-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     
     services:
       evenstore: 
-       image: eventstore/eventstore
+       image: eventstore/eventstore:release-5.0.9
        ports: 
          - 1113:1113
          - 2113:2113
@@ -303,11 +311,12 @@ jobs:
   
   sqlserver-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
-      postgres:
-        image: microsoft/mssql-server-linux
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server
         ports: 
           - 1433:1433
         env:
@@ -330,6 +339,7 @@ jobs:
         
   mysql-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -366,6 +376,7 @@ jobs:
 
   dynamo-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
   
     services:
@@ -391,6 +402,7 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     needs: [test]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -421,3 +433,22 @@ jobs:
           aws sns list-topics
       - name: SQS Tests
         run: dotnet test ./tests/Paramore.Brighter.AWSSQS.Tests/Paramore.Brighter.AWSSQS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  azure-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Azure Tests
+        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
