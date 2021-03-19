@@ -121,6 +121,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         {
             Logger.Value.Info($"Creating subscription {subscriptionName} for topic {topicName}...");
 
+            if (!TopicExists(topicName))
+            {
+                CreateTopic(topicName);
+            }
+
             var subscriptionDescription = new SubscriptionDescription(topicName, subscriptionName)
             {
                 MaxDeliveryCount = maxDeliveryCount
