@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus;
@@ -30,7 +31,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ReceiveMode.ReceiveAndDelete)).Returns(_messageReceiver.Object);
 
             _azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
-                _nameSpaceManagerWrapper.Object, _mockMessageReceiver.Object);
+                _nameSpaceManagerWrapper.Object, _mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create);
         }
 
         [Fact]
@@ -369,6 +370,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             Assert.Equal(MessageType.MT_QUIT, result[0].Header.MessageType);
 
+        }
+
+        [Fact]
+        public void When_a_subscription_does_not_exist_and_Missing_is_set_to_Validate_a_Channel_Failure_is_Raised()
+        {
+            _nameSpaceManagerWrapper.Setup(f => f.SubscriptionExists("topic", "subscription")).Returns(false);
+
+            var azureServiceBusConsumerValidate = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
+                _nameSpaceManagerWrapper.Object, _mockMessageReceiver.Object, makeChannels: OnMissingChannel.Validate);
+
+            Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(400));
         }
     }
 }

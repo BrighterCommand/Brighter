@@ -18,9 +18,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly string _subscriptionName;
         private bool _subscriptionCreated;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusConsumer>);
+        private readonly OnMissingChannel _makeChannel;
         
         public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducer messageProducer, IManagementClientWrapper managementClientWrapper, 
-            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10)
+            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
@@ -28,6 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _managementClientWrapper = managementClientWrapper;
             _messageReceiverProvider = messageReceiverProvider;
             _batchSize = batchSize;
+            _makeChannel = makeChannels;
             
             GetMessageReceiverProvider();
         }
@@ -114,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             const int maxDeliveryCount = 2000;
 
-            if (_subscriptionCreated)
+            if (_subscriptionCreated || _makeChannel.Equals(OnMissingChannel.Assume))
                 return;
 
             try
@@ -123,6 +125,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 {
                     _subscriptionCreated = true;
                     return;
+                }
+
+                if (_makeChannel.Equals(OnMissingChannel.Validate))
+                {
+                    throw new ChannelFailureException($"Subscription {_subscriptionName} does not exist on topic {_topicName} and missing channel mode set to Validate.");
                 }
 
                 _managementClientWrapper.CreateSubscription(_topicName, _subscriptionName, maxDeliveryCount);
