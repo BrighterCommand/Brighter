@@ -2,11 +2,17 @@
 {
     public class AzureServiceBusConfiguration
     {
-        public AzureServiceBusConfiguration(string connectionString)
+        public AzureServiceBusConfiguration(string connectionString, bool ackOnRead = false )
         {
             ConnectionString = connectionString;
+            AckOnRead = ackOnRead;
         }
 
         public string ConnectionString { get; }
+
+        /// <summary>
+        /// When set to true this will Chanage RecieveMode from ReceiveAndDelete to PeekAndLock
+        /// </summary>
+        public bool AckOnRead{ get; }
     }
 }

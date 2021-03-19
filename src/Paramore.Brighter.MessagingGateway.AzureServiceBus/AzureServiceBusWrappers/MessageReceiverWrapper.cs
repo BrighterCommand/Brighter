@@ -35,6 +35,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             Logger.Value.Warn("MessageReceiver connection stopped");
         }
 
+        public async Task Complete(string lockToken)
+        {
+            await _messageReceiver.CompleteAsync(lockToken).ConfigureAwait(false);
+        }
+
         public bool IsClosedOrClosing => _messageReceiver.IsClosedOrClosing;
     }
 }
