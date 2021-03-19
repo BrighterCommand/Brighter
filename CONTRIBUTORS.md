@@ -121,6 +121,9 @@ Brighter contributors (sorted alphabeticaly)
 **[Tarun Pothulapati](https://github.com/Pothulapati)**
   * PostgreSQL Outbox
 
+**[Paul Reardon](https://github.com/preardon)**
+  * Improvements to ASB Transport 
+
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
   
