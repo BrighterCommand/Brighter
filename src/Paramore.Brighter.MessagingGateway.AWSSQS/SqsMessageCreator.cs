@@ -48,44 +48,31 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 timeStamp = ReadTimestamp(sqsMessage);
                 replyTo = ReadReplyTo(sqsMessage);
                 receiptHandle = ReadReceiptHandle(sqsMessage);
-                
-                if (false == (topic.Success && messageId.Success && contentType.Success && correlationId.Success 
-                              && handledCount.Success && messageType.Success && timeStamp.Success 
-                              && receiptHandle.Success))
-                {
-                    return FailureMessage(topic, messageId);
-                }
-                else
-                {
-                    var messageHeader = timeStamp.Success
-                        ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
-                        : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    if (correlationId.Success)
-                        messageHeader.CorrelationId = correlationId.Result;
+                var messageHeader = timeStamp.Success
+                    ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
+                    : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    if (replyTo.Success)
-                        messageHeader.ReplyTo = replyTo.Result;
+                if (correlationId.Success)
+                    messageHeader.CorrelationId = correlationId.Result;
 
-                    if (contentType.Success)
-                        messageHeader.ContentType = contentType.Result;
+                if (replyTo.Success)
+                    messageHeader.ReplyTo = replyTo.Result;
+
+                if (contentType.Success)
+                    messageHeader.ContentType = contentType.Result;
                    
-                    message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
+                message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
                     
-                    //deserialize the bag 
-                    var bag = ReadMessageBag(sqsMessage);
-                    foreach (var key in bag.Keys)
-                    {
-                        message.Header.Bag.Add(key, bag[key]);
-                    }
-
-                    
-                    if(receiptHandle.Success)
-                        message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
+                //deserialize the bag 
+                var bag = ReadMessageBag(sqsMessage);
+                foreach (var key in bag.Keys)
+                {
+                    message.Header.Bag.Add(key, bag[key]);
                 }
 
-
-
+                if(receiptHandle.Success)
+                    message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
             }
             catch (Exception e)
             {
@@ -144,7 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     return new HeaderResult<MessageType>(messageType, true);
                 }
             }
-            return new HeaderResult<MessageType>(MessageType.MT_UNACCEPTABLE, false);
+            return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
         private HeaderResult<int> ReadHandledCount(Amazon.SQS.Model.Message sqsMessage)
@@ -189,7 +176,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     return new HeaderResult<Guid>(messageId, true);
                 }
             }
-            return new HeaderResult<Guid>(Guid.Empty, false);
+            return new HeaderResult<Guid>(Guid.Empty, true);
         }
 
         private HeaderResult<string> ReadTopic(Amazon.SQS.Model.Message sqsMessage)
@@ -201,7 +188,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var topic = arnElements[(int)ARNAmazonSNS.TopicName];
                 return new HeaderResult<string>(topic, true);
             }
-            return new HeaderResult<string>(String.Empty, false);
+            return new HeaderResult<string>(String.Empty, true);
         }
 
 
