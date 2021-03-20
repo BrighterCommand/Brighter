@@ -24,7 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private const string _lockTokenKey = "LockToken";
         
         public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducer messageProducer, IManagementClientWrapper managementClientWrapper, 
-            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, OnMissingChannel makeChannels = OnMissingChannel.Create, ReceiveMode receiveMode = ReceiveMode.ReceiveAndDelete)
+            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, ReceiveMode receiveMode = ReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
