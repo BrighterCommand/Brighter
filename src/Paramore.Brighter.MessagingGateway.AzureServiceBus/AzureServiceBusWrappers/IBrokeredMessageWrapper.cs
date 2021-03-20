@@ -6,6 +6,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     {
         byte[] MessageBodyValue { get; }
         
-        IDictionary<string, object> UserProperties { get; }   
+        IDictionary<string, object> UserProperties { get; }
+
+        string LockToken { get; }
     }
 }

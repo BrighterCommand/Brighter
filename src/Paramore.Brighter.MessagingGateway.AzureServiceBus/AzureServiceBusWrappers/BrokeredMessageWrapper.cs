@@ -14,5 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public byte[] MessageBodyValue => _brokeredMessage.Body;
         
         public IDictionary<string, object> UserProperties => _brokeredMessage.UserProperties;
+
+        public string LockToken => _brokeredMessage.SystemProperties.LockToken;
     }
 }

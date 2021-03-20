@@ -1,4 +1,5 @@
-﻿using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+﻿using Microsoft.Azure.ServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
@@ -18,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
                 new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
                     new TopicClientProvider(_configuration)), nameSpaceManagerWrapper,
-                new MessageReceiverProvider(_configuration));
+                new MessageReceiverProvider(_configuration), receiveMode: _configuration.AckOnRead ? ReceiveMode.PeekLock : ReceiveMode.ReceiveAndDelete);
         }
     }
 }

@@ -19,9 +19,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private bool _subscriptionCreated;
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusConsumer>);
         private readonly OnMissingChannel _makeChannel;
+        private readonly ReceiveMode _receiveMode;
+
+        private const string _lockTokenKey = "LockToken";
         
         public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducer messageProducer, IManagementClientWrapper managementClientWrapper, 
-            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, OnMissingChannel makeChannels = OnMissingChannel.Create)
+            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, ReceiveMode receiveMode = ReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
@@ -30,16 +33,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _messageReceiverProvider = messageReceiverProvider;
             _batchSize = batchSize;
             _makeChannel = makeChannels;
+            _receiveMode = receiveMode;
             
             GetMessageReceiverProvider();
         }
 
         private void GetMessageReceiverProvider()
         {
-            _logger.Value.Info($"Getting message receiver provider for topic {_topicName} and subscription {_subscriptionName}...");
+            _logger.Value.Info($"Getting message receiver provider for topic {_topicName} and subscription {_subscriptionName} with recieve Mode {_receiveMode}...");
             try
             {
-                _messageReceiver = _messageReceiverProvider.Get(_topicName, _subscriptionName, ReceiveMode.ReceiveAndDelete);
+                _messageReceiver = _messageReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode);
             }
             catch (Exception e)
             {
@@ -97,7 +101,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
             _logger.Value.Debug($"Received message from topic {_topicName} via subscription {_subscriptionName} with body {messageBody}.");
             MessageType messageType = GetMessageType(azureServiceBusMessage);
-            var message = new Message(new MessageHeader(Guid.NewGuid(), _topicName, messageType), new MessageBody(messageBody));
+            var headers = new MessageHeader(Guid.NewGuid(), _topicName, messageType);
+            if(_receiveMode.Equals(ReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
+            var message = new Message(headers, new MessageBody(messageBody));
             return message;
         }
 
@@ -169,7 +175,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void Acknowledge(Message message)
         {
-            //Not implemented as we use ReceiveMode.ReceiveAndDelete (Brighter will call this method anyway)
+            //Only ACK if ReceiveMode is Peek
+            if (_receiveMode.Equals(ReceiveMode.PeekLock))
+            {
+                try
+                {
+                    EnsureSubscription();
+                    var lockToken = message.Header.Bag[_lockTokenKey].ToString();
+
+                    if (string.IsNullOrEmpty(lockToken))
+                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                    _logger.Value.Debug($"Acknowledging Message with Id {message.Id} Lock Token : {lockToken}");
+
+                    _messageReceiver.Complete(lockToken).Wait();
+                }
+                catch(Exception ex)
+                {
+                    _logger.Value.ErrorException($"Error completing message with id {message.Id}", ex);
+                    throw;
+                }
+            }
         }
 
         public void Reject(Message message)
