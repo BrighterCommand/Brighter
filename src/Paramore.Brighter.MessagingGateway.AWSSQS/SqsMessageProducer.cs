@@ -47,6 +47,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             _connection = connection;
             _topicArn = EnsureTopic(new RoutingKey(publication.RoutingKey), publication.SnsAttributes, publication.MakeChannels);
+            MaxOutStandingMessages = publication.MaxOutStandingMessages;
+            MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingMessages;
         }
 
        /// <summary>

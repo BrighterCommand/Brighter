@@ -20,6 +20,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration);
             _publication = publication ?? new Publication() {MakeChannels = OnMissingChannel.Create};
+            MaxOutStandingMessages = _publication.MaxOutStandingMessages;
+            MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
         }
 
         public void Send(Message message)

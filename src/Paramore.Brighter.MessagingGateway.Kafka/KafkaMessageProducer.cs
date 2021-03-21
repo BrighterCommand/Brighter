@@ -84,6 +84,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             NumPartitions = publication.NumPartitions;
             ReplicationFactor = publication.ReplicationFactor;
             TopicFindTimeoutMs = publication.TopicFindTimeoutMs;
+            MaxOutStandingMessages = publication.MaxOutStandingMessages;
+            MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingCheckIntervalMilliSeconds;
         }
         
         /// <summary>
