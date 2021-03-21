@@ -12,13 +12,18 @@ namespace GreetingsSender.Adapters
     {
         private readonly IAmACommandProcessor _processor;
         private readonly ILogger<TimedMessageGenerator> _logger;
+        private readonly IHostApplicationLifetime _appLifetime;
         private Timer _timer;
         private long _iteration = 0;
 
-        public TimedMessageGenerator(IAmACommandProcessor processor, ILogger<TimedMessageGenerator> logger)
+        public TimedMessageGenerator(
+            IAmACommandProcessor processor, 
+            ILogger<TimedMessageGenerator> logger,
+            IHostApplicationLifetime appLifetime)
         {
             _processor = processor;
             _logger = logger;
+            _appLifetime = appLifetime;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -44,9 +49,17 @@ namespace GreetingsSender.Adapters
             _iteration++;
 
             var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid(), Greeting = $"Hello # {_iteration}"};
-            
-            _processor.Post(greetingEvent);
-           
+
+            try
+            {
+                _processor.Post(greetingEvent);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError($"Kafka Message Generator is stopping due to {e.Message}");
+                _appLifetime.StopApplication();
+            }
+
             _logger.LogInformation($"Sending message with id {greetingEvent.Id} and greeting {greetingEvent.Greeting}");
         }
 

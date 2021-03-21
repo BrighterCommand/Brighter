@@ -63,13 +63,12 @@ namespace Paramore.Brighter
         {
             var now = DateTime.Now;
 
+            if (now - _lastScanAt < ExpirationScanInterval)
+                return;
+
             if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
-
-                if (now - _lastScanAt < ExpirationScanInterval)
-                    return;
-
-                //This is expensive, so use a background thread
+               //This is expensive, so use a background thread
                 Task.Factory.StartNew(
                     action: state => RemoveExpiredMessages((DateTime)state),
                     state: now,
