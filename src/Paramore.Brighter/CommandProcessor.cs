@@ -63,8 +63,8 @@ namespace Paramore.Brighter
         
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
-        private IAmAChannelFactory _responseChannelFactory;
         private IAmAMessageProducerAsync _asyncMessageProducer;
+        private IAmAChannelFactory _responseChannelFactory;
         private bool _disposed;
 
         /// <summary>
@@ -631,6 +631,8 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No outbox defined.");
             if (_messageProducer == null)
                 throw new InvalidOperationException("No message producer defined.");
+            
+            CheckOutboxOutstandingLimit();
 
 
             foreach (var messageId in posts)
@@ -668,6 +670,8 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("No async outbox defined.");
             if (_asyncMessageProducer == null)
                 throw new InvalidOperationException("No async message producer defined.");
+            
+            CheckOutboxOutstandingLimit();
 
             foreach (var messageId in posts)
             {
@@ -821,6 +825,26 @@ namespace Paramore.Brighter
             if (handlerCount == 0)
                 throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
+        
+        private void CheckOutboxOutstandingLimit()
+        {
+            bool hasOutBox = (_outBox != null || _asyncOutbox != null);
+            if (!hasOutBox)
+                return;
+            
+            int maxOutStandingMessages = -1;
+            if (_messageProducer != null)
+                maxOutStandingMessages = _messageProducer.MaxOutStandingMessages;
+
+            if (_asyncMessageProducer != null)
+                maxOutStandingMessages = _asyncMessageProducer.MaxOutStandingMessages;
+                
+            // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
+            bool exceedsOutstandingMessageLimit = maxOutStandingMessages != -1 && _outStandingCount > maxOutStandingMessages;
+            
+            if (exceedsOutstandingMessageLimit)
+                throw new OutboxLimitReachedException($"The outbox limit of {maxOutStandingMessages} has been exceeded");
+        }
 
         private void ConfigureAsyncPublisherCalllbackMaybe()
         {
@@ -836,6 +860,10 @@ namespace Paramore.Brighter
                         _logger.Value.InfoFormat("Sent message: Id:{0}", id.ToString());
                         if (_asyncOutbox != null)
                             await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
+                    }
+                    else
+                    {
+                        CheckOutstandingMessages();
                     }
                 };
             }
@@ -856,6 +884,10 @@ namespace Paramore.Brighter
                         if (_outBox != null)
                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
                     }
+                    else
+                    {
+                        CheckOutstandingMessages();
+                    }
                 };
             }
         }
@@ -866,13 +898,6 @@ namespace Paramore.Brighter
             var result = policy.ExecuteAndCapture(send);
             if (result.Outcome != OutcomeType.Successful)
             {
-                // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
-                if (_outStandingCount == -1 || _outStandingCount > _messageProducer.MaxOutStandingMessages)
-                    if (_outStandingCount == -1)
-                        throw new OutboxLimitReachedException("No outbox, so no holding of messages, and could not publish message despite retries");
-                    else
-                        throw new OutboxLimitReachedException($"The outbox limit of {_messageProducer.MaxOutStandingMessages} has been exceeded");
-
                 if (result.FinalException != null)
                 {
                     _logger.Value.ErrorException("Exception whilst trying to publish message", result.FinalException);
@@ -893,13 +918,6 @@ namespace Paramore.Brighter
             
             if (result.Outcome != OutcomeType.Successful)
             {
-                // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
-                if ((_outStandingCount == -1) || (_outStandingCount > _messageProducer.MaxOutStandingMessages))
-                    if (_outStandingCount == -1)
-                        throw new OutboxLimitReachedException($"No outbox, so no holding of messages, and could not publish message despite retries");
-                    else
-                        throw new OutboxLimitReachedException($"The outbox limit of {_messageProducer.MaxOutStandingMessages} has been exceeded");
-
                 if (result.FinalException != null)
                 {
                     _logger.Value.ErrorException("Exception whilst trying to publish message", result.FinalException);

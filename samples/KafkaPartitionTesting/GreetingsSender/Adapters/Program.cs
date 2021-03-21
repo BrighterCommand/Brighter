@@ -114,6 +114,8 @@ namespace GreetingsSender.Adapters
                                 MessageSendMaxRetries = 3,
                                 MessageTimeoutMs = 1000,
                                 MaxInFlightRequestsPerConnection = 1,
+                                MaxOutStandingMessages = 10,
+                                MaxOutStandingCheckIntervalMilliSeconds = 10000,
                                 MakeChannels = OnMissingChannel.Assume
                             })
                         .Create();

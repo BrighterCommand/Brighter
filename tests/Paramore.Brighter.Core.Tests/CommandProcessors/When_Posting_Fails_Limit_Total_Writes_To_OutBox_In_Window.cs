@@ -27,7 +27,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 
@@ -36,7 +35,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     public class PostFailureLimitCommandTests
     {
         private readonly CommandProcessor _commandProcessor;
-        private readonly Message _message;
         private IAmAMessageProducer _fakeMessageProducer;
         private InMemoryOutbox _outbox;
 
@@ -79,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 } while (sentList.Count < 10);
             }
-            catch (OutboxLimitReachedException oe)
+            catch (OutboxLimitReachedException)
             {
                 shouldThrowException = true;
             }

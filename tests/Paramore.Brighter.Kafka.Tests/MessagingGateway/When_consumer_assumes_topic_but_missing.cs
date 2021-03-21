@@ -49,7 +49,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public KafkaProducerAssumeTests(ITestOutputHelper output)
         {
-            const string groupId = "Kafka Message Producer Assume Topic Test";
             _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
