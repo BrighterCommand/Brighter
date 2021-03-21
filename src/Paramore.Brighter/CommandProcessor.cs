@@ -54,7 +54,13 @@ namespace Paramore.Brighter
         private readonly IAmAnOutboxAsync<Message> _asyncOutbox;
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
-
+        private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
+        
+        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
+        private readonly object _checkOutStandingMessagesObject = new object();
+        //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
+        private static int _outStandingCount = 0;
+        
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
         private IAmAChannelFactory _responseChannelFactory;
@@ -568,10 +574,13 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            RetryAndBreakCircuit(() =>
+            var written = Retry(() =>
             {
                 _outBox.Add(message, _outboxTimeout);
             });
+
+            if (!written)
+                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
 
             return message.Id;
         }
@@ -599,10 +608,13 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            await RetryAndBreakCircuitAsync(async ct =>
+            var written = await RetryAsync(async ct =>
             {
                 await _asyncOutbox.AddAsync(message, _outboxTimeout, ct).ConfigureAwait(continueOnCapturedContext);
             }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+            
+            if (!written)
+                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
 
             return message.Id;
         }
@@ -632,12 +644,13 @@ namespace Paramore.Brighter
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {   
                     //mark dispatch handled by a callback - set in constructor
-                    RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
+                    Retry(() => { _messageProducer.Send(message); });
                 }
                 else
                 {
-                    RetryAndBreakCircuit(() => { _messageProducer.Send(message); });
-                    Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
+                    var sent = Retry(() => { _messageProducer.Send(message); });
+                    if (sent)
+                        Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
                 }
             }
 
@@ -667,7 +680,7 @@ namespace Paramore.Brighter
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {
                     //mark dispatch handled by a callback - set in constructor
-                    await RetryAndBreakCircuitAsync(
+                    await RetryAsync(
                             async ct =>
                                 await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
                             continueOnCapturedContext,
@@ -677,14 +690,15 @@ namespace Paramore.Brighter
                 else
                 {
 
-                    await RetryAndBreakCircuitAsync(
+                    var sent = await RetryAsync(
                             async ct =>
                                 await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
                             continueOnCapturedContext,
                             cancellationToken)
                         .ConfigureAwait(continueOnCapturedContext);
-
-                    await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
+                    
+                    if (sent)
+                        await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
                 }
             }
 
@@ -808,18 +822,6 @@ namespace Paramore.Brighter
                 throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
 
-        private void CheckCircuit(Action send)
-        {
-            _policyRegistry.Get<Policy>(CIRCUITBREAKER).Execute(send);
-        }
-
-        private async Task CheckCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            await _policyRegistry.Get<AsyncPolicy>(CIRCUITBREAKERASYNC)
-                .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
-                .ConfigureAwait(continueOnCapturedContext);
-        }
-        
         private void ConfigureAsyncPublisherCalllbackMaybe()
         {
             if (_asyncMessageProducer == null)
@@ -858,28 +860,110 @@ namespace Paramore.Brighter
             }
         }
 
-        private void Retry(Action send)
+        private bool Retry(Action send)
         {
-            _policyRegistry.Get<Policy>(RETRYPOLICY).Execute(send);
+            var policy = _policyRegistry.Get<Policy>(RETRYPOLICY);
+            var result = policy.ExecuteAndCapture(send);
+            if (result.Outcome != OutcomeType.Successful)
+            {
+                // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
+                if (_outStandingCount == -1 || _outStandingCount > _messageProducer.MaxOutStandingMessages)
+                    if (_outStandingCount == -1)
+                        throw new OutboxLimitReachedException("No outbox, so no holding of messages, and could not publish message despite retries");
+                    else
+                        throw new OutboxLimitReachedException($"The outbox limit of {_messageProducer.MaxOutStandingMessages} has been exceeded");
+
+                if (result.FinalException != null)
+                {
+                    _logger.Value.ErrorException("Exception whilst trying to publish message", result.FinalException);
+                    CheckOutstandingMessages();
+                }
+
+                return false;
+            }
+
+            return true;
         }
 
-        private async Task RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<bool> RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            await _policyRegistry.Get<AsyncPolicy>(RETRYPOLICYASYNC)
-                .ExecuteAsync(send, cancellationToken, continueOnCapturedContext)
+            var result = await _policyRegistry.Get<AsyncPolicy>(RETRYPOLICYASYNC)
+                .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
                 .ConfigureAwait(continueOnCapturedContext);
+            
+            if (result.Outcome != OutcomeType.Successful)
+            {
+                // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
+                if ((_outStandingCount == -1) || (_outStandingCount > _messageProducer.MaxOutStandingMessages))
+                    if (_outStandingCount == -1)
+                        throw new OutboxLimitReachedException($"No outbox, so no holding of messages, and could not publish message despite retries");
+                    else
+                        throw new OutboxLimitReachedException($"The outbox limit of {_messageProducer.MaxOutStandingMessages} has been exceeded");
+
+                if (result.FinalException != null)
+                {
+                    _logger.Value.ErrorException("Exception whilst trying to publish message", result.FinalException);
+                    CheckOutstandingMessages();
+                }
+
+                return false;
+            }
+
+            return true;
         }
 
-         private void RetryAndBreakCircuit(Action send)
+        private void CheckOutstandingMessages()
         {
-            CheckCircuit(() => Retry(send));
+            if (_messageProducer == null)
+                return;
+
+            var now = DateTime.Now;
+            var checkInterval = TimeSpan.FromMilliseconds(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds);
+            
+            if (Monitor.TryEnter(_checkOutStandingMessagesObject))
+            {
+                if (now - _lastOutStandingMessageCheckAt < checkInterval)
+                    return;
+
+                //This is expensive, so use a background thread
+                Task.Run( () => OutstandingMessagesCheck(now));
+            }
         }
 
-        private async Task RetryAndBreakCircuitAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        private void OutstandingMessagesCheck(DateTime now)
         {
-            await CheckCircuitAsync(ct => RetryAsync(send, continueOnCapturedContext, ct), continueOnCapturedContext, cancellationToken)
-                .ConfigureAwait(continueOnCapturedContext);
-        }
+            try
+            {
+                if ((_outBox != null) && (_outBox is IAmAnOutboxViewer<Message> outboxViewer))
+                {
+                    _outStandingCount = outboxViewer
+                        .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
+                        .Count();
+                }
 
-  }
+                //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
+                if ((_asyncOutbox != null) && (_asyncOutbox is IAmAnOutboxViewer<Message> asyncOutboxViewer))
+                {
+                    _outStandingCount = asyncOutboxViewer
+                        .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
+                        .Count();
+                }
+
+                if ((_outBox == null) && (_asyncOutbox == null))
+                    _outStandingCount = -1;
+
+            }
+            catch (Exception)
+            {
+                //if we can't talk to the outbox, we would swallow the exception on this thread
+                //by setting the _outstandingCount to -1, we force an exception
+                _outStandingCount = -1; 
+            }
+            finally
+            {
+                 _lastOutStandingMessageCheckAt = now;
+                 Monitor.Exit(_checkOutStandingMessagesObject);
+            }
+        }
+    }
 }

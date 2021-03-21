@@ -97,8 +97,10 @@ namespace Tests
     }
 
     internal class FakeProducer : IAmAMessageProducer, IAmAMessageProducerAsync
-
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+ 
         public void Dispose()
         {
             throw new NotImplementedException();

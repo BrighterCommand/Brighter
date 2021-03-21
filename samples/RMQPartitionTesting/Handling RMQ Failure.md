@@ -40,13 +40,6 @@ blockade -h
 ### Usage
 Although blockade offers its own docker compose-like syntax for configuring services in a network, its easier to just create the network with docker-compose directly, and then use blockade add to add the containers from that network into the blockade. You are likely to use the command line, or a script anyway, to run blockade partition and blockade join to move nodes in and out of a partition.
 
-### Notes
-It may sound obvious, but you need to plan your testing. What are the scenarios? Most importantly: identify what do you expect to happen and what actually happens. Plan how you get the system into the starting condition (for example you might need to keep restarting clients until they connect to the correct node). Ad-hoc is tempting. 'What happens if I partition the system?' But the reality is this often proves confusing. Was what happened expected? If not, what is the expected behaviour?
-
-I spent a lot of time running a test, checking to see via the RMQ Management console what node I was connected to, and figuring out which scenario that would help with
-
-So plan. 
-
 ### Point of Failure
 The point of failure needs to be taken into account when determinig how our code should respond. Generally, we have four steps when we set up messaging with an RMQ broker
 
@@ -61,13 +54,9 @@ Generally, as we connect to a node, the connection must be torn down, and channe
 
 If we multiplex channels across a shared connection, then all channels in use will be impacted by the failure of that connection, so when we tear down the connection because an operation fails on a channel, other channels will also cease to exist. So we cannot assume the presence of a channel before using a connection.
 
-### Analysis
+### Non HA Queues
 
-[Draw Diagram]
-
-#### Non HA Queues
-
-##### Setup
+#### Setup
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, on A and it's is not mirrored, so not on B and C.
 Assume that I am not using a durable queue, so the queue is created on a node by a consumer, if it does not already exist.
@@ -84,9 +73,9 @@ Assume that I am not using a durable queue, so the queue is created on a node by
     * This is not 'safe' as there may be lost messages where the publisher sent them and RMQ discarded them.
     * So to support this approach you have to be able to replay message sent during that window (Brighter has a message box for this).
 
-#### HA Queues
+### HA Queues
 
-##### Setup
+#### Setup
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, with the master on A and slaves on B and C.
 We have chosen a strategy of Pause Minority on a partition
@@ -98,29 +87,29 @@ We have chosen a strategy of Pause Minority on a partition
     * I need to stop talking to A and talk to B or C.
     * I should resume talking on B or C
 
-    ###### Results
+    ##### Results
 
 2. Assume I connect to Node A. I consume from the master which is on A. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to B. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We are not impacted by the partition and should continue
 
-    ###### Results
+    ##### Results
   
 3. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then B gets a partition and I cannot see A or C. I need to re-connect to A via A or C. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We will timeout on our connection
     * I need to stop talking to B and talk to A or C.
 
-    ###### Results
+    ##### Results
 
 
 4. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then C gets a partition and cannot be seen. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We are not impacted by the partition and should continue
-    ###### Results
+    ##### Results
 
 
-###### Setup
+##### Setup
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, with the master on A and slaves on B and C.
 We have chosen a strategy of Ignore on a partition

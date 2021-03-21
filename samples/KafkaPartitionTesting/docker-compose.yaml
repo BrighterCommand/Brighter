@@ -25,6 +25,8 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+    volumes:
+      - ./broker1/data:/var/lib/kafka/data
     depends_on:
       - zoo1
 
@@ -42,6 +44,8 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1    
+    volumes:
+      - ./broker2/data:/var/lib/kafka/data
     depends_on:
       - zoo1
 
@@ -59,5 +63,7 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1      
+    volumes:
+      - ./broker2/data:/var/lib/kafka/data
     depends_on:
       - zoo1

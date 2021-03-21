@@ -13,6 +13,9 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  ------ Will insert an Inbox in all pipelines
  ------ Can be overriden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
  --- The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
+ -- The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages
+ ---- that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is seperate and mainly
+ ---- intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
  - Added caching of attributes on target handlers in the pipeline build step
  --- This means we don't do reflection every time we build the pipeline for a request
  --- We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does

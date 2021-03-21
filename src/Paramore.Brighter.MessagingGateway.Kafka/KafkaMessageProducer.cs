@@ -32,6 +32,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
         private IProducer<string, string> _producer;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;

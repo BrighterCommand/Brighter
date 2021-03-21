@@ -23,7 +23,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducer
     {
-        private readonly AWSMessagingGatewayConnection _connection;
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
+         private readonly AWSMessagingGatewayConnection _connection;
         private readonly string _topicArn;
 
         /// <summary>
@@ -46,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _topicArn = EnsureTopic(new RoutingKey(publication.RoutingKey), publication.SnsAttributes, publication.MakeChannels);
         }
 
-        /// <summary>
+       /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>

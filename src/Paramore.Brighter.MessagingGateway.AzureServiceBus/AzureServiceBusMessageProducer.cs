@@ -29,6 +29,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
 
         private readonly MessageSenderPool _pool;

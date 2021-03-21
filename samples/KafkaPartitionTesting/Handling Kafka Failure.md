@@ -10,8 +10,6 @@
 7: Electing a leader requires connection to Zookeeper (unless unclean leader election is configured)
 8: Kafka was designed as CA, to run in a data-centre. Zookeeper is designed as CP, it drops nodes that are partitioned. The combination of Zookeeper and Kafka is CP - the ISR pool only includes consistent nodes, we can't reach those that become inconsistent.
 
-
-
 ## Simulating partitions for testing the cluster
 We are going to use Blockade, running against our docker containers, to simulate failures
 
@@ -25,39 +23,22 @@ You can confirm with
 
 blockade -h
 
+On MacOs Blockade is broken due to the version of greenlet it
+
 ### Usage
 Although blockade offers its own docker compose-like syntax for configuring services in a network, its easier to just create the network with docker-compose directly, and then use blockade add to add the containers from that network into the blockade. You are likely to use the command line, or a script anyway, to run blockade partition and blockade join to move nodes in and out of a partition.
 
-### Notes
-It may sound obvious, but you need to plan your testing. What are the scenarios? Most importantly: identify what do you expect to happen and what actually happens. Plan how you get the system into the starting condition (for example you might need to keep restarting clients until they connect to the correct node). Ad-hoc is tempting. 'What happens if I partition the system?' But the reality is this often proves confusing. Was what happened expected? If not, what is the expected behaviour?
+## Tests
 
-I spent a lot of time running a test, checking to see via the RMQ Management console what node I was connected to, and figuring out which scenario that would help with
+### Setup
+Assume the cluster is not available
+1: The Producer should exit after trying to send events to the topic
+   -- The number of failures should be part of the producer configuration via the Polly policy
+   
 
-So plan. 
-
-### Point of Failure
-The point of failure needs to be taken into account when determinig how our code should respond. Generally, we have four steps when we set up messaging with an RMQ broker
-
-1. Establish a socket-based connection to the broker
-2. Create a channel on that connection
-3. Create our assets: exchange, queues, bindings via that channel
-4. Publish to the channel or listen for messages on a queue
-
-Failure might occur at any one of these points, and results in different errors being raised via the client, and different recover strategies.
-
-Generally, as we connect to a node, the connection must be torn down, and channels recreated when we lose connectivity to a node through failure (or because it is paused via a partition).
-
-If we multiplex channels across a shared connection, then all channels in use will be impacted by the failure of that connection, so when we tear down the connection because an operation fails on a channel, other channels will also cease to exist. So we cannot assume the presence of a channel before using a connection.
-
-### Analysis
-
-[Draw Diagram]
-
-#### Non HA Queues
-
-##### Setup
+### Setup
 Assume I have a cluster with three nodes: A,B, C
-Assume that I have a queue, orders, on A and it's is not mirrored, so not on B and C.
+Assume that I have a stream, greeting event on A and 
 Assume that I am not using a durable queue, so the queue is created on a node by a consumer, if it does not already exist.
 
 1. Assume that A partitions and can no longer talk to B and C. 
@@ -71,47 +52,4 @@ Assume that I am not using a durable queue, so the queue is created on a node by
     * Brighter supports this as it always ensures that exchanges and queues exist before using them, using EnsureConsumer and EnsureConnection.
     * This is not 'safe' as there may be lost messages where the publisher sent them and RMQ discarded them.
     * So to support this approach you have to be able to replay message sent during that window (Brighter has a message box for this).
-
-#### HA Queues
-
-##### Setup
-Assume I have a cluster with three nodes: A,B, C
-Assume that I have a queue, orders, with the master on A and slaves on B and C.
-We have chosen a strategy of Pause Minority on a partition
-
-1. Assume I connect to Node A. I consume from the master which is on A. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to A. 
-    * RMQ will pause the partioned node
-    * We will timeout on our connection
-    * A new master will be elected on B or C
-    * I need to stop talking to A and talk to B or C.
-    * I should resume talking on B or C
-
-    ###### Results
-
-2. Assume I connect to Node A. I consume from the master which is on A. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to B. I have chosen an Pause Minority strategy.
-    * RMQ will pause the partioned node
-    * We are not impacted by the partition and should continue
-
-    ###### Results
-  
-3. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then B gets a partition and I cannot see A or C. I need to re-connect to A via A or C. I have chosen an Pause Minority strategy.
-    * RMQ will pause the partioned node
-    * We will timeout on our connection
-    * I need to stop talking to B and talk to A or C.
-
-    ###### Results
-
-
-4. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then C gets a partition and cannot be seen. I have chosen an Pause Minority strategy.
-    * RMQ will pause the partioned node
-    * We are not impacted by the partition and should continue
-    ###### Results
-
-
-###### Setup
-Assume I have a cluster with three nodes: A,B, C
-Assume that I have a queue, orders, with the master on A and slaves on B and C.
-We have chosen a strategy of Ignore on a partition
-
-
 

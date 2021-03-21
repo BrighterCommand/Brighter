@@ -50,6 +50,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
     public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set;  } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+    
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
         private readonly Publication _publication; //not used for now, but passed in for future use
         private const string NEXT_ID = "nextid";
@@ -71,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
+       /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
