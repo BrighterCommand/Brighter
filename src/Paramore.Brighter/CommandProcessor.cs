@@ -663,6 +663,8 @@ namespace Paramore.Brighter
                         Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
                 }
             }
+            
+            CheckOutstandingMessages();
 
         }
 
@@ -714,7 +716,8 @@ namespace Paramore.Brighter
                         await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
                 }
             }
-
+            
+            CheckOutstandingMessages();
 
         }
 
@@ -848,7 +851,7 @@ namespace Paramore.Brighter
             if (_asyncMessageProducer != null)
                 maxOutStandingMessages = _asyncMessageProducer.MaxOutStandingMessages;
 
-            _logger.Value.Info($"Outbox oustanding message count is: {_outStandingCount}");
+            _logger.Value.Debug($"Outbox oustanding message count is: {_outStandingCount}");
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
             bool exceedsOutstandingMessageLimit = maxOutStandingMessages != -1 && _outStandingCount > maxOutStandingMessages;
 
@@ -864,14 +867,19 @@ namespace Paramore.Brighter
             var now = DateTime.Now;
             var checkInterval = TimeSpan.FromMilliseconds(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds);
 
-            if (now - _lastOutStandingMessageCheckAt < checkInterval)
-                return;
 
-            if (Monitor.TryEnter(_checkOutStandingMessagesObject))
+            var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
+            _logger.Value.Debug($"Time since last check is {timeSinceLastCheck.TotalSeconds} seconds ");
+            if (timeSinceLastCheck < checkInterval)
             {
-                //This is expensive, so use a background thread
-                Task.Run(() => OutstandingMessagesCheck(now));
+                _logger.Value.Debug($"Check not ready to run yet");
+                return;
             }
+
+            _logger.Value.Debug($"Running outstanding message check at {DateTime.UtcNow} after {timeSinceLastCheck.TotalSeconds} seconds wait");
+            //This is expensive, so use a background thread
+            Task.Run(() => OutstandingMessagesCheck());
+            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         }
 
         private void ConfigureAsyncPublisherCalllbackMaybe()
@@ -888,10 +896,6 @@ namespace Paramore.Brighter
                         _logger.Value.InfoFormat("Sent message: Id:{0}", id.ToString());
                         if (_asyncOutbox != null)
                             await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
-                    }
-                    else
-                    {
-                        CheckOutstandingMessages();
                     }
                 };
             }
@@ -912,49 +916,51 @@ namespace Paramore.Brighter
                         if (_outBox != null)
                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
                     }
-                    else
-                    {
-                        CheckOutstandingMessages();
-                    }
                 };
             }
         }
 
-        private void OutstandingMessagesCheck(DateTime now)
+        private void OutstandingMessagesCheck()
         {
-            try
+            if (Monitor.TryEnter(_checkOutStandingMessagesObject))
             {
-                if ((_outBox != null) && (_outBox is IAmAnOutboxViewer<Message> outboxViewer))
+
+                _logger.Value.Debug("Begin count of oustanding messages");
+                try
                 {
-                    _outStandingCount = outboxViewer
-                        .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
-                        .Count();
-                    return;
-                }
+                    if ((_outBox != null) && (_outBox is IAmAnOutboxViewer<Message> outboxViewer))
+                    {
+                        _outStandingCount = outboxViewer
+                            .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
+                            .Count();
+                        return;
+                    }
 
-                //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
-                if ((_asyncOutbox != null) && (_asyncOutbox is IAmAnOutboxViewer<Message> asyncOutboxViewer))
+                    //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
+                    if ((_asyncOutbox != null) && (_asyncOutbox is IAmAnOutboxViewer<Message> asyncOutboxViewer))
+                    {
+                        _outStandingCount = asyncOutboxViewer
+                            .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
+                            .Count();
+                        return;
+                    }
+
+                    if ((_outBox == null) && (_asyncOutbox == null))
+                        _outStandingCount = 0;
+
+                }
+                catch (Exception ex)
                 {
-                    _outStandingCount = asyncOutboxViewer
-                        .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
-                        .Count();
-                    return;
+                    //if we can't talk to the outbox, we would swallow the exception on this thread
+                    //by setting the _outstandingCount to -1, we force an exception
+                    _logger.Value.ErrorException("Error getting outstanding message count, reset count", ex);
+                    _outStandingCount = 0;
                 }
-
-                if ((_outBox == null) && (_asyncOutbox == null))
-                    _outStandingCount = -1;
-
-            }
-            catch (Exception)
-            {
-                //if we can't talk to the outbox, we would swallow the exception on this thread
-                //by setting the _outstandingCount to -1, we force an exception
-                _outStandingCount = -1;
-            }
-            finally
-            {
-                _lastOutStandingMessageCheckAt = now;
-                Monitor.Exit(_checkOutStandingMessagesObject);
+                finally
+                {
+                    _logger.Value.Debug($"Current outstanding count is {_outStandingCount}");
+                    Monitor.Exit(_checkOutStandingMessagesObject);
+                }
             }
         }
 
