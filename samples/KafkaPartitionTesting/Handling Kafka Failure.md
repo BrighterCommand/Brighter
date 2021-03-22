@@ -42,8 +42,7 @@ Assume the cluster is not available
 
 ### Setup
 Assume I have a cluster with three nodes: A,B, C
-Assume that I have a stream, greeting event on A and 
-Assume that I am not using a durable queue, so the queue is created on a node by a consumer, if it does not already exist.
+Assume that I have a stream, greeting event on A 
 
 1. Assume that A partitions and can no longer talk to B and C. 
     * I might assume that I could use an ignore strategy 
