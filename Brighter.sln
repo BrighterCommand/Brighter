@@ -201,7 +201,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\KafkaP
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\KafkaPartitionTesting\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{F6683D05-CAAE-46FB-9E7F-73DD8702A9D4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\KafkaPartitionTesting\GreetingsSender\GreetingsSender.csproj", "{4D8FDFF0-9776-4999-A894-F61B1742D4D3}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.AzureServiceBus.Tests", "tests\Paramore.Brighter.AzureServiceBus.Tests\Paramore.Brighter.AzureServiceBus.Tests.csproj", "{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1029,6 +1029,18 @@ Global
 		{4D8FDFF0-9776-4999-A894-F61B1742D4D3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{4D8FDFF0-9776-4999-A894-F61B1742D4D3}.Release|x86.ActiveCfg = Release|Any CPU
 		{4D8FDFF0-9776-4999-A894-F61B1742D4D3}.Release|x86.Build.0 = Release|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Debug|x86.Build.0 = Debug|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Release|Any CPU.Build.0 = Release|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Release|x86.ActiveCfg = Release|Any CPU
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1090,6 +1102,7 @@ Global
 		{403DFDF3-B59F-4638-9F08-985450B30875} = {ACED4F91-08E1-4097-B919-895B6B403833}
 		{F6683D05-CAAE-46FB-9E7F-73DD8702A9D4} = {ACED4F91-08E1-4097-B919-895B6B403833}
 		{4D8FDFF0-9776-4999-A894-F61B1742D4D3} = {ACED4F91-08E1-4097-B919-895B6B403833}
+		{48F584DF-0BA1-4485-A612-14FD4F6A4CF7} = {329736D2-BF92-4D06-A7BF-19F4B6B64EDD}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
