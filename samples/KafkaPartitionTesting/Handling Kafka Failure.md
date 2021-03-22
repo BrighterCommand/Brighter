@@ -33,8 +33,12 @@ Although blockade offers its own docker compose-like syntax for configuring serv
 ### Setup
 Assume the cluster is not available
 1: The Producer should exit after trying to send events to the topic
-   -- The number of failures should be part of the producer configuration via the Polly policy
-   
+   -- If we are validating or creating the topic, this fails first
+   -- -- It fails when we timeout on topic creation
+   -- If we assume the topic exists 
+   -- -- Then failed messages just sit in the Outbox
+   -- -- The number of failures before we error should be part of the producer configuration
+
 
 ### Setup
 Assume I have a cluster with three nodes: A,B, C

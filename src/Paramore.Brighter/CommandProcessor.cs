@@ -363,8 +363,8 @@ namespace Paramore.Brighter
             _outboxTimeout = outboxTimeout;
             _inboxConfiguration = inboxConfiguration;
 
-            ConfigurePublisherCallbackMaybe();
-            ConfigureAsyncPublisherCalllbackMaybe();
+            //Only register one, to avoid two callbacks where we support both interfaces on a producer
+            if (!ConfigurePublisherCallbackMaybe()) ConfigureAsyncPublisherCalllbackMaybe();
         }
 
         /// <summary>
@@ -882,10 +882,10 @@ namespace Paramore.Brighter
             _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         }
 
-        private void ConfigureAsyncPublisherCalllbackMaybe()
+        private bool ConfigureAsyncPublisherCalllbackMaybe()
         {
             if (_asyncMessageProducer == null)
-                return;
+                return false;
 
             if (_asyncMessageProducer is ISupportPublishConfirmation producer)
             {
@@ -898,13 +898,16 @@ namespace Paramore.Brighter
                             await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
                     }
                 };
+                return true;
             }
+
+            return false;
         }
 
-        private void ConfigurePublisherCallbackMaybe()
+        private bool ConfigurePublisherCallbackMaybe()
         {
             if (_messageProducer == null)
-                return;
+                return false;
 
             if (_messageProducer is ISupportPublishConfirmation producer)
             {
@@ -917,7 +920,10 @@ namespace Paramore.Brighter
                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
                     }
                 };
+                return true;
             }
+
+            return false;
         }
 
         private void OutstandingMessagesCheck()
