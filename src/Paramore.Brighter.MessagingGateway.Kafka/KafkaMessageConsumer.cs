@@ -121,23 +121,34 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
-                .SetPartitionsAssignedHandler((consumer, list) => _partitions.AddRange(list))
+                .SetPartitionsAssignedHandler((consumer, list) =>
+                {
+                    var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");
+                    
+                    _logger.Value.InfoFormat("Parition Added {0}", String.Join(",", partitions));
+                    
+                    _partitions.AddRange(list);
+                })
                 .SetPartitionsRevokedHandler((consumer, list) =>
                 {
                     _consumer.Commit(list);
-                    var revokedPartitions = list.Select(tpo => tpo.Partition).ToList();
+                    var revokedPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
-                    _logger.Value.InfoFormat("Partitions for consumer revoked {0", string.Join(",", revokedPartitions.Select(p => p.Value.ToString())));
+                    _logger.Value.InfoFormat("Partitions for consumer revoked {0}", string.Join(",", revokedPartitions));
                     
-                    _partitions = _partitions.Where(tp => !revokedPartitions.Contains(tp.Partition)).ToList();
+                    _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
                 .SetPartitionsLostHandler((consumer, list) =>
                 {
-                    var lostPartitions = list.Select(tpo => tpo.Partition).ToList();
+                    var lostPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
-                    _logger.Value.InfoFormat("Partitions for consumer lost {0", string.Join(",", lostPartitions.Select(p => p.Value.ToString())));
+                    _logger.Value.InfoFormat("Partitions for consumer lost {0}", string.Join(",", lostPartitions));
                     
-                    _partitions = _partitions.Where(tp => !lostPartitions.Contains(tp.Partition)).ToList();
+                    _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
+                })
+                .SetErrorHandler((consumer, error) =>
+                {
+                    _logger.Value.Error($"Code: {error.Code}, Reason: {error.Reason}, Fatal: {error.IsFatal}");
                 })
                 .Build();
             
@@ -222,6 +233,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             try
             {
+                
                 LogOffSets();
 
                 _logger.Value.DebugFormat(
@@ -230,13 +242,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 if (consumeResult == null)
                 {
-                    _logger.Value.InfoFormat($"No messages available from Kafka stream");
+                    CheckHasPartitions();
+                    
+                    _logger.Value.DebugFormat($"No messages available from Kafka stream");
                     return new Message[] {new Message()};
                 }
 
                 if (consumeResult.IsPartitionEOF)
                 {
-                    _logger.Value.Info($"Consumer {_consumer.MemberId} has reached the end of the partition");
+                    _logger.Value.Debug($"Consumer {_consumer.MemberId} has reached the end of the partition");
                     return new Message[] {new Message()};
                 }
 
@@ -272,13 +286,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
+
         /// <summary>
         /// Rejects the specified message. This is just a commit of the offset to move past the record without processing it
         /// on Kafka, as we can't requeue or delete from the queue
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-         public void Reject(Message message)
+        public void Reject(Message message)
         {
             Acknowledge(message);
         }
@@ -301,6 +316,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Task.Delay(delayMilliseconds).Wait();
             Requeue(message);
         }
+        
+        private bool CheckHasPartitions()
+        {
+            if (_partitions.Count <= 0)
+            {
+                _logger.Value.Debug("Consumer is not allocated any partitions");
+                return false;
+            }
+
+            return true;
+        }
+
 
         [Conditional("DEBUG")]
         [DebuggerStepThrough]
@@ -324,7 +351,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     var topicPartition = pair.Key;
                     var message = $"Offset to consume from is: {pair.Value.ToString()} on partition: {topicPartition.Partition.Value.ToString()} for topic: {topicPartition.Topic}";
-                    _logger.Value.Info(message);
+                    _logger.Value.Debug(message);
                 }
             }
             catch (KafkaException ke)
@@ -350,11 +377,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         private void CommitOffsets(DateTime flushTime)
         {
-           if (_logger.Value.IsInfoEnabled())
+           if (_logger.Value.IsDebugEnabled())
            {
                var offsets = _offsetStorage.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                var offsetAsString = string.Join(Environment.NewLine, offsets);
-               _logger.Value.InfoFormat($"Commiting all offsets: {Environment.NewLine} {offsetAsString}");
+               _logger.Value.DebugFormat($"Commiting all offsets: {Environment.NewLine} {offsetAsString}");
            }
             
            var listOffsets = new List<TopicPartitionOffset>();

@@ -1,83 +1,129 @@
-﻿#region Licence
-/* The MIT License (MIT)
-Copyright © 2015 Yiannis Triantafyllopoulos <yiannis.triantafyllopoulos@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-#endregion
-
-using System;
-using Newtonsoft.Json;
+﻿using System;
+using System.Threading;
 using Paramore.Brighter.Logging;
+using Polly;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Polly.Retry;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
-    public class AzureServiceBusMessageProducer : MessageGateway, IAmAMessageProducer
+    public class AzureServiceBusMessageProducer : IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
+        private readonly IManagementClientWrapper _managementClientWrapper;
+        private readonly ITopicClientProvider _topicClientProvider;
+        private bool _topicCreated;
+
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
+        private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
+        private const int TopicConnectionRetryCount = 5;
+        private readonly OnMissingChannel _makeChannel;
 
-        private readonly MessageSenderPool _pool;
-
-        public AzureServiceBusMessageProducer(AzureServiceBusMessagingGatewayConfiguration configuration)
-            : base(configuration)
+        public AzureServiceBusMessageProducer(IManagementClientWrapper managementClientWrapper, ITopicClientProvider topicClientProvider, OnMissingChannel makeChannel = OnMissingChannel.Create)
         {
-            _pool = new MessageSenderPool();
+            _managementClientWrapper = managementClientWrapper;
+            _topicClientProvider = topicClientProvider;
+            _makeChannel = makeChannel;
         }
 
-        /// <summary>
-        /// Sends the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <returns>Task.</returns>
-         public void Send(Message message)
+        public void Send(Message message)
         {
-            _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Publishing message to topic {0}", message.Header.Topic);
-            var messageSender = _pool.GetMessageSender(message.Header.Topic);
+            SendWithDelay(message);
+        }
+
+        public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            _logger.Value.Debug($"Preparing  to send message on topic {message.Header.Topic}");
+
             EnsureTopicExists(message.Header.Topic);
-            messageSender.Send(new Amqp.Message(message.Body.Value));
-            _logger.Value.DebugFormat("AzureServiceBusMessageProducer: Published message with id {0} to topic '{1}' and content: {2}", message.Id, message.Header.Topic, JsonConvert.SerializeObject(message));
-        }
 
-        /// <summary>
-        /// Sends the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="delayMilliseconds">The sending delay</param>
-        /// <returns>Task.</returns>
-         public void SendWithDelay(Message message, int delayMilliseconds = 0)
-        {
-            Send(message);
-        }
+            ITopicClient topicClient;
 
-        public bool DelaySupported => false;
-
-        ~AzureServiceBusMessageProducer()
-        {
-            Dispose(false);
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing)
+            try
             {
-                _pool?.Dispose();
+                RetryPolicy policy = Policy
+                    .Handle<Exception>()
+                    .Retry(TopicConnectionRetryCount, (exception, retryNumber) =>
+                    {
+                        _logger.Value.ErrorException(
+                            $"Failed to connect to topic {message.Header.Topic}, retrying...", exception);
+
+                        Thread.Sleep(TimeSpan.FromMilliseconds(TopicConnectionSleepBetweenRetriesInMilliseconds));
+                    }
+                    );
+
+                topicClient = policy.Execute(() => _topicClientProvider.Get(message.Header.Topic));
             }
-            base.Dispose(disposing);
+            catch (Exception e)
+            {
+                _logger.Value.ErrorException($"Failed to connect to topic {message.Header.Topic}, aborting.", e);
+                throw;
+            }
+
+            try
+            {
+                _logger.Value.Debug(
+                    $"Publishing message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}.");
+
+                var azureServiceBusMessage = new Microsoft.Azure.ServiceBus.Message(message.Body.Bytes);
+                azureServiceBusMessage.UserProperties.Add("MessageType", message.Header.MessageType.ToString());
+                if (delayMilliseconds == 0)
+                {
+                    topicClient.Send(azureServiceBusMessage);
+                }
+                else
+                {
+                    var dateTimeOffset = new DateTimeOffset(DateTime.UtcNow.AddMilliseconds(delayMilliseconds));
+                    topicClient.ScheduleMessage(azureServiceBusMessage, dateTimeOffset);
+                }
+
+                _logger.Value.Debug(
+                    $"Published message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}");
+            }
+            catch (Exception e)
+            {
+                _logger.Value.ErrorException($"Failed to publish message to topic {message.Header.Topic} with id {message.Id}, message will not be retried.", e);
+            }
+            finally
+            {
+                topicClient.Close();
+            }
+        }
+
+        private void EnsureTopicExists(string topic)
+        {
+            if (_topicCreated || _makeChannel.Equals(OnMissingChannel.Assume))
+                return;
+
+            try
+            {
+                if (_managementClientWrapper.TopicExists(topic))
+                {
+                    _topicCreated = true;
+                    return;
+                }
+
+                if (_makeChannel.Equals(OnMissingChannel.Validate))
+                {
+                    throw new ChannelFailureException($"Topic {topic} does not exist and missing channel mode set to Validate.");
+                }
+
+                _managementClientWrapper.CreateTopic(topic);
+                _topicCreated = true;
+            }
+            catch (Exception e)
+            {
+                //The connection to Azure Service bus may have failed so we re-establish the connection.
+                _managementClientWrapper.Reset();
+                _logger.Value.ErrorException("Failing to check or create topic.", e);
+                throw;
+            }
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

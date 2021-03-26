@@ -32,9 +32,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
         private IProducer<string, string> _producer;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
+        private bool _hasFatalProducerError = false;
         private bool _disposedValue;
 
         public KafkaMessageProducer(
@@ -81,6 +85,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             NumPartitions = publication.NumPartitions;
             ReplicationFactor = publication.ReplicationFactor;
             TopicFindTimeoutMs = publication.TopicFindTimeoutMs;
+            MaxOutStandingMessages = publication.MaxOutStandingMessages;
+            MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingCheckIntervalMilliSeconds;
         }
         
         /// <summary>
@@ -100,7 +106,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public void Init()
         {
-            _producer = new ProducerBuilder<string, string>(_producerConfig).Build();
+            _producer = new ProducerBuilder<string, string>(_producerConfig)
+                .SetErrorHandler((consumer, error) =>
+                {
+                    _logger.Value.Error($"Code: {error.Code}, Reason: {error.Reason}, Fatal: {error.IsFatal}");
+                    _hasFatalProducerError = error.IsFatal;
+                })
+                .Build();
             _publisher = new KafkaMessagePublisher(_producer);
 
             EnsureTopic();
@@ -111,6 +123,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
+
+            if (_hasFatalProducerError)
+                throw new ChannelFailureException($"Producer is in unrecoverable state");
 
             try
             {
@@ -181,6 +196,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
+            if (_hasFatalProducerError)
+                 throw new ChannelFailureException($"Producer is in unrecoverable state");
             try
             {
                 _logger.Value.DebugFormat(
@@ -233,8 +250,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 if (disposing)
                 {
-                    _producer.Dispose();
-                    _producer = null;
+                    if (_producer != null)
+                    {
+                        _producer.Flush(TimeSpan.FromMilliseconds(_producerConfig.MessageTimeoutMs.Value + 5000)); 
+                        _producer.Dispose();
+                        _producer = null;
+                    }
                 }
 
                 _disposedValue = true;

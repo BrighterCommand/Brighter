@@ -75,7 +75,7 @@ jobs:
 
   package:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: [test]
     
     steps:
@@ -101,6 +101,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [package]
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: nuget packages
+      - name: Push generated package to NuGet
+        run: dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
     
   memory:
     runs-on: ubuntu-latest
@@ -241,7 +253,7 @@ jobs:
       run: dotnet restore
     - name: Kafka Transport Tests
       run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
-
+ 
   postgres-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
@@ -434,3 +446,22 @@ jobs:
           aws sns list-topics
       - name: SQS Tests
         run: dotnet test ./tests/Paramore.Brighter.AWSSQS.Tests/Paramore.Brighter.AWSSQS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  azure-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Azure Tests
+        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
