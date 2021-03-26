@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -381,6 +382,36 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                 _nameSpaceManagerWrapper.Object, _mockMessageReceiver.Object, makeChannels: OnMissingChannel.Validate);
 
             Assert.Throws<ChannelFailureException>(() => azureServiceBusConsumerValidate.Receive(400));
+        }
+
+        [Fact]
+        public void When_ackOnRead_is_Set_and_ack_fails_then_exception_is_thrown()
+        {
+            var brokeredMessageList = new List<IBrokeredMessageWrapper>();
+            var message1 = new Mock<IBrokeredMessageWrapper>();
+            var mockMessageReceiver = new Mock<IMessageReceiverProvider>();
+
+            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
+
+            var lockToken = Guid.NewGuid().ToString();
+
+            message1.Setup(x => x.MessageBodyValue).Returns((byte[])null);
+            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.LockToken).Returns(lockToken);
+
+            brokeredMessageList.Add(message1.Object);
+
+            _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
+            _messageReceiver.Setup(x => x.Complete(lockToken)).Throws(new Exception());
+
+            var azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
+                _nameSpaceManagerWrapper.Object, mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create, receiveMode: ReceiveMode.PeekLock);
+
+            Message[] result = azureServiceBusConsumer.Receive(400);
+
+            var msg = result.First();
+
+            Assert.Throws<Exception>(() => azureServiceBusConsumer.Acknowledge(msg));
         }
     }
 }
