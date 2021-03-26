@@ -23,14 +23,19 @@ You can confirm with
 
 blockade -h
 
-On MacOs Blockade is broken due to the version of greenlet it
+On MacOs Blockade is broken due to the version of greenlet it so you need to build it locally from the source as PRs exist which have updated it (though you will still get warnings)
 
 ### Usage
 Although blockade offers its own docker compose-like syntax for configuring services in a network, its easier to just create the network with docker-compose directly, and then use blockade add to add the containers from that network into the blockade. You are likely to use the command line, or a script anyway, to run blockade partition and blockade join to move nodes in and out of a partition.
 
+blockade add CONTAINER -- adds a container to blockade
+blockade status -- lists all the containers in the blockade and their partition
+blockade partition CONTAINERS -- adds containers to a partition
+blockade join -- heal the partition
+
 ## Tests
 
-### Setup
+### Cluster Down
 Assume the cluster is not available
 1: The Producer should exit after trying to send events to the topic
    -- If we are validating or creating the topic, this fails first
@@ -40,19 +45,33 @@ Assume the cluster is not available
    -- -- The number of failures before we error should be part of the producer configuration
 
 
-### Setup
-Assume I have a cluster with three nodes: A,B, C
-Assume that I have a stream, greeting event on A 
+### Rolling Partitions
+Assume I have a cluster with three nodes: 1,2,3
 
-1. Assume that A partitions and can no longer talk to B and C. 
-    * I might assume that I could use an ignore strategy 
-    * The issue here is that ignore allows a partition, so new connections sent to the B,C partition by my load balancer will create a new queue
-    * I should use a pause minority strategy
-    * Now I will need to switch nodes as my node had failed
-    * This is safe.
-2. Assume that A fails. Now I need to failover to another node in the cluster, B or C. 
-    * Once I have failed over there is no queue though, so I must redeclare a queue to be resilient in this situation. 
-    * Brighter supports this as it always ensures that exchanges and queues exist before using them, using EnsureConsumer and EnsureConnection.
-    * This is not 'safe' as there may be lost messages where the publisher sent them and RMQ discarded them.
-    * So to support this approach you have to be able to replay message sent during that window (Brighter has a message box for this).
+1. Assume that 2 partitions and can no longer talk to 1 and 3.
+    * Any leader partitions on 2 need to move to 1 and 3
+    * 3 no longer has an ISRs
+1a: Now assume that 3 partitions and can no longer talk to 1.
+    * Any leader partitions on 3 need to move to 1
+    * 2 & 3 no longer has an ISRs
+1c: Join the Partition
+
+### Broker Death
+Assume I have a cluster with three nodes: 1,2,3; assume I am connected to 3
+
+1. 2 stops
+    * Now cluster only has two nodes and leaders needed on 1, 3
+2. 3 stops
+    * Now cluster only has nodes on 1
+3: Restart 2 and 3
+    * Now reconnects and picks up messages
+
+### Zookeeper Death
+Assume I have a cluster with three nodes: 1,2,3; assume I am connected to 3
+
+1. Kill Zookeeper
+2: Force leader re-election with Zookeeper down
+
+
+
 

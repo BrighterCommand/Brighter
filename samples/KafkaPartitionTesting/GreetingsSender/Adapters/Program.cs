@@ -48,7 +48,7 @@ namespace GreetingsSender.Adapters
                 .MinimumLevel.Debug()
                 .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
                 .Enrich.FromLogContext()
-                .WriteTo.Console()
+                .WriteTo.Console(LogEventLevel.Debug)
                 .CreateLogger();
 
             var host = BuildHost();

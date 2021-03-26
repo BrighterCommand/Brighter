@@ -35,6 +35,7 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
+using Serilog.Events;
 
 namespace GreetingsReceiverConsole
 {
@@ -43,7 +44,7 @@ namespace GreetingsReceiverConsole
         public static async Task Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
+                .WriteTo.Console(LogEventLevel.Debug)
                 .CreateLogger();
 
             var host = new HostBuilder()
