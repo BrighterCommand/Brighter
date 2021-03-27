@@ -18,8 +18,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
                 new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
-                    new TopicClientProvider(_configuration)), nameSpaceManagerWrapper,
-                new MessageReceiverProvider(_configuration), receiveMode: _configuration.AckOnRead ? ReceiveMode.PeekLock : ReceiveMode.ReceiveAndDelete);
+                    new TopicClientProvider(_configuration), subscription.MakeChannels), nameSpaceManagerWrapper,
+                new MessageReceiverProvider(_configuration),
+                makeChannels: subscription.MakeChannels,
+                receiveMode: _configuration.AckOnRead ? ReceiveMode.PeekLock : ReceiveMode.ReceiveAndDelete);
         }
     }
 }
