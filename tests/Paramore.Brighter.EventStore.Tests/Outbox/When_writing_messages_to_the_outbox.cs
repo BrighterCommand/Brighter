@@ -45,7 +45,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
                 messageId:Guid.NewGuid(), 
                 topic: "Topic", 
                 messageType: MessageType.MT_EVENT,
-                timeStamp: DateTime.Now,
+                timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid(),
                 replyTo:"ReplyTo",
                 contentType: "text/plain");
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
                 messageId:Guid.NewGuid(), 
                 topic: "Topic", 
                 messageType: MessageType.MT_EVENT,
-                timeStamp: DateTime.Now,
+                timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid(),
                 replyTo:"ReplyTo",
                 contentType: "text/plain");
