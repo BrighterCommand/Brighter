@@ -17,6 +17,9 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Ed Blackburn](https://github.com/edblackburn)** 
  * Documentation fixes
+
+**[F Bryant](https://github.com/FBryant87)**
+ * New ASB Transport
  
 **[Ian Cooper](https://github.com/iancooper)**
   * Wrote first version of Command Processor, Policy, RavenDb Outbox, RMQ gateway, RestMS Core, RestMS Server, RestMS Gateway and ServiceActivator, Control Bus
@@ -85,6 +88,7 @@ Brighter contributors (sorted alphabeticaly)
   
 **[Domenico Musto](https://github.com/domspektrix?)**
   * Fix issue with multiple performers having name clashes
+  * New ASB Transport
   
 **[Jonny Olliff-Lee](https://github.com/DevJonny)**
   * Documentation Fixes
@@ -117,11 +121,23 @@ Brighter contributors (sorted alphabeticaly)
 **[Tarun Pothulapati](https://github.com/Pothulapati)**
   * PostgreSQL Outbox
 
+**[Paul Reardon](https://github.com/preardon)**
+  * Improvements to ASB Transport 
+
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
   
+**[Sagar Sahay](https://github.com/sagarSahay)**  
+ * New ASB Transport
+  
 **[Tim Seaward](https://github.com/Drawaes)**
  * Fix unecessary allocations
+
+**[Alessandro Signorett](https://github.com/alesgn)**
+ * New ASB Transport
+
+**[Damon Siusta](https://github.com/damonsiusta)**
+ * New ASB Transport
 
 **[Daniel Stockhammer](https://github.com/dstockhammer?tab=activity)** 
   * Various fixes
