@@ -1,8 +1,8 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
-using Newtonsoft.Json;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 messageAttributes.Add(HeaderNames.ReplyTo, new MessageAttributeValue{StringValue = Convert.ToString(message.Header.ReplyTo), DataType = "String"});
              
             //we can set up to 10 attributes; we have set 6 above, so use a single JSON object as the bag
-            var bagJson = JsonConvert.SerializeObject(message.Header.Bag.Keys);
+            var bagJson = JsonSerializer.Serialize(message.Header.Bag.Keys, JsonSerialisationOptions.Options);
 
             messageAttributes.Add(HeaderNames.Bag, new MessageAttributeValue{StringValue = Convert.ToString(bagJson), DataType = "String"});
             publishRequest.MessageAttributes = messageAttributes;

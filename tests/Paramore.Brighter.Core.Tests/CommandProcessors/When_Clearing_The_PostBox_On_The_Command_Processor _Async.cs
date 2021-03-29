@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.Registry;
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _message = new Message(
                 new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonConvert.SerializeObject(myCommand))
+                new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));

@@ -26,7 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using Newtonsoft.Json;
+using System.Text.Json;
 
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //correlation id
             WriteCorrelationId(messageHeader, headers);
 
-            return JsonConvert.SerializeObject(headers);
+            return JsonSerializer.Serialize(headers, JsonSerialisationOptions.Options);
         }
 
         private void WriteContentType(MessageHeader messageHeader, Dictionary<string, string> headers)
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteMessageBag(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            var flatBag = JsonConvert.SerializeObject(messageHeader.Bag);
+            var flatBag = JsonSerializer.Serialize(messageHeader.Bag, JsonSerialisationOptions.Options);
             headers.Add(HeaderNames.BAG, flatBag);
         }
 
@@ -146,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteTimeStamp(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
-            headers.Add(HeaderNames.TIMESTAMP, JsonConvert.SerializeObject(messageHeader.TimeStamp));
+            headers.Add(HeaderNames.TIMESTAMP, JsonSerializer.Serialize(messageHeader.TimeStamp, JsonSerialisationOptions.Options));
         }
 
 

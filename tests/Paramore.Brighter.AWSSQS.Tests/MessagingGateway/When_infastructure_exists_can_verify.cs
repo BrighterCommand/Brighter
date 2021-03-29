@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Linq;
+using System.Text.Json;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
-                new MessageBody(JsonConvert.SerializeObject((object) _myCommand))
+                new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
             );
 
 

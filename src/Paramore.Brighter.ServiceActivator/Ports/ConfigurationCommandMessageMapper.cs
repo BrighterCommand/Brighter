@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Reflection;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
@@ -13,14 +13,14 @@ namespace Paramore.Brighter.ServiceActivator.Ports
             var topic = Environment.MachineName + Assembly.GetEntryAssembly()?.GetName();
 
             var header = new MessageHeader(messageId: request.Id, topic: topic, messageType: MessageType.MT_COMMAND);
-            var body = new MessageBody(JsonConvert.SerializeObject(request));
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
         }
 
         public ConfigurationCommand MapToRequest(Message message)
         {
-            return JsonConvert.DeserializeObject<ConfigurationCommand>(message.Body.Value);
+            return JsonSerializer.Deserialize<ConfigurationCommand>(message.Body.Value, JsonSerialisationOptions.Options);
         }
 
     }

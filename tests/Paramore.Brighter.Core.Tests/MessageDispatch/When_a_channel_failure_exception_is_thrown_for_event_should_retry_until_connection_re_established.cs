@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,11 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -48,8 +48,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var @event = new MyEvent();
 
             //Two events will be received when channel fixed
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             

@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     _logger.Value.InfoFormat(
                         "RmqMessageProducer: Published message to exchange {0} on subscription {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
-                        message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds, message.Persist);
+                        message.Id, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow, delayMilliseconds, message.Persist);
                 }
             }
             catch (IOException io)

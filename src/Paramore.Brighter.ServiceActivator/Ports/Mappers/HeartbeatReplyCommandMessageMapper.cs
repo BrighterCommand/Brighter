@@ -1,6 +1,6 @@
-using System;
+﻿using System;
 using System.Linq;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 
 namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
@@ -17,18 +17,8 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
                 correlationId: request.SendersAddress.CorrelationId
                 );
 
-            var json = new JObject(
-                    new JProperty("HostName", request.HostName),
-                    new JProperty("Consumers", 
-                        new JArray(
-                                from c in request.Consumers
-                                select new JObject(
-                                    new JProperty("ConsumerName", c.ConsumerName.ToString()),
-                                    new JProperty("State", c.State)
-                                    )
-                            )
-                        )
-                );
+            var consumers = request.Consumers.Select(c => new HeartBeatResponseBodyConsumerObject(c.ConsumerName, c.State)).ToArray();
+            var json = JsonSerializer.Serialize(new HeartBeatResponseBody(request.HostName, consumers), JsonSerialisationOptions.Options);
 
             var body = new MessageBody(json.ToString());
             var message = new Message(header, body);
@@ -37,17 +27,14 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
 
         public HeartbeatReply MapToRequest(Message message)
         {
-            var messageBody = JObject.Parse(message.Body.Value);
-            var hostName = (string) messageBody["HostName"];
+            var messageBody = JsonSerializer.Deserialize<HeartBeatResponseBody>(message.Body.Value, JsonSerialisationOptions.Options);
             var replyAddress = new ReplyAddress(message.Header.Topic, message.Header.CorrelationId);
 
-            var reply = new HeartbeatReply(hostName, replyAddress);
-            var consumers = (JArray) messageBody["Consumers"];
-            foreach (var consumer in consumers)
+            var reply = new HeartbeatReply(messageBody.HostName, replyAddress);
+            foreach (var consumer in messageBody.Consumers)
             {
-                var consumerName = new ConsumerName((string)consumer["ConsumerName"]);
-                var state = (ConsumerState)Enum.Parse(typeof (ConsumerState), (string) consumer["State"]);
-                reply.Consumers.Add(new RunningConsumer(consumerName, state));
+                var consumerName = new ConsumerName(consumer.ConsumerName);
+                reply.Consumers.Add(new RunningConsumer(consumerName, consumer.State));
             }
 
             return reply;
