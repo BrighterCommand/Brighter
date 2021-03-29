@@ -12,13 +12,17 @@ namespace Paramore.Brighter
 
         static JsonSerialisationOptions()
         {
-            Options = new JsonSerializerOptions
+            var opts = new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 NumberHandling = JsonNumberHandling.AllowReadingFromString,
                 AllowTrailingCommas = true
             };
+
+            opts.Converters.Add(new JsonStringConverter());
+
+            Options = opts;
         }
     }
 }
