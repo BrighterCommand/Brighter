@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using Paramore.Brighter;
 
-namespace KafkaTaskQueueSamples.Greetings.Ports.Commands
+namespace Greetings.Ports.Commands
 {
     public class GreetingEvent : Event
     {

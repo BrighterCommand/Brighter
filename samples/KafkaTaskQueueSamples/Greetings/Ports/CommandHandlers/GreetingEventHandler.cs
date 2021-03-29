@@ -23,10 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using KafkaTaskQueueSamples.Greetings.Ports.Commands;
+using Greetings.Ports.Commands;
 using Paramore.Brighter;
 
-namespace KafkaTaskQueueSamples.Greetings.Ports.CommandHandlers
+namespace Greetings.Ports.CommandHandlers
 {
     public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {

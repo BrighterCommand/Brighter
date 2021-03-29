@@ -23,33 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.TinyIoc;
+using Greetings.Ports.Commands;
 using Paramore.Brighter;
 
-namespace Greetings.Adapters.ServiceHost
+namespace Greetings.Ports.CommandHandlers
 {
-    public class ServiceProviderHandlerFactory : IAmAHandlerFactory
+    public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
-        private readonly TinyIoCContainer _container;
-
-        public ServiceProviderHandlerFactory(TinyIoCContainer container)
+        public override GreetingEvent Handle(GreetingEvent @event)
         {
-            _container = container;
-        }
-
-        public IHandleRequests Create(Type handlerType)
-        {
-            return (IHandleRequests)_container.Resolve(handlerType);
-        }
-
-        public void Release(IHandleRequests handler)
-        {
-            var disposable = handler as IDisposable;
-            if (disposable != null)
-            {
-                disposable.Dispose();
-            }
-            handler = null;
+            Console.WriteLine("Received Greeting. Message Follows");
+            Console.WriteLine("----------------------------------");
+            Console.WriteLine(@event.Greeting);
+            Console.WriteLine("----------------------------------");
+            Console.WriteLine("Message Ends");
+            return base.Handle(@event);
         }
     }
 }
