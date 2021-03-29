@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Logging.Handlers
@@ -92,13 +92,13 @@ namespace Paramore.Brighter.Logging.Handlers
         private void LogCommand(TRequest request)
         {
             //TODO: LibLog has no async support, so remains a blocking call for now
-            _logger.Value.InfoFormat("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", _timing.ToString(), typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
+            _logger.Value.InfoFormat("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request), DateTime.UtcNow);
         }
 
         private void LogFailure(TRequest request)
         {
             //TODO: LibLog has no async support, so remains a blocking call for now
-            _logger.Value.InfoFormat("Failure in pipeline call for {0} with values of {1} at: {2}", typeof(TRequest), JsonConvert.SerializeObject(request), DateTime.UtcNow);
+            _logger.Value.InfoFormat("Failure in pipeline call for {0} with values of {1} at: {2}", typeof(TRequest), JsonSerializer.Serialize(request), DateTime.UtcNow);
         }
     }
 }

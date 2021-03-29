@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using Greetings.Ports.Commands;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Paramore.Brighter;
 
 namespace Greetings.Ports.Mappers
@@ -33,14 +33,14 @@ namespace Greetings.Ports.Mappers
         public Message MapToMessage(GreetingEvent request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
-            var body = new MessageBody(JsonConvert.SerializeObject(request));
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
         }
 
         public GreetingEvent MapToRequest(Message message)
         {
-            var greetingCommand = JsonConvert.DeserializeObject<GreetingEvent>(message.Body.Value);
+            var greetingCommand = JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);
             
             return greetingCommand;
         }

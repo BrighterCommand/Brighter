@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,11 +25,11 @@ THE SOFTWARE. */
 using System;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
 
             _monitorEventMessageMapper = new MonitorEventMessageMapper();
 
-            _originalRequestAsJson = JsonConvert.SerializeObject(new MyCommand());
+            _originalRequestAsJson = JsonSerializer.Serialize(new MyCommand(), JsonSerialisationOptions.Options);
             _elapsedMilliseconds = 34;
             var @event = new MonitorEvent(InstanceName, MonitorEventType.EnterHandler, HandlerName, HandlerFullAssemblyName, _originalRequestAsJson, _at, _elapsedMilliseconds);
             _message = _monitorEventMessageMapper.MapToMessage(@event);

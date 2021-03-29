@@ -1,5 +1,5 @@
-﻿using Events.Ports.Commands;
-using Newtonsoft.Json;
+﻿using System.Text.Json;
+using Events.Ports.Commands;
 using Paramore.Brighter;
 
 namespace Events.Ports.Mappers
@@ -9,14 +9,14 @@ namespace Events.Ports.Mappers
         public Message MapToMessage(CompetingConsumerCommand request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: "multipleconsumer.command", messageType: MessageType.MT_COMMAND);
-            var body = new MessageBody(JsonConvert.SerializeObject(request));
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
         }
 
         public CompetingConsumerCommand MapToRequest(Message message)
         {
-            var greetingCommand = JsonConvert.DeserializeObject<CompetingConsumerCommand>(message.Body.Value);
+            var greetingCommand = JsonSerializer.Deserialize<CompetingConsumerCommand>(message.Body.Value, JsonSerialisationOptions.Options);
             
             return greetingCommand;
         }
