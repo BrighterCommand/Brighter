@@ -26,10 +26,10 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using Npgsql;
-using Newtonsoft.Json;
 using System.Data;
 using NpgsqlTypes;
 using Paramore.Brighter.Logging;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
@@ -308,7 +308,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private NpgsqlParameter[] InitAddDbParameters(Message message)
         {
-            var bagjson = JsonConvert.SerializeObject(message.Header.Bag);
+            var bagjson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             var parameters = new NpgsqlParameter[]
             {
                 CreateNpgsqlParameter("MessageId", message.Id),
@@ -420,7 +420,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, string>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 
