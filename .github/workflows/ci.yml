@@ -1,0 +1,466 @@
+name: CI
+# CI build for Brighter
+# It creates a package on the github nuger feed for this project
+# We run tests for transports as separate jobs to create greater visibility of failure, and to parallelize
+# HINT: If you need to debug a config issue, tmate allows you to hop on to the server, check in the build
+# logs for the SSH address to let you hop onto the box via tmate. It will timeout and not connect if left too long
+# - name: Debugging with tmate
+#   uses: mxschmitt/action-tmate@v3.1
+
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+env:
+ # Stop wasting time caching packages
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  # Disable sending usage data to Microsoft
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # Don't show a logo on first run of CLI
+  DOTNET_NOLOGO: true
+  # GitHub Packages Feed settings
+  GITHUB_FEED: https://nuget.pkg.github.com/
+  GITHUB_USER: iancooper
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Build
+        run: dotnet build --configuration Release --no-restore 
+      - uses: actions/upload-artifact@v2
+        with:
+          name: dotnet artifacts
+          path: |
+            ./
+            src/
+            tests/
+  
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Core Tests
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal" --blame -v n
+
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [test]
+    
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: dotnet artifacts
+      - uses: actions/upload-artifact@v2
+        with:
+          name: nuget packages
+          path: "**/*.nupkg"
+      
+  prerelease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [package]
+    
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: nuget packages
+      - name: to GitHub Feed
+        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+  release:
+    if: startsWith(github.ref, 'refs/tags')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [package]
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: nuget packages
+      - name: Push generated package to NuGet
+        run: dotnet nuget push **/*.nupkg --api-key ${{ secrets.NUGET_KEY }} --skip-duplicate
+    
+  memory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: In Memory Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n  
+        
+  redis-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    
+    services:
+      redis:  
+        image: redis:latest
+        ports:
+        - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5             
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Redis Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
+  rabbitmq-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+
+    services:
+      rabbitmq:
+        image: brightercommand/rabbitmq:3.8-management-delay
+        ports:
+        - 5672:5672 
+        # needed because the rabbitmq container does not provide a healthcheck
+        options: >-
+          --health-cmd "rabbitmqctl node_health_check"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: RMQ Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  kafka-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    services:
+      zookeeper:
+        image: confluentinc/cp-zookeeper:latest
+        ports: 
+          - 2181:2181
+        env:
+         ZOOKEEPER_CLIENT_PORT: 2181
+         ZOOKEEPER_TICK_TIME: 2000
+         ALLOW_ANONYMOUS_LOGIN: yes
+      kafka:
+        image: confluentinc/cp-enterprise-kafka:latest
+        ports:
+          - 9092:9092
+        env:
+          KAFKA_BROKER_ID: 1
+          KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
+          KAFKA_DELETE_TOPIC_ENABLE: "true"
+
+    steps:
+    - name: Install KafkaCat
+      run: |
+        sudo apt-get install kafkacat
+    - name: Sleep to let Kafka spin up
+      uses: jakejarvis/wait-action@master
+      with:
+        time: '30s'
+    - name: docker check
+      run: docker ps -a
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Setup dotnet 3.1
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.1.x'
+    - name: Setup dotnet 5.0.x
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+    - name: Install dependencies
+      run: dotnet restore
+    # - name: Debugging with tmate
+    #   uses: mxschmitt/action-tmate@v3.1
+    - name: Kafka Install Check
+      run:  kafkacat -L -b localhost
+    - name: Kafka Transport Tests
+      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  postgres-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+  
+    services:
+      postgres:
+        image: postgres
+        ports: 
+          - 5432:5432
+        env:
+          POSTGRES_PASSWORD: password
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Postgres Tests
+        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
+  eventstore-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    
+    services:
+      evenstore: 
+       image: eventstore/eventstore:release-5.0.9
+       ports: 
+         - 1113:1113
+         - 2113:2113
+       env:
+         EVENTSTORE_RUN_PROJECTIONS: ALL
+         EVENTSTORE_START_STANDARD_PROJECTIONS: true
+         EVENTSTORE_CLUSTER_SIZE: 1
+         EVENTSTORE_EXT_TCP_PORT: 1113
+         EVENTSTORE_EXT_HTTP_PORT: 2113 
+         EVENTSTORE_INSECURE: true
+         EVENTSTORE_ENABLE_EXTERNAL_TCP: true
+         EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
+     
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: EventStore Tests
+        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+  
+  sqlserver-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+  
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server
+        ports: 
+          - 1433:1433
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Password123!
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: MSSQL Tests
+        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        
+  mysql-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+  
+    services:
+      mariadb:
+        image: mariadb:latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: BrighterTests
+          MYSQL_ROOT_PASSWORD: root
+        options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Verify MariaDB connection
+        env:
+          PORT: ${{ job.services.mariadb.ports[3306] }}
+        run: |
+          while ! mysqladmin ping -h"127.0.0.1" -P"$PORT" --silent; do
+            sleep 1
+          done
+      - name: MySQL Tests
+        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  dynamo-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+  
+    services:
+      dynamo:
+        image: dwmkerr/dynamodb
+        ports: 
+          - 8000:8000
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: DynamoDB Tests
+        run: dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  aws-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: us-west-2
+      AWS_DEFAULT_OUTPUT: json    
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+      - name: Copy files to the test website with the AWS CLI
+        run: |
+          aws sns list-topics
+      - name: SQS Tests
+        run: dotnet test ./tests/Paramore.Brighter.AWSSQS.Tests/Paramore.Brighter.AWSSQS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+
+  azure-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Azure Tests
+        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n

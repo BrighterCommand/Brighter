@@ -1,0 +1,19 @@
+version: '3'
+
+services:
+   
+  # Need to give 2GB of memory to Docker for SQL
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    environment:
+      - ACCEPT_EULA=Y
+      - SA_PASSWORD=Password123!
+
+volumes:
+  sqlserver-data:
+    driver: local
+  

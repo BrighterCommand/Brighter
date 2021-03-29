@@ -31,6 +31,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         , [Topic] nvarchar(255) NULL
                                         , [MessageType] nvarchar(32) NULL
                                         , [Timestamp] datetime NULL
+                                        , [CorrelationId] UNIQUEIDENTIFIER NULL
+                                        , [ReplyTo] NVARCHAR(255) NULL
+                                        , [ContentType] NVARCHAR(128) NULL  
                                         , [Dispatched] datetime NULL
                                         , [HeaderBag] ntext NULL
                                         , [Body] ntext NULL

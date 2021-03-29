@@ -1,38 +1,28 @@
 ---
-name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
-assignees: ''
-
+name: 🐞 Bug report
+about: Create a report about something that is not working
+labels: 'bug'
 ---
 
-**Describe the bug**
+### Describe the bug
 A clear and concise description of what the bug is.
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+### To Reproduce
+<!--
+We ❤ code! Point us to a minimalistic repro project hosted in a GitHub repo.
+For a repro project, create a new project using the template of your your choice, apply the minimum required code to result in the issue you're observing.
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+We will close this issue if:
+- the repro project you share with us is complex. We can't investigate custom projects, so don't point us to such, please.
+- if we will not be able to repro the behavior you're reporting
+-->
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+### Exceptions (if any)
+<!-- 
+Include the exception you get when facing this issue
+-->
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
-
-**Additional context**
-Add any other context about the problem here.
+### Further technical details
+- Brighter version
+- Include the output of `dotnet --info`
+- The OS (Window, Linux, MacOs, etc)

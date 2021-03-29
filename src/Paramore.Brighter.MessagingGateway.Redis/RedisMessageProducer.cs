@@ -51,12 +51,19 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducer
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
+        private readonly Publication _publication; //not used for now, but passed in for future use
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
-            : base(redisMessagingGatewayConfiguration)
+            : this(redisMessagingGatewayConfiguration, new Publication {MakeChannels = OnMissingChannel.Create})
         {}
+        
+         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, Publication publication = null)
+            : base(redisMessagingGatewayConfiguration)
+         {
+             _publication = publication;
+         }
 
         public void Dispose()
         {

@@ -40,11 +40,11 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>
-        /// <param name="connection">The queue to connect to; uses routing key as queue name</param>
+        /// <param name="subscription">The parameters for us to connect to the channel and receive messages</param>
         /// <returns>IAmAMessageConsumer</returns>
-        public IAmAMessageConsumer Create(Connection connection)
+        public IAmAMessageConsumer Create(Subscription subscription)
         {
-            return new RedisStreamsConsumer(_configuration, connection.RoutingKey);
+            throw new System.NotImplementedException();
         }
     }
 }

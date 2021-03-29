@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             using (var connection = GetConnection())
             {
                 connection.Open();
-                var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
                 try
                 {
                     sqlcmd.ExecuteNonQuery();
@@ -148,7 +148,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             using (var connection = GetConnection())
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlcmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
                 try
                 {
                     await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -284,7 +284,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             return new SqlConnection(_configuration.ConnectionString);
         }
 
-        private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
+        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
         {
             var sqlAdd =
                 $"insert into {_configuration.InBoxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";

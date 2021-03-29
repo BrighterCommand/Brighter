@@ -36,25 +36,26 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
         private readonly IAmAMessagePump _messagePump;
-        private readonly FailingChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
-        private readonly MyCommand _command;
 
         public MessagePumpRetryCommandOnConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
-            _channel = new FailingChannel { NumberOfRetries = 4 };
+            var channel = new FailingChannel { NumberOfRetries = 1 };
             var mapper = new MyCommandMessageMapper();
-            _messagePump = new MessagePump<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            _messagePump = new MessagePump<MyCommand>(_commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
 
-            _command = new MyCommand();
+            var command = new MyCommand();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(_command)));
-            _channel.Enqueue(message1);
-            _channel.Enqueue(message2);
+            //two command, will be received when subscription restored
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(command)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(command)));
+            channel.Enqueue(message1);
+            channel.Enqueue(message2);
+            
+            //end the pump
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Enqueue(quitMessage);
+            channel.Enqueue(quitMessage);
         }
 
         [Fact]

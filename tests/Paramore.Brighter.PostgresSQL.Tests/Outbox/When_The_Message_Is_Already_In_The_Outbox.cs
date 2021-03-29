@@ -30,21 +30,21 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
-    [Trait("Category", "PostgreSql")]
-    [Collection("PostgreSql OutBox")]
+    [Trait("Category", "PostgresSql")]
+    [Collection("PostgresSql OutBox")]
     public class PostgreSqlOutboxMessageAlreadyExistsTests : IDisposable
     {
         private Exception _exception;
         private readonly Message _messageEarliest;
         private readonly PostgreSqlOutbox _sqlOutbox;
-        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
+        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
 
         public PostgreSqlOutboxMessageAlreadyExistsTests()
         {
-            _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.SetupMessageDb();
+            _postgresSqlTestHelper = new PostgresSqlTestHelper();
+            _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _sqlOutbox.Add(_messageEarliest);
         }
@@ -54,13 +54,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         {
             _exception = Catch.Exception(() => _sqlOutbox.Add(_messageEarliest));
 
-            //_should_ignore_the_duplcate_key_and_still_succeed
+            //should ignore the duplicate key and still succeed
             _exception.Should().BeNull();
         }
 
         public void Dispose()
         {
-            _PostgreSqlTestHelper.CleanUpTable();
+            _postgresSqlTestHelper.CleanUpDb();
         }
     }
 }

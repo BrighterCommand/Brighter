@@ -689,7 +689,7 @@ namespace Paramore.Brighter
             var routingKey = channelName.ToString();
             using (var responseChannel =
                 _responseChannelFactory.CreateChannel(
-                    new Connection(
+                    new Subscription(
                         typeof(TResponse),
                         channelName: new ChannelName(channelName.ToString()), 
                         routingKey: new RoutingKey(routingKey))))
@@ -700,8 +700,8 @@ namespace Paramore.Brighter
                 request.ReplyAddress.CorrelationId = channelName; 
                 
                 //we do this to create the channel on the broker, or we won't have anything to send to; we 
-                //retry in case the connection is poor. An alternative would be to extract the code from
-                //the channel to create the connection, but this does not do much on a new queue
+                //retry in case the subscription is poor. An alternative would be to extract the code from
+                //the channel to create the subscription, but this does not do much on a new queue
                 Retry(() => responseChannel.Purge());
 
                 var outMessage = outMessageMapper.MapToMessage(request);

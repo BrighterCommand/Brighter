@@ -30,21 +30,21 @@ using Xunit;
 
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
-    [Trait("Category", "PostgreSql")]
-    [Collection("PostgreSql OutBox")]
+    [Trait("Category", "PostgresSql")]
+    [Collection("PostgresSql OutBox")]
     public class PostgreSqlOutboxEmptyStoreTests : IDisposable
     {
-        private readonly PostgreSqlTestHelper _PostgreSqlTestHelper;
+        private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
         private readonly Message _messageEarliest;
         private readonly PostgreSqlOutbox _sqlOutbox;
         private Message _storedMessage;
 
         public PostgreSqlOutboxEmptyStoreTests()
         {
-            _PostgreSqlTestHelper = new PostgreSqlTestHelper();
-            _PostgreSqlTestHelper.SetupMessageDb();
+            _postgresSqlTestHelper = new PostgresSqlTestHelper();
+            _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new PostgreSqlOutbox(_PostgreSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
@@ -53,13 +53,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
-            //_should_return_a_empty_message
+            //should return a empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }
 
         public void Dispose()
         {
-            _PostgreSqlTestHelper.CleanUpTable();
+            _postgresSqlTestHelper.CleanUpDb();
         }
     }
 }

@@ -89,6 +89,10 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             _db.StreamAcknowledge(_queueName, _consumerGroup, new RedisValue(redisId));
         }
 
+        public void Reject(Message message)
+        {
+        }
+
 
         /// <summary>
         /// Clear the queue

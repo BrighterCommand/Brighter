@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _channel.Reject(_receivedMessage);
 
             //_should_ackonwledge_the_message
-            A.CallTo(() => _gateway.Reject(_receivedMessage, true)).MustHaveHappened();
+            A.CallTo(() => _gateway.Reject(_receivedMessage)).MustHaveHappened();
         }
     }
 }

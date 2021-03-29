@@ -38,10 +38,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageConsumer>);
         private IConsumer<Null, string> _consumer;
-        private bool _disposedValue = false;
-        private string _topic;
-        private ConsumerConfig _consumerConfig;
+        private KafkaMessageCreator _creator;
+        private readonly string _topic;
+        private readonly ConsumerConfig _consumerConfig;
         private bool _autoCommitEnabled = false;
+        private bool _disposedValue = false;
 
         public KafkaMessageConsumer(string groupId, string topic, 
             KafkaMessagingGatewayConfiguration globalConfiguration, 
@@ -66,7 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 AutoCommitIntervalMs = consumerConfiguration.AutoCommitIntervalMs, 
                 EnableAutoCommit = consumerConfiguration.EnableAutoCommit,
-                
+                AllowAutoCreateTopics = true,
                 AutoOffsetReset = consumerConfiguration.OffsetDefault 
             };
 
@@ -92,6 +93,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _logger.Value.InfoFormat($"Kakfa consumer subscribing to {_topic}");
 
             _consumer.Subscribe(new []{ _topic });
+
+            _creator = new KafkaMessageCreator();
         }
 
 
@@ -154,13 +157,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Message.Value}");
                 _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Vallue: {consumeResult.Message.Value}");
 
-                var messageHeader =
-                    new MessageHeader(Guid.NewGuid(), consumeResult.Topic, MessageType.MT_EVENT)
-                    {
-                        Bag = {["TopicPartitionOffset"] = consumeResult.TopicPartitionOffset,}
-                    };
-                var messageBody = new MessageBody(consumeResult.Message.Value);
-                return new Message[] {new Message(messageHeader, messageBody)};
+                return new []{_creator.CreateMessage(consumeResult)};
             }
             catch (ConsumeException consumeException)
             {
@@ -171,7 +168,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                      _consumerConfig.GroupId, 
                      _consumerConfig.BootstrapServers,
                      consumeException.ConsumerRecord.ToString());
-                 throw new ChannelFailureException("Error connecting to RabbitMQ, see inner exception for details", consumeException);
+                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
                  
             }
             catch (Exception exception)
@@ -191,9 +188,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
-         public void Reject(Message message, bool requeue)
+         public void Reject(Message message)
         {
-            if (!requeue && !_autoCommitEnabled)
+            if (!_autoCommitEnabled)
                 Acknowledge(message);
         }
 

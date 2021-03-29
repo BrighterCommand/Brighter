@@ -44,14 +44,18 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Creates the input channel.
         /// </summary>
-        /// <param name="connection">The connection parameters with which to create the channel</param>
+        /// <param name="subscription">The subscription parameters with which to create the channel</param>
         /// <returns>IAmAnInputChannel.</returns>
-        public IAmAChannel CreateChannel(Connection connection)
+        public IAmAChannel CreateChannel(Subscription subscription)
         {
+            RedisSubscription rmqSubscription = subscription as RedisSubscription;  
+            if (rmqSubscription == null)
+                throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
+            
             return new Channel(
-                connection.ChannelName, 
-                _messageConsumerFactory.Create(connection),
-                connection.BufferSize
+                subscription.ChannelName, 
+                _messageConsumerFactory.Create(subscription),
+                subscription.BufferSize
                 );
         }
     }

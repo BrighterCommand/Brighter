@@ -36,25 +36,26 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     public class MessagePumpRetryEventConnectionFailureTests
     {
         private readonly IAmAMessagePump _messagePump;
-        private readonly FailingChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
-        private readonly MyEvent _event;
 
         public MessagePumpRetryEventConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
-            _channel = new FailingChannel { NumberOfRetries = 4 };
+            var channel = new FailingChannel { NumberOfRetries = 1 };
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = -1 };
+            _messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
 
-            _event = new MyEvent();
+            var @event = new MyEvent();
 
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_event)));
-            _channel.Enqueue(message1);
-            _channel.Enqueue(message2);
+            //Two events will be received when channel fixed
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            channel.Enqueue(message1);
+            channel.Enqueue(message2);
+            
+            //Quit the message pump
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Enqueue(quitMessage);
+            channel.Enqueue(quitMessage);
         }
 
         [Fact]

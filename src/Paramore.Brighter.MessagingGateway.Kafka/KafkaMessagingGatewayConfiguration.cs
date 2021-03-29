@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Maximum number of in-flight requests the 
         /// client will send. 
-        /// This setting applies per broker connection.
+        /// This setting applies per broker subscription.
         /// </summary>
         public int? MaxInFlightRequestsPerConnection { get; set; }
 
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         //    };
 
         //    if (MaxInFlightRequestsPerConnection.HasValue)
-        //        config["max.in.flight.requests.per.connection"] = MaxInFlightRequestsPerConnection.Value;
+        //        config["max.in.flight.requests.per.subscription"] = MaxInFlightRequestsPerConnection.Value;
         //    return config;
         //}
     }

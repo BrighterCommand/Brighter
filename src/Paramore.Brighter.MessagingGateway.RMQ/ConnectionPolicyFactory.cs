@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         if (exception is BrokerUnreachableException)
                         {
                             _logger.Value.WarnException(
-                                "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on connection {2}. Will retry {3} times",
+                                "RMQMessagingGateway: BrokerUnreachableException error on connecting to queue {0} exchange {1} on subscription {2}. Will retry {3} times",
                                 exception,
                                 context["queueName"],
                                 connection.Exchange.Name,
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         else
                         {
                             _logger.Value.WarnException(
-                                "RMQMessagingGateway: Exception on connection to queue {0} via exchange {1} on connection {2}",
+                                "RMQMessagingGateway: Exception on subscription to queue {0} via exchange {1} on subscription {2}",
                                 exception,
                                 context["queueName"],
                                 connection.Exchange.Name,

@@ -8,11 +8,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     [DynamoDBTable("brighter_outbox")]
     public class MessageItem
     {
-       /// <summary>
+        /// <summary>
         /// The message body
         /// </summary>
         public string Body { get; set; }
-        
+
         /// <summary>
         /// The time at which the message was created, formatted as a string yyyy-MM-dd
         /// </summary>
@@ -21,46 +21,68 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The time at which the message was created, in ticks
         /// </summary>
-        [DynamoDBGlobalSecondaryIndexRangeKey(indexName:"Outstanding")]
+        [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
         [DynamoDBProperty]
         public string CreatedTime { get; set; }
-        
+
         /// <summary>
         /// The time at which the message was delivered, formatted as a string yyyy-MM-dd
         /// </summary>
         public string DeliveredAt { get; set; }
+
         /// <summary>
         /// The time that the message was delivered to the broker, in ticks
         /// </summary>
-        [DynamoDBGlobalSecondaryIndexRangeKey(indexName:"Delivered")]
+        [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Delivered")]
         [DynamoDBProperty]
         public string DeliveryTime { get; set; }
-             
+
         /// <summary>
         /// A JSON object representing a dictionary of additional properties set on the message
         /// </summary>
         public string HeaderBag { get; set; }
-        
+
         /// <summary>
         /// The Id of the Message. Used as a Global Secondary Index
         /// </summary>
         [DynamoDBHashKey]
         [DynamoDBProperty]
         public string MessageId { get; set; }
-       
+
         /// <summary>
         /// The type of message i.e. MT_COMMAND, MT_EVENT etc. An enumeration rendered as a string
         /// </summary>
         public string MessageType { get; set; }
 
-       /// <summary>
+        /// <summary>
         /// The Topic the message was published to
         /// </summary>
         [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
         [DynamoDBProperty]
-         public string Topic { get; set; }
+        public string Topic { get; set; }
 
-        public MessageItem() {/*Deserialization*/}
+        /// <summary>
+        /// The correlation id of the message
+        /// </summary>
+        [DynamoDBProperty]
+        public string CorrelationId { get; set; }
+
+        /// <summary>
+        /// If this is a conversation i.e. request-response, what is the reply channel
+        /// </summary>
+        [DynamoDBProperty]
+        public string ReplyTo { get; set; }
+        
+        /// <summary>
+        /// What is the content type of the message
+        /// </summary>
+        [DynamoDBProperty]
+        public string ContentType { get; set; }
+        
+        public MessageItem()
+        {
+            /*Deserialization*/
+        }
 
         public MessageItem(Message message)
         {
@@ -70,6 +92,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             MessageId = message.Id.ToString();
             Topic = message.Header.Topic;
             MessageType = message.Header.MessageType.ToString();
+            CorrelationId = message.Header.CorrelationId.ToString();
+            ReplyTo = message.Header.ReplyTo;
+            ContentType = message.Header.ContentType;
             CreatedAt = $"{date}";
             HeaderBag = JsonConvert.SerializeObject(message.Header.Bag);
             Body = message.Body.Value;
@@ -80,9 +105,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var messageId = Guid.Parse(MessageId);
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
             var timestamp = DateTime.Parse(CreatedAt);
+            var correlationId = Guid.Parse(CorrelationId);
             var bag = JsonConvert.DeserializeObject<Dictionary<string, string>>(HeaderBag);
 
-            var header = new MessageHeader(messageId, Topic, messageType, timestamp);
+            var header = new MessageHeader(
+                messageId:messageId, 
+                topic: Topic, 
+                messageType: messageType, 
+                timeStamp: timestamp,
+                correlationId: correlationId,
+                replyTo: ReplyTo,
+                contentType: ContentType);
 
             foreach (var key in bag.Keys)
             {

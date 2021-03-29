@@ -73,15 +73,15 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
                     break;
                 case ConfigurationCommandType.CM_STOPCHANNEL:
                     _logger.Value.Debug("--------------------------------------------------------------------------");
-                    _logger.Value.DebugFormat("Configuration Command received and now stopping channel {0}", command.ConnectionName);
+                    _logger.Value.DebugFormat("Configuration Command received and now stopping channel {0}", command.SubscriptionName);
                     _logger.Value.Debug("--------------------------------------------------------------------------");
-                    _dispatcher.Shut(command.ConnectionName);
+                    _dispatcher.Shut(command.SubscriptionName);
                     break;
                 case ConfigurationCommandType.CM_STARTCHANNEL:
                     _logger.Value.Debug("--------------------------------------------------------------------------");
-                    _logger.Value.DebugFormat("Configuration Command received and now starting channel {0}", command.ConnectionName);
+                    _logger.Value.DebugFormat("Configuration Command received and now starting channel {0}", command.SubscriptionName);
                     _logger.Value.Debug("--------------------------------------------------------------------------");
-                    _dispatcher.Open(command.ConnectionName);
+                    _dispatcher.Open(command.SubscriptionName);
                     break;
                 default:
                     throw new ArgumentException("{0} is an unknown Configuration Command", Enum.GetName(typeof(ConfigurationCommandType), command.Type));

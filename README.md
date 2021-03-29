@@ -1,25 +1,38 @@
 | | |
 | ------------- | ------------- |
 |![canon](https://raw.githubusercontent.com/BrighterCommand/Brighter/master/images/brightercanon-nuget.png) |[Brighter](https://github.com/BrighterCommand/Brighter)|
-||Brighter is a command dispatcher, processor, and task queue. It can be used to implement the [Command Invoker](http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker) pattern. It can be used for interoperability in a microservices architecture as well. |
+||Brighter is a Command Dispatcher and Command Processor. It can be used with an in-memory bus, or for interoperability in a microservices architecture, out of process via a wider range of middleware transports. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.svg)](https://www.nuget.org/packages/paramore.brighter/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
-| Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://paramore.readthedocs.io); [Wiki](https://github.com/BrighterCommand/Brighter/wiki)  |
+| Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://paramore.readthedocs.io)  |
 | Source  |https://github.com/BrighterCommand/Brighter |
 | Chat | [![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
-| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, c#, command, command dispatcher, command  processor, queue, distributed |
+| Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kakfa, redis, c#, command, command dispatcher, command  processor, queue, distributed |
 
-## Why a Command Dispatcher, Command Processor, and Task Queue?
-* When implementing a hexagonal architecture, one question is how to implement a port.
-	- Brighter shows how to implement ports using a Command approach (with a Command Dispatcher)
-	- This is the strategy described for services in Service Design Patterns as  [Command Invoker](http://servicedesignpatterns.com/WebServiceImplementationStyles/CommandInvoker)
-* A command processor lets you add orthogonal concerns seperately to the processing of commands such as logging, undo, validation, retry, and circuit breaker
- 	- Brighter provides a Command Processor, using a 'Russian Doll' model to allow a pipeline of handlers to operate on a command.
-* A task queue allows a one process to send work to be handled asynchronously to another process, using a message queue as the channel, for processing. A common use case is to help a web server scale by handing off a request to another process for back-end processing. This allows both a faster ack and throttling of the request arrival rate to that which can be handled by a back end processing component. For another project with this goal, see [Celery](https://github.com/celery/celery)
- 	- Brighter provides a Task Queue implementation for handling commands asynchronously via a work queue. 
+## What Scenarios Can You Use Brighter in?
+* When implementing a clean architecture (ports & adapters), one question is how to implement the interactor or port layer (sometimes called a mediator).
+
+    * A common solution is to use the Command pattern to implement the Interactor (port) or a pattern derived from that.
+    * Brighter provides an implementation the Interactor (port) using the Command Dispatcher pattern.
+    * You can write a command, that is then dispatched to a handler that you write.
+    * Alternatively you can write an event, that is dispatched to zero or more handlers that you write.
+    * Brighter also supports the Command Processor pattern, so that you can add middleware between the sender and handler.
+    * Handlers are tagged via attributes to include middleware in thier pipeline.
+    * Out-of-the-box middleware is provided for logging and Polly (retry, and circuit breaker).
+           
+* When integrating two microservices using messaging, one question is how to abstract from the developer the code that sends and receives messages in favor of writing domain code.
+
+    * A common solution is a message pump that: gets a message, translates a message, and dispatches it to user code. 
+    * Brighter provides a service activator that implements a message pump.
+    * The message pump dispatches to user code via Brighter's Command Dispatcher/Processor.
+    * This hides the complexity of a message pump; developers need only write a handler that subscribes to a message
+    * This hides the complexity of messaging from developers who just write commands/events and handlers.
+    * Developers can take full advantage of Brighter's middleware pipeline when processing messages 
+    * Brighter can be configured for a variety of transports including RabbitMQ, and SNS+SQS.
+  
 
 ## Documentation
-* More detailed documentation on the project can be found on the GitHub pages for the project here: [Paramore](https://github.com/BrighterCommand/Brighter)
+* More detailed documentation on the project can be found on the ReadTheDocs pages for the project here: [Paramore](https://paramore.readthedocs.io/en/latest/)
 
 
 ## What are the different branches?
@@ -43,11 +56,12 @@ The goal is to allow you to begin working with Brighter as easily as possible fo
 Note that if you have locally installed versions of these services you will either need to stop them, or edit a local version of the docker compose file.
 
 ## How do I get the NuGet packages for the latest build?
-We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on a regular basis and we update the release notes on those drops. We also tag the master code line. If you want to take the packages that represent master at any point you can download the packages for the latest good build from [AppVeyor](https://ci.appveyor.com/nuget/paramore-brighter-m289d49fraww). The easiest approach to using those is to download them into a folder that you add to your NuGet sources. 
+We release the build artefacts (NuGet packages) to [NuGet](http://nuget.org) on a regular basis and we update the release notes on those drops. We also tag the master code line. If you want to take the packages that represent master at any point you can download the packages for the latest good build from [GitHub Packages](https://nuget.pkg.github.com/).
 
 <a href="https://scan.coverity.com/projects/2900">
   <img alt="Coverity Scan Build Status"
        src="https://scan.coverity.com/projects/2900/badge.svg"/>
 </a>
 
-[![Build status](https://ci.appveyor.com/api/projects/status/srgw17idv5994wkm/branch/master?svg=true)](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter/branch/master)
+![CI](https://github.com/BrighterCommand/Brighter/workflows/CI/badge.svg)
+

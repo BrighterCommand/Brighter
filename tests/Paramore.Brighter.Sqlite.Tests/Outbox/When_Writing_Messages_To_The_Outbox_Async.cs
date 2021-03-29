@@ -58,11 +58,11 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             _retrievedMessages = await _sSqlOutbox.GetAsync();
 
-            //_should_read_first_message_last_from_the__outbox
+            //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //_should_read_last_message_first_from_the__outbox
+            //should read last message first from the outbox
             _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //_should_read_the_messages_from_the__outbox
+            //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
 

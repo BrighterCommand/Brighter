@@ -1,4 +1,6 @@
 using System;
+using Amazon;
+using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
 using Newtonsoft.Json;
@@ -18,36 +20,40 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
-        private readonly MyCommand _myCommand;
-        private readonly Guid _correlationId;
-        private readonly string _replyTo;
-        private readonly string _contentType;
-        private readonly string _topicName;
-        private Connection<MyCommand> _connection = new Connection<MyCommand>(channelName: new ChannelName($"{typeof(MyCommand)}.{Guid.NewGuid()}"));
+        private readonly SqsSubscription<MyCommand> _subscription; 
 
         public SqsMessageProducerRequeueTests()
         {
-            _myCommand = new MyCommand{Value = "Test"};
-            _correlationId = Guid.NewGuid();
-            _replyTo = "http:\\queueUrl";
-            _contentType = "text\\plain";
-            _topicName = _myCommand.GetType().FullName.ToValidSNSTopicName();
+            MyCommand myCommand = new MyCommand{Value = "Test"};
+            Guid correlationId = Guid.NewGuid();
+            string replyTo = "http:\\queueUrl";
+            string contentType = "text\\plain";
+            var channelName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
+            var routingKey = new RoutingKey(topicName);
+            
+            _subscription = new SqsSubscription<MyCommand>(
+                name: new SubscriptionName(channelName),
+                channelName: new ChannelName(channelName),
+                routingKey: routingKey
+                );
             
             _message = new Message(
-                new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
-                new MessageBody(JsonConvert.SerializeObject((object) _myCommand))
+                new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
+                new MessageBody(JsonConvert.SerializeObject((object) myCommand))
             );
  
             //Must have credentials stored in the SDK Credentials store or shared credentials file
-            var credentialChain = new CredentialProfileStoreChain();
+            new CredentialProfileStoreChain();
             
-            if (credentialChain.TryGetAWSCredentials("default", out var credentials) && credentialChain.TryGetProfile("default", out var profile))
-            {
-                var awsConnection = new AWSMessagingGatewayConnection(credentials, profile.Region);
-                _sender = new SqsMessageProducer(awsConnection);
-                _channelFactory = new ChannelFactory(awsConnection, new SqsMessageConsumerFactory(awsConnection));
-                _channel = _channelFactory.CreateChannel(_connection);
-            }
+            (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            
+            _sender = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            
+            //We need to do this manually in a test - will create the channel from subscriber parameters
+            _channelFactory = new ChannelFactory(awsConnection);
+            _channel = _channelFactory.CreateChannel(_subscription);
         }
 
         [Fact]
@@ -67,8 +73,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory.DeleteQueue(_connection);
-            _channelFactory.DeleteTopic(_connection);
+            _channelFactory.DeleteTopic();
+            _channelFactory.DeleteQueue();
         }
     }
 }

@@ -7,18 +7,21 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly MsSqlMessagingGatewayConfiguration _msSqlMessagingGatewayConfiguration;
         private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageProducerFactory>);
+        private Publication _publication; //-- placeholder for future use
 
-        public MsSqlMessageProducerFactory(MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration)
+        public MsSqlMessageProducerFactory(
+            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
+            Publication publication = null)
         {
-            _msSqlMessagingGatewayConfiguration = msSqlMessagingGatewayConfiguration ??
-                                                  throw new ArgumentNullException(
-                                                      nameof(msSqlMessagingGatewayConfiguration));
+            _msSqlMessagingGatewayConfiguration = 
+                msSqlMessagingGatewayConfiguration ?? throw new ArgumentNullException(nameof(msSqlMessagingGatewayConfiguration));
+            _publication = publication ?? new Publication() {MakeChannels = OnMissingChannel.Create};
         }
 
         public IAmAMessageProducer Create()
         {
             Logger.Value.Debug($"MsSqlMessageProducerFactory: create producer");
-            return new MsSqlMessageProducer(_msSqlMessagingGatewayConfiguration);
+            return new MsSqlMessageProducer(_msSqlMessagingGatewayConfiguration, _publication);
         }
     }
 }

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <summary>
         /// Initialises a new instance of <see cref="PostgreSqlOutboxConfiguration" class/>
         /// </summary>
-        /// <param name="connectionstring">The Connection String</param>
+        /// <param name="connectionstring">The Subscription String</param>
         /// <param name="outBoxTablename">Name of the OutBox table</param>
         public PostgreSqlOutboxConfiguration(string connectionstring,string outBoxTablename)
         {
@@ -42,9 +42,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         /// <summary>
-        /// Gets the connection string.
+        /// Gets the subscription string.
         /// </summary>
-        /// <value>The connection string.</value>
+        /// <value>The subscription string.</value>
         public string ConnectionString { get; private set; }
 
         /// <summary>
