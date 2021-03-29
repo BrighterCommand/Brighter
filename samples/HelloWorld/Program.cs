@@ -41,17 +41,25 @@ namespace HelloWorld
                 .WriteTo.Console()
                 .CreateLogger();
 
-            var serviceCollection = new ServiceCollection();
-
-            serviceCollection.AddBrighter().AutoFromAssemblies();
-
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-
-            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+            var commandProcessor = 
+                CreateServices()
+                .GetService<IAmACommandProcessor>();
             
-            commandProcessor.Send(new GreetingCommand("Ian"));
+            commandProcessor?.Send(new GreetingCommand("Ian"));
 
             Console.ReadLine();
+        }
+
+        private static ServiceProvider CreateServices()
+        {
+            var serviceCollection = new ServiceCollection();
+
+            serviceCollection
+                .AddBrighter()
+                .AutoFromAssemblies();
+
+            var serviceProvider = serviceCollection.BuildServiceProvider();
+            return serviceProvider;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,8 +23,10 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
-using KafkaTaskQueueSamples.Greetings.Ports.Commands;
+using Confluent.Kafka;
+using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -33,7 +36,7 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
 
-namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
+namespace GreetingsReceiverConsole
 {
     public class Program
     {
@@ -46,29 +49,27 @@ namespace KafkaTaskQueueSamples.GreetingsReceiverConsole
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var subscriptions = new Subscription[]
+                    var subscriptions = new KafkaSubscription[]
                     {
-                        new Subscription<GreetingEvent>(
+                        new KafkaSubscription<GreetingEvent>(
                             new SubscriptionName("paramore.example.greeting"),
-                            new ChannelName("greeting.event"),
-                            new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 200)
+                            channelName: new ChannelName("greeting.event"),
+                            routingKey: new RoutingKey("greeting.event"),
+                            groupId: "kafka-GreetingsReceiverConsole-Sample",
+                            timeoutInMilliseconds: 100,
+                            offsetDefault: AutoOffsetReset.Earliest,
+                            commitBatchSize:5)
                     };
+                    
                     //create the gateway
-                    var messagingGatewayConfiguration = new KafkaMessagingGatewayConfiguration
-                    {
-                        Name = "paramore.brighter", 
-                        BootStrapServers = new[] {"localhost:9092"}
-                    };
-
-                    var consumerFactory = new KafkaMessageConsumerFactory(messagingGatewayConfiguration);
+                    var consumerFactory = new KafkaMessageConsumerFactory(
+                        new KafkaMessagingGatewayConfiguration {Name = "paramore.brighter", BootStrapServers = new[] {"localhost:9092"}}
+                   );
 
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(consumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new KafkaMessageProducerFactory(messagingGatewayConfiguration).Create(), null);
                     }).AutoFromAssemblies();
 
 

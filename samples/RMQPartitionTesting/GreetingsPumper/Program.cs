@@ -36,7 +36,7 @@ namespace GreetingsPumper
                         };
                         var producer = new RmqMessageProducer(
                             connection:gatewayConnection, 
-                            new Publication
+                            new RmqPublication
                             {
                                 MakeChannels =OnMissingChannel.Create
                             });

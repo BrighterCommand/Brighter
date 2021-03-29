@@ -21,41 +21,88 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System.Collections.Generic;
+using System;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    //Maps to Confluent's Kafka's Client Config enum, but we don't want to take a direct dependency on that here
+    
+    /// <summary>
+    /// What is the security protocol used to authenticate the client with the broker
+    /// </summary>
+    public enum SaslMechanism
+    {
+        Gssapi,
+        Plain,
+        ScramSha256,
+        ScramSha512,
+        OAuthBearer,
+    }
+    
+    public enum SecurityProtocol
+    {
+        Plaintext,
+        Ssl,
+        SaslPlaintext,
+        SaslSsl,
+    }
+    
     public class KafkaMessagingGatewayConfiguration
     {
         /// <summary>
-        /// Client identifier.
-        /// </summary>
-        public string Name { get; set; }
-
-        /// <summary>
-        /// Initial list of brokers as a list of 
-        /// broker host or host:port. "
+        /// Initial list of brokers as a list of broker host or host:port. "
         /// </summary>
         public string[] BootStrapServers { get; set; }
 
         /// <summary>
-        /// Maximum number of in-flight requests the 
-        /// client will send. 
-        /// This setting applies per broker subscription.
+        /// A comma-separated list of debug contexts to enable.  Producer: broker, topic, msg. Consumer: consumer, cgrp, topic, fetch
         /// </summary>
-        public int? MaxInFlightRequestsPerConnection { get; set; }
+        public string Debug { get; set; } = null; 
 
-        //public IEnumerable<KeyValuePair<string, object>> ToConfig()
-        //{
-        //    var config = new Dictionary<string, object>()
-        //    {
-        //        {"client.id", Name },
-        //        {"bootstrap.servers", string.Join(", ", BootStrapServers)}
-        //    };
+         /// <summary>
+         /// Client identifier.
+         /// </summary>
+         public string Name { get; set; }
 
-        //    if (MaxInFlightRequestsPerConnection.HasValue)
-        //        config["max.in.flight.requests.per.subscription"] = MaxInFlightRequestsPerConnection.Value;
-        //    return config;
-        //}
+         /// <summary>
+         /// The Sasl mechanism by which the client connects to the broker
+         /// </summary>
+         public SaslMechanism? SaslMechanisms { get; set; } = null;
+
+         /// <summary>
+         /// This client's Kerberos principal name.
+         /// </summary>
+         public string SaslKerberosPrincipal { get; set; } = null;
+         
+         /// <summary>
+         /// SASL username for use with PLAIN and SASL-SCRAM
+         /// </summary>
+         public string SaslUsername { get; set; }
+         
+         /// <summary>
+         /// SASL password for use with PLAIN and SASL-SCRAM 
+         /// </summary>
+         public string SaslPassword { get; set; }
+
+         /// <summary>
+         /// What is the security protocol used by the broker
+         /// </summary>
+         public SecurityProtocol? SecurityProtocol { get; set; } = null;
+
+         /// <summary>
+         /// Where is the CA certificate located
+         /// </summary>
+         public string SslCaLocation { get; set; } = null;
+
+         /// <summary>
+         /// Path to client's keystore
+         /// </summary>
+         public string SslKeystoreLocation { get; set; } = null;
+         
+         /// <summary>
+         /// Password to keystore
+         /// </summary>
+         public string SslKeystorePassword { get; set; } = null;
+
     }
 }

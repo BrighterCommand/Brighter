@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
-            Task.Delay(250).Wait();
+            Task.Delay(500).Wait();
 
 
             //_should_have_consumed_the_messages_in_the_event_channel

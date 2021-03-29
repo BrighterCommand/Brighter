@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Serilog;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace GreetingsReceiverConsole
 {

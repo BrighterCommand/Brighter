@@ -64,18 +64,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Building_With_A_Default_Policy_Sufficient_To_Post()
+        public void When_Posting_With_A_Default_Policy()
         {
             _commandProcessor.Post(_myCommand);
 
-            //_should_store_the_message_in_the_sent_command_message_repository
+            //should store the message in the sent outbox
             _fakeOutbox
                 .Get()
                 .SingleOrDefault(msg => msg.Id == _message.Id)
                 .Should().NotBe(null);
-            //_should_send_a_message_via_the_messaging_gateway
+            //should send a message via the messaging gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
-            //_should_convert_the_command_into_a_message
+            // should convert the command into a message
             _fakeOutbox.Get().First().Should().Be(_message);
         }
 

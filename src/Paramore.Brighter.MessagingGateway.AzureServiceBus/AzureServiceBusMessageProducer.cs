@@ -9,9 +9,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     public class AzureServiceBusMessageProducer : IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
         private readonly IManagementClientWrapper _managementClientWrapper;
         private readonly ITopicClientProvider _topicClientProvider;
         private bool _topicCreated;
+
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
         private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
         private const int TopicConnectionRetryCount = 5;

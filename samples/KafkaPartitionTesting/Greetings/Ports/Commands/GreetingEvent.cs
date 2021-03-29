@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,23 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Greetings.TinyIoc;
 using Paramore.Brighter;
 
-namespace Greetings.Adapters.ServiceHost
+namespace Greetings.Ports.Commands
 {
-    public class TinyIoCMessageMapperFactory : IAmAMessageMapperFactory
+    public class GreetingEvent : Event
     {
-        private readonly TinyIoCContainer _container;
+        public GreetingEvent() : base(Guid.NewGuid()) { }
 
-        public TinyIoCMessageMapperFactory(TinyIoCContainer container)
+        public GreetingEvent(string greeting) : base(Guid.NewGuid())
         {
-            _container = container;
+            Greeting = greeting;
         }
 
-        public IAmAMessageMapper Create(Type messageMapperType)
-        {
-            return (IAmAMessageMapper)_container.Resolve(messageMapperType);
-        }
+        public string Greeting { get; set; }
     }
 }
