@@ -61,7 +61,7 @@ namespace Paramore.Brighter
 
         protected void ClearExpiredMessages()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             if (now - _lastScanAt < ExpirationScanInterval)
                 return;

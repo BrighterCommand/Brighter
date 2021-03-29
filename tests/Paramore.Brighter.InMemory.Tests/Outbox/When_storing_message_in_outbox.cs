@@ -75,7 +75,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             //Act
             outbox.Add(messageToAdd);
-            var dispatchedAt = DateTime.Now;
+            var dispatchedAt = DateTime.UtcNow;
             outbox.MarkDispatched(messageId, dispatchedAt);
 
             var dispatchedMessages = outbox.DispatchedMessages(500);
