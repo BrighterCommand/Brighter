@@ -3,11 +3,11 @@ using System.Threading;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    internal class MessagePumpSynchronizationContext : SynchronizationContext
+    internal class SingleThreadedApartment : SynchronizationContext
     {
         private readonly IAmAChannel _channel;
 
-        public MessagePumpSynchronizationContext(IAmAChannel channel)
+        public SingleThreadedApartment(IAmAChannel channel)
         {
             _channel = channel;
         }
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>Not supported.</summary>
         public override void Send(SendOrPostCallback d, object state)
         {
-            throw new NotSupportedException("AsyncMessagePump does not support sending synchronously");
+            throw new NotSupportedException("MessagePumpAsync does not support sending synchronously");
         }
     }
 }

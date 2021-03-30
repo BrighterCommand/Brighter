@@ -1,44 +1,56 @@
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherRoutingAsyncTests
+  public class MessagePumpDispatchAsyncTests
     {
-        private readonly Dispatcher _dispatcher;
-        private readonly FakeChannel _channel;
-        private readonly SpyCommandProcessor _commandProcessor;
+        private readonly IAmAMessagePump _messagePump;
+        private readonly MyEvent _myEvent = new MyEvent();
 
-        public MessageDispatcherRoutingAsyncTests()
+        public MessagePumpDispatchAsyncTests()
         {
-            _channel = new FakeChannel();
-            _commandProcessor = new SpyCommandProcessor();
+            var subscriberRegistry = new SubscriberRegistry();
+            subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+            var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerAsyncWithContinuation>(() => new MyEventHandlerAsyncWithContinuation());
+            var commandProcessor = new CommandProcessor(
+                subscriberRegistry,
+                handlerFactory,
+                new InMemoryRequestContextFactory(),
+                new PolicyRegistry());
 
-            var connection = new Subscription<MyEvent>(
-                new SubscriptionName("test"),
-                noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
-                channelFactory: new InMemoryChannelFactory(_channel),
-                channelName: new ChannelName("fakeChannel"), 
-                routingKey: new RoutingKey("fakekey"),
-                runAsync: true);
-            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
+            PipelineBuilder<MyEvent>.ClearPipelineCache();
 
-            var @event = new MyEvent();
-            var message = new MyEventMessageMapper().MapToMessage(@event);
-            _channel.Enqueue(message);
+            var channel = new FakeChannel();
+            var mapper = new MyEventMessageMapper();
+            _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
 
-            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
-            _dispatcher.Receive();
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_myEvent)));
+            channel.Enqueue(message);
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            channel.Enqueue(quitMessage);
         }
-   }
+
+        [Fact(Timeout = 5000)]
+        public async Task When_a_message_is_dispatched_it_should_reach_a_handler_async()
+        {
+            await _messagePump.Run();
+
+            MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent).Should().BeTrue();
+            MyEventHandlerAsyncWithContinuation.MonitorValue.Should().Be(2);
+            //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would 
+            //change once we fix the pump to exhibit that behavior
+            MyEventHandlerAsyncWithContinuation.WorkThreadId.Should().NotBe(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+        }
+    }
 }

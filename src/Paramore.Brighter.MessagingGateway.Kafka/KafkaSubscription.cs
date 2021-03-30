@@ -143,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
+                requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
         {
             CommitBatchSize = commitBatchSize;
             GroupId = groupId;

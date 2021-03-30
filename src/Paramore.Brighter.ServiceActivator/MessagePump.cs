@@ -22,17 +22,15 @@ namespace Paramore.Brighter.ServiceActivator
         protected IAmACommandProcessor _commandProcessor;
 
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
-        private readonly bool _runAsync;
         private int _unacceptableMessageCount = 0;
 
         public MessagePump(
             IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapper<TRequest> messageMapper,
-            bool runAsync = false)
+            IAmAMessageMapper<TRequest> messageMapper
+            )
         {
             _commandProcessor = commandProcessor; 
             _messageMapper = messageMapper;
-            _runAsync = runAsync;
         }
 
         public int TimeoutInMilliseconds { get; set; }
@@ -45,12 +43,13 @@ namespace Paramore.Brighter.ServiceActivator
 
         public IAmAChannel Channel { get; set; }
 
-        public virtual Task Run()
-        {
-            
-        }
+        //Implemented in a derived class to control how we run this:
+        //AsyncMesssagePump - do not block for I/O that can be queued on completion port, instead continue and put callback onto queue for message pump - single threaded apartment
+        //MessagePumpBlocking - block for I/O, single thread waits on I/O (guarantees ordering, controls backpressure)
+        //Choose most appropriate
+        public abstract Task Run();
 
-        private async Task RunImpl()
+        protected async Task RunImpl()
         {
             do
             {
@@ -189,75 +188,11 @@ namespace Paramore.Brighter.ServiceActivator
         {
             return RequeueCount != -1;
         }
+
+        // Implemented in a derived class to dispatch to the relevant type of pipeline via the command processor
+        // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
+        protected abstract Task DispatchRequest(MessageHeader messageHeader, TRequest request);
         
-        protected async Task DispatchRequest(MessageHeader messageHeader, TRequest request)
-        {
-            var messageType = messageHeader.MessageType;
-            
-            if (_runAsync)
-            {
-                await DispatchAsync(request, messageType);
-            }
-            else
-            {
-                await DispatchSync(request, messageType);
-            }
-        }
-
-        private Task DispatchSync(TRequest request, MessageType messageType)
-        {
-            var tcs = new TaskCompletionSource<object>();
-
-            _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
-
-            ValidateMessageType(messageType, request);
-
-            switch (messageType)
-            {
-                case MessageType.MT_COMMAND:
-                {
-                    _commandProcessor.Send(request);
-                    break;
-                }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
-                {
-                    _commandProcessor.Publish(request);
-                    break;
-                }
-            }
-
-            tcs.SetResult(new object());
-            return tcs.Task;
-        }
-        
-        //TODO: Try to see if this runs if we force the threadpool callback first
-        //Then we can see if we can allow an STA model
-        private async Task DispatchAsync(TRequest request, MessageType messageType)
-        {
-            var tcs = new TaskCompletionSource<object>();
-
-            _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
-
-            ValidateMessageType(messageType, request);
-
-            switch (messageType)
-            {
-                case MessageType.MT_COMMAND:
-                {
-                     await _commandProcessor.SendAsync(request, continueOnCapturedContext: false);
-                     break;
-                }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
-                {
-                     await _commandProcessor.PublishAsync(request, continueOnCapturedContext: false);
-                     break;
-                }
-            }
-
-        }
-
         protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
@@ -366,7 +301,7 @@ namespace Paramore.Brighter.ServiceActivator
             return false;
         }
 
-        private void ValidateMessageType(MessageType messageType, TRequest request)
+        protected void ValidateMessageType(MessageType messageType, TRequest request)
         {
             if (messageType == MessageType.MT_COMMAND && request is IEvent)
             {

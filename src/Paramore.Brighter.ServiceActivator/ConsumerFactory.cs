@@ -47,16 +47,34 @@ namespace Paramore.Brighter.ServiceActivator
         public Consumer Create()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
-            {
-                Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
-                RequeueCount = _subscription.RequeueCount,
-                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
-                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
-            };
+            
+            MessagePump<TRequest> messagePump = _subscription.RunAsync ? CreateAsyncPump(channel) : CreateBlockingPump(channel);                
 
             return new Consumer(_consumerName, _subscription.Name, channel, messagePump, _subscription.RunAsync);
         }
-   }
+
+        private MessagePump<TRequest> CreateBlockingPump(IAmAChannel channel)
+        {
+              return new MessagePumpBlocking<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+                        {
+                            Channel = channel,
+                            TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                            RequeueCount = _subscription.RequeueCount,
+                            RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                            UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+                        };
+        }
+
+        private MessagePump<TRequest> CreateAsyncPump(IAmAChannel channel)
+        {
+              return new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+                        {
+                            Channel = channel,
+                            TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                            RequeueCount = _subscription.RequeueCount,
+                            RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                            UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+                        };
+        }
+    }
 }

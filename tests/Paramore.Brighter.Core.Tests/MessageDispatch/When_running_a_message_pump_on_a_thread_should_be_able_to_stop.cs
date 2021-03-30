@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            var messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper);
+            var messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper);
             messagePump.Channel = _channel;
             messagePump.TimeoutInMilliseconds = 5000;
 

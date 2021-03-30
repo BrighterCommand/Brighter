@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePump<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
+            _messagePump = new MessagePumpBlocking<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options)));
             channel.Enqueue(message);
