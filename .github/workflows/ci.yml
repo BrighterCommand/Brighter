@@ -67,7 +67,7 @@ jobs:
           name: nuget packages
           path: "**/*.nupkg"
       - name: Push to GitHub Feed
-        if: matrix.job.push && matrix.tests.push && secrets.GITHUB_TOKEN != ''
+        if: matrix.job.push && matrix.tests.push
         run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
