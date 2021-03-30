@@ -33,14 +33,13 @@ jobs:
       matrix:
         job:
           - os: ubuntu-latest
-            build: ./build.sh
             push: true
           - os: windows-latest
-            build: ./build.cmd
+          - os: macos-latest
         tests:
-          - sdk: 3.1.404
+          - sdk: 3.1.*
             framework: netcoreapp3.1
-          - sdk: 5.0.100
+          - sdk: 5.0.*
             framework: net5.0
             push: true
     name: ${{ matrix.job.os }}-${{ matrix.tests.sdk }}
@@ -60,6 +59,8 @@ jobs:
           fetch-depth: 0
       - name: Build
         run: dotnet build --configuration Release
+      - name: Core Tests
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal" --blame -v n
       - name: Upload packages as artifacts
         if: matrix.job.push && matrix.tests.push
         uses: actions/upload-artifact@v2
