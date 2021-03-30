@@ -15,7 +15,7 @@ namespace Paramore.Brighter.ServiceActivator
     // It is also why throughput on a queue needs multiple performers, each with their own message pump
     // Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     // Timeout on the handler should be provided by timeout policy using an attribute on the handler
-    public class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
+    public abstract class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
         internal readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessagePump<TRequest>>);
 
@@ -45,7 +45,12 @@ namespace Paramore.Brighter.ServiceActivator
 
         public IAmAChannel Channel { get; set; }
 
-        public async Task Run()
+        public virtual Task Run()
+        {
+            
+        }
+
+        private async Task RunImpl()
         {
             do
             {
