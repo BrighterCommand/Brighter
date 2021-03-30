@@ -38,10 +38,10 @@ jobs:
           - os: macos-latest
         tests:
           - sdk: 3.1.*
-            framework: netcoreapp3.1
-          - sdk: 5.0.*
-            framework: net5.0
             push: true
+          # - sdk: 5.0.*
+          #   framework: net5.0
+          #   push: true
     name: ${{ matrix.job.os }}-${{ matrix.tests.sdk }}
     runs-on: ${{ matrix.job.os }}
     steps:
