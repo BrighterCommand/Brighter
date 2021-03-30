@@ -12,8 +12,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     public class AWSAssumeInfrastructureTests  : IDisposable
     {     private readonly Message _message;
-        private readonly IAmAChannel _channel;
-        private SqsMessageConsumer _consumer;
+        private readonly SqsMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
@@ -48,19 +47,19 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //This doesn't look that different from our create tests - this is because we create using the channel factory in
             //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(subscription);
+            var channel = _channelFactory.CreateChannel(subscription);
             
             //Now change the subscription to validate, just check what we made
             subscription = new(
                 name: new SubscriptionName(channelName),
-                channelName: _channel.Name,
+                channelName: channel.Name,
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Assume
             );
             
             _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume, RoutingKey = routingKey});
 
-            _consumer = new SqsMessageConsumer(awsConnection, _channel.Name.ToValidSQSQueueName(), routingKey);
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }
 
         [Fact]

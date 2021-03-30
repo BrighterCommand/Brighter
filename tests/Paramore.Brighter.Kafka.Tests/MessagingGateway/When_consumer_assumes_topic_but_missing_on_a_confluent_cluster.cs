@@ -41,13 +41,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     [Trait("Category", "Kafka")]
     public class KafkaConfluentProducerAssumeTests : IDisposable
     {
-        private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAMessageProducer _producer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
-        public KafkaConfluentProducerAssumeTests (ITestOutputHelper output)
+        public KafkaConfluentProducerAssumeTests ()
         {
             string SupplyCertificateLocation()
             {
@@ -65,7 +64,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
-            _output = output;
             _producer = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {

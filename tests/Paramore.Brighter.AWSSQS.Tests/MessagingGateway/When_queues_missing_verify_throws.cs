@@ -10,15 +10,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     public class AWSValidateQueuesTests  : IDisposable
     {
-        private AWSMessagingGatewayConnection _awsConnection;
-        private SqsSubscription<MyCommand> _subscription;
-        private SqsMessageProducer _messageProducer;
+        private readonly AWSMessagingGatewayConnection _awsConnection;
+        private readonly SqsSubscription<MyCommand> _subscription;
         private ChannelFactory _channelFactory;
 
         public AWSValidateQueuesTests()
         {
-            MyCommand myCommand = new MyCommand{Value = "Test"};
-            Guid correlationId = Guid.NewGuid();
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
@@ -34,7 +31,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
             //We need to create the topic at least, to check the queues
-            _messageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            var _ = new SqsMessageProducer(_awsConnection, 
+                new SqsPublication
+                {
+                    MakeChannels = OnMissingChannel.Create, 
+                    RoutingKey = routingKey
+                });
         }
 
         [Fact]

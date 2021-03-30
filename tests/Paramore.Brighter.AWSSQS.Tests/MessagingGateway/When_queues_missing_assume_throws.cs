@@ -10,21 +10,16 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     public class AWSAssumeQueuesTests  : IDisposable
     {
-        private AWSMessagingGatewayConnection _awsConnection;
-        private SqsSubscription<MyCommand> _subscription;
-        private SqsMessageProducer _messageProducer;
-        private ChannelFactory _channelFactory;
-        private SqsMessageConsumer _consumer;
+        private readonly ChannelFactory _channelFactory;
+        private readonly SqsMessageConsumer _consumer;
 
         public AWSAssumeQueuesTests()
         {
-            MyCommand myCommand = new MyCommand{Value = "Test"};
-            Guid correlationId = Guid.NewGuid();
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
             
-            _subscription = new SqsSubscription<MyCommand>(
+            var subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
@@ -32,17 +27,21 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             );
             
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
-            _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
+            var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
             //create the topic, we want the queue to be the issue
-            _messageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            var _ = new SqsMessageProducer(awsConnection, 
+                new SqsPublication
+                {
+                    MakeChannels = OnMissingChannel.Create, 
+                    RoutingKey = routingKey
+                });
             
-            _channelFactory = new ChannelFactory(_awsConnection);
-            var channel = _channelFactory.CreateChannel(_subscription);
+            _channelFactory = new ChannelFactory(awsConnection);
+            var channel = _channelFactory.CreateChannel(subscription);
             
             //We need to create the topic at least, to check the queues
-            _messageProducer = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
-            _consumer = new SqsMessageConsumer(_awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }
 
         [Fact]
