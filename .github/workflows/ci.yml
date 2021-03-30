@@ -27,86 +27,58 @@ env:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
     timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v2
-        with:
-          fetch-depth: 0
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Install dependencies
-        run: dotnet restore
-      - name: Build
-        run: dotnet build --configuration Release --no-restore 
-      - uses: actions/upload-artifact@v2
-        with:
-          name: dotnet artifacts
-          path: |
-            ./
-            src/
-            tests/
-  
-  test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: [build]
-
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
+        job:
+          - os: ubuntu-latest
+            build: ./build.sh
+            push: true
+          - os: windows-latest
+            build: ./build.cmd
+        tests:
+          - sdk: 3.1.404
+            framework: netcoreapp3.1
+          - sdk: 5.0.100
+            framework: net5.0
+            push: true
+    name: ${{ matrix.job.os }}-${{ matrix.tests.sdk }}
+    runs-on: ${{ matrix.job.os }}
     steps:
+      - name: setup-dotnet tests-sdk
+        if: matrix.tests.sdk != '5.0.100'
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "${{ matrix.tests.sdk }}"
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "5.0.100"
+      - run: dotnet --info
       - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Install dependencies
-        run: dotnet restore
-      - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal" --blame -v n
-
-  package:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: [test]
-    
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: dotnet artifacts
-      - uses: actions/upload-artifact@v2
+          with:
+            fetch-depth: 0
+      - name: Build
+        run: dotnet build --configuration Release
+      - name: Upload packages as artifacts
+        if: matrix.job.push && matrix.tests.push
+        uses: actions/upload-artifact@v2
         with:
           name: nuget packages
           path: "**/*.nupkg"
-      
-  prerelease:
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: [package]
-    
-    steps:
-      - uses: actions/download-artifact@v2
-        with:
-          name: nuget packages
-      - name: to GitHub Feed
+      - name: Push to GitHub Feed
+        if: matrix.job.push && matrix.tests.push && secrets.GITHUB_TOKEN != ''
         run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
 
+     
   release:
     if: startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [package]
+    needs: [build]
     steps:
       - uses: actions/download-artifact@v2
         with:
@@ -117,7 +89,7 @@ jobs:
   memory:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
     
     steps:
       - uses: actions/checkout@v2
@@ -137,7 +109,7 @@ jobs:
   redis-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
     
     services:
       redis:  
@@ -168,7 +140,7 @@ jobs:
   rabbitmq-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
 
     services:
       rabbitmq:
@@ -200,7 +172,7 @@ jobs:
   kafka-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [test]
+    needs: [build]
     env:
       CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
       CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
@@ -257,7 +229,7 @@ jobs:
   postgres-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
   
     services:
       postgres:
@@ -289,7 +261,7 @@ jobs:
   eventstore-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
     
     services:
       evenstore: 
@@ -325,7 +297,7 @@ jobs:
   sqlserver-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
   
     services:
       sqlserver:
@@ -353,7 +325,7 @@ jobs:
   mysql-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
   
     services:
       mariadb:
@@ -390,7 +362,7 @@ jobs:
   dynamo-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
   
     services:
       dynamo:
@@ -416,7 +388,7 @@ jobs:
   aws-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -450,7 +422,7 @@ jobs:
   azure-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [test]
+    needs: [build]
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
