@@ -46,13 +46,13 @@ jobs:
     runs-on: ${{ matrix.job.os }}
     steps:
       - name: setup-dotnet tests-sdk
-        if: matrix.tests.sdk != '5.0.100'
+        if: matrix.tests.sdk != '5.0.*'
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: "${{ matrix.tests.sdk }}"
       - uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: "5.0.100"
+          dotnet-version: "5.0.*"
       - run: dotnet --info
       - uses: actions/checkout@v2
         with:
