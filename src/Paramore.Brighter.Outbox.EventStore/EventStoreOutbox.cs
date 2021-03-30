@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 George Ayris <george.ayris@gmail.com>
@@ -27,11 +27,10 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using EventStore.ClientAPI;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.EventStore
@@ -81,7 +80,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <returns>Task.</returns>
         public void Add(Message message, int outBoxTimeout = -1)
         {
-            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
@@ -103,7 +102,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         public async Task AddAsync(Message message, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonConvert.SerializeObject(message));
+            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
             var streamId = ExtractStreamIdFromHeader(message.Header.Bag, message.Id);
             var eventNumber = ExtractEventNumberFromHeader(message.Header.Bag, message.Id);
@@ -332,7 +331,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             var json = Encoding.UTF8.GetString(metadata);
             var messageHeader =
-                JsonConvert.DeserializeObject<MessageHeader>(json);
+                JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
             
             messageHeader.Bag.Add("streamId", stream);
             messageHeader.Bag.Add("eventNumber", eventNumber);
@@ -353,7 +352,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             var headerCopy = message.Header.Copy();
             RemoveEventStoreHeaderItems(headerCopy.Bag);
 
-            var headerJson = JsonConvert.SerializeObject(headerCopy);
+            var headerJson = JsonSerializer.Serialize(headerCopy, JsonSerialisationOptions.Options);
             var eventHeader = Encoding.UTF8.GetBytes(headerJson);
 
             return new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};

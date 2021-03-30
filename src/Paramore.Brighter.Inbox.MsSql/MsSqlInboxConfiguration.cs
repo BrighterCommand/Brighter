@@ -22,9 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using Newtonsoft.Json;
-
 namespace Paramore.Brighter.Inbox.MsSql
 {
     /// <summary>

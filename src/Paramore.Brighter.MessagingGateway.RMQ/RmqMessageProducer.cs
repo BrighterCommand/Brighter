@@ -24,8 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
@@ -37,7 +37,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        
+         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
         private readonly Publication _publication;
@@ -49,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         ///     Make Channels = Create
         /// </param>
         public RmqMessageProducer(RmqMessagingGatewayConnection connection) 
-            : this(connection, new Publication{MakeChannels = OnMissingChannel.Create})
+            : this(connection, new RmqPublication{MakeChannels = OnMissingChannel.Create})
         { }
 
         /// <summary>
@@ -59,10 +62,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="publication">How should we configure this producer. If not provided use default behaviours:
         ///     Make Channels = Create
         /// </param>
-         public RmqMessageProducer(RmqMessagingGatewayConnection connection, Publication publication) 
+         public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication publication) 
             : base(connection)
         {
-            _publication = publication;
+            _publication = publication ?? new RmqPublication{MakeChannels = OnMissingChannel.Create};
+            MaxOutStandingMessages = _publication.MaxOutStandingMessages;
+            MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
         }
 
         /// <summary>
@@ -111,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     _logger.Value.InfoFormat(
                         "RmqMessageProducer: Published message to exchange {0} on subscription {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
-                        message.Id, JsonConvert.SerializeObject(message), DateTime.UtcNow, delayMilliseconds, message.Persist);
+                        message.Id, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow, delayMilliseconds, message.Persist);
                 }
             }
             catch (IOException io)

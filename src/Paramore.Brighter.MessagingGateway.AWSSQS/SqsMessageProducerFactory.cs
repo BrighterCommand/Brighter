@@ -6,15 +6,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     public class SqsMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly AWSMessagingGatewayConnection _connection;
+        private readonly SqsPublication _sqsPublication;
 
-        public SqsMessageProducerFactory(AWSMessagingGatewayConnection connection)
+        public SqsMessageProducerFactory(
+            AWSMessagingGatewayConnection connection
+            ) : this(connection, new SqsPublication{MakeChannels = OnMissingChannel.Create })
+        {
+            
+        }
+        
+        public SqsMessageProducerFactory(
+            AWSMessagingGatewayConnection connection,
+            SqsPublication sqsPublication)
         {
             _connection = connection;
+            _sqsPublication = sqsPublication;
         }
 
         public IAmAMessageProducer Create()
         {
-            return new SqsMessageProducer(_connection);
+            return new SqsMessageProducer(_connection, _sqsPublication);
         }
     }
 }

@@ -1,9 +1,9 @@
-using System;
+﻿using System;
+using System.Text.Json;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
@@ -20,7 +20,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         private readonly IAmAChannel _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
-        private readonly SqsSubscription<MyCommand> _subscription; 
 
         public SqsMessageProducerRequeueTests()
         {
@@ -32,15 +31,15 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             string topicName = $"Producer-Requeue-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
             
-            _subscription = new SqsSubscription<MyCommand>(
+            var subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
-                );
+            );
             
             _message = new Message(
                 new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
-                new MessageBody(JsonConvert.SerializeObject((object) myCommand))
+                new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
  
             //Must have credentials stored in the SDK Credentials store or shared credentials file
@@ -53,7 +52,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
-            _channel = _channelFactory.CreateChannel(_subscription);
+            _channel = _channelFactory.CreateChannel(subscription);
         }
 
         [Fact]

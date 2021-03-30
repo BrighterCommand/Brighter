@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Text.Json;
 using System.Threading;
 using Amazon;
 using Amazon.Runtime.Internal;
@@ -9,7 +10,6 @@ using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
@@ -121,7 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (_subscription.RedrivePolicy != null && _dlqARN != null)
                 {
                     var policy = new {maxReceiveCount = _subscription.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = _dlqARN};
-                    attributes.Add("RedrivePolicy", JsonConvert.SerializeObject(policy));
+                    attributes.Add("RedrivePolicy", JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
                 }
                 
                 attributes.Add("DelaySeconds", _subscription.DelaySeconds.ToString());

@@ -1,6 +1,6 @@
-using System;
+﻿using System;
+using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
-using Newtonsoft.Json;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
@@ -32,10 +32,10 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             Time = $"{TimeStamp.Ticks}";
             CommandId = command.Id.ToString();
             CommandType = typeof(T).Name;
-            CommandBody = JsonConvert.SerializeObject(command);
+            CommandBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             ContextKey = contextKey;
         }
 
-        public T ConvertToCommand() => JsonConvert.DeserializeObject<T>(CommandBody);
+        public T ConvertToCommand() => JsonSerializer.Deserialize<T>(CommandBody, JsonSerialisationOptions.Options);
     }
 }

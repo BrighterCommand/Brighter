@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
@@ -14,12 +17,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
     public class SQSBufferedConsumerTests : IDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
-        private SqsMessageConsumer _consumer;
-        private readonly string _topicName = Guid.NewGuid().ToString().ToValidSNSTopicName();
-        private ChannelFactory _channelFactory;
-        private const string CONTENT_TYPE = "text\\plain";
-        private const int BUFFER_SIZE = 3;
-        private const int MESSAGE_COUNT = 4;
+        private readonly SqsMessageConsumer _consumer;
+        private readonly string _topicName; 
+        private readonly ChannelFactory _channelFactory;
+        private const string _contentType = "text\\plain";
+        private const int _bufferSize = 3;
+        private const int _messageCount = 4;
 
         public SQSBufferedConsumerTests()
         {
@@ -37,35 +40,41 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
                 routingKey:routingKey,
-                bufferSize: BUFFER_SIZE
+                bufferSize: _bufferSize,
+                makeChannels: OnMissingChannel.Create
                 ));
             
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, BUFFER_SIZE);
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, _bufferSize);
+            _messageProducer = new SqsMessageProducer(awsConnection, 
+                new SqsPublication
+                {
+                    MakeChannels = OnMissingChannel.Create, 
+                    RoutingKey = routingKey
+                });
         }
             
         [Fact]
         public void When_a_message_consumer_reads_multiple_messages()
         {
             var messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, CONTENT_TYPE),
+                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content one")
                 );
             
             var messageTwo= new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, CONTENT_TYPE),
+                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content two")
                 );
            
             var messageThree= new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, CONTENT_TYPE),
+                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content three")
                 );
              
             var messageFour= new Message(
-                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, CONTENT_TYPE),
+                new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content four")
                 );
              
@@ -76,28 +85,37 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _messageProducer.Send(messageFour);
 
 
-            int messagesRecieved = 0;
+            int iteration = 0;
+            var messagesReceived = new List<Message>();
+            var messagesReceivedCount = messagesReceived.Count;
             do
             {
-                var outstandingMessageCount = MESSAGE_COUNT - messagesRecieved;
+                iteration++;
+                var outstandingMessageCount = _messageCount - messagesReceivedCount;
 
                 //retrieve  messages
-                var moreMessages = _consumer.Receive(10000);
+                var messages = _consumer.Receive(10000);
                 
-                moreMessages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
+                messages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
                 
                 //should not receive more than buffer in one hit
-                moreMessages.Length.Should().BeLessOrEqualTo(BUFFER_SIZE);
+                messages.Length.Should().BeLessOrEqualTo(_bufferSize);
 
+                var moreMessages = messages.Where(m => m.Header.MessageType == MessageType.MT_COMMAND);
                 foreach (var message in moreMessages)
                 {
-                    //this will be MT_NONE for an empty message
-                    message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-                    _consumer.Acknowledge(message);
+                    messagesReceived.Add(message);
+                   _consumer.Acknowledge(message);
                 }
+                 
+                messagesReceivedCount = messagesReceived.Count;
+                
+                Task.Delay(1000).Wait();
 
-                messagesRecieved += moreMessages.Length;
-            } while (messagesRecieved < MESSAGE_COUNT);
+            } while ((iteration <= 5) && (messagesReceivedCount <  _messageCount));
+    
+
+            messagesReceivedCount.Should().Be(4);
 
         }
         

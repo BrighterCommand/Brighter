@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             //_should_serialize_the_message_type_to_the_header
             _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_message_id_to_the_message_body
-            _message.Body.Value.Should().Contain($"\"Id\": \"{_request.Id}\"");
+            _message.Body.Value.Should().Contain($"\"id\":\"{_request.Id}\"");
             //_should_serialize_the_topic_to_the_message_body
             _message.Header.ReplyTo.Should().Be(TOPIC);
             //_should_serialize_the_correlation_id_to_the_message_body

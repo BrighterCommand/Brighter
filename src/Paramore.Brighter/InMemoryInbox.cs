@@ -24,10 +24,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Concurrent;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Inbox.Exceptions;
 
 namespace Paramore.Brighter
@@ -140,7 +139,7 @@ namespace Paramore.Brighter
                 }
             }
 
-            _requests[key].RequestBody = JsonConvert.SerializeObject(command);
+            _requests[key].RequestBody = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
         }
 
         /// <summary>
@@ -184,7 +183,7 @@ namespace Paramore.Brighter
             
             if (_requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
             {
-                return JsonConvert.DeserializeObject<T>(inboxItem.RequestBody);
+                return JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);
             }
 
             throw new RequestNotFoundException<T>(id);

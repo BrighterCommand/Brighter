@@ -25,7 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Paramore.Brighter.Logging;
 using ServiceStack;
 
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns></returns>
         private MessageHeader ReadHeader(string headersJson)
         {
-            var headers = JsonConvert.DeserializeObject<Dictionary<string, string>>(headersJson);  
+            var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
             //Read Message Id
             var messageId = ReadMessageId(headers);
             //Read TimeStamp
@@ -250,7 +250,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             if (headers.ContainsKey(HeaderNames.BAG))
             {
                 var bagJson = headers[HeaderNames.BAG];
-                var bag = JsonConvert.DeserializeObject<Dictionary<string, object>>(bagJson);
+                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(bagJson, JsonSerialisationOptions.Options);
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
@@ -295,7 +295,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
        /// <summary>
-        /// Note that RMQ uses a unix timestamp, we just Newtonsoft's JSON date format in Redis 
+        /// Note that RMQ uses a unix timestamp, we just System.Text's JSON date format in Redis 
         /// </summary>
         /// <param name="headers">The collection of headers</param>
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>

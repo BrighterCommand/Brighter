@@ -13,12 +13,17 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  ------ Will insert an Inbox in all pipelines
  ------ Can be overriden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
  --- The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
+ -- The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages
+ ---- that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is seperate and mainly
+ ---- intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
  - Added caching of attributes on target handlers in the pipeline build step
  --- This means we don't do reflection every time we build the pipeline for a request
  --- We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
  --- We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
  - Added ability to persist RabbitMQ messages
  - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
+ - Improved the Kafka Client. It now uses the publisher/creator model to ensure that a message is in Brighter format i.e. headers as well as body; updated configuration values; generally improved reliability. This is a breaking change with previous versions of the Kafka client.
+ - The class BrighterMessaging now only has a default constructor and now has setters on properties. Use the initializer syntax instead - new BrighterMessage{} to avoid having redundant constructor arguments.
  - Changes to how we configure transports - renaming classes and extending their functionality
  --- Connection is renamed to Subscription
  --- Added a matching Publication for producers

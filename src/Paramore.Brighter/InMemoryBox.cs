@@ -61,47 +61,50 @@ namespace Paramore.Brighter
 
         protected void ClearExpiredMessages()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
-            if (Monitor.TryEnter(_cleanupRunningLockObject))
-            {
+            if (now - _lastScanAt < ExpirationScanInterval)
+                return;
 
-                if (now - _lastScanAt < ExpirationScanInterval)
-                    return;
-
-                //This is expensive, so use a background thread
-                Task.Factory.StartNew(
-                    action: state => RemoveExpiredMessages((DateTime)state),
-                    state: now,
-                    cancellationToken: CancellationToken.None,
-                    creationOptions: TaskCreationOptions.DenyChildAttach,
-                    scheduler: TaskScheduler.Default);
-
-            }
+            //This is expensive, so use a background thread
+            Task.Factory.StartNew(
+                action: state => RemoveExpiredMessages((DateTime)state),
+                state: now,
+                cancellationToken: CancellationToken.None,
+                creationOptions: TaskCreationOptions.DenyChildAttach,
+                scheduler: TaskScheduler.Default);
+            
+            _lastScanAt = now;
         }
 
         private void RemoveExpiredMessages(DateTime now)
         {
-            var expiredEntries = 
-                _requests
-                .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
-                    .Select(entry => entry.Key);
-           
-            foreach (var key in expiredEntries)
+            if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
-                //if this fails ignore, killed by something else like compaction
-                _requests.TryRemove(key, out _);
+                try
+                {
+                    var expiredEntries =
+                        _requests
+                            .Where<KeyValuePair<string, T>>(entry => (now - entry.Value.WriteTime) >= EntryTimeToLive)
+                            .Select(entry => entry.Key);
+
+                    foreach (var key in expiredEntries)
+                    {
+                        //if this fails ignore, killed by something else like compaction
+                        _requests.TryRemove(key, out _);
+                    }
+
+                }
+                finally
+                {
+                    Monitor.Exit(_cleanupRunningLockObject);
+                }
             }
-            
-            _lastScanAt = now;
-            Monitor.Exit(_cleanupRunningLockObject);
         }
 
         protected void EnforceCapacityLimit()
         {
-            if (Monitor.TryEnter(_cleanupRunningLockObject))
-            {
-                //Take a copy as it may change whilst we are doing the calculation, we ignore that
+               //Take a copy as it may change whilst we are doing the calculation, we ignore that
                 var count = EntryCount;
                 var upperSize = EntryLimit;
 
@@ -117,26 +120,33 @@ namespace Paramore.Brighter
                         TaskCreationOptions.DenyChildAttach,
                         TaskScheduler.Default);
                 }
-            }
         }
         
         // Compaction algorithm is to sort into date deposited order, with oldest first
         // Then remove entries until newsize is reached
         private void Compact(int entriesToRemove)
         {
-            var removalList = 
-                _requests
-                    .OrderBy(entry => entry.Value.WriteTime)
-                    .Take(entriesToRemove)
-                    .Select(entry => entry.Key);
-
-            foreach (var key in removalList)
+            if (Monitor.TryEnter(_cleanupRunningLockObject))
             {
-                //ignore errors, likely just something else has cleared it such as TTL eviction
-                _requests.TryRemove(key, out _);
+                try
+                {
+                    var removalList =
+                        _requests
+                            .OrderBy(entry => entry.Value.WriteTime)
+                            .Take(entriesToRemove)
+                            .Select(entry => entry.Key);
+
+                    foreach (var key in removalList)
+                    {
+                        //ignore errors, likely just something else has cleared it such as TTL eviction
+                        _requests.TryRemove(key, out _);
+                    }
+                }
+                finally
+                {
+                    Monitor.Exit(_cleanupRunningLockObject);
+                }
             }
-            
-            Monitor.Exit(_cleanupRunningLockObject);
         }
     }
 }

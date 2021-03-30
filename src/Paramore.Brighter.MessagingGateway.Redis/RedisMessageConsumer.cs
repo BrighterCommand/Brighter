@@ -25,8 +25,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 using ServiceStack.Redis;
 
@@ -222,7 +222,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 msg = client.GetValue(key);
                 _logger.Value.InfoFormat(
                     "Redis: Received message from queue {0} with routing key {0}, message: {1}",
-                    _queueName, Topic, JsonConvert.SerializeObject(msg), Environment.NewLine);
+                    _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options), Environment.NewLine);
             }
             else
             {

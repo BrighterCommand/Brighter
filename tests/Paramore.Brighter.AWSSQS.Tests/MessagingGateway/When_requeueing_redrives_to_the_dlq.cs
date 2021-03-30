@@ -1,7 +1,8 @@
-
+﻿
 using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
@@ -10,7 +11,6 @@ using Amazon.Runtime.CredentialManagement;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             _message = new Message(
                 new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
-                new MessageBody(JsonConvert.SerializeObject((object) myCommand))
+                new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
  
             //Must have credentials stored in the SDK Credentials store or shared credentials file

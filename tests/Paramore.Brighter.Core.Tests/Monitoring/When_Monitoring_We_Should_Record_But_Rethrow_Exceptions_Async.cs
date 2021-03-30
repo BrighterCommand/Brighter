@@ -26,7 +26,6 @@ using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using FluentAssertions.Extensions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Monitoring.TestDoubles;
 using Xunit;
@@ -36,6 +35,7 @@ using Paramore.Brighter.Monitoring.Handlers;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
 
             _command = new MyCommand();
 
-            _originalRequestAsJson = JsonConvert.SerializeObject(_command);
+            _originalRequestAsJson = JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options);
 
             _at = DateTime.UtcNow.AddMilliseconds(-500);
         }
