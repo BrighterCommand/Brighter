@@ -1,5 +1,5 @@
 ﻿using System;
-using Newtonsoft.Json.Linq;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -13,8 +13,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 messageType: MessageType.MT_COMMAND,
                 correlationId: request.SendersAddress.CorrelationId);
 
-            var json = new JObject(new JProperty("Id", request.Id), new JProperty("ReplyValue", request.ReplyValue));
-            var body = new MessageBody(json.ToString());
+            var body = new MessageBody(JsonSerializer.Serialize(new MyResponseObject(request.Id.ToString(), request.ReplyValue), JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
         }
@@ -23,9 +22,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var command = new MyResponse(replyAddress);
-            var messageBody = JObject.Parse(message.Body.Value);
-            command.Id = Guid.Parse((string)messageBody["Id"]);
-            command.ReplyValue = (string) messageBody["ReplyValue"];
+            var messageBody = JsonSerializer.Deserialize<MyResponseObject>(message.Body.Value, JsonSerialisationOptions.Options);
+            command.Id = Guid.Parse(messageBody.Id);
+            command.ReplyValue = messageBody.ReplyValue;
             return command;
         }
     }

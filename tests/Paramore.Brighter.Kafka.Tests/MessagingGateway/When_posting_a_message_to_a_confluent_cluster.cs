@@ -83,6 +83,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 3,
+                    //These timeouts support running on a container using the same host as the tests, 
+                    //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
                     MakeChannels = OnMissingChannel.Create,

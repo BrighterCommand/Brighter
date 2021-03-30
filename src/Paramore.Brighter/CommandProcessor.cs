@@ -864,7 +864,7 @@ namespace Paramore.Brighter
             if (_messageProducer == null)
                 return;
 
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             var checkInterval = TimeSpan.FromMilliseconds(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds);
 
 

@@ -199,7 +199,7 @@ jobs:
 
   kafka-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: [test]
     env:
       CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}

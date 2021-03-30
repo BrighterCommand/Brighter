@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,7 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
-using Newtonsoft.Json;
+using System.Text.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
@@ -32,14 +32,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public Message MapToMessage(MyEvent request)
         {
             var header = new MessageHeader(request.Id, "MyEvent", MessageType.MT_EVENT);
-            var body = new MessageBody(JsonConvert.SerializeObject(request));
+            var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
         }
 
         public MyEvent MapToRequest(Message message)
         {
-            return JsonConvert.DeserializeObject<MyEvent>(message.Body.Value);
+            return JsonSerializer.Deserialize<MyEvent>(message.Body.Value, JsonSerialisationOptions.Options);
         }
     }
 }

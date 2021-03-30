@@ -26,9 +26,9 @@ THE SOFTWARE. */
 using System;
 using System.Data;
 using System.Data.Common;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -203,7 +203,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
         {
-            var commandJson = JsonConvert.SerializeObject(command);
+            var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
                 CreateNpgsqlParameter("CommandID", command.Id),
@@ -256,7 +256,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             if (dr.Read())
             {
                 var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                return JsonConvert.DeserializeObject<TResult>(body);
+                return JsonSerializer.Deserialize<TResult>(body, JsonSerialisationOptions.Options);
             }
 
             throw new RequestNotFoundException<TResult>(commandId);

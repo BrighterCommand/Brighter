@@ -402,7 +402,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         // The batch size has been exceeded, so flush our offsets
         private void FlushOffsets()
         {
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
             if (Monitor.TryEnter(_flushLock))
             {
                 //This is expensive, so use a background thread

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Newtonsoft.Json;
+using System.Text.Json;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.EnterHandler, 
                             _handlerName, 
                             _handlerFullAssemblyName,
-                            JsonConvert.SerializeObject(command), 
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeBeforeHandle,
                             0));
 
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.ExitHandler, 
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonConvert.SerializeObject(command), 
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeAfterHandle,
                             (timeAfterHandle-timeBeforeHandle).Milliseconds));
                         
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.ExceptionThrown, 
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonConvert.SerializeObject(command), 
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
                             timeOnException,
                             (timeOnException - timeBeforeHandle).Milliseconds,
                             e));

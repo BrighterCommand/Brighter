@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,8 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Converters;
+using System.Text.Json.Serialization;
 using Paramore.Brighter.Monitoring.Handlers;
 
 namespace Paramore.Brighter.Monitoring.Events
@@ -64,11 +63,11 @@ namespace Paramore.Brighter.Monitoring.Events
         /// Any exception that was thrown when processing the handler pipeline
         /// </summary>
         public Exception Exception { get; set; }
-        
+
         /// <summary>
         /// Why was this event raised?
         /// </summary>
-        [JsonConverter(typeof(StringEnumConverter))]
+        [JsonConverter(typeof(JsonStringEnumConverter))]
         public MonitorEventType EventType { get; private set; }
 
         /// <summary>
@@ -106,10 +105,10 @@ namespace Paramore.Brighter.Monitoring.Events
             string instanceName,
             MonitorEventType eventType, 
             string handlerName,
-            string handlerFullName,
+            string handlerFullAssemblyName,
             string requestBody,
             DateTime eventTime,
-            int elapsedMilliseconds,
+            int timeElapsedMs,
             Exception exception = null
             )
             :base(Guid.NewGuid())
@@ -117,10 +116,10 @@ namespace Paramore.Brighter.Monitoring.Events
             InstanceName = instanceName;
             EventType = eventType;
             HandlerName = handlerName;
-            HandlerFullAssemblyName = handlerFullName;
+            HandlerFullAssemblyName = handlerFullAssemblyName;
             RequestBody = requestBody;
             EventTime = eventTime;
-            TimeElapsedMs = elapsedMilliseconds;
+            TimeElapsedMs = timeElapsedMs;
             Exception = exception;
         }
 
