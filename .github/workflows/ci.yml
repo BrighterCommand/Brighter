@@ -56,8 +56,8 @@ jobs:
           dotnet-version: "5.0.100"
       - run: dotnet --info
       - uses: actions/checkout@v2
-          with:
-            fetch-depth: 0
+        with:
+          fetch-depth: 0
       - name: Build
         run: dotnet build --configuration Release
       - name: Upload packages as artifacts
