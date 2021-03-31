@@ -35,8 +35,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  --- We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)  
  --- Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
  - Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
- - Changed IsAsync to RunAsync for clarity
- - Supports an asnc pipeline
+ - Changed IsAsync to RunAsync on a Subscription for clarity
+ - Supports an async pipeline: callbacks should happen on the same thread as the handler (and the pump), avoiding thread pool threads
  
 ## Release 8.1.1399 ##
  - Update nuget libs
