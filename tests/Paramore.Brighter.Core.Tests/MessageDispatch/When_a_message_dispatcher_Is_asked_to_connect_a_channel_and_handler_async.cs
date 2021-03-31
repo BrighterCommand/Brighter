@@ -1,57 +1,60 @@
-using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
-using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-  public class MessagePumpDispatchAsyncTests
+    public class MessageDispatcherRoutingAsyncTests
     {
-        private readonly IAmAMessagePump _messagePump;
-        private readonly MyEvent _myEvent = new MyEvent();
+        private readonly Dispatcher _dispatcher;
+        private readonly FakeChannel _channel;
+        private readonly SpyCommandProcessor _commandProcessor;
 
-        public MessagePumpDispatchAsyncTests()
+        public MessageDispatcherRoutingAsyncTests()
         {
-            var subscriberRegistry = new SubscriberRegistry();
-            subscriberRegistry.RegisterAsync<MyEvent, MyEventHandlerAsyncWithContinuation>();
+            _channel = new FakeChannel();
+            _commandProcessor = new SpyCommandProcessor();
 
-            var handlerFactory = new TestHandlerFactoryAsync<MyEvent, MyEventHandlerAsyncWithContinuation>(() => new MyEventHandlerAsyncWithContinuation());
-            var commandProcessor = new CommandProcessor(
-                subscriberRegistry,
-                handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry());
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            PipelineBuilder<MyEvent>.ClearPipelineCache();
+            var connection = new Subscription<MyEvent>(
+                new SubscriptionName("test"),
+                noOfPerformers: 1, 
+                timeoutInMilliseconds: 1000, 
+                channelFactory: new InMemoryChannelFactory(_channel),
+                channelName: new ChannelName("fakeChannel"), 
+                routingKey: new RoutingKey("fakekey"),
+                runAsync: true);
+            _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
 
-            var channel = new FakeChannel();
-            var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
+            var @event = new MyEvent();
+            var message = new MyEventMessageMapper().MapToMessage(@event);
+            _channel.Enqueue(message);
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_myEvent)));
-            channel.Enqueue(message);
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Enqueue(quitMessage);
+            _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
         }
-
-        //[Fact(Timeout = 10000)]
-        [Fact]
-        public async Task When_a_message_is_dispatched_it_should_reach_a_handler_async()
+        
+        [Fact(Timeout = 50000)]
+        public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
-            await _messagePump.Run();
+            Task.Delay(5000).Wait();
+            _dispatcher.End().Wait();
 
-            MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent).Should().BeTrue();
-            MyEventHandlerAsyncWithContinuation.MonitorValue.Should().Be(2);
-            //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would 
-            //change once we fix the pump to exhibit that behavior
-            MyEventHandlerAsyncWithContinuation.WorkThreadId.Should().NotBe(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
+            //should have consumed the messages in the channel
+            _channel.Length.Should().Be(0);
+            //should have a stopped state
+            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
+            //should have dispatched a request
+            _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
+            //should have published async
+            _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
         }
-    }
+   }
 }

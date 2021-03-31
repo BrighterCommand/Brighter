@@ -20,15 +20,6 @@ namespace Paramore.Brighter.ServiceActivator
         {
         }
 
-        public override Task Run()
-        {
-            var tcs = new TaskCompletionSource<object>();
-            //Nothing will be awaited in this path, so not async
-            RunImpl().GetAwaiter().GetResult();
-            tcs.SetResult(new object());
-            return tcs.Task;
-        }
-
         protected override Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             var tcs = new TaskCompletionSource<object>();

@@ -33,10 +33,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly Subscription _subscription;
         private readonly ConsumerName _consumerName;
 
-        public ConsumerFactory(
-            IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapperRegistry messageMapperRegistry, 
-            Subscription subscription)
+        public ConsumerFactory(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry, Subscription subscription)
         {
             _commandProcessor = commandProcessor;
             _messageMapperRegistry = messageMapperRegistry;
@@ -46,35 +43,40 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer Create()
         {
+            if (_subscription.RunAsync)
+                return CreateAsync();
+            else
+                return CreateBlocking();
+        }
+
+        private Consumer CreateBlocking()
+        {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            
-            MessagePump<TRequest> messagePump = _subscription.RunAsync ? CreateAsyncPump(channel) : CreateBlockingPump(channel);                
+            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            {
+                Channel = channel,
+                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                RequeueCount = _subscription.RequeueCount,
+                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+            };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, _subscription.RunAsync);
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, false);
         }
 
-        private MessagePump<TRequest> CreateBlockingPump(IAmAChannel channel)
+        private Consumer CreateAsync()
         {
-              return new MessagePumpBlocking<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
-                        {
-                            Channel = channel,
-                            TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
-                            RequeueCount = _subscription.RequeueCount,
-                            RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
-                            UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
-                        };
-        }
+            var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            {
+                Channel = channel,
+                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                RequeueCount = _subscription.RequeueCount,
+                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+            };
 
-        private MessagePump<TRequest> CreateAsyncPump(IAmAChannel channel)
-        {
-              return new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
-                        {
-                            Channel = channel,
-                            TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
-                            RequeueCount = _subscription.RequeueCount,
-                            RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
-                            UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
-                        };
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, true);
         }
     }
 }

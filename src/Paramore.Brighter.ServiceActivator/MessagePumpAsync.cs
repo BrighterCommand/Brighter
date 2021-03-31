@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
 
@@ -10,6 +11,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// When a callback is signalled it is queued next, and will be picked up when the current message completes or waits itself
     /// Strict ordering of messages will be lost as no guarantee what order I/O operations will complete - do not use if strict ordering required
     /// Only used one thread, so predictable performance, but may have many messages queued. Once queue length exceeds buffer size, we will stop reading new work
+    /// Based on https://devblogs.microsoft.com/pfxteam/await-synchronizationcontext-and-console-apps/
     /// </summary>
     /// <typeparam name="TRequest">The Request on the Data Type Channel</typeparam>
     public class MessagePumpAsync<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
@@ -21,25 +23,8 @@ namespace Paramore.Brighter.ServiceActivator
         {
         }
 
-        public override async Task Run()
-        {
-            var prevCtx = SynchronizationContext.Current;
-            try
-            {
-                var context = new BrighterSynchronizationContext(Channel);
-                SynchronizationContext.SetSynchronizationContext(context);
-                await RunImpl();
-            }
-            finally
-            {
-                SynchronizationContext.SetSynchronizationContext(prevCtx); 
-            }
-        }
-
         protected override async Task DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
-            var tcs = new TaskCompletionSource<object>();
-
             _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             var messageType = messageHeader.MessageType;
@@ -50,16 +35,53 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    await _commandProcessor.SendAsync(request, continueOnCapturedContext: true);
+                    Run(SendAsync, request);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    await _commandProcessor.PublishAsync(request, continueOnCapturedContext: true);
+                    Run(PublishAsync, request);
                     break;
                 }
             }
         }
+        
+        private static void Run(Action<TRequest> act, TRequest request)
+        {
+            if (act == null) throw new ArgumentNullException("act");
+
+            var prevCtx = SynchronizationContext.Current;
+            try
+            {
+                // Establish the new context
+                var context = new BrighterSynchronizationContext();
+                SynchronizationContext.SetSynchronizationContext(context);
+
+                context.OperationStarted();
+
+                act(request);
+
+                context.OperationCompleted();
+
+                // Pump continuations and propagate any exceptions
+                context.RunOnCurrentThread();
+            }
+            finally
+            {
+                SynchronizationContext.SetSynchronizationContext(prevCtx);
+            }
+        }
+        
+        private async void PublishAsync(TRequest request)
+        {
+            await _commandProcessor.PublishAsync(request, continueOnCapturedContext: true);
+        }
+
+        private async void SendAsync(TRequest request)
+        {
+            await _commandProcessor.SendAsync(request, continueOnCapturedContext: true);
+        }
+
     }
 }

@@ -43,13 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public IAmAChannel Channel { get; set; }
 
-        //Implemented in a derived class to control how we run this:
-        //AsyncMesssagePump - do not block for I/O that can be queued on completion port, instead continue and put callback onto queue for message pump - single threaded apartment
-        //MessagePumpBlocking - block for I/O, single thread waits on I/O (guarantees ordering, controls backpressure)
-        //Choose most appropriate
-        public abstract Task Run();
-
-        protected async Task RunImpl()
+        public async Task Run()
         {
             do
             {
