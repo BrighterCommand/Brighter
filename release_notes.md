@@ -36,6 +36,8 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  --- Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
  - Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
  - Changed IsAsync to RunAsync for clarity
+ - Supports an asnc pipeline
+ 
 ## Release 8.1.1399 ##
  - Update nuget libs
  - RabbitMQ 6.*
