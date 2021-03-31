@@ -5,10 +5,13 @@ using Confluent.Kafka;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
+    [Collection("Kafka")]
+    [Trait("Category", "Kafka")]
     public class KafkaMessageConsumerUpdateOffset : IDisposable
     {
         private readonly ITestOutputHelper _output;

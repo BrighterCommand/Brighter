@@ -12,6 +12,9 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
+    [Collection("Kafka")]
+    [Trait("Category", "Kafka")]
+    [Trait("Category", "Confluent")]
     public class KafkaMessageConsumerConfluentPreservesOrder : IDisposable
     {
         private const string _groupId = "Kafka Message Producer Assume Topic Test";

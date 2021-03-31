@@ -23,16 +23,12 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Xunit;
 using Xunit.Abstractions;
-using SaslMechanism = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism;
-using SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {

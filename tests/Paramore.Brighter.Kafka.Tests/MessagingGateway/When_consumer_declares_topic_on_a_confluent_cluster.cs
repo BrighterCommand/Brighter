@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Collection("Kafka")]
     [Trait("Category", "Kafka")]
+    [Trait("Category", "Confluent")]
     public class KafkaConfluentConsumerDeclareTests : IDisposable
     {
         private readonly ITestOutputHelper _output;

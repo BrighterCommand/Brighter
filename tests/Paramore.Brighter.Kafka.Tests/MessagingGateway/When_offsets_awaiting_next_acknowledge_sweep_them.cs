@@ -10,6 +10,8 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
+    [Collection("Kafka")]
+    [Trait("Category", "Kafka")]
     public class KafkaMessageConsumerSweepOffsets : IDisposable
     {
         private readonly ITestOutputHelper _output;

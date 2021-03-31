@@ -39,6 +39,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Collection("Kafka")]
     [Trait("Category", "Kafka")]
+    [Trait("Category", "Confluent")]
+    [Trait("Category", "Confluent")]
     public class KafkaConfluentProducerAssumeTests : IDisposable
     {
         private readonly string _queueName = Guid.NewGuid().ToString(); 
