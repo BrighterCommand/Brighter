@@ -1,13 +1,14 @@
 using System;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    internal class SingleThreadedApartment : SynchronizationContext
+    internal class BrighterSynchronizationContext : SynchronizationContext
     {
         private readonly IAmAChannel _channel;
 
-        public SingleThreadedApartment(IAmAChannel channel)
+        public BrighterSynchronizationContext(IAmAChannel channel)
         {
             _channel = channel;
         }

@@ -41,7 +41,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             channel.Enqueue(quitMessage);
         }
 
-        [Fact(Timeout = 5000)]
+        //[Fact(Timeout = 10000)]
+        [Fact]
         public async Task When_a_message_is_dispatched_it_should_reach_a_handler_async()
         {
             await _messagePump.Run();

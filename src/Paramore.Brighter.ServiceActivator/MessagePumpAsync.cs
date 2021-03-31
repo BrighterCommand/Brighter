@@ -26,7 +26,7 @@ namespace Paramore.Brighter.ServiceActivator
             var prevCtx = SynchronizationContext.Current;
             try
             {
-                var context = new SingleThreadedApartment(Channel);
+                var context = new BrighterSynchronizationContext(Channel);
                 SynchronizationContext.SetSynchronizationContext(context);
                 await RunImpl();
             }
@@ -50,13 +50,13 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    await _commandProcessor.SendAsync(request, continueOnCapturedContext: false);
+                    await _commandProcessor.SendAsync(request, continueOnCapturedContext: true);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    await _commandProcessor.PublishAsync(request, continueOnCapturedContext: false);
+                    await _commandProcessor.PublishAsync(request, continueOnCapturedContext: true);
                     break;
                 }
             }
