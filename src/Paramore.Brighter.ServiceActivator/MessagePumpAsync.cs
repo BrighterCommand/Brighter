@@ -23,7 +23,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
         }
 
-        protected override async Task DispatchRequest(MessageHeader messageHeader, TRequest request)
+        protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 

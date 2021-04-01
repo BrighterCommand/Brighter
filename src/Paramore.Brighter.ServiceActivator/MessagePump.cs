@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public IAmAChannel Channel { get; set; }
 
-        public async Task Run()
+        public void Run()
         {
             do
             {
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     var request = TranslateMessage(message);
-                    await DispatchRequest(message.Header, request);
+                    DispatchRequest(message.Header, request);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -185,7 +185,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         // Implemented in a derived class to dispatch to the relevant type of pipeline via the command processor
         // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
-        protected abstract Task DispatchRequest(MessageHeader messageHeader, TRequest request);
+        protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request);
         
         protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {

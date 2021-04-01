@@ -41,9 +41,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact(Timeout = 50000)]
-        public async Task When_a_message_is_dispatched_it_should_reach_a_handler_async()
+        public void When_a_message_is_dispatched_it_should_reach_a_handler_async()
         {
-            await _messagePump.Run();
+            _messagePump.Run();
 
             MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent).Should().BeTrue();
             MyEventHandlerAsyncWithContinuation.MonitorValue.Should().Be(2);

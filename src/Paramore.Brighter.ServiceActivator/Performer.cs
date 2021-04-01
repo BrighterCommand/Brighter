@@ -51,10 +51,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public async Task Run()
         {
-            if (_runAsync)
-                await Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            else
-                await Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning);
+            await Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         }
 
         public void Dispose()
