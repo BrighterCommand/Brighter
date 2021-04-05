@@ -123,6 +123,8 @@ Brighter contributors (sorted alphabeticaly)
 
 **[Paul Reardon](https://github.com/preardon)**
   * Improvements to ASB Transport 
+  * Replaced Newtonsoft.Json with System.Text.Json
+  * Created Social Media Card
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
