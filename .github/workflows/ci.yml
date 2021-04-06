@@ -11,9 +11,10 @@ name: CI
 on:
   push:
     branches: [ master ]
+    tags: ["*.*.*"]
   pull_request:
     branches: [ master ]
-  tags: ["*.*.*"]
+  
 env:
  # Stop wasting time caching packages
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
