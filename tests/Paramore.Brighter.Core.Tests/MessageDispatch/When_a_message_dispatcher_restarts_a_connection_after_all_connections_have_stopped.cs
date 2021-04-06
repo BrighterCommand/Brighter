@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -74,9 +74,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
-            Task.Delay(500).Wait();
-
-
+            Task.Delay(1000).Wait();
+            
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
             //_should_have_a_running_state

@@ -203,7 +203,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AzureServiceBus.Tests", "tests\Paramore.Brighter.AzureServiceBus.Tests\Paramore.Brighter.AzureServiceBus.Tests.csproj", "{48F584DF-0BA1-4485-A612-14FD4F6A4CF7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\KafkaPartitionTesting\GreetingsSender\GreetingsSender.csproj", "{04EB9DE3-9B73-4A0F-B066-F9A32844AEEE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\KafkaPartitionTesting\GreetingsSender\GreetingsSender.csproj", "{A980A6CC-3FF6-4D64-A0DC-2CA44E2F43F7}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
