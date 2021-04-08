@@ -33,12 +33,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
+        private readonly MyCommandHandler _myCommandHandler;
 
         public CommandProcessorSendTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
+            _myCommandHandler = new MyCommandHandler();
+            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => _myCommandHandler);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -50,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Send(_myCommand);
 
             //_should_send_the_command_to_the_command_handler
-            MyCommandHandler.ShouldReceive(_myCommand).Should().BeTrue();
+            _myCommandHandler.ShouldReceive(_myCommand).Should().BeTrue();
         }
     }
 }
