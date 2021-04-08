@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2019 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
 
@@ -89,6 +89,9 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task DisposeAsync()
         {
             Connection.Close();
+            var completionSource = new TaskCompletionSource<object>();
+            completionSource.SetResult(null);
+            await completionSource.Task;
         }
     }
 }
