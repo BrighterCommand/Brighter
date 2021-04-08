@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isAsync">Is this channel read asynchronously</param>
+        /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
         /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
-            bool isAsync = false,
+            bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             OnMissingChannel makeChannels = OnMissingChannel.Create
         )
             : base(dataType, name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
-                unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
+                unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
         {
             LockTimeout = lockTimeout;
             DelaySeconds = delaySeconds;
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isAsync">Is this channel read asynchronously</param>
+        /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
         /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
@@ -172,7 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
-            bool isAsync = false,
+            bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
             int lockTimeout = 10,
             int delaySeconds = 0,
@@ -184,7 +184,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             OnMissingChannel makeChannels = OnMissingChannel.Create
         )
             : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
-                unacceptableMessageLimit, isAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod, iAmPolicy,redrivePolicy,
+                unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod, iAmPolicy,redrivePolicy,
                 snsAttributes, tags, makeChannels)
         {
         }
