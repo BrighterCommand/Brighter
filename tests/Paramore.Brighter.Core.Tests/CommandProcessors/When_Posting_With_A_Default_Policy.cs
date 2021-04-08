@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeOutbox
                 .Get()
                 .SingleOrDefault(msg => msg.Id == _message.Id)
-                .Should().NotBe(null);
+                .Should().NotBeNull();
             //should send a message via the messaging gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             // should convert the command into a message

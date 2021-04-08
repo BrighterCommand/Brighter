@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .OutstandingMessages(3000)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
-            depositedPost.Should().NotBe(null);
+            depositedPost.Should().NotBeNull();
            
             //message should correspond to the command
             depositedPost.Id.Should().Be(_message.Id);

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
 
             var sentMessage = _fakeMessageProducer.SentMessages.FirstOrDefault();
-            sentMessage.Should().NotBe(null);
+            sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
             sentMessage.Body.Value.Should().Be(_message.Body.Value);

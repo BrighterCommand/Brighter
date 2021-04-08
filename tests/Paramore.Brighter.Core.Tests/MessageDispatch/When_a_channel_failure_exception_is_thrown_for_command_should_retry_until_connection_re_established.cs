@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            _commandProcessor.Commands.Count().Should().Equals(2);
+            _commandProcessor.Commands.Count().Should().Be(2);
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             _commandProcessor.Commands[1].Should().Be(CommandType.Send);
         }
