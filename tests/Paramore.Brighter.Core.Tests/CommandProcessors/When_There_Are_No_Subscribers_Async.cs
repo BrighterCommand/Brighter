@@ -28,6 +28,7 @@ using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
@@ -48,6 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         }
 
         //Ignore any errors about adding System.Runtime from the IDE. See https://social.msdn.microsoft.com/Forums/en-US/af4dc0db-046c-4728-bfe0-60ceb93f7b9f/vs2012net-45-rc-compiler-error-when-using-actionblock-missing-reference-to?forum=tpldataflow
+        [Fact]
         public async Task When_There_Are_No_Subscribers_Async()
         {
             _exception = await Catch.ExceptionAsync(() => _commandProcessor.PublishAsync(_myEvent));
