@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
-        public void When_Building_An_Async_Pipeline_Allow_ForiegnAttribues()
+        public void When_Building_An_Async_Pipeline_Allow_ForeignAttributes()
         {
             _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 

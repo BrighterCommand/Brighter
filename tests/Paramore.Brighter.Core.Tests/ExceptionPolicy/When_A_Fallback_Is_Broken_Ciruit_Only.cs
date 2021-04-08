@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         }
 
         [Fact]
-        public void When_A_Fallback_Is_Broken_Ciruit_Only()
+        public void When_A_Fallback_Is_Broken_Circuit_Only()
         {
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 

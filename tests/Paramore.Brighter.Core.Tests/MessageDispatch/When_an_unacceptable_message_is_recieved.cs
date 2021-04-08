@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_An_Unacceptable_Message_Is_Recieved()
+        public async Task When_An_Unacceptable_Message_Is_Received()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();

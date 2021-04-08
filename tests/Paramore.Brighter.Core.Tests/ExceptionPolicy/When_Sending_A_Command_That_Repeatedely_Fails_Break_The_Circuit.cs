@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
         //We have to catch the final exception that bubbles out after retry
         [Fact]
-        public void When_Sending_A_Command_That_Repeatedely_Fails_Break_The_Circuit()
+        public void When_Sending_A_Command_That_Repeatedly_Fails_Break_The_Circuit()
         {
                 //First two should be caught, and increment the count
                 _firstException = Catch.Exception(() => _commandProcessor.Send(_myCommand));
