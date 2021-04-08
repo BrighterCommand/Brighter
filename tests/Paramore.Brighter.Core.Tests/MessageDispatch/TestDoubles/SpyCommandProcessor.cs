@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -63,7 +63,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.SendAsync);
-            await Task.Delay(0).ConfigureAwait(false);
+            var completionSource = new TaskCompletionSource<object>();
+            completionSource.SetResult(null);
+            await completionSource.Task;
         }
 
         public virtual void Publish<T>(T @event) where T : class, IRequest
@@ -76,7 +78,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(@event);
             Commands.Add(CommandType.PublishAsync);
-            await Task.Delay(0).ConfigureAwait(false);
+
+            var completionSource = new TaskCompletionSource<object>();
+            completionSource.SetResult(null);
+            await completionSource.Task;
         }
 
         public virtual void Post<T>(T request) where T : class, IRequest
@@ -96,7 +101,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);
-            await Task.Delay(0);
+
+            var completionSource = new TaskCompletionSource<object>();
+            completionSource.SetResult(null);
+            await completionSource.Task;
         }
 
         public Guid DepositPost<T>(T request) where T : class, IRequest
@@ -108,11 +116,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var tcs = new TaskCompletionSource<Guid>();
             _postBox.Add(request.Id, request);
-            await Task.Delay(0, cancellationToken);
+
+            var tcs = new TaskCompletionSource<Guid>();
             tcs.SetResult(request.Id);
-            return tcs.Task.Result;
+            return await tcs.Task;
         }
 
         public void ClearOutbox(params Guid[] posts)
@@ -130,7 +138,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             CancellationToken cancellationToken = default(CancellationToken))
         {
             ClearOutbox(posts.ToArray());
-            await Task.Delay(0);
+
+            var completionSource = new TaskCompletionSource<object>();
+            completionSource.SetResult(null);
+            await completionSource.Task;
         }
 
         public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : class, IResponse

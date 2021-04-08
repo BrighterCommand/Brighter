@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
-            _fakeOutbox.Add(_message);
+            await _fakeOutbox.AddAsync(_message);
             
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 

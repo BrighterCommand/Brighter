@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -53,10 +53,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public async Task Command_Is_Not_Stored_If_The_Handler_Is_Not_Successful()
         {
             Guid id = Guid.NewGuid();
-            Catch.Exception(() => _commandProcessor.Send(new MyCommandToFail() { Id = id }));
+            await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail() { Id = id }));
 
-            var exists =
-                await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
+            var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
             exists.Should().BeFalse();
         }
     }

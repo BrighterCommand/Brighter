@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public async Task When_Posting_A_Message_And_There_Is_No_Message_Producer_Async()
         {
-            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
+            _exception = await Catch.ExceptionAsync(async ()=> await _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
             _exception.Should().BeOfType<InvalidOperationException>();
