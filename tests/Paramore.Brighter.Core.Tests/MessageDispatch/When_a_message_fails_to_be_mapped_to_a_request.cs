@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -31,7 +31,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
 
             _channel.Stop();
 
