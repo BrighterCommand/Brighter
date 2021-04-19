@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -61,7 +61,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void When_An_Unacceptable_Message_Limit_Is_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
 
             Task.WaitAll(new[] { task });
 

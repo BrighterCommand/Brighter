@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -33,10 +33,10 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherShutConnectionTests
+    public class MessageDispatcherShutConnectionTests : IAsyncLifetime
     {
-        private static Dispatcher _dispatcher;
-        private static Subscription _subscription;
+        private readonly Dispatcher _dispatcher;
+        private readonly Subscription _subscription;
 
         public MessageDispatcherShutConnectionTests()
         {
@@ -55,15 +55,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
-            _dispatcher.Receive();
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Shuts_A_Connection()
+        public async Task When_A_Message_Dispatcher_Shuts_A_Connection()
         {
-            Task.Delay(1000).Wait();
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             _dispatcher.Shut(_subscription);
-            _dispatcher.End().Wait();
+            await _dispatcher.End();
 
             //_should_have_consumed_the_messages_in_the_channel
             _dispatcher.Consumers.Should().NotContain(consumer => consumer.Name == _subscription.Name && consumer.State == ConsumerState.Open);
@@ -71,6 +70,21 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
             //_should_have_no_consumers
             _dispatcher.Consumers.Should().BeEmpty();
+        }
+
+
+        public Task InitializeAsync()
+        {
+            _dispatcher.Receive();
+            var completionSource = new TaskCompletionSource<IDispatcher>();
+            completionSource.SetResult(_dispatcher);
+
+            return completionSource.Task;
+        }
+
+        public Task DisposeAsync()
+        {
+            return _dispatcher.End();
         }
     }
 }
