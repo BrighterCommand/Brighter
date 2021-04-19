@@ -57,15 +57,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Requeue_Count_Threshold_For_Commands_Has_Been_Reached()
+        public async Task When_A_Requeue_Count_Threshold_For_Commands_Has_Been_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(500);
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await task;
 
             //_should_send_the_message_via_the_command_processor
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,7 +34,7 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class DispatcherAddNewConnectionTests : IDisposable
+    public class DispatcherAddNewConnectionTests : IAsyncLifetime
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -59,11 +59,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
-            _dispatcher.Receive();
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
+        public async Task When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
             _dispatcher.Open(_newSubscription);
 
@@ -71,8 +70,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
 
-            Task.Delay(1000).Wait();
 
+            await Task.Delay(500);
+            
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
             //_should_have_a_running_state
@@ -83,10 +83,19 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Connections.Should().HaveCount(2);
         }
 
-        public void Dispose()
+
+        public Task InitializeAsync()
         {
-            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
-                _dispatcher.End().Wait();
+            _dispatcher.Receive();
+            var completionSource = new TaskCompletionSource<IDispatcher>();
+            completionSource.SetResult(_dispatcher);
+
+            return completionSource.Task;
+        }
+
+        public Task DisposeAsync()
+        {
+            return _dispatcher?.End();
         }
     }
 }
