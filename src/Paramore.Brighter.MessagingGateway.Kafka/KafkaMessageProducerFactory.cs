@@ -21,12 +21,16 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
+using Confluent.Kafka;
+
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly KafkaPublication _publication;
+        private Action<ProducerConfig> _configHook;
 
         public KafkaMessageProducerFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration
@@ -40,11 +44,28 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             _globalConfiguration = globalConfiguration;
             _publication = publication;
+            _configHook = null;
         }
+        
 
         public IAmAMessageProducer Create()
         {
-            return new KafkaMessageProducer(_globalConfiguration, _publication);
+            var producer = new KafkaMessageProducer(_globalConfiguration, _publication);
+            if (_configHook != null)
+                producer.ConfigHook(_configHook);
+            producer.Init();
+            return producer;
+        }
+
+        /// <summary>
+        /// Set a configuration hook to set properties not exposed by KafkaMessagingGatewayConfiguration or KafkaPublication
+        /// Intended as 'get out of gaol free' this couples us to the Confluent .NET Kafka client. Bear in mind that a future release
+        /// might drop the Confluent client, and this hook
+        /// </summary>
+        /// <param name="hook"></param>
+        public void SetConfigHook(Action<ProducerConfig> hook)
+        {
+            _configHook = hook;
         }
     }
 }

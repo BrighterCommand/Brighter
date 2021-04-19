@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,11 +26,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyCommandHandler : RequestHandler<MyCommand>
     {
-        private static MyCommand s_command;
+        private MyCommand _command;
 
         public MyCommandHandler()
         {
-            s_command = null;
+            _command = null;
         }
 
         public override MyCommand Handle(MyCommand command)
@@ -39,14 +39,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return base.Handle(command);
         }
 
-        public static bool ShouldReceive(MyCommand expectedCommand)
+        public  bool ShouldReceive(MyCommand expectedCommand)
         {
-            return (s_command != null) && (expectedCommand.Id == s_command.Id);
+            return (_command != null) && (expectedCommand.Id == _command.Id);
         }
 
         private void LogCommand(MyCommand request)
         {
-            s_command = request;
+            _command = request;
         }
     }
 }

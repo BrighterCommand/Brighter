@@ -21,76 +21,127 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-using Confluent.Kafka;
-
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    //These enums map to Confluent's ProducerConfig values, we just don't want a dependency on that in our interface
+    
+    /// <summary>
+    /// What is the algorithm for mapping keys to partitions
+    /// </summary>
+    public enum Partitioner
+    {
+        Random,
+        Consistent,
+        ConsistentRandom,
+        Murmur2,
+        Murmur2Random,
+    }
+    
+    /// <summary>
+    /// When publishing to the broker, how many nodes must we replicate to before responding
+    /// </summary>
+    public enum Acks
+    {
+        All = -1, // 0xFFFFFFFF
+        None = 0,
+        Leader = 1,
+    }
+    
     public class KafkaPublication : Publication
     {
         /// <summary>
-        /// Maximum number of messages allowed on the 
-        /// producer queue.
+        /// The acks parameter controls how many ISR nodes must receive the 
+        /// record before the producer can consider the write successful.
         /// </summary>
-        public int? QueueBufferingMaxMessages { get; set; }
-
-        /// <summary>
-        /// Maximum total message size sum allowed on the 
-        /// producer queue.
-        /// </summary>
-        public int? QueueBufferingMaxKbytes { get; set; }
-
-        /// <summary>
-        /// Maximum time, in milliseconds, for buffering data 
-        ///on the producer queue.
-        /// </summary>
-        public int? QueueBufferingMax { get; set; }
-
-        /// <summary>
-        /// The acks parameter controls how many 
-        /// partition replicas must receive the 
-        /// record before the producer can consider 
-        /// the write successful.
-        /// </summary>
-        public Acks? Acks { get; set; }
-
-        /// <summary>
-        /// How many times to retry sending a failing MessageSet.
-        /// Note: retrying may cause reordering.
-        /// </summary>
-        public int? MessageSendMaxRetries { get; set; }
-
-        /// <summary>
-        /// The backoff time before retrying 
-        /// a message send.
-        /// </summary>
-        public int? RetryBackoff { get; set; }
+        public Acks Replication { get; set; } = Acks.All;
 
         /// <summary>
         /// Maximum number of messages batched in one MessageSet. 
         /// </summary>
-        public int? BatchNumberMessages { get; set; }
+        public int BatchNumberMessages { get; set; } = 10;
 
         /// <summary>
-        /// The ack timeout of the producer request.
-	    /// This value is only enforced by the broker and relies 
-	    /// on Acks being != AcksEnum.None.",
+        /// Messages are produced once only
+        /// Will adjust the following if not set:
+        /// `max.in.flight.requests.per.connection=5` (must be less than or equal to 5), `retries=INT32_MAX` (must be greater than 0), `acks=all`, `queuing.strategy=fifo`. 
         /// </summary>
-        public int? RequestTimeout { get; set; }
+        public bool EnableIdempotence { get; set; } = true;
+        
+         /// <summary>
+         /// Maximum time, in milliseconds, for buffering data on the producer queue.
+         /// </summary>
+         public int LingerMs { get; set; } = 5;
+
+         /// <summary>
+        /// How many times to retry sending a failing MessageSet.
+        /// Note: retrying may cause reordering, set the  max in flight to 1 if using this 
+        /// </summary>
+        public int MessageSendMaxRetries { get; set; } = 3;
 
         /// <summary>
         /// Local message timeout. "
-	    /// This value is only enforced locally and limits the time a 
-	    /// produced message waits for successful delivery. 
-        ///  A time of 0 is infinite.
+        /// This value is only enforced locally and limits the time a produced message
+        /// waits for successful delivery. A time of 0 is infinite.
         /// </summary>
-        public int? MessageTimeout { get; set; }
+        public int MessageTimeoutMs { get; set; } = 5000;
 
-        public KafkaPublication()
-        {
-            Acks = Confluent.Kafka.Acks.All;
-            MessageTimeout = 5000;
-        }
+        /// <summary>
+        /// Maximum number of in-flight requests the  client will send.
+        /// We default this to 1, so as to allow retries to not de-order the stream
+        /// </summary>
+        public int MaxInFlightRequestsPerConnection { get; set; } = 1;
+
+        /// <summary>
+        /// How many partitions on this topic?
+        /// </summary>
+        public int NumPartitions { get; set; } = 1;
+        
+        /// <summary>
+        /// How do we partition - defaults to consistent random
+        /// </summary>
+        public Partitioner Partitioner { get; set; } = Partitioner.ConsistentRandom;
+        
+        /// <summary>
+        /// Maximum number of messages allowed on the producer queue.
+        /// </summary>
+        public int QueueBufferingMaxMessages { get; set; } = 10;
+
+        /// <summary>
+        /// Maximum total message size sum allowed on the producer queue.
+        /// </summary>
+        public int QueueBufferingMaxKbytes { get; set; } = 1048576;
+
+        /// <summary>
+        /// What is the replication factor? How many nodes is the topic copied to on the broker?
+        /// </summary>
+        public short ReplicationFactor { get; set; } = 1;
+
+        /// <summary>
+        /// The backoff time before retrying a message send.
+        /// </summary>
+        public int RetryBackoff { get; set; } = 100;
+
+        /// <summary>
+        /// The ack timeout of the producer request. This value is only enforced by the broker
+        /// \and relies on Replication being != AcksEnum.None.",
+        /// </summary>
+        public int RequestTimeoutMs { get; set; } = 500;
+        
+        /// <summary>
+        /// What is the Topic we wish to publish to. Required for topic creation
+        /// </summary>
+        public RoutingKey Topic { get; set; }
+
+        /// <summary>
+        /// How long to wait when asking for topic metadata
+        /// </summary>
+        public int TopicFindTimeoutMs { get; set; } = 5000;
+        
+        /// <summary>
+        /// The unique identifier for this producer, used with transactions
+        /// </summary>
+        /// <returns></returns>
+        public string TransactionalId { get; set; }
 
     }
 }

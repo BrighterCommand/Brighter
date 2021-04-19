@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -46,5 +46,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The topic
         /// </summary>
         public const string TOPIC = "Topic";
-   }
+        /// <summary>
+        /// The key used to partition this message
+        /// </summary>
+        public static string PARTITIONKEY = "PartitionKey";
+        /// <summary>
+        /// What is the offset into the partition of the message
+        /// </summary>
+        public static string PARTITION_OFFSET = "TopicPartitionOffset";
+    }
 }

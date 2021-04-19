@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,11 +25,11 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -43,13 +43,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor = new SpyCommandProcessor();
             var channel = new FailingChannel { NumberOfRetries = 1 };
             var mapper = new MyCommandMessageMapper();
-            _messagePump = new MessagePump<MyCommand>(_commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
+            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
 
             var command = new MyCommand();
 
             //two command, will be received when subscription restored
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(command)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonConvert.SerializeObject(command)));
+            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
+            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
             channel.Enqueue(message1);
             channel.Enqueue(message2);
             
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            _commandProcessor.Commands.Count().Should().Equals(2);
+            _commandProcessor.Commands.Count().Should().Be(2);
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             _commandProcessor.Commands[1].Should().Be(CommandType.Send);
         }

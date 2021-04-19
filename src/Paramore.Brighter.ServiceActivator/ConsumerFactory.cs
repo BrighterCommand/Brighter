@@ -43,8 +43,16 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer Create()
         {
+            if (_subscription.RunAsync)
+                return CreateAsync();
+            else
+                return CreateBlocking();
+        }
+
+        private Consumer CreateBlocking()
+        {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
@@ -53,7 +61,22 @@ namespace Paramore.Brighter.ServiceActivator
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, false);
         }
-   }
+
+        private Consumer CreateAsync()
+        {
+            var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            {
+                Channel = channel,
+                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                RequeueCount = _subscription.RequeueCount,
+                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+            };
+
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, true);
+        }
+    }
 }

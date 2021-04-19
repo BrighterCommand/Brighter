@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            var connection = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 3, timeoutInMilliseconds: 1000, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            var connection = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 3, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
 
             var @event = new MyEvent();
@@ -65,10 +65,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         [Fact]
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             //should_have_multiple_consumers
             _dispatcher.Consumers.Count().Should().Be(3);
 
-            Task.Delay(1000).Wait();
             _dispatcher.End().Wait();
             
             //_should_have_consumed_the_messages_in_the_channel
@@ -76,5 +76,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
+
     }
 }

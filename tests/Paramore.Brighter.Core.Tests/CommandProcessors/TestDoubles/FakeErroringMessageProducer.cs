@@ -4,6 +4,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     public class FakeErroringMessageProducer : IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         public int SentCalledCount { get; set; }
         public void Dispose() { }
 

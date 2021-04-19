@@ -14,10 +14,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 var message = new SqsMessageCreator().CreateMessage(sqsMessages[i]);
                 _logger.Value.InfoFormat("SqsMessageConsumer: Received message from queue {0}, message: {1}{2}",
-                    _queueName, Environment.NewLine, JsonConvert.SerializeObject(message));
+                    _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                 messages[i] = message;
             }
 

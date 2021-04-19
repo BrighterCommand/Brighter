@@ -15,7 +15,7 @@ namespace Paramore.Brighter.ServiceActivator
     // It is also why throughput on a queue needs multiple performers, each with their own message pump
     // Retry and circuit breaker should be provided by exception policy using an attribute on the handler
     // Timeout on the handler should be provided by timeout policy using an attribute on the handler
-    public class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
+    public abstract class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
         internal readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MessagePump<TRequest>>);
 
@@ -24,9 +24,12 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
 
-        public MessagePump(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper)
+        public MessagePump(
+            IAmACommandProcessor commandProcessor, 
+            IAmAMessageMapper<TRequest> messageMapper
+            )
         {
-            _commandProcessor = commandProcessor;
+            _commandProcessor = commandProcessor; 
             _messageMapper = messageMapper;
         }
 
@@ -40,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         public IAmAChannel Channel { get; set; }
 
-        public Task Run()
+        public void Run()
         {
             do
             {
@@ -166,7 +169,6 @@ namespace Paramore.Brighter.ServiceActivator
 
             _logger.Value.DebugFormat("MessagePump0: Finished running message loop, no longer receiving messages from {0} on thread # {1}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
             
-            return Task.CompletedTask;
         }
 
         protected void AcknowledgeMessage(Message message)
@@ -180,36 +182,11 @@ namespace Paramore.Brighter.ServiceActivator
         {
             return RequeueCount != -1;
         }
+
+        // Implemented in a derived class to dispatch to the relevant type of pipeline via the command processor
+        // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
+        protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request);
         
-        protected void DispatchRequest(MessageHeader messageHeader, TRequest request)
-        {
-            _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
-
-            if (messageHeader.MessageType == MessageType.MT_COMMAND && request is IEvent)
-            {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id, MessageType.MT_COMMAND));
-            }
-            if (messageHeader.MessageType == MessageType.MT_EVENT && request is ICommand)
-            {
-                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id, MessageType.MT_EVENT));
-            }
-
-            switch (messageHeader.MessageType)
-            {
-                case MessageType.MT_COMMAND:
-                {
-                    _commandProcessor.Send(request);
-                    break;
-                }
-                case MessageType.MT_DOCUMENT:
-                case MessageType.MT_EVENT:
-                {
-                    _commandProcessor.Publish(request);
-                    break;
-                }
-            }
-        }
- 
         protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
@@ -318,5 +295,19 @@ namespace Paramore.Brighter.ServiceActivator
             return false;
         }
 
+        protected void ValidateMessageType(MessageType messageType, TRequest request)
+        {
+            if (messageType == MessageType.MT_COMMAND && request is IEvent)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type IEvent", request.Id,
+                    MessageType.MT_COMMAND));
+            }
+
+            if (messageType == MessageType.MT_EVENT && request is ICommand)
+            {
+                throw new ConfigurationException(string.Format("Message {0} mismatch. Message type is '{1}' yet mapper produced message of type ICommand", request.Id,
+                    MessageType.MT_EVENT));
+            }
+        }
    }
 }

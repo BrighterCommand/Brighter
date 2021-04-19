@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new FailingEventMessageMapper();
-            _messagePump = new MessagePump<MyFailingMapperEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
+            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
 
             var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
 
@@ -31,7 +31,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public void When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
 
             _channel.Stop();
 

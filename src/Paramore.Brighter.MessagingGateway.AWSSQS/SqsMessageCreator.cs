@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Amazon.SQS.Model;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 try
                 {
-                    var bag = (Dictionary<string, object>)JsonConvert.DeserializeObject(value.StringValue);
+                    var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(value.StringValue, JsonSerialisationOptions.Options);
                     return bag;
                 }
                 catch (Exception)

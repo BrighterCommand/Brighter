@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2016 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Runtime.ExceptionServices;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.EnterHandler,
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonConvert.SerializeObject(command),
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeBeforeHandle,
                             0),
                         ContinueOnCapturedContext, cancellationToken)
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.ExitHandler,
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonConvert.SerializeObject(command),
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeAfterHandle,
                             (timeAfterHandle - timeBeforeHandle).Milliseconds),
                         ContinueOnCapturedContext, cancellationToken)
@@ -129,7 +129,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             MonitorEventType.ExceptionThrown,
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonConvert.SerializeObject(command),
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeOnException,
                             (timeOnException - timeBeforeHandle).Milliseconds,
                             capturedException.SourceException),

@@ -79,7 +79,7 @@ namespace Paramore.Brighter
         /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
         /// </summary>
         /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
-        public bool IsAsync { get; }
+        public bool RunAsync { get; }
 
 
         /// <summary>
@@ -142,7 +142,7 @@ namespace Paramore.Brighter
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isAsync">Is this channel read asynchronously</param>
+        /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public Subscription(
@@ -156,7 +156,7 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
-            bool isAsync = false,
+            bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
@@ -170,7 +170,7 @@ namespace Paramore.Brighter
             RequeueCount = requeueCount;
             RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
             UnacceptableMessageLimit = unacceptableMessageLimit;
-            IsAsync = isAsync;
+            RunAsync = runAsync;
             ChannelFactory = channelFactory;
             MakeChannels = makeChannels;
         }
@@ -191,7 +191,7 @@ namespace Paramore.Brighter
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isAsync"></param>
+        /// <param name="runAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public Subscription(
@@ -204,7 +204,7 @@ namespace Paramore.Brighter
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
-            bool isAsync = false,
+            bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(
@@ -218,7 +218,7 @@ namespace Paramore.Brighter
                 requeueCount, 
                 requeueDelayInMilliseconds, 
                 unacceptableMessageLimit, 
-                isAsync, 
+                runAsync, 
                 channelFactory, 
                 makeChannels)
         {

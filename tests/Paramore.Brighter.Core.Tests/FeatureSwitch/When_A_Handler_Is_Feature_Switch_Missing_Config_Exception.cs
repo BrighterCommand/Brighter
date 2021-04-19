@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
             _exception.Should().BeOfType<ConfigurationException>();
             _exception.Should().NotBeNull();
-            _exception.Message.Should().Contain($"Handler of type {typeof(MyFeatureSwitchedConfigHandler).Name} does not have a Feature Switch configuration!");
+            _exception.Message.Should().Contain($"Handler of type {nameof(MyFeatureSwitchedConfigHandler)} does not have a Feature Switch configuration!");
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeFalse(); 
         }

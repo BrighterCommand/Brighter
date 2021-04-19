@@ -28,10 +28,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.MySql
@@ -456,7 +456,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private MySqlParameter[] InitAddDbParameters(Message message)
         {
-            var bagJson = JsonConvert.SerializeObject(message.Header.Bag);
+            var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
                 new MySqlParameter
@@ -609,7 +609,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonConvert.DeserializeObject<Dictionary<string, string>>(headerBag);
+            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, string>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 

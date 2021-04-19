@@ -40,6 +40,9 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
     /// </summary>
     public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+         
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMsMessageProducer>);
 
         private readonly Feed _feed;

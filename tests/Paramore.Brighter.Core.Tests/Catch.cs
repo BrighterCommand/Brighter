@@ -49,18 +49,21 @@ namespace Paramore.Brighter.Core.Tests
         }
         public static async Task<Exception> ExceptionAsync(Func<Task> action)
         {
-            Exception exception = null;
-
+            var tcs = new TaskCompletionSource<Exception>();
+            //Exception exception = null;
+            
             try
             {
                 await action();
+                tcs.SetResult(null);
             }
             catch (Exception e)
             {
-                exception = e;
+                //exception = e;
+                tcs.SetResult(e);
             }
 
-            return exception;
+            return await tcs.Task;
         }
     }
 }

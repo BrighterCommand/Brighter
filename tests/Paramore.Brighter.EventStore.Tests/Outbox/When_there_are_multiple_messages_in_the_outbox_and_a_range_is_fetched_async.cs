@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2019 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
@@ -45,18 +45,16 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var message1 = CreateMessage(0, StreamName);
             var message2 = CreateMessage(1, StreamName);
             var message3 = CreateMessage(2, StreamName);
-            
-            eventStoreOutbox.Add(message1);
-            await Task.Delay(100);
-            eventStoreOutbox.Add(message2);
-            await Task.Delay(100);
-            eventStoreOutbox.Add(message3);
+
+            await eventStoreOutbox.AddAsync(message1);
+            await eventStoreOutbox.AddAsync(message2);
+            await eventStoreOutbox.AddAsync(message3);
 
             var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, StreamName}};
-            
+
             // act
             var messages = await eventStoreOutbox.GetAsync(1, 3, args);
-            
+
             // assert
             messages.Should().ContainSingle().Which.Should().BeEquivalentTo(message3);
         }
@@ -66,12 +64,12 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            
+
             // act
-            Func<Task> getWithoutArgs = async () => await eventStoreOutbox.GetAsync(1, 1);
-            
+            Func<Task> getWithoutArgs =  () => eventStoreOutbox.GetAsync(1, 1);
+
             // assert
-            getWithoutArgs.Should().Throw<ArgumentNullException>();
+            await Assert.ThrowsAsync<ArgumentNullException>(getWithoutArgs);
         }
 
         [Fact]
@@ -80,12 +78,12 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
             var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, null}};
-            
+
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.GetAsync(1, 1, args);
-            
+
             // assert
-            getWithoutArgs.Should().Throw<ArgumentException>();
+            await Assert.ThrowsAsync<ArgumentException>(getWithoutArgs);
         }
 
         [Fact]
@@ -94,12 +92,12 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
             var args = new Dictionary<string, object>();
-            
+
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.GetAsync(1, 1, args);
-            
+
             // assert
-            getWithoutArgs.Should().Throw<ArgumentException>();
+            await Assert.ThrowsAsync<ArgumentException>(getWithoutArgs);
         }
 
         [Fact]
@@ -107,13 +105,13 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var args = new Dictionary<string, object> { { "Foo", "Bar" }};
-            
+            var args = new Dictionary<string, object> {{"Foo", "Bar"}};
+
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.GetAsync(1, 1, args);
-            
+
             // assert
-            getWithoutArgs.Should().Throw<ArgumentException>();
+            await Assert.ThrowsAsync<ArgumentException>(getWithoutArgs);
         }
     }
 }

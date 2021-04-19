@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,12 +25,12 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
@@ -46,12 +46,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor = new SpyCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyEventMessageMapper();
-            var messagePump = new MessagePump<MyEvent>(_commandProcessor, mapper);
+            var messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper);
             messagePump.Channel = _channel;
             messagePump.TimeoutInMilliseconds = 5000;
 
             var @event = new MyEvent();
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(@event)));
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
             _channel.Enqueue(message);
 
             _performer = new Performer(_channel, messagePump);

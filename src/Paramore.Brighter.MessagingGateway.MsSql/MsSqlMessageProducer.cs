@@ -7,6 +7,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public class MsSqlMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        
         private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageProducer>);
         private readonly MsSqlMessageQueue<Message> _sqlQ;
         private Publication _publication; // -- placeholder for future use
@@ -17,6 +20,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration);
             _publication = publication ?? new Publication() {MakeChannels = OnMissingChannel.Create};
+            MaxOutStandingMessages = _publication.MaxOutStandingMessages;
+            MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
         }
 
         public void Send(Message message)

@@ -1,7 +1,7 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
-using Newtonsoft.Json;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             ReplyTo = message.Header.ReplyTo;
             ContentType = message.Header.ContentType;
             CreatedAt = $"{date}";
-            HeaderBag = JsonConvert.SerializeObject(message.Header.Bag);
+            HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             Body = message.Body.Value;
         }
 
@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
             var timestamp = DateTime.Parse(CreatedAt);
             var correlationId = Guid.Parse(CorrelationId);
-            var bag = JsonConvert.DeserializeObject<Dictionary<string, string>>(HeaderBag);
+            var bag = JsonSerializer.Deserialize<Dictionary<string, string>>(HeaderBag, JsonSerialisationOptions.Options);
 
             var header = new MessageHeader(
                 messageId:messageId, 

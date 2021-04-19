@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Text.Json;
 using Greetings.Ports.Commands;
-using Newtonsoft.Json.Linq;
 using Paramore.Brighter;
 
 namespace Greetings.Ports.Mappers
@@ -15,8 +15,7 @@ namespace Greetings.Ports.Mappers
                 messageType: MessageType.MT_COMMAND,
                 correlationId: request.SendersAddress.CorrelationId);
 
-            var json = new JObject(new JProperty("Id", request.Id), new JProperty("Salutation", request.Salutation));
-            var body = new MessageBody(json.ToString());
+            var body = new MessageBody(JsonSerializer.Serialize(new GreetingsReplyBody(request.Id.ToString(), request.Salutation)));
             var message = new Message(header, body);
             return message;
          }
@@ -25,9 +24,9 @@ namespace Greetings.Ports.Mappers
         {
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var reply = new GreetingReply(replyAddress);
-            var body = JObject.Parse(message.Body.Value);
-            reply.Id = Guid.Parse((string)body["Id"]);
-            reply.Salutation = Convert.ToString(body["Salutation"]);
+            var body = JsonSerializer.Deserialize<GreetingsReplyBody>(message.Body.Value);
+            reply.Id = Guid.Parse(body.Id);
+            reply.Salutation = body.Salutation;
 
             return reply;
         }

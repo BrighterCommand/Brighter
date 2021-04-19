@@ -31,13 +31,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             WorkThreadId = Thread.CurrentThread.ManagedThreadId;
 
             LogEvent(command);
-            await Task.Delay(30, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            await Task.Delay(500, cancellationToken).ContinueWith(
+                (task =>
+                {
+                    MonitorValue = 2;
+                    ContinuationThreadId = Thread.CurrentThread.ManagedThreadId; 
+                })
+                );
 
-            //this will run on the continuation
-            MonitorValue = 2;
-            ContinuationThreadId = Thread.CurrentThread.ManagedThreadId;
-
-            return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await base.HandleAsync(command, cancellationToken);
         }
 
         private static void LogEvent(MyEvent @event)

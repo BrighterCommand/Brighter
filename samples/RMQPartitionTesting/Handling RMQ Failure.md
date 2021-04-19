@@ -2,17 +2,17 @@
 ## Mirrored and local queues
 
 1. A queue is local to a node, unless it is marked high-availability in which case it is mirrored across all nodes
-    * A non-mirrored queue can be recreated on a new node if the queue is non-durable i.e. the subscription dies with the node, so it is ok to recreate elsewhere
-2. So although a mirrored queue is one strategy to cope with node failure, you could opt for non-mirrored, non durable.
+    * A non-ha queue can be recreated on a new node if the queue is non-durable i.e. the subscription dies with the node, so it is ok to recreate elsewhere
+2. So although an ha queue is one strategy to cope with node failure, you could opt for non-ha, non durable.
     * Constraints: You may get message loss whilst there is no subscribing queue i.e. node is down, new queue not created; in addition, you have to start consumers before producers
-3. With a mirrored queue if you connect to a slave node, the channel actually publishes and consumers from the master node
+3. With an ha queue if you connect to a mirror, the channel actually publishes and consumers from the master 
     * For this to work, the routing data, the Exchange, is replicated to all nodes in the cluster
-4. Publisher Confirms: let your app know when a message has been passed from the master to all slave queues
-    * If a mirrored queue’s master fails before the message has been routed to the slave that will be become the new master, the publisher confirmation will never arrive and you’ll know that the message may have been lost.
-5. If a mirrored queue loses a slave node, any consumers attached to the mirrored queue don’t notice the loss. That’s because technically they’re attached to the queue’s master copy.
-6. But if the node hosting the master copy fails, all of the queue’s consumers need to reattach to start listening to the new queue master. 
+4. Publisher Confirms: let your app know when a message has been passed from the master to mirrors
+    * If an ha queue’s master fails before the message has been routed to the mirror that will be become the new master, the publisher confirmation will never arrive and you’ll know that the message may have been lost.
+5. If an ha queue loses a mirror, any consumers attached to the mirror don’t notice the loss. That’s because technically they’re attached to the master.
+6. But if the node hosting the master fails, all of the queue’s consumers need to reattach to start listening to the new master. 
     * For consumers that were connected through the node that actually failed, this isn’t hard. Since they’ve lost their TCP connection to the node, they’ll automatically pick up the new queue master when they reattach to a new node in the cluster.
-    * For consumers that were attached to the mirrored queue through a node that didn’t fail, RabbitMQ will send those consumers a consumer cancellation notification telling them they’re no longer attached to the queue master
+    * For consumers that were attached to a mirror through a node that didn’t fail, RabbitMQ will send those consumers a consumer cancellation notification telling them they’re no longer attached to the queue master
     * The default basic consumer in the RMQ .NET Client will set the consumer to isrunning false at this point (and the derived queuing basic consumer will close the shared queue).
 7. Rabbit can’t tell the difference between acknowledgements that were lost during the failover and messages that weren’t acknowledged at all. So to be safe, consumed but unacknowledged messages are requeued to their original positions in the queue
 8. Transaction: ensures the published message has been routed to a queue, before continuing
@@ -29,13 +29,9 @@ We are going to use Blockade, running against our docker containers, to simulate
 
 blockade.readthedocs.io/en/latest
 
-Under Windows, we need to install this into docker toolbox. Before we can do that we need to install the Build Tools for VS 2017, so that we can build python tools. 
+We need to install blockade, you may want to use a virtual env to do this
 
-wiki.python.org/main/WindowsCompilers
-
-With that we should be able to run the Docker Toolbox console and run
-
-pip install blockade to get blockade running
+pip install blockade
 
 You can confirm with 
 
@@ -43,13 +39,6 @@ blockade -h
 
 ### Usage
 Although blockade offers its own docker compose-like syntax for configuring services in a network, its easier to just create the network with docker-compose directly, and then use blockade add to add the containers from that network into the blockade. You are likely to use the command line, or a script anyway, to run blockade partition and blockade join to move nodes in and out of a partition.
-
-### Notes
-It may sound obvious, but you need to plan your testing. What are the scenarios? Most importantly: identify what do you expect to happen and what actually happens. Plan how you get the system into the starting condition (for example you might need to keep restarting clients until they connect to the correct node). Ad-hoc is tempting. 'What happens if I partition the system?' But the reality is this often proves confusing. Was what happened expected? If not, what is the expected behaviour?
-
-I spent a lot of time running a test, checking to see via the RMQ Management console what node I was connected to, and figuring out which scenario that would help with
-
-So plan. 
 
 ### Point of Failure
 The point of failure needs to be taken into account when determinig how our code should respond. Generally, we have four steps when we set up messaging with an RMQ broker
@@ -65,13 +54,9 @@ Generally, as we connect to a node, the connection must be torn down, and channe
 
 If we multiplex channels across a shared connection, then all channels in use will be impacted by the failure of that connection, so when we tear down the connection because an operation fails on a channel, other channels will also cease to exist. So we cannot assume the presence of a channel before using a connection.
 
-### Analysis
+### Non HA Queues
 
-[Draw Diagram]
-
-#### Non HA Queues
-
-##### Setup
+#### Setup
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, on A and it's is not mirrored, so not on B and C.
 Assume that I am not using a durable queue, so the queue is created on a node by a consumer, if it does not already exist.
@@ -88,9 +73,9 @@ Assume that I am not using a durable queue, so the queue is created on a node by
     * This is not 'safe' as there may be lost messages where the publisher sent them and RMQ discarded them.
     * So to support this approach you have to be able to replay message sent during that window (Brighter has a message box for this).
 
-#### HA Queues
+### HA Queues
 
-##### Setup
+#### Setup
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, with the master on A and slaves on B and C.
 We have chosen a strategy of Pause Minority on a partition
@@ -102,46 +87,29 @@ We have chosen a strategy of Pause Minority on a partition
     * I need to stop talking to A and talk to B or C.
     * I should resume talking on B or C
 
-    ###### Results
+    ##### Results
 
 2. Assume I connect to Node A. I consume from the master which is on A. (I don't consume from the slave, that is there in case A fails). Then I get a partition and I cannot talk to B. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We are not impacted by the partition and should continue
 
-    ###### Results
+    ##### Results
   
 3. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then B gets a partition and I cannot see A or C. I need to re-connect to A via A or C. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We will timeout on our connection
     * I need to stop talking to B and talk to A or C.
 
-    ###### Results
-    * Consumer is Idle
-      * We get a System.Timeout exception that the socket has timed out.
-         * In this case from EnsureConsumer->EnsureChannelBind
-         * We should terminate the connection and try to create a new one.
-         * But we seem to pause - the Timeout should have become ChannelFailure, we should wait and retry!!
-         * Debugging reveals that we seem to 'freeze' when calling Dispose on the dead connection in ResetConnectionToBroker.
-         * We already have a TryRemoveConnection, that ought to have run when signalled that the connection has closed
-           * Why not just run this?
-           * In addition, if we close, we don't need to Dispose, so just Dipose if Open.
-           * Retest!
+    ##### Results
+
 
 4. Assume I connect to Node B. I consume from the master on A via Node B. (I don't consume from the slave, that is there in case A fails). Then C gets a partition and cannot be seen. I have chosen an Pause Minority strategy.
     * RMQ will pause the partioned node
     * We are not impacted by the partition and should continue
-    ###### Results
-    * Consumer is Idle
-      * RMQ Mangement Console reports that queue only now has one mirror; connection remains live
-      * When partition ends, node rejoins as slave
-    * Consumer is busy
-      * RMQ Mangement Console reports that queue only now has one mirror; connection remains live; messages are processed
-      * When partition ends, node rejoins as slave but is unsychronized.
-        * RMQ advice is to prefer 'eventual synchronization' as messages are drained that node has not seen, see https://www.rabbitmq.com/ha.html
+    ##### Results
 
 
-
-###### Setup
+##### Setup
 Assume I have a cluster with three nodes: A,B, C
 Assume that I have a queue, orders, with the master on A and slaves on B and C.
 We have chosen a strategy of Ignore on a partition

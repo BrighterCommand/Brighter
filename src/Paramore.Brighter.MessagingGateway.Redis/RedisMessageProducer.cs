@@ -50,19 +50,27 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
     public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducer
     {
+        public int MaxOutStandingMessages { get; set;  } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+    
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
         private readonly Publication _publication; //not used for now, but passed in for future use
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
-            : this(redisMessagingGatewayConfiguration, new Publication {MakeChannels = OnMissingChannel.Create})
+            : this(redisMessagingGatewayConfiguration, new RedisMessagePublication {MakeChannels = OnMissingChannel.Create})
         {}
         
-         public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, Publication publication = null)
+         public RedisMessageProducer(
+             RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
+             RedisMessagePublication publication = null)
+         
             : base(redisMessagingGatewayConfiguration)
          {
-             _publication = publication;
+             _publication = publication ?? new RedisMessagePublication{MakeChannels = OnMissingChannel.Create};
+             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
+             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
          }
 
         public void Dispose()
@@ -71,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             GC.SuppressFinalize(this);
         }
 
-        /// <summary>
+       /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>

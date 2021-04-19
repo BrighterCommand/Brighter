@@ -1,15 +1,15 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
-using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherRoutingAsyncTests
+    public class MessageDispatcherRoutingAsyncTests : IAsyncLifetime
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 channelFactory: new InMemoryChannelFactory(_channel),
                 channelName: new ChannelName("fakeChannel"), 
                 routingKey: new RoutingKey("fakekey"),
-                isAsync: true);
+                runAsync: true);
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
 
             var @event = new MyEvent();
@@ -38,7 +38,37 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
-            _dispatcher.Receive();
         }
-   }
+        
+        [Fact]
+        public async Task When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
+        {
+            await _dispatcher.End();
+
+            //should have consumed the messages in the channel
+            _channel.Length.Should().Be(0);
+            //should have a stopped state
+            _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
+            //should have dispatched a request
+            _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
+            //should have published async
+            _commandProcessor.Commands.Should().Contain(commandType => commandType == CommandType.PublishAsync);
+        }
+
+        public Task InitializeAsync()
+        {
+            _dispatcher.Receive();
+            var completionSource = new TaskCompletionSource<IDispatcher>();
+            completionSource.SetResult(_dispatcher);
+
+            return completionSource.Task;
+        }
+
+        public Task DisposeAsync()
+        {
+            var completionSource = new TaskCompletionSource<object>();
+            completionSource.SetResult(null);
+            return completionSource.Task;
+        }
+    }
 }

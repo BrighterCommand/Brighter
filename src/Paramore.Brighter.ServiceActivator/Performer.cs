@@ -32,11 +32,16 @@ namespace Paramore.Brighter.ServiceActivator
     {
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
+        private readonly bool _runAsync;
 
-        public Performer(IAmAChannel channel, IAmAMessagePump messagePump)
+        public Performer(
+            IAmAChannel channel, 
+            IAmAMessagePump messagePump,
+            bool runAsync = false)
         {
             _channel = channel;
             _messagePump = messagePump;
+            _runAsync = runAsync;
         }
 
         public void Stop()
@@ -44,9 +49,9 @@ namespace Paramore.Brighter.ServiceActivator
             _channel.Stop();
         }
 
-        public Task Run()
+        public async Task Run()
         {
-            return Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning); 
+            await Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         }
 
         public void Dispose()

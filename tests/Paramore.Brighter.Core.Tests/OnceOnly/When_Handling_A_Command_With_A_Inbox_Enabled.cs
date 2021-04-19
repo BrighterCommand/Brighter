@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         }
 
         [Fact]
-        public void Command_Is_Not_Stored_If_The_Handler_Is_Not_Succesful()
+        public void Command_Is_Not_Stored_If_The_Handler_Is_Not_Successful()
         {
             Guid id = Guid.NewGuid();
 

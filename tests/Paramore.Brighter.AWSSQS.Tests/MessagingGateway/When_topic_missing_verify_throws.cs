@@ -15,9 +15,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public AWSValidateMissingTopicTests()
         {
-            MyCommand myCommand = new MyCommand{Value = "Test"};
-            Guid correlationId = Guid.NewGuid();
-            var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _routingKey = new RoutingKey(topicName);
             
@@ -39,7 +36,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                         MakeChannels = OnMissingChannel.Validate, 
                         RoutingKey = _routingKey
                     }));
-            
         }
    }
 }

@@ -22,15 +22,21 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+    public class FakeMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
+        public event Action<bool, Guid> OnMessagePublished;
+        public int MaxOutStandingMessages { get; set; } = -1;
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        
         public List<Message> SentMessages = new List<Message>();
         public bool MessageWasSent { get; set; }
+        
         public void Dispose() { }
 
         public Task SendAsync(Message message)
@@ -45,12 +51,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             MessageWasSent = true;
             SentMessages.Add(message);
+            OnMessagePublished?.Invoke(true, message.Id);
         }
         
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             Send(message);
         }
- 
-    }
+
+   }
 }

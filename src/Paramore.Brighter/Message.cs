@@ -120,7 +120,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("You cannot execute a callback unless the message is a callback method");
             }
 
-            //Body.Postback.Call();
+            Body.PostBack.Call();
         }
 
         /// <summary>

@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
@@ -127,9 +127,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
                 var json = (string) reader[0];
                 var messageType = (string) reader[1];
                 var id = (long) reader[3];
-                var contractResolver = new MessageDefaultContractResolver();
-                var settings = new JsonSerializerSettings {ContractResolver = contractResolver};
-                var message = JsonConvert.DeserializeObject<T>(json, settings);
+                var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
                 return new ReceivedResult<T>(true, json, topic, messageType, id, message);
             }
         }
@@ -158,9 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
                 var json = (string) reader[0];
                 var messageType = (string) reader[1];
                 var id = (int) reader[3];
-                var contractResolver = new MessageDefaultContractResolver();
-                var settings = new JsonSerializerSettings {ContractResolver = contractResolver};
-                var message = JsonConvert.DeserializeObject<T>(json, settings);
+                var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
                 return new ReceivedResult<T>(true, json, topic, messageType, id, message);
             }
         }
@@ -209,7 +205,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             {
                 CreateSqlParameter("topic", topic),
                 CreateSqlParameter("messageType", typeof(T).FullName),
-                CreateSqlParameter("payload", JsonConvert.SerializeObject(message))
+                CreateSqlParameter("payload", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options))
             };
             return parameters;
         }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
-using Newtonsoft.Json;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
 
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 new SqliteParameter("MessageType", message.Header.MessageType.ToString()),
                 new SqliteParameter("Topic", message.Header.Topic),
                 new SqliteParameter("Timestamp", SqliteType.Text) { Value =message.Header.TimeStamp.ToString("s")},
-                new SqliteParameter("HeaderBag",SqliteType.Text) { Value = JsonConvert.SerializeObject(message.Header.Bag)},
+                new SqliteParameter("HeaderBag",SqliteType.Text) { Value = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options)},
                 new SqliteParameter("Body", message.Body.Value),
             };
 
