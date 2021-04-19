@@ -215,7 +215,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     _logger.Value.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
 
-                    while (!_tasks.IsEmpty)
+                    while (_tasks.Any())
                     {
                         try
                         {
@@ -228,19 +228,25 @@ namespace Paramore.Brighter.ServiceActivator
                             if (consumer != null)
                             {
                                 _logger.Value.DebugFormat("Dispatcher: Removing a consumer with subscription name {0}", consumer.Name);
-                                consumer.Dispose();
 
-                                _consumers.TryRemove(consumer.Name, out consumer);
+                                if (_consumers.TryRemove(consumer.Name, out consumer))
+                                {
+                                    consumer.Dispose();
+                                }
                             }
 
-                            Task removedTask;
-                            _tasks.TryRemove(stoppingConsumer.Id, out removedTask);
+                            if (_tasks.TryRemove(stoppingConsumer.Id, out Task removedTask))
+                            {
+                                removedTask.Dispose();
+                            }
+
+                            stoppingConsumer.Dispose();
                         }
                         catch (AggregateException ae)
                         {
                             ae.Handle(ex =>
                             {
-                                _logger.Value.ErrorFormat("Dispatcher: Error on consumer; consumer shut down");
+                                _logger.Value.Error(ex, "Dispatcher: Error on consumer; consumer shut down");
                                 return true;
                             });
                         }
@@ -251,6 +257,11 @@ namespace Paramore.Brighter.ServiceActivator
                 }
             },
             TaskCreationOptions.LongRunning);
+
+            while (State != DispatcherState.DS_RUNNING)
+            {
+                Task.Delay(100).Wait();
+            }
         }
 
         private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> connections)
