@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -86,12 +86,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscriptionName">The name of the associated subscription.</param>
         /// <param name="channel">The channel.</param>
         /// <param name="messagePump">The message pump.</param>
-        /// <param name="runAsync">Should we run this pipeline async?</param>
-        public Consumer(ConsumerName name, SubscriptionName subscriptionName, IAmAChannel channel, IAmAMessagePump messagePump, bool runAsync)
+        public Consumer(ConsumerName name, SubscriptionName subscriptionName, IAmAChannel channel, IAmAMessagePump messagePump)
         {
             Name = name;
             SubscriptionName = subscriptionName;
-            Performer = new Performer(channel, messagePump, runAsync);
+            Performer = new Performer(channel, messagePump);
             State = ConsumerState.Shut;
         }
 
