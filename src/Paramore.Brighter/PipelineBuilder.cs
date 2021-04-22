@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Attributes;
 
 namespace Paramore.Brighter
@@ -36,7 +37,7 @@ namespace Paramore.Brighter
     public class PipelineBuilder<TRequest> : IAmAPipelineBuilder<TRequest>, IAmAnAsyncPipelineBuilder<TRequest>
         where TRequest : class, IRequest
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PipelineBuilder<TRequest>>);
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
 
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly InboxConfiguration _inboxConfiguration;
@@ -142,7 +143,7 @@ namespace Paramore.Brighter
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
-            _logger.Value.DebugFormat("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            s_logger.LogDebug("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 
@@ -198,7 +199,7 @@ namespace Paramore.Brighter
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
-            _logger.Value.DebugFormat("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            s_logger.LogDebug("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 

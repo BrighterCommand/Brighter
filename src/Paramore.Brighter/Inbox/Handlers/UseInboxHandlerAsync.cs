@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
 
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     /// <typeparam name="T"></typeparam>
     public class UseInboxHandlerAsync<T> : RequestHandlerAsync<T> where T : class, IRequest
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<UseInboxHandlerAsync<T>>);
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandlerAsync<T>>();
 
         private readonly IAmAnInboxAsync _inbox;
         private bool _onceOnly;
@@ -78,24 +79,24 @@ namespace Paramore.Brighter.Inbox.Handlers
             
             if (_onceOnly)
             {
-                _logger.Value.DebugFormat("Checking if command {0} has already been seen", command.Id);
+                s_logger.LogDebug("Checking if command {0} has already been seen", command.Id);
                 //TODO: We should not use an infinite timeout here - how to configure
                 var exists = await _inbox.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
                 {
-                    _logger.Value.DebugFormat("Command {0} has already been seen", command.Id);
+                    s_logger.LogDebug("Command {0} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
                 if (exists && _onceOnlyAction is OnceOnlyAction.Warn)
                 {
-                    _logger.Value.WarnFormat("Command {0} has already been seen", command.Id);
+                    s_logger.LogWarning("Command {0} has already been seen", command.Id);
                     return command;
                 }
             }
             
-            _logger.Value.DebugFormat("Writing command {0} to the Inbox", command.Id);
+            s_logger.LogDebug("Writing command {0} to the Inbox", command.Id);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
