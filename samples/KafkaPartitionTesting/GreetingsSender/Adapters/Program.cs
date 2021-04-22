@@ -72,11 +72,6 @@ namespace GreetingsSender.Adapters
         private static IHost BuildHost()
         {
             return new HostBuilder()
-                .ConfigureLogging(loggingBuilder =>
-                {
-                    loggingBuilder.AddConsole();
-                    loggingBuilder.AddDebug();
-                })
                .ConfigureServices((hostContext, services) =>
                 {
                     var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
@@ -130,6 +125,7 @@ namespace GreetingsSender.Adapters
 
                     services.AddHostedService<TimedMessageGenerator>();
                 })
+               .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
         }
