@@ -27,6 +27,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public class Dispatcher : IDispatcher
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Dispatcher>);
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<Dispatcher>();
 
         private Task _controlTask;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
@@ -109,7 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                _logger.Value.Info("Dispatcher: Stopping dispatcher");
+                s_logger.LogInformation("Dispatcher: Stopping dispatcher");
                 Consumers.Each(consumer => consumer.Shut());
             }
 
@@ -131,7 +132,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <param name="subscription">The subscription.</param>
         public void Open(Subscription subscription)
         {
-            _logger.Value.InfoFormat("Dispatcher: Opening subscription {0}", subscription.Name);
+            s_logger.LogInformation("Dispatcher: Opening subscription {0}", subscription.Name);
 
             AddConnectionToConnections(subscription);
             var addedConsumers = CreateConsumers(new[] { subscription });
@@ -190,7 +191,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             if (State == DispatcherState.DS_RUNNING)
             {
-                _logger.Value.InfoFormat("Dispatcher: Stopping subscription {0}", subscription.Name);
+                s_logger.LogInformation("Dispatcher: Stopping subscription {0}", subscription.Name);
                 var consumersForConnection = Consumers.Where(consumer => consumer.SubscriptionName == subscription.Name).ToArray();
                 var noOfConsumers = consumersForConnection.Length;
                 for (int i = 0; i < noOfConsumers; ++i)
@@ -206,14 +207,14 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 if (State == DispatcherState.DS_AWAITING || State == DispatcherState.DS_STOPPED)
                 {
-                    _logger.Value.Info("Dispatcher: Dispatcher starting");
+                    s_logger.LogInformation("Dispatcher: Dispatcher starting");
                     State = DispatcherState.DS_RUNNING;
 
                     var consumers = Consumers.ToArray();
                     consumers.Each(consumer => consumer.Open());
                     consumers.Each(consumer => _tasks.TryAdd(consumer.JobId, consumer.Job));
 
-                    _logger.Value.InfoFormat("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
+                    s_logger.LogInformation("Dispatcher: Dispatcher starting {0} performers", _tasks.Count);
 
                     while (_tasks.Any())
                     {
@@ -222,12 +223,12 @@ namespace Paramore.Brighter.ServiceActivator
                             var runningTasks = _tasks.Values.ToArray();
                             var index = Task.WaitAny(runningTasks);
                             var stoppingConsumer = runningTasks[index];
-                            _logger.Value.DebugFormat("Dispatcher: Performer stopped with state {0}", stoppingConsumer.Status);
+                            s_logger.LogDebug("Dispatcher: Performer stopped with state {0}", stoppingConsumer.Status);
 
                             var consumer = Consumers.SingleOrDefault(c => c.JobId == stoppingConsumer.Id);
                             if (consumer != null)
                             {
-                                _logger.Value.DebugFormat("Dispatcher: Removing a consumer with subscription name {0}", consumer.Name);
+                                s_logger.LogDebug("Dispatcher: Removing a consumer with subscription name {0}", consumer.Name);
 
                                 if (_consumers.TryRemove(consumer.Name, out consumer))
                                 {
@@ -246,14 +247,14 @@ namespace Paramore.Brighter.ServiceActivator
                         {
                             ae.Handle(ex =>
                             {
-                                _logger.Value.Error(ex, "Dispatcher: Error on consumer; consumer shut down");
+                                s_logger.LogError(ex, "Dispatcher: Error on consumer; consumer shut down");
                                 return true;
                             });
                         }
                     }
 
                     State = DispatcherState.DS_STOPPED;
-                    _logger.Value.Info("Dispatcher: Dispatcher stopped");
+                    s_logger.LogInformation("Dispatcher: Dispatcher stopped");
                 }
             },
             TaskCreationOptions.LongRunning);
@@ -272,7 +273,7 @@ namespace Paramore.Brighter.ServiceActivator
                 for (var i = 0; i < connection.NoOfPeformers; i++)
                 {
                     int performer = i;
-                    _logger.Value.InfoFormat("Dispatcher: Creating consumer number {0} for subscription: {1}", performer + 1, connection.Name);
+                    s_logger.LogInformation("Dispatcher: Creating consumer number {0} for subscription: {1}", performer + 1, connection.Name);
                     var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
                     var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessor, _messageMapperRegistry, connection);
 
