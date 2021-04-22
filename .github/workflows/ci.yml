@@ -37,8 +37,8 @@ jobs:
         job:
           - os: ubuntu-latest
             push: true
-          - os: windows-latest
-          - os: macos-latest
+          #- os: windows-latest
+          #- os: macos-latest
         tests:
           - sdk: 3.1.*
             push: true
