@@ -244,7 +244,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
 
-            ConfigureAsyncPublisherCalllbackMaybe();
+            ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -364,7 +364,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
 
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
-            if (!ConfigurePublisherCallbackMaybe()) ConfigureAsyncPublisherCalllbackMaybe();
+            if (!ConfigurePublisherCallbackMaybe()) ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -882,7 +882,7 @@ namespace Paramore.Brighter
             _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         }
 
-        private bool ConfigureAsyncPublisherCalllbackMaybe()
+        private bool ConfigureAsyncPublisherCallbackMaybe()
         {
             if (_asyncMessageProducer == null)
                 return false;

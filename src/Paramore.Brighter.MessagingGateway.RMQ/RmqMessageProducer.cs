@@ -23,10 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
+using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -35,15 +38,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync
+    public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation, IDisposable
     {
+        public event Action<bool, Guid> OnMessagePublished;
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-        
-         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
+
+        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
 
         static readonly object _lock = new object();
-        private readonly Publication _publication;
+        private readonly RmqPublication _publication;
+        private readonly ConcurrentDictionary<ulong, Guid> _pendingConfirmations = new ConcurrentDictionary<ulong, Guid>();
+        private bool _confirmsSelected = false;
+        private readonly int _waitForConfirmsTimeOutInMilliseconds;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -68,6 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _publication = publication ?? new RmqPublication{MakeChannels = OnMissingChannel.Create};
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
+            _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
         }
 
         /// <summary>
@@ -97,12 +105,19 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 
                     message.Persist = Connection.PersistMessages;
+                    Channel.BasicAcks += OnPublishSucceeded;
+                    Channel.BasicNacks += OnPublishFailed;
+                    Channel.ConfirmSelect();
+                    _confirmsSelected = true;
+         
 
                     _logger.Value.DebugFormat(
                         "RmqMessageProducer: Publishing message to exchange {0} on subscription {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
                         message.Id, message.Body.Value, delayMilliseconds, message.Persist);
                     
+                    
+                    _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
                     if (DelaySupported)
                     {
                         rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
@@ -133,6 +148,50 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public Task SendAsync(Message message)
         {
             throw new NotImplementedException();
+        }
+        
+       
+        public sealed override void Dispose()
+        {
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (Channel != null && Channel.IsOpen && _confirmsSelected)
+                {
+                    //In the event this fails, then consequence is not marked as sent in outbox
+                    //As we are disposing, just let that happen
+                    Channel.WaitForConfirms(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out bool timedOut);
+                    if (timedOut)
+                        _logger.Value.Warn("Failed to await publisher confirms when shutting down!");
+                }
+            }
+
+            base.Dispose(disposing);
+        }
+        
+        private void OnPublishFailed(object sender, BasicNackEventArgs e)
+        {
+             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+             {
+                 OnMessagePublished?.Invoke(false, messageId);
+                 _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                 _logger.Value.Debug($"Failed to publish message: {messageId}");
+             }
+        }
+
+        private void OnPublishSucceeded(object sender, BasicAckEventArgs e)
+        {
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+            {
+                OnMessagePublished?.Invoke(true, messageId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                _logger.Value.Info($"Published message: {messageId}");
+            }
         }
     }
 }

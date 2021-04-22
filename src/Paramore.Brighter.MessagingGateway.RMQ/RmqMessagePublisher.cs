@@ -29,7 +29,7 @@ using System.Linq;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Exceptions;
+using RabbitMQ.Client.Events;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -74,11 +74,12 @@ internal class RmqMessagePublisher
                 throw new ArgumentNullException(nameof(connection));
             }
 
-            _channel = channel;
             _connection = connection;
-        }
+            
+            _channel = channel;
+       }
 
-        /// <summary>
+       /// <summary>
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
