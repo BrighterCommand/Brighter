@@ -47,9 +47,9 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.nuget/packages
-          key: ubuntu-latest-nuget-${{ hashFiles('**/*.csproj') }}
+          key: Linux-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
-            ubuntu-latest-nuget-
+            Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
       - name: Core Tests
