@@ -30,6 +30,7 @@ using System.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
 
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// </summary>
     public class MsSqlInbox : IAmAnInbox, IAmAnInboxAsync
     {
-        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<MsSqlInbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlInbox>();
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
@@ -80,7 +81,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        s_logger.Value.WarnFormat(
+                        s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
@@ -157,7 +158,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        s_logger.Value.WarnFormat(
+                        s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
