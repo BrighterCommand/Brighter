@@ -12,7 +12,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.Hosting
 
         public ServiceActivatorHostedService(ILogger<ServiceActivatorHostedService> logger, IDispatcher dispatcher)
         {
-            _logger = logger;
+            _logger= logger;
             _dispatcher = dispatcher;
         }
 
