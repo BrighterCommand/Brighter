@@ -32,9 +32,18 @@ using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.RedisStreams
 {
+    internal enum ReadState
+    {
+        Pending, 
+        New
+    }
+    
+    
     public class RedisStreamsConsumer : RedisStreamsGateway, IAmAMessageConsumer
     {
-        
+        private readonly RedisValue NEW_MESSAGES = new RedisValue(">");
+        private readonly RedisValue PENDING_MESSAGES = new RedisValue("0-0");
+
         /* see RedisMessageProducer to understand how we are using a dynamic recipient list model with Redis */
 
         private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsConsumer>);
@@ -42,6 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         private readonly string _consumerGroup;
         private readonly int _batchSize;
         private readonly string _consumerId;
+        private ReadState _readState;
         private readonly IDatabase _db;
 
         /// <summary>
@@ -57,6 +67,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             _consumerGroup = redisStreamsConfiguration.ConsumerGroup;
             _consumerId = redisStreamsConfiguration.ConsumerId;
             _queueName = queueName;
+            _readState = ReadState.Pending;
             
             _db = Redis.GetDatabase();
 
@@ -89,11 +100,6 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             _db.StreamAcknowledge(_queueName, _consumerGroup, new RedisValue(redisId));
         }
 
-        public void Reject(Message message)
-        {
-        }
-
-
         /// <summary>
         /// Clear the queue
         /// </summary>
@@ -104,16 +110,23 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         /// <summary>
         /// Get the next message off the Redis list, within a timeout
+        /// It is worth understanding that we have different options when reading streams
+        /// Read pending messages for this consumer group i.e. not acknowledged, perhaps following a consumer failure
+        /// Read new messages for this consumer i.e. not pending
+        /// This means what we have to switch modes. At startup we always read pending messages. Once we have no more pending messages,
+        /// we begin reading outstanding messages 
         /// </summary>
         /// <param name="timeoutInMilliseconds">The period to await a message</param>
         /// <returns>The message read from the list</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             _logger.Value.DebugFormat("RedisStreamsConsumer: Preparing to retrieve next message from queue {0}", _queueName);
+            
+            //TODO: We need to read pending messages first, then we can start to consumer new messages
 
             try
             {
-                var entries = _db.StreamReadGroup(_queueName, _consumerGroup, _consumerId, ">", _batchSize);
+                var entries = _db.StreamReadGroup(_queueName, _consumerGroup, _consumerId, NEW_MESSAGES, _batchSize);
                 var messageCreator = new RedisStreamsMessageCreator();
                 return entries.Select(se => messageCreator.CreateMessage(se)).ToArray();
             }
@@ -126,17 +139,35 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
 
         /// <summary>
-        /// This a 'do nothing operation' as we have already popped
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="requeue"></param>
+        /// In a stream we can't delete, so we just skip over a record we don't intend to process so it won't get reprocessed
+        /// This amounts to an acknowledge if requeue is false, so its the same operation on a stream. However, if you configure a DLQ, we will push onto
+        /// the DLQ if requeue is false.
+        /// <param name="message">The message to reject</param>
+        /// <param name="requeue">Should we requeue (do nothing), or not (skip and add to DLQ)</param>
         public void Reject(Message message, bool requeue)
         {
-            return;
+            if (requeue)
+            {
+                Acknowledge(message);
+                //TODO: Put on DLQ if configured
+                return;
+            }
+            
+            Requeue(message);
+        }
+        
+        /// <summary>
+        /// Call reject with false for requeue i.e. skip past this record by doing an ack and put on DLQ if configured
+        /// </summary>
+        /// <param name="message">The message you are rejecting</param>
+        public void Reject(Message message)
+        {
+            Reject(message, false);
         }
 
+
         /// <summary>
-        /// Push the Id back onto the queue, to re-order
+        /// Push the Id back onto the queue. In the case of a stream this simply means we don't acknowledge, so it will be processed again
         /// </summary>
         /// <param name="message"></param>
         public void Requeue(Message message)

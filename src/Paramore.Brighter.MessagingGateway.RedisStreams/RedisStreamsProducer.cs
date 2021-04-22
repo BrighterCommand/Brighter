@@ -51,6 +51,9 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             ReleaseUnmanagedResources();
         }
 
+        public int MaxOutStandingMessages { get; set; }
+        public int MaxOutStandingCheckIntervalMilliSeconds { get; set; }
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
