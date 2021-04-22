@@ -30,8 +30,10 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using EventStore.ClientAPI;
 using Paramore.Brighter.Logging;
+using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Paramore.Brighter.Outbox.EventStore
 {
@@ -44,7 +46,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         IAmAnOutboxViewer<Message>,
         IAmAnOutboxViewerAsync<Message>
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<EventStoreOutbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutbox>();
 
         private readonly IEventStoreConnection _eventStore;
 
@@ -80,7 +82,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <returns>Task.</returns>
         public void Add(Message message, int outBoxTimeout = -1)
         {
-            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+            s_logger.LogDebug("Adding message to Event Store Outbox: {0}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
             var headerBag = message.Header.Bag;
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
@@ -102,7 +104,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         public async Task AddAsync(Message message, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            _logger.Value.DebugFormat("Adding message to Event Store Outbox: {0}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
+            s_logger.LogDebug("Adding message to Event Store Outbox: {0}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
             var streamId = ExtractStreamIdFromHeader(message.Header.Bag, message.Id);
             var eventNumber = ExtractEventNumberFromHeader(message.Header.Bag, message.Id);

@@ -31,6 +31,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Logging;
 
@@ -45,7 +46,7 @@ namespace Paramore.Brighter.Outbox.MySql
         IAmAnOutboxViewer<Message>,
         IAmAnOutboxViewerAsync<Message>
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MySqlOutbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
         private readonly MySqlOutboxConfiguration _configuration;
@@ -99,7 +100,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                            s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -131,7 +132,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     {
                         if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                         {
-                            _logger.Value.WarnFormat("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                            s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
