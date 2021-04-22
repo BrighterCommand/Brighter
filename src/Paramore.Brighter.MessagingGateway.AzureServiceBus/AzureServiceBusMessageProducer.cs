@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Polly;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -16,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly ITopicClientProvider _topicClientProvider;
         private bool _topicCreated;
 
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusMessageProducer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMessageProducer>();
         private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
         private const int TopicConnectionRetryCount = 5;
         private readonly OnMissingChannel _makeChannel;
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            _logger.Value.Debug($"Preparing  to send message on topic {message.Header.Topic}");
+            s_logger.LogDebug($"Preparing  to send message on topic {message.Header.Topic}");
 
             EnsureTopicExists(message.Header.Topic);
 
@@ -47,8 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     .Handle<Exception>()
                     .Retry(TopicConnectionRetryCount, (exception, retryNumber) =>
                     {
-                        _logger.Value.ErrorException(
-                            $"Failed to connect to topic {message.Header.Topic}, retrying...", exception);
+                        s_logger.LogError(exception, $"Failed to connect to topic {message.Header.Topic}, retrying...");
 
                         Thread.Sleep(TimeSpan.FromMilliseconds(TopicConnectionSleepBetweenRetriesInMilliseconds));
                     }
@@ -58,14 +58,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             catch (Exception e)
             {
-                _logger.Value.ErrorException($"Failed to connect to topic {message.Header.Topic}, aborting.", e);
+                s_logger.LogError(e, $"Failed to connect to topic {message.Header.Topic}, aborting.");
                 throw;
             }
 
             try
             {
-                _logger.Value.Debug(
-                    $"Publishing message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}.");
+                s_logger.LogDebug($"Publishing message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}.");
 
                 var azureServiceBusMessage = new Microsoft.Azure.ServiceBus.Message(message.Body.Bytes);
                 azureServiceBusMessage.UserProperties.Add("MessageType", message.Header.MessageType.ToString());
@@ -79,12 +78,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     topicClient.ScheduleMessage(azureServiceBusMessage, dateTimeOffset);
                 }
 
-                _logger.Value.Debug(
+                s_logger.LogDebug(
                     $"Published message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}");
             }
             catch (Exception e)
             {
-                _logger.Value.ErrorException($"Failed to publish message to topic {message.Header.Topic} with id {message.Id}, message will not be retried.", e);
+                s_logger.LogError(e, $"Failed to publish message to topic {message.Header.Topic} with id {message.Id}, message will not be retried.");
             }
             finally
             {
@@ -117,7 +116,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 _managementClientWrapper.Reset();
-                _logger.Value.ErrorException("Failing to check or create topic.", e);
+                s_logger.LogError(e, "Failing to check or create topic.");
                 throw;
             }
         }

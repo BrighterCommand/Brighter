@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
 using Paramore.Brighter.MessagingGateway.RESTMS.Model;
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 {
     internal class Join
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Join>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Join>();
 
         private readonly RestMSMessageGateway _gateway;
         private readonly Feed _feed;
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         public RestMSJoin CreateJoin(string pipeUri, string routingKey)
         {
-            _logger.Value.DebugFormat("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
+            s_logger.LogDebug("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
             var client = _gateway.Client();
             try
             {
@@ -73,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.Value.ErrorFormat("Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
+                    s_logger.LogError(exception,"Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the join with routingKey {0} to Pipe {1} to the RestMS server, see log for details", routingKey, pipeUri));

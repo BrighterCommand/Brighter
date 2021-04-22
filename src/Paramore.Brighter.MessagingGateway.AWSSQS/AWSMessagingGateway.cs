@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class AWSMessagingGateway
     {
-        protected static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ChannelFactory>);
+        protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AWSMessagingGateway>();
         protected AWSMessagingGatewayConnection _awsConnection;
         protected string _channelTopicArn;
 
