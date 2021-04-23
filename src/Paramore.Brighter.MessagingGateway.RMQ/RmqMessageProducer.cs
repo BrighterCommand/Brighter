@@ -168,7 +168,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     //As we are disposing, just let that happen
                     Channel.WaitForConfirms(TimeSpan.FromMilliseconds(_waitForConfirmsTimeOutInMilliseconds), out bool timedOut);
                     if (timedOut)
-                        _logger.Value.Warn("Failed to await publisher confirms when shutting down!");
+                        s_logger.LogWarning("Failed to await publisher confirms when shutting down!");
                 }
             }
 
@@ -181,7 +181,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
              {
                  OnMessagePublished?.Invoke(false, messageId);
                  _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
-                 _logger.Value.Debug($"Failed to publish message: {messageId}");
+                 s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
              }
         }
 
@@ -191,7 +191,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 OnMessagePublished?.Invoke(true, messageId);
                 _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
-                _logger.Value.Info($"Published message: {messageId}");
+                s_logger.LogInformation("Published message: {MessageId}", messageId);
             }
         }
     }

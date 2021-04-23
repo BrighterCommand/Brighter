@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.RMQ;
@@ -33,14 +32,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Collection("RMQ")]
     [Trait("Category", "RMQ")]
-    public class RmqMessageProducerConfrmationsSendMessageTests : IDisposable
+    public class RmqMessageProducerConfirmationsSendMessageTests : IDisposable
     {
         private readonly RmqMessageProducer _messageProducer;
         private readonly Message _message;
         private bool _messageWasPublished = false;
         private bool _messageWasNotPublished = true;
 
-        public RmqMessageProducerConfrmationsSendMessageTests ()
+        public RmqMessageProducerConfirmationsSendMessageTests ()
         {
             _message = new Message(
                 new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
@@ -74,7 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         [Fact]
         public async Task When_confirming_posting_a_message_via_the_messaging_gateway()
         {
-            _messageProducer.Send(_message);
+            await _messageProducer.SendAsync(_message);
 
             await Task.Delay(500);
 

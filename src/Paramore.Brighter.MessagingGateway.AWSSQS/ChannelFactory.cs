@@ -4,14 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
-using Amazon;
 using Amazon.Runtime.Internal;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter.Logging;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
@@ -24,8 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private SqsSubscription _subscription;
         private string _queueUrl;
         private string _dlqARN;
-        private RetryPolicy _retryPolicy;
-
+        private readonly RetryPolicy _retryPolicy;
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
@@ -279,12 +276,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private string ToSecondsAsString(int timeountInMilliseconds)
+        private string ToSecondsAsString(int timeoutInMilliseconds)
         {
             int timeOutInSeconds = 0;
-            if (timeountInMilliseconds >= 1000)
-                timeOutInSeconds = timeountInMilliseconds / 1000;
-            else if (timeountInMilliseconds > 0)
+            if (timeoutInMilliseconds >= 1000)
+                timeOutInSeconds = timeoutInMilliseconds / 1000;
+            else if (timeoutInMilliseconds > 0)
                 timeOutInSeconds = 1;
 
             return Convert.ToString(timeOutInSeconds);
