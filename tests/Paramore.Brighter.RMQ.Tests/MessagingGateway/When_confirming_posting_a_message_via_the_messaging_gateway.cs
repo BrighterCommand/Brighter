@@ -73,7 +73,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         [Fact]
         public async Task When_confirming_posting_a_message_via_the_messaging_gateway()
         {
-            await _messageProducer.SendAsync(_message);
+            _messageProducer.Send(_message);
 
             await Task.Delay(500);
 
