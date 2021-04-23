@@ -32,13 +32,11 @@ using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 using Paramore.Brighter.Inbox.Exceptions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
     public class DynamoDbInbox : IAmAnInbox, IAmAnInboxAsync
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbInbox>);
        
         private readonly DynamoDBContext _context;
 

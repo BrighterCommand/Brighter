@@ -24,6 +24,7 @@ namespace HelloAsyncListeners
                         services.AddHostedService<RunCommandProcessor>();
                     }
                 )
+                .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
 

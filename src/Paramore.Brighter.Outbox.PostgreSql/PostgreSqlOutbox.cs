@@ -30,12 +30,13 @@ using System.Data;
 using NpgsqlTypes;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
     public class PostgreSqlOutbox : IAmAnOutbox<Message>, IAmAnOutboxViewer<Message>
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PostgreSqlOutbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
         private readonly PostgreSqlOutboxConfiguration _configuration;
 
         public bool ContinueOnCapturedContext
@@ -74,7 +75,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     {
                         if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                         {
-                            _logger.Value.WarnFormat(
+                            s_logger.LogWarning(
                                 "PostgresSQLOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Policies.Attributes;
 using Paramore.Brighter.Policies.Handlers;
@@ -48,7 +49,7 @@ namespace Paramore.Brighter
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public abstract class RequestHandler<TRequest> : IHandleRequests<TRequest> where TRequest : class, IRequest
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RequestHandler<TRequest>>);
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RequestHandler<TRequest>>();
 
         private IHandleRequests<TRequest> _successor;
 
@@ -102,7 +103,7 @@ namespace Paramore.Brighter
         {
             if (_successor != null)
             {
-                _logger.Value.DebugFormat("Passing request from {0} to {1}", Name, _successor.Name);
+                s_logger.LogDebug("Passing request from {0} to {1}", Name, _successor.Name);
                 return _successor.Handle(command);
             }
 
@@ -132,7 +133,7 @@ namespace Paramore.Brighter
         {
             if (_successor != null)
             {
-                _logger.Value.DebugFormat("Falling back from {0} to {1}", Name, _successor.Name);
+                s_logger.LogDebug("Falling back from {0} to {1}", Name, _successor.Name);
                 return _successor.Fallback(command);
             }
 

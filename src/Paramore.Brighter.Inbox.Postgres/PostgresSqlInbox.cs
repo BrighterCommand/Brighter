@@ -29,6 +29,7 @@ using System.Data.Common;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.Inbox.Postgres
     public class PostgresSqlInbox : IAmAnInbox, IAmAnInboxAsync
     {
         private readonly PostgresSqlInboxConfiguration _configuration;
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<PostgresSqlInbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlInbox>();
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
         ///     synchronization context.
@@ -73,7 +74,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                   {
                       if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                       {
-                          _logger.Value.WarnFormat(
+                          s_logger.LogWarning(
                               "PostgresSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                               command.Id);
                           return;
@@ -125,7 +126,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 {
                     if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                     {
-                        _logger.Value.WarnFormat(
+                        s_logger.LogWarning(
                             "PostgresSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;

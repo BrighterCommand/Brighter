@@ -1,5 +1,7 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -46,6 +48,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 ? policyBuilder.DefaultPolicy()
                 : policyBuilder.Policies(options.PolicyRegistry);
 
+            var loggerFactory = provider.GetService<ILoggerFactory>();
+            ApplicationLogging.LoggerFactory = loggerFactory;
             
             INeedARequestContext taskQueuesBuilder;
             if (options.ChannelFactory is null)

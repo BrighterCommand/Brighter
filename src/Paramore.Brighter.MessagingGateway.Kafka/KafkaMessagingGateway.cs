@@ -4,13 +4,14 @@ using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.Kafka.Admin;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public class KafkaMessagingGateway
     {
-        protected static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessageProducer>);
+        protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageProducer>();
         protected ClientConfig _clientConfig;
         protected OnMissingChannel MakeChannels;
         protected RoutingKey Topic;
@@ -55,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         throw new ChannelFailureException($"An error occured creating topic {Topic.Value}: {e.Results[0].Error.Reason}");
                     }
 
-                    _logger.Value.Debug("Topic already exists");
+                    s_logger.LogDebug("Topic already exists");
                 }
             }
         }
@@ -77,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             return false;
                         else
                         {
-                            _logger.Value.Warn($"Topic {matchingTopic.Topic} is in error with code: {matchingTopic.Error.Code} and reason: {matchingTopic.Error.Reason}");
+                            s_logger.LogWarning($"Topic {matchingTopic.Topic} is in error with code: {matchingTopic.Error.Code} and reason: {matchingTopic.Error.Reason}");
                             return false;
                         }
 

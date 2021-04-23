@@ -3,13 +3,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Paramore.Brighter.Extensions;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessagePublisher
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<KafkaMessagePublisher>);
         private readonly IProducer<string, string> _producer;
         private static readonly string[] _headersToReset =
         {

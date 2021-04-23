@@ -1,6 +1,5 @@
 ﻿using System.Threading;
-using System.Threading.Tasks;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -22,7 +21,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
-            _logger.Value.DebugFormat("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
+            s_logger.LogDebug("MessagePump: Dispatching message {0} from {2} on thread # {1}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             var messageType = messageHeader.MessageType;
 

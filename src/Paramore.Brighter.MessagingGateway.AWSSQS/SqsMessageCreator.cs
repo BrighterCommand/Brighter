@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using Amazon.SQS.Model;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
@@ -21,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     
     internal class SqsMessageCreator
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<SqsMessageCreator>);
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageCreator>();
 
         public Message CreateMessage(Amazon.SQS.Model.Message sqsMessage)
         {
@@ -76,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (Exception e)
             {
-                _logger.Value.WarnException("Failed to create message from amqp message", e);
+                s_logger.LogWarning(e, "Failed to create message from amqp message");
                 message = FailureMessage(topic, messageId);
             }
             

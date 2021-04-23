@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
@@ -36,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     internal class RmqMessageCreator
     {
-        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<RmqMessageCreator>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageCreator>();
 
         public Message CreateMessage(BasicDeliverEventArgs fromQueue)
         {
@@ -95,7 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
             catch (Exception e)
             {
-                s_logger.Value.WarnException("Failed to create message from amqp message", e);
+                s_logger.LogWarning(e,"Failed to create message from amqp message");
                 message = FailureMessage(topic, messageId);
             }
 
@@ -112,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             if (!(dict[key] is byte[] bytes))
             {
-                s_logger.Value.WarnFormat("The value of header {0} could not be cast to a byte array", key);
+                s_logger.LogWarning("The value of header {0} could not be cast to a byte array", key);
                 return new HeaderResult<string>(null, false);
             }
 
@@ -124,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                s_logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
+                s_logger.LogWarning(e,"Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
                 return new HeaderResult<string>(null, false);
             }
         }
@@ -233,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             if (string.IsNullOrEmpty(messageId))
             {
-                s_logger.Value.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                s_logger.LogDebug("No message id found in message MessageId, new message id is {0}", newMessageId);
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
@@ -242,7 +243,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
-            s_logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            s_logger.LogDebug("Could not parse message MessageId, new message id is {0}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
         }
 

@@ -53,6 +53,7 @@ namespace GreetingsPumper
                     }
                 )
                 .UseConsoleLifetime()
+                .UseSerilog()
                 .Build();
 
             await host.RunAsync();
