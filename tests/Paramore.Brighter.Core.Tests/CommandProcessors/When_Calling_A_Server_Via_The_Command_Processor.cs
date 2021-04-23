@@ -1,6 +1,6 @@
 ﻿using System;
+using System.Text.Json;
 using FluentAssertions;
-using Newtonsoft.Json.Linq;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
@@ -30,8 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 correlationId: _myRequest.ReplyAddress.CorrelationId,
                 replyTo: _myRequest.ReplyAddress.Topic);
 
-            var json = new JObject(new JProperty("Id", _myRequest.Id), new JProperty("RequestValue", _myRequest.RequestValue));
-            var body = new MessageBody(json.ToString());
+            var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id.ToString(), _myRequest.RequestValue), JsonSerialisationOptions.Options));
             _message = new Message(header, body);
  
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>

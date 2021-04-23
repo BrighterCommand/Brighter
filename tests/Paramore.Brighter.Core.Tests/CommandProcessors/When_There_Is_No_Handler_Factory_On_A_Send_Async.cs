@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public async Task When_There_Is_No_Handler_Factory_On_A_Send_Async()
         {
-            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
+            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
            //_should_throw_an_invalid_operation_exception
             _exception.Should().BeOfType<InvalidOperationException>();

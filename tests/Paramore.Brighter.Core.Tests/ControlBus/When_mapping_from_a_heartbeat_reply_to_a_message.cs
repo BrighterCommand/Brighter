@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -59,13 +59,13 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             //_should_put_the_correlation_id_in_the_header
             _message.Header.CorrelationId.Should().Be(_correlationId);
             //_should_put_the_connections_into_the_body
-            _message.Body.Value.Should().Contain("\"ConsumerName\": \"Test.Consumer1\"");
-            _message.Body.Value.Should().Contain("\"State\": 1");
-            _message.Body.Value.Should().Contain("\"ConsumerName\": \"More.Consumers2\"");
-            _message.Body.Value.Should().Contain("\"State\": 0");
+            _message.Body.Value.Should().Contain("\"consumerName\":\"Test.Consumer1\"");
+            _message.Body.Value.Should().Contain("\"state\":1");
+            _message.Body.Value.Should().Contain("\"consumerName\":\"More.Consumers2\"");
+            _message.Body.Value.Should().Contain("\"state\":0");
 
             //_should_put_the_hostname_in_the_message_body
-            _message.Body.Value.Should().Contain("\"HostName\": \"Test.Hostname\"");
+            _message.Body.Value.Should().Contain("\"hostName\":\"Test.Hostname\"");
         }
     }
 }

@@ -27,8 +27,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Logging;
 using Polly.CircuitBreaker;
 using RabbitMQ.Client;
@@ -261,7 +261,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         _logger.Value.InfoFormat(
                             "RmqMessageConsumer: Received message from queue {0} with routing key {1} via exchange {2} on subscription {3}, message: {4}",
                             _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
-                            JsonConvert.SerializeObject(message),
+                            JsonSerializer.Serialize(message, JsonSerialisationOptions.Options),
                             Environment.NewLine);
                     }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Paramore.Brighter.Logging;
@@ -21,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             //on validate or assume, turn a routing key into a topicARN
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
-                ValidateTopic(topic, attributes);
+                ValidateTopic(topic, attributes, makeTopic);
             else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
             return _channelTopicArn;
         }
@@ -52,11 +53,37 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void ValidateTopic(RoutingKey topic, SnsAttributes attributes)
+        private void ValidateTopic(RoutingKey topic, SnsAttributes attributes, OnMissingChannel onMissingChannel)
         {
             if ((attributes != null) && (!string.IsNullOrEmpty(attributes.TopicARN)))
-                _channelTopicArn = attributes.TopicARN;
-                
+            {
+                if (onMissingChannel == OnMissingChannel.Assume)
+                {
+                    _channelTopicArn = attributes.TopicARN;
+                    return;
+                }
+                else
+                {
+                    ValidateTopicByArn(attributes.TopicARN);
+                }
+            }
+
+            ValidateTopicByName(topic);
+        }
+
+        private bool ValidateTopicByArn(string topicArn)
+        {
+            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            {
+                var response = snsClient.GetTopicAttributesAsync(new GetTopicAttributesRequest(topicArn))
+                    .GetAwaiter()
+                    .GetResult();
+                return ((response.HttpStatusCode == HttpStatusCode.OK) && (response.Attributes["TopicArn"] == topicArn));
+            }
+        }
+
+        private void ValidateTopicByName(RoutingKey topic)
+        {
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
                 var (success, arn) = FindTopicByName(topic.ToValidSNSTopicName(), snsClient);

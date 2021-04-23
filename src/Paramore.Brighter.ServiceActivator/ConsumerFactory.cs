@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -43,8 +43,16 @@ namespace Paramore.Brighter.ServiceActivator
 
         public Consumer Create()
         {
+            if (_subscription.RunAsync)
+                return CreateAsync();
+            else
+                return CreateBlocking();
+        }
+
+        private Consumer CreateBlocking()
+        {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePump<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
@@ -55,5 +63,20 @@ namespace Paramore.Brighter.ServiceActivator
 
             return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
         }
-   }
+
+        private Consumer CreateAsync()
+        {
+            var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
+            {
+                Channel = channel,
+                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                RequeueCount = _subscription.RequeueCount,
+                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+            };
+
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
+        }
+    }
 }

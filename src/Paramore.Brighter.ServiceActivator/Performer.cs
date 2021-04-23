@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -33,7 +33,9 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
 
-        public Performer(IAmAChannel channel, IAmAMessagePump messagePump)
+        public Performer(
+            IAmAChannel channel, 
+            IAmAMessagePump messagePump)
         {
             _channel = channel;
             _messagePump = messagePump;
@@ -44,9 +46,9 @@ namespace Paramore.Brighter.ServiceActivator
             _channel.Stop();
         }
 
-        public Task Run()
+        public async Task Run()
         {
-            return Task.Factory.StartNew(() => _messagePump.Run().Wait(), TaskCreationOptions.LongRunning); 
+            await Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
         }
 
         public void Dispose()

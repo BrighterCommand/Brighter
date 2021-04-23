@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -42,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _eventChannel;
         private readonly FakeChannel _commandChannel;
-        private static int _numberOfConsumers;
+        private int _numberOfConsumers;
 
         public MessageDispatcherMultipleConnectionTests()
         {
@@ -77,11 +76,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
 
         [Fact]
-        public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
+        public async Task When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
-            Task.Delay(1000).Wait();
+            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
             _numberOfConsumers = _dispatcher.Consumers.Count();
-            _dispatcher.End().Wait();
+            
+            await _dispatcher.End();
 
            //_should_have_consumed_the_messages_in_the_event_channel
             _eventChannel.Length.Should().Be(0);
@@ -95,6 +95,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _numberOfConsumers.Should().Be(2);
         }
 
+
+     
     }
 
 }

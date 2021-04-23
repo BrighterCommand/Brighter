@@ -38,7 +38,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Runs the message loop
         /// </summary>
-        Task Run();
+        void Run();
 
         /// <summary>
         /// Gets or sets the timeout in milliseconds, that the pump waits for a message on the queue before it yields control for an interval, prior to resuming.

@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.Registry;
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _message = new Message(
                 new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
-                new MessageBody(JsonConvert.SerializeObject(_myCommand)));
+                new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options)));
 
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public async Task When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry_Async()
         {
-            _exception = await Catch.ExceptionAsync(() => _commandProcessor.PostAsync(_myCommand));
+            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
             _exception.Should().BeOfType<ArgumentOutOfRangeException>();

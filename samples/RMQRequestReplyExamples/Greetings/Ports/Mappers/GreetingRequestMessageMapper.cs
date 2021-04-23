@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,8 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json;
 using Greetings.Ports.Commands;
-using Newtonsoft.Json.Linq;
 using Paramore.Brighter;
 
 namespace Greetings.Ports.Mappers
@@ -40,12 +40,7 @@ namespace Greetings.Ports.Mappers
                 correlationId: request.ReplyAddress.CorrelationId,
                 replyTo: request.ReplyAddress.Topic);
 
-            var json = new JObject(
-                new JProperty("Id", request.Id), 
-                new JProperty("Name", request.Name), 
-                new JProperty("Language", request.Language)
-                );
-            var body = new MessageBody(json.ToString());
+            var body = new MessageBody(JsonSerializer.Serialize(new GreetingsRequestBody(request.Id.ToString(), request.Name, request.Language), JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
  
@@ -55,9 +50,9 @@ namespace Greetings.Ports.Mappers
         {
             var replyAddress = new ReplyAddress(topic: message.Header.ReplyTo, correlationId: message.Header.CorrelationId);
             var command = new GreetingRequest(replyAddress);
-            var body = JObject.Parse(message.Body.Value);
-            command.Name = Convert.ToString(body["Name"]);
-            command.Language = Convert.ToString(body["Language"]);
+            var body = JsonSerializer.Deserialize<GreetingsRequestBody>(message.Body.Value, JsonSerialisationOptions.Options);
+            command.Name = body.Name;
+            command.Language = body.Language;
             return command;
         }
     }

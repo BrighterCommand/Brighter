@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         [Fact]
         public async Task When_Sending_A_Command_And_The_Policy_Is_Not_In_The_Registry_Async()
         {
-            _exception = await Catch.ExceptionAsync(() => _commandProcessor.SendAsync(_myCommand));
+            _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
             //_should_throw_an_exception
             _exception.Should().BeOfType<KeyNotFoundException>();

@@ -31,12 +31,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
-    public class PipelineForiegnAttributesTests
+    public class PipelineForeignAttributesTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
 
-        public PipelineForiegnAttributesTests()
+        public PipelineForeignAttributesTests()
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyObsoleteCommandHandler>();
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Building_A_Pipeline_Allow_ForiegnAttribues()
+        public void When_Building_A_Pipeline_Allow_ForeignAttributes()
         {
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 

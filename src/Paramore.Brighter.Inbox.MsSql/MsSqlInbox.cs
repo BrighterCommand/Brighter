@@ -27,9 +27,9 @@ using System;
 using System.Data;
 using System.Data.Common;
 using System.Data.SqlClient;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
 
@@ -299,7 +299,7 @@ namespace Paramore.Brighter.Inbox.MsSql
 
         private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
         {
-            var commandJson = JsonConvert.SerializeObject(command);
+            var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
                 CreateSqlParameter("CommandID", command.Id),
@@ -316,7 +316,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             if (dr.Read())
             {
                 var body = dr.GetString(dr.GetOrdinal("CommandBody"));
-                return JsonConvert.DeserializeObject<TResult>(body);
+                return JsonSerializer.Deserialize<TResult>(body, JsonSerialisationOptions.Options);
             }
 
             throw new RequestNotFoundException<TResult>(commandId);

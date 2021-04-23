@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             var outstandingMessage = _sqlOutbox.OutstandingMessages(500).SingleOrDefault();
 
-            outstandingMessage.Should().NotBe(null);
+            outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
         }
     }

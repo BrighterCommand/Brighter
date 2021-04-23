@@ -58,7 +58,8 @@ namespace GreetingsReceiverConsole
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
-                            timeoutInMilliseconds: 20, lockTimeout: 30)
+                            timeoutInMilliseconds: 20, 
+                            lockTimeout: 30)
                     };
 
                     //create the gateway
@@ -71,7 +72,7 @@ namespace GreetingsReceiverConsole
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(awsConnection);
                             var outBox = new InMemoryOutbox();
-                            options.BrighterMessaging = new BrighterMessaging(outBox, outBox, new SqsMessageProducer(awsConnection), null);
+                            options.BrighterMessaging = new BrighterMessaging(outBox, new SqsMessageProducer(awsConnection));
                         }).AutoFromAssemblies();
                     }
 
