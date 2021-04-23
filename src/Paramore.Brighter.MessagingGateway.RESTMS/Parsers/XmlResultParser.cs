@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Xml.Serialization;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.RESTMS.Parsers
@@ -49,8 +50,8 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS.Parsers
             }
             catch (Exception e)
             {
-                var logger = LogProvider.For<XmlResultParser>();
-                logger.Trace(e.Message);
+                var logger = ApplicationLogging.CreateLogger<XmlResultParser>();
+                logger.LogTrace(e.Message);
                 domainObject = default(T);
                 return false;
             }

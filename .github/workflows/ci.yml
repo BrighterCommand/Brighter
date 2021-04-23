@@ -30,29 +30,13 @@ env:
 
 jobs:
   build:
-    timeout-minutes: 15
-    strategy:
-      fail-fast: false
-      matrix:
-        job:
-          - os: ubuntu-latest
-            push: true
-          - os: windows-latest
-          - os: macos-latest
-        tests:
-          - sdk: 3.1.*
-            push: true
-          # - sdk: 5.0.*
-          #   framework: net5.0
-          #   push: true
-    name: ${{ matrix.job.os }}-${{ matrix.tests.sdk }}
-    runs-on: ${{ matrix.job.os }}
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
     steps:
       - name: setup-dotnet tests-sdk
-        if: matrix.tests.sdk != '5.0.*'
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: "${{ matrix.tests.sdk }}"
+          dotnet-version: "3.1.*"
       - uses: actions/setup-dotnet@v1
         with:
           dotnet-version: "5.0.*"
@@ -63,27 +47,25 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.nuget/packages
-          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj') }}
+          key: Linux-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
-            ${{ runner.os }}-nuget-
+            Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
       - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --no-build
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --no-build --verbosity d
       - name: Upload packages as artifacts
-        if: matrix.job.push && matrix.tests.push
         uses: actions/upload-artifact@v2
         with:
           name: nuget packages
           path: "**/*.nupkg"
       - name: Push to GitHub Feed
-        if: matrix.job.push && matrix.tests.push
         run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
 
-     
+
   release:
     if: startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 
@@ -8,7 +9,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     public class MsSqlMessageConsumer : IAmAMessageConsumer
     {
         private readonly string _topic;
-        private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageConsumer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumer>();
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
         public MsSqlMessageConsumer(
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="message">The message.</param>
         public void Reject(Message message)
         {
-            Logger.Value.Info(
+            s_logger.LogInformation(
                 $"MsSqlMessagingConsumer: rejecting message with topic {message.Header.Topic} and id {message.Id.ToString()}, NOT IMPLEMENTED");
         }
 
@@ -57,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         public void Purge()
         {
-            Logger.Value.Debug("MsSqlMessagingConsumer: purging queue");
+            s_logger.LogDebug("MsSqlMessagingConsumer: purging queue");
             _sqlQ.Purge();
         }
 
@@ -70,8 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             var topic = message.Header.Topic;
 
-            Logger.Value.Debug(
-                $"MsSqlMessagingConsumer: requeuing message with topic {topic} and id {message.Id.ToString()}");
+            s_logger.LogDebug($"MsSqlMessagingConsumer: re-queuing message with topic {topic} and id {message.Id.ToString()}");
 
             _sqlQ.Send(message, topic);
         }

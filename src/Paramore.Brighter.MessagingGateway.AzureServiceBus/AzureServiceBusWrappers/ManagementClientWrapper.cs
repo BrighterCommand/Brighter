@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Azure.ServiceBus.Management;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
@@ -7,7 +8,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     public class ManagementClientWrapper : IManagementClientWrapper
     {
         private ManagementClient _managementClient;
-        private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<ManagementClientWrapper>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ManagementClientWrapper>();
         private readonly AzureServiceBusConfiguration _configuration;
         
         public ManagementClientWrapper(AzureServiceBusConfiguration configuration)
@@ -18,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         private void Initialise()
         {
-            Logger.Value.Debug("Initialising new management client wrapper...");
+            s_logger.LogDebug("Initialising new management client wrapper...");
             
             try
             {
@@ -31,22 +32,22 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                Logger.Value.ErrorException("Failed to initialise new management client wrapper.", e);
+                s_logger.LogError(e,"Failed to initialise new management client wrapper.");
                 throw;
             }
 
-            Logger.Value.Debug("New management client wrapper initialised.");
+            s_logger.LogDebug("New management client wrapper initialised.");
         }
 
         public void Reset()
         {
-            Logger.Value.Warn("Resetting management client wrapper...");
+            s_logger.LogWarning("Resetting management client wrapper...");
             Initialise();
         }
 
         public bool TopicExists(string topic)
         {
-            Logger.Value.Debug($"Checking if topic {topic} exists...");
+            s_logger.LogDebug("Checking if topic {Topic} exists...", topic);
             
             bool result;
 
@@ -56,17 +57,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                Logger.Value.ErrorException($"Failed to check if topic {topic} exists.", e);
+                s_logger.LogError(e,"Failed to check if topic {Topic} exists.", topic);
                 throw;
             }
 
             if (result)
             {
-                Logger.Value.Debug($"Topic {topic} exists.");
+                s_logger.LogDebug("Topic {Topic} exists.", topic);
             }
             else
             {
-                Logger.Value.Warn($"Topic {topic} does not exist.");
+                s_logger.LogWarning("Topic {Topic} does not exist.", topic);
             }
             
             return result;
@@ -74,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public void CreateTopic(string topic)
         {
-            Logger.Value.Info($"Creating topic {topic}...");
+            s_logger.LogInformation("Creating topic {Topic}...", topic);
 
             try
             {
@@ -82,16 +83,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                Logger.Value.ErrorException($"Failed to create topic {topic}.", e);
+                s_logger.LogError(e,"Failed to create topic {Topic}.", topic);
                 throw;
             }
             
-            Logger.Value.Info($"Topic {topic} created.");
+            s_logger.LogInformation("Topic {Topic} created.", topic);
         }
 
         public bool SubscriptionExists(string topicName, string subscriptionName)
         {
-            Logger.Value.Debug($"Checking if subscription {subscriptionName} for topic {topicName} exists...");
+            s_logger.LogDebug("Checking if subscription {SubscriptionName} for topic {TopicName} exists...", subscriptionName, topicName);
 
             bool result;
 
@@ -101,17 +102,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                Logger.Value.ErrorException($"Failed to check if subscription {subscriptionName} for topic {topicName} exists.", e);
+                s_logger.LogError(e,"Failed to check if subscription {SubscriptionName} for topic {TopicName} exists.", subscriptionName, topicName);
                 throw;
             }
             
             if (result)
             {
-                Logger.Value.Debug($"Subscription {subscriptionName} for topic {topicName} exists.");
+                s_logger.LogDebug("Subscription {SubscriptionName} for topic {TopicName} exists.", subscriptionName, topicName);
             }
             else
             {
-                Logger.Value.Warn($"Subscription {subscriptionName} for topic {topicName} does not exist.");
+                s_logger.LogWarning("Subscription {SubscriptionName} for topic {TopicName} does not exist.", subscriptionName, topicName);
             }
 
             return result;
@@ -119,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
         {
-            Logger.Value.Info($"Creating subscription {subscriptionName} for topic {topicName}...");
+            s_logger.LogInformation("Creating subscription {SubscriptionName} for topic {TopicName}...", subscriptionName, topicName);
 
             if (!TopicExists(topicName))
             {
@@ -137,11 +138,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                Logger.Value.ErrorException($"Failed to create subscription {subscriptionName} for topic {topicName}.", e);
+                s_logger.LogError(e,"Failed to create subscription {SubscriptionName} for topic {TopicName}.", subscriptionName, topicName);
                 throw;
             }
             
-            Logger.Value.Info($"Subscription {subscriptionName} for topic {topicName} created.");
+            s_logger.LogInformation("Subscription {SubscriptionName} for topic {TopicName} created.", subscriptionName, topicName);
         }
     }
 }

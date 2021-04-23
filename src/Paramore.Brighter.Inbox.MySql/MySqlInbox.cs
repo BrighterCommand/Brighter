@@ -29,6 +29,7 @@ using System.Data.Common;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.Inbox.MySql
     /// </summary>
     public class MySqlInbox : IAmAnInbox, IAmAnInboxAsync
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<MySqlInbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlInbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
         private readonly MySqlInboxConfiguration _configuration;
@@ -79,7 +80,7 @@ namespace Paramore.Brighter.Inbox.MySql
                 {
                     if (sqlException.Number == MySqlDuplicateKeyError)
                     {
-                        _logger.Value.WarnFormat(
+                        s_logger.LogWarning(
                             "MySqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
@@ -188,7 +189,7 @@ namespace Paramore.Brighter.Inbox.MySql
                 {
                     if (sqlException.Number == MySqlDuplicateKeyError)
                     {
-                        _logger.Value.WarnFormat(
+                        s_logger.LogWarning(
                             "MySqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;

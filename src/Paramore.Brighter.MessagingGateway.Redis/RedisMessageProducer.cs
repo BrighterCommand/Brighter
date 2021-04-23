@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using ServiceStack.Redis;
 
@@ -53,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int MaxOutStandingMessages { get; set;  } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
     
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisMessageProducer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
         private readonly Publication _publication; //not used for now, but passed in for future use
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
@@ -90,11 +91,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 Topic = message.Header.Topic;
 
-                _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
+                s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
   
                 var redisMessage = CreateRedisMessage(message);
 
-                _logger.Value.DebugFormat("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
+                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value);
                 //increment a counter to get the next message id
                 var nextMsgId = IncrementMessageCounter(client);
@@ -102,7 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 StoreMessage(client, redisMessage, nextMsgId);
                 //If there are subscriber queues, push the message to the subscriber queues
                 var pushedTo = PushToQueues(client, nextMsgId);
-                _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to queues: {3}", 
+                s_logger.LogDebug("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to queues: {3}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
             }
         }

@@ -26,6 +26,7 @@ using System;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
@@ -38,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
     /// </summary>
     public class RestMsMessageConsumer : RestMSMessageGateway, IAmAMessageConsumer
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMsMessageConsumer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RestMsMessageConsumer>();
 
         private readonly string _queueName;
         private readonly string _routingKey;
@@ -87,12 +88,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -123,12 +124,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -157,12 +158,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                _logger.Value.ErrorFormat("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                _logger.Value.ErrorFormat("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
                 throw;
             }
         }
@@ -206,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                 return;
             }
 
-            _logger.Value.DebugFormat("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
+            s_logger.LogDebug("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
             SendDeleteMessage(matchingMessage);
         }
 
@@ -217,7 +218,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                 return new Message[] {new Message()};
             }
 
-            _logger.Value.DebugFormat("Getting the message from the RestMS server: {0}", messageUri);
+            s_logger.LogDebug("Getting the message from the RestMS server: {0}", messageUri);
             var client = Client();
 
             try
@@ -231,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.Value.ErrorFormat("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
+                    s_logger.LogError("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));

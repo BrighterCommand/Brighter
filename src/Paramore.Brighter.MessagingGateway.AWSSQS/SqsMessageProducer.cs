@@ -12,9 +12,8 @@
 // <summary></summary>
 // ***********************************************************************
 
-using System;
 using Amazon.SimpleNotificationService;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            _logger.Value.DebugFormat("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", 
+            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", 
                 message.Header.Topic, message.Id, message.Body);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))

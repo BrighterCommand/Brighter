@@ -26,6 +26,7 @@ using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration;
 using Paramore.Brighter.MessagingGateway.RESTMS.Parsers;
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
     /// </summary>
     public class RestMSMessageGateway
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RestMSMessageGateway>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RestMSMessageGateway>();
 
         private ThreadLocal<HttpClient> _client;
         private readonly double _timeout;
@@ -101,8 +102,8 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             T domainObject;
             if (!XmlResultParser.TryParse(entityBody, out domainObject))
             {
-                var errorString = string.Format("Could not parse entity body as a domain => {0}", entityBody);
-                _logger.Value.ErrorFormat(errorString);
+                var errorString = $"Could not parse entity body as a domain => {entityBody}";
+                s_logger.LogError(errorString);
                 throw new ResultParserException(errorString);
             }
             return domainObject;

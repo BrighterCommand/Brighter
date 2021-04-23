@@ -4,6 +4,7 @@ using System.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
@@ -15,7 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
     public class MsSqlMessageQueue<T>
     {
         private const int RetryDelay = 100;
-        private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageQueue<T>>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageQueue<T>>();
         private readonly MsSqlMessagingGatewayConfiguration _configuration;
 
         /// <summary>
@@ -25,9 +26,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public MsSqlMessageQueue(MsSqlMessagingGatewayConfiguration configuration)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            if (Logger.Value.IsDebugEnabled())
-                Logger.Value.Debug(
-                    $"MsSqlMessageQueue({_configuration.ConnectionString}, {_configuration.QueueStoreTable})");
+            if (s_logger.IsEnabled(LogLevel.Debug))
+                s_logger.LogDebug($"MsSqlMessageQueue({_configuration.ConnectionString}, {_configuration.QueueStoreTable})");
             ContinueOnCapturedContext = false;
         }
 
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         public void Send(T message, string topic, int timeoutInMilliseconds = -1)
         {
-            if (Logger.Value.IsDebugEnabled()) Logger.Value.Debug($"Send<{typeof(T).FullName}>(..., {topic})");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"Send<{typeof(T).FullName}>(..., {topic})");
 
             var parameters = InitAddDbParameters(topic, message);
 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public async Task SendAsync(T message, string topic, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (Logger.Value.IsDebugEnabled()) Logger.Value.Debug($"SendAsync<{typeof(T).FullName}>(..., {topic})");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"SendAsync<{typeof(T).FullName}>(..., {topic})");
 
             var parameters = InitAddDbParameters(topic, message);
 
@@ -92,8 +92,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message arrives within the timeout period</returns>
         public ReceivedResult<T> TryReceive(string topic, int timeoutInMilliseconds)
         {
-            if (Logger.Value.IsDebugEnabled())
-                Logger.Value.Debug($"TryReceive<{typeof(T).FullName}>(..., {timeoutInMilliseconds})");
+            if (s_logger.IsEnabled(LogLevel.Debug))
+                s_logger.LogDebug($"TryReceive<{typeof(T).FullName}>(..., {timeoutInMilliseconds})");
             var rc = TryReceive(topic);
             var timeleft = timeoutInMilliseconds;
             while (!rc.IsDataValid && timeleft > 0)
@@ -113,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message is waiting</returns>
         private ReceivedResult<T> TryReceive(string topic)
         {
-            if (Logger.Value.IsDebugEnabled()) Logger.Value.Debug($"TryReceive<{typeof(T).FullName}>(...)");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"TryReceive<{typeof(T).FullName}>(...)");
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public async Task<ReceivedResult<T>> TryReceiveAsync(string topic,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (Logger.Value.IsDebugEnabled()) Logger.Value.Debug($"TryReceiveAsync<{typeof(T).FullName}>(...)");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"TryReceiveAsync<{typeof(T).FullName}>(...)");
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -182,7 +182,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         public void Purge()
         {
-            if (Logger.Value.IsDebugEnabled()) Logger.Value.Debug("Purge()");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Purge()");
 
             using (var connection = GetConnection())
             {

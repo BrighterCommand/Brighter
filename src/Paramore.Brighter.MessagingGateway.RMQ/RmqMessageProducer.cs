@@ -28,6 +28,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client.Events;
 
@@ -43,8 +44,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public event Action<bool, Guid> OnMessagePublished;
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageProducer>);
+     
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object _lock = new object();
         private readonly RmqPublication _publication;
@@ -99,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 lock (_lock)
                 {
-                    _logger.Value.DebugFormat("RmqMessageProducer: Preparing  to send message via exchange {0}", Connection.Exchange.Name);
+                    s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {0}", Connection.Exchange.Name);
                     EnsureBroker(makeExchange: _publication.MakeChannels);
                     
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
@@ -111,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     _confirmsSelected = true;
          
 
-                    _logger.Value.DebugFormat(
+                    s_logger.LogDebug(
                         "RmqMessageProducer: Publishing message to exchange {0} on subscription {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
                         message.Id, message.Body.Value, delayMilliseconds, message.Persist);
@@ -128,7 +129,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         rmqMessagePublisher.PublishMessage(message, 0);
                     }
 
-                    _logger.Value.InfoFormat(
+                    s_logger.LogInformation(
                         "RmqMessageProducer: Published message to exchange {0} on subscription {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
                         message.Id, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow, delayMilliseconds, message.Persist);
@@ -136,7 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
             catch (IOException io)
             {
-                _logger.Value.ErrorFormat(
+                s_logger.LogError(io,
                     "RmqMessageProducer: Error talking to the socket on {0}, resetting subscription",
                     Connection.AmpqUri.GetSanitizedUri()
                     );
