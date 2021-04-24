@@ -125,6 +125,7 @@ Brighter contributors (sorted alphabeticaly)
   * Improvements to ASB Transport 
   * Replaced Newtonsoft.Json with System.Text.Json
   * Created Social Media Card
+  * Added Token Based Authentication to MsSQL Inbox and OutBox
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
