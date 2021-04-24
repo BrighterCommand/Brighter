@@ -41,6 +41,19 @@ namespace Paramore.Brighter.Inbox.MsSql
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="MsSqlInboxConfiguration"/> class.
+        /// </summary>
+        /// <param name="connectionString">The subscription string.</param>
+        /// <param name="inBoxTableName">Name of the InBox table</param>
+        /// <param name="useTokenBasedAuthentication">Use Token Based Authentication to connect to SQL</param>
+        /// <param name="authenticationTokenScope">Scope to request the Token for</param>
+        public MsSqlInboxConfiguration(string connectionString, string inBoxTableName, bool useTokenBasedAuthentication, string authenticationTokenScope = "https://database.windows.net/.default") : this (connectionString, inBoxTableName)
+        {
+            UseTokenBasedAuthentication = useTokenBasedAuthentication;
+            AuthenticationTokenScope = authenticationTokenScope;
+        }
+
+        /// <summary>
         /// Gets the subscription string.
         /// </summary>
         /// <value>The subscription string.</value>
@@ -51,5 +64,15 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// </summary>
         /// <value>The name of the outbox table.</value>
         public string InBoxTableName { get; private set; }
+
+        /// <summary>
+        /// Use the MSAL Libraries to Authenticate instead of SQL Authentication
+        /// </summary>
+        public bool UseTokenBasedAuthentication { get; private set; }
+
+        /// <summary>
+        /// The Scope to request the Authentication Token for
+        /// </summary>
+        public string AuthenticationTokenScope { get; private set; }
     }
 }

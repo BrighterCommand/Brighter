@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
 
@@ -41,6 +41,19 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
+        /// Initializes a new instance of the <see cref="MsSqlOutboxConfiguration"/> class.
+        /// </summary>
+        /// <param name="connectionString">The subscription string.</param>
+        /// <param name="outBoxTableName">Name of the outbox table</param>
+        /// <param name="useTokenBasedAuthentication">Use Token Based Authentication to connect to SQL</param>
+        /// <param name="authenticationTokenScope">Scope to request the Token for</param>
+        public MsSqlOutboxConfiguration(string connectionString, string outBoxTableName, bool useTokenBasedAuthentication, string authenticationTokenScope = "https://database.windows.net/.default") : this(connectionString, outBoxTableName)
+        {
+            UseTokenBasedAuthentication = useTokenBasedAuthentication;
+            AuthenticationTokenScope = authenticationTokenScope;
+        }
+
+        /// <summary>
         /// Gets the subscription string.
         /// </summary>
         /// <value>The subscription string.</value>
@@ -50,5 +63,15 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <value>The name of the outbox table.</value>
         public string OutBoxTableName { get; private set; }
+
+        /// <summary>
+        /// Use the MSAL Libraries to Authenticate instead of SQL Authentication
+        /// </summary>
+        public bool UseTokenBasedAuthentication { get; private set; }
+
+        /// <summary>
+        /// The Scope to request the Authentication Token for
+        /// </summary>
+        public string AuthenticationTokenScope { get; private set; }
     }
 }

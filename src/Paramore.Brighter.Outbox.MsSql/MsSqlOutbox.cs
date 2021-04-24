@@ -31,6 +31,8 @@ using System.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Azure.Core;
+using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
@@ -116,7 +118,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var parameters = InitAddDbParameters(message);
 
-            using (var connection = GetConnection())
+            using (var connection = await GetConnectionAsync())
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 using (var command = InitAddDbCommand(connection, parameters))
@@ -259,7 +261,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var connection = GetConnection())
+            using (var connection = await GetConnectionAsync())
             using (var command = connection.CreateCommand())
             {
                 CreatePagedReadCommand(command, pageSize, pageNumber);
@@ -286,7 +288,7 @@ namespace Paramore.Brighter.Outbox.MsSql
  
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-           using (var connection = GetConnection())
+           using (var connection = await GetConnectionAsync())
            {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
@@ -420,7 +422,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             CancellationToken cancellationToken = default(CancellationToken),
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
+            using (var connection = await GetConnectionAsync())
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -435,7 +437,28 @@ namespace Paramore.Brighter.Outbox.MsSql
         private DbConnection GetConnection()
         {
 
-            return new SqlConnection(_configuration.ConnectionString);
+            var sqlConnection = new SqlConnection(_configuration.ConnectionString);
+            if (_configuration.UseTokenBasedAuthentication)
+            {
+                var accessToken = (new DefaultAzureCredential())
+                    .GetToken(new TokenRequestContext(new string[1] { _configuration.AuthenticationTokenScope })).Token;
+                sqlConnection.AccessToken = accessToken;
+            }
+
+            return sqlConnection;
+        }
+
+        private async Task<DbConnection> GetConnectionAsync()
+        {
+            var sqlConnection = new SqlConnection(_configuration.ConnectionString);
+            if (_configuration.UseTokenBasedAuthentication)
+            {
+                var accessToken = (await (new DefaultAzureCredential())
+                    .GetTokenAsync(new TokenRequestContext(new string[1] { _configuration.AuthenticationTokenScope }))).Token;
+                sqlConnection.AccessToken = accessToken;
+            }
+
+            return sqlConnection;
         }
 
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
