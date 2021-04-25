@@ -110,7 +110,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _producer = new ProducerBuilder<string, string>(_producerConfig)
                 .SetErrorHandler((consumer, error) =>
                 {
-                    s_logger.LogError($"Code: {error.Code}, Reason: {error.Reason}, Fatal: {error.IsFatal}");
+                    s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason,
+                        error.IsFatal);
                     _hasFatalProducerError = error.IsFatal;
                 })
                 .Build();

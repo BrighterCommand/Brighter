@@ -92,7 +92,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public bool SubscriptionExists(string topicName, string subscriptionName)
         {
-            s_logger.LogDebug("Checking if subscription {SubscriptionName} for topic {TopicName} exists...", subscriptionName, topicName);
+            s_logger.LogDebug("Checking if subscription {ChannelName} for topic {Topic} exists...", subscriptionName, topicName);
 
             bool result;
 
@@ -102,17 +102,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to check if subscription {SubscriptionName} for topic {TopicName} exists.", subscriptionName, topicName);
+                s_logger.LogError(e, "Failed to check if subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
                 throw;
             }
             
             if (result)
             {
-                s_logger.LogDebug("Subscription {SubscriptionName} for topic {TopicName} exists.", subscriptionName, topicName);
+                s_logger.LogDebug("Subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
             }
             else
             {
-                s_logger.LogWarning("Subscription {SubscriptionName} for topic {TopicName} does not exist.", subscriptionName, topicName);
+                s_logger.LogWarning("Subscription {ChannelName} for topic {Topic} does not exist.", subscriptionName, topicName);
             }
 
             return result;
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
         {
-            s_logger.LogInformation("Creating subscription {SubscriptionName} for topic {TopicName}...", subscriptionName, topicName);
+            s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
             if (!TopicExists(topicName))
             {
@@ -138,11 +138,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             catch (Exception e)
             {
-                s_logger.LogError(e,"Failed to create subscription {SubscriptionName} for topic {TopicName}.", subscriptionName, topicName);
+                s_logger.LogError(e, "Failed to create subscription {ChannelName} for topic {Topic}.", subscriptionName, topicName);
                 throw;
             }
             
-            s_logger.LogInformation("Subscription {SubscriptionName} for topic {TopicName} created.", subscriptionName, topicName);
+            s_logger.LogInformation("Subscription {ChannelName} for topic {Topic} created.", subscriptionName, topicName);
         }
     }
 }

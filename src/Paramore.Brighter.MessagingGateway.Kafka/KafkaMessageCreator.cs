@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 else
                 {
-                    s_logger.LogDebug("Could not parse message correlation id: {0}", correlationValue);
+                    s_logger.LogDebug("Could not parse message correlation id: {CorrelationValue}", correlationValue);
                     return new HeaderResult<Guid>(Guid.Empty, false);
                 }
             }

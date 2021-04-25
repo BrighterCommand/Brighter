@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug($"MsSqlMessageQueue({_configuration.ConnectionString}, {_configuration.QueueStoreTable})");
+                s_logger.LogDebug("MsSqlMessageQueue({ConnectionString}, {QueueStoreTable})", _configuration.ConnectionString, _configuration.QueueStoreTable);
             ContinueOnCapturedContext = false;
         }
 

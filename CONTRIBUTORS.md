@@ -126,6 +126,7 @@ Brighter contributors (sorted alphabeticaly)
   * Replaced Newtonsoft.Json with System.Text.Json
   * Created Social Media Card
   * Added Token Based Authentication to MsSQL Inbox and OutBox
+  * Added Structured Logging
 
 **[tmschlot](https://github.com/tmschlot)**
   * Various fixes
