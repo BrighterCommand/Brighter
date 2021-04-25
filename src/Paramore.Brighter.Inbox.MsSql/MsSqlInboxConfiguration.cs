@@ -47,10 +47,27 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <param name="inBoxTableName">Name of the InBox table</param>
         /// <param name="useTokenBasedAuthentication">Use Token Based Authentication to connect to SQL</param>
         /// <param name="authenticationTokenScope">Scope to request the Token for</param>
-        public MsSqlInboxConfiguration(string connectionString, string inBoxTableName, bool useTokenBasedAuthentication, string authenticationTokenScope = "https://database.windows.net/.default") : this (connectionString, inBoxTableName)
+        public MsSqlInboxConfiguration(string connectionString, string inBoxTableName, bool useTokenBasedAuthentication,
+            string authenticationTokenScope = "https://database.windows.net/.default") : this(connectionString,
+            inBoxTableName)
         {
             UseTokenBasedAuthentication = useTokenBasedAuthentication;
             AuthenticationTokenScope = authenticationTokenScope;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MsSqlInboxConfiguration"/> class.
+        /// </summary>
+        /// <param name="connectionString">The subscription string.</param>
+        /// <param name="inBoxTableName">Name of the InBox table</param>
+        /// <param name="useTokenBasedAuthentication">Use Token Based Authentication to connect to SQL</param>
+        /// <param name="useSharedTokenCache">Use Access token from Shared Token Cache</param>
+        /// <param name="authenticationTokenScope">Scope to request the Token for</param>
+        public MsSqlInboxConfiguration(string connectionString, string inBoxTableName, bool useTokenBasedAuthentication,
+            bool useSharedTokenCache, string authenticationTokenScope = "https://database.windows.net/.default") : this(
+            connectionString, inBoxTableName, useTokenBasedAuthentication, authenticationTokenScope)
+        {
+            UseSharedTokenCacheCredential = useSharedTokenCache;
         }
 
         /// <summary>
@@ -74,5 +91,11 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// The Scope to request the Authentication Token for
         /// </summary>
         public string AuthenticationTokenScope { get; private set; }
+
+        /// <summary>
+        /// Specifically use Shared Token Cache Credential and specify Username and Tenant
+        /// Specifically using the AZURE_USERNAME and AZURE_TENANT_ID Environment Variables
+        /// </summary>
+        public bool UseSharedTokenCacheCredential { get; private set; }
     }
 }

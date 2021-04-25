@@ -51,6 +51,8 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
+        private const string _azureUserName = "AZURE_USERNAME";
+        private const string _azureTenantId = "AZURE_TENANT_ID";
         private readonly MsSqlOutboxConfiguration _configuration;
 
         /// <summary>
@@ -118,7 +120,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var parameters = InitAddDbParameters(message);
 
-            using (var connection = await GetConnectionAsync())
+            using (var connection = await GetConnectionAsync(cancellationToken))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 using (var command = InitAddDbCommand(connection, parameters))
@@ -261,7 +263,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var connection = await GetConnectionAsync())
+            using (var connection = await GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
             {
                 CreatePagedReadCommand(command, pageSize, pageNumber);
@@ -288,7 +290,7 @@ namespace Paramore.Brighter.Outbox.MsSql
  
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-           using (var connection = await GetConnectionAsync())
+           using (var connection = await GetConnectionAsync(cancellationToken))
            {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
@@ -422,7 +424,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             CancellationToken cancellationToken = default(CancellationToken),
             params DbParameter[] parameters)
         {
-            using (var connection = await GetConnectionAsync())
+            using (var connection = await GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -440,21 +442,52 @@ namespace Paramore.Brighter.Outbox.MsSql
             var sqlConnection = new SqlConnection(_configuration.ConnectionString);
             if (_configuration.UseTokenBasedAuthentication)
             {
-                var accessToken = (new DefaultAzureCredential())
-                    .GetToken(new TokenRequestContext(new string[1] { _configuration.AuthenticationTokenScope })).Token;
+                TokenCredential credential;
+                if (_configuration.UseSharedTokenCacheCredential)
+                {
+                    credential = new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()
+                    {
+                        Username = Environment.GetEnvironmentVariable(_azureUserName),
+                        TenantId = Environment.GetEnvironmentVariable(_azureTenantId)
+                    });
+                }
+                else
+                {
+                    credential = new DefaultAzureCredential();
+                }
+
+                var accessToken = credential
+                    .GetToken(new TokenRequestContext(new string[1] {_configuration.AuthenticationTokenScope}),
+                        default(CancellationToken)).Token;
                 sqlConnection.AccessToken = accessToken;
             }
 
             return sqlConnection;
         }
 
-        private async Task<DbConnection> GetConnectionAsync()
+        private async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             var sqlConnection = new SqlConnection(_configuration.ConnectionString);
             if (_configuration.UseTokenBasedAuthentication)
             {
-                var accessToken = (await (new DefaultAzureCredential())
-                    .GetTokenAsync(new TokenRequestContext(new string[1] { _configuration.AuthenticationTokenScope }))).Token;
+                TokenCredential credential;
+                if (_configuration.UseSharedTokenCacheCredential)
+                {
+                    credential = new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()
+                    {
+                        Username = Environment.GetEnvironmentVariable(_azureUserName),
+                        TenantId = Environment.GetEnvironmentVariable(_azureTenantId)
+                    });
+                }
+                else
+                {
+                    credential = new DefaultAzureCredential();
+                }
+
+                var accessToken =
+                    (await credential.GetTokenAsync(
+                        new TokenRequestContext(new string[1] {_configuration.AuthenticationTokenScope}),
+                        cancellationToken)).Token;
                 sqlConnection.AccessToken = accessToken;
             }
 
