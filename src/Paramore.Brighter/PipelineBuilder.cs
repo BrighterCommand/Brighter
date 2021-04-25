@@ -143,7 +143,7 @@ namespace Paramore.Brighter
             }
 
             AppendToPipeline(postAttributes, implicitHandler, requestContext);
-            s_logger.LogDebug("New handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            s_logger.LogDebug("New handler pipeline created: {HandlerName}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 
@@ -199,7 +199,7 @@ namespace Paramore.Brighter
             }
 
             AppendToAsyncPipeline(postAttributes, implicitHandler, requestContext);
-            s_logger.LogDebug("New async handler pipeline created: {0}", TracePipeline(firstInPipeline));
+            s_logger.LogDebug("New async handler pipeline created: {HandlerName}", TracePipeline(firstInPipeline));
             return firstInPipeline;
         }
 

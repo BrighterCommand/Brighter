@@ -60,7 +60,7 @@ namespace Paramore.Brighter
             if (_handlerFactory == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
-            s_logger.LogDebug("Tracking instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
+            s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Add(IHandleRequestsAsync instance)
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
             if (_asyncHandlerFactory == null)
                 throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
             _trackedAsyncObjects.Add(instance);
-            s_logger.LogDebug("Tracking async handler instance {0} of type {1}", instance.GetHashCode(), instance.GetType());
+            s_logger.LogDebug("Tracking async handler instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
         public void Dispose()
@@ -77,14 +77,14 @@ namespace Paramore.Brighter
             {
                 //free disposable items
                 _handlerFactory.Release(trackedItem);
-                s_logger.LogDebug("Releasing handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
+                s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             _trackedAsyncObjects.Each(trackedItem =>
             {
                 //free disposable items
                 _asyncHandlerFactory.Release(trackedItem);
-                s_logger.LogDebug("Releasing async handler instance {0} of type {1}", trackedItem.GetHashCode(), trackedItem.GetType());
+                s_logger.LogDebug("Releasing async handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 
             //clear our tracking

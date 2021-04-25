@@ -83,15 +83,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             lock (s_lock)
             {
                 DelayReconnecting();
-                
+
                 try
                 {
-                CreateConnection(connectionFactory);
-            }
+                    CreateConnection(connectionFactory);
+                }
                 catch (BrokerUnreachableException exception)
                 {
-                    s_logger.LogError(exception, "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
-        }
+                    s_logger.LogError(exception,
+                        "RmqMessageGatewayConnectionPool: Failed to reset subscription to Rabbit MQ endpoint {URL}",
+                        connectionFactory.Endpoint);
+                }
             }
         }
 
@@ -101,7 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             TryRemoveConnection(connectionId);
 
-            s_logger.LogDebug("RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {0}", connectionFactory.Endpoint);
+            s_logger.LogDebug("RmqMessageGatewayConnectionPool: Creating subscription to Rabbit MQ endpoint {URL}", connectionFactory.Endpoint);
 
             connectionFactory.RequestedHeartbeat = TimeSpan.FromSeconds(_connectionHeartbeat);
             connectionFactory.RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000);
@@ -110,12 +112,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             var connection = connectionFactory.CreateConnection(_connectionName);
 
-            s_logger.LogDebug("RmqMessageGatewayConnectionPool: new connected to {0} added to pool named {1}", connection.Endpoint, connection.ClientProvidedName);
+            s_logger.LogDebug("RmqMessageGatewayConnectionPool: new connected to {URL} added to pool named {ProviderName}", connection.Endpoint, connection.ClientProvidedName);
 
 
             void ShutdownHandler(object sender, ShutdownEventArgs e)
             {
-                s_logger.LogWarning("RmqMessageGatewayConnectionPool: The subscription {0} has been shutdown due to {1}", connection.Endpoint, e.ToString());
+                s_logger.LogWarning("RmqMessageGatewayConnectionPool: The subscription {URL} has been shutdown due to {ErrorMessage}", connection.Endpoint, e.ToString());
 
                 lock (s_lock)
                 {

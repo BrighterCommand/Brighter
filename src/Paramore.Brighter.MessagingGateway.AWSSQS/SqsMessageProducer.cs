@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {0} and id {1} and message: {2}", 
+            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
                 message.Header.Topic, message.Id, message.Body);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))

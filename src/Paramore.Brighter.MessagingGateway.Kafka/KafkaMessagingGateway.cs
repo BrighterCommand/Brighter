@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         throw new ChannelFailureException($"An error occured creating topic {Topic.Value}: {e.Results[0].Error.Reason}");
                     }
 
-                    s_logger.LogDebug("Topic already exists");
+                    s_logger.LogDebug("Topic {Topic} already exists", Topic.Value);
                 }
             }
         }
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             return false;
                         else
                         {
-                            s_logger.LogWarning($"Topic {matchingTopic.Topic} is in error with code: {matchingTopic.Error.Code} and reason: {matchingTopic.Error.Reason}");
+                            s_logger.LogWarning("Topic {Topic} is in error with code: {ErrorCode} and reason: {ErrorMessage}", matchingTopic.Topic, matchingTopic.Error.Code, matchingTopic.Error.Reason);
                             return false;
                         }
 

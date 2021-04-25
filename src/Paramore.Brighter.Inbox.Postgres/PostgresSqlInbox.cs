@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                       if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                       {
                           s_logger.LogWarning(
-                              "PostgresSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
+                              "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
                               command.Id);
                           return;
                       }
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                     if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                     {
                         s_logger.LogWarning(
-                            "PostgresSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
+                            "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }

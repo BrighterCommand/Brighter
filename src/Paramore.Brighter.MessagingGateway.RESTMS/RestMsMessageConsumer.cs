@@ -88,12 +88,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {ErrorMessage}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {ErrorMessage}", he.ToString());
                 throw;
             }
         }
@@ -124,12 +124,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {ErrorMessage}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {ErrorMessage}", he.ToString());
                 throw;
             }
         }
@@ -158,12 +158,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {ErrorMessage}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {ErrorMessage}", he.ToString());
                 throw;
             }
         }
@@ -207,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                 return;
             }
 
-            s_logger.LogDebug("Deleting the message {0} from the pipe: {0}", message.Id, pipe.Href);
+            s_logger.LogDebug("Deleting the message {Id} from the pipe: {URL}", message.Id, pipe.Href);
             SendDeleteMessage(matchingMessage);
         }
 
@@ -218,7 +218,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
                 return new Message[] {new Message()};
             }
 
-            s_logger.LogDebug("Getting the message from the RestMS server: {0}", messageUri);
+            s_logger.LogDebug("Getting the message from the RestMS server: {URL}", messageUri);
             var client = Client();
 
             try
@@ -232,7 +232,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError("Threw exception getting Pipe {0} from RestMS Server {1}", _pipe.PipeUri, exception.Message);
+                    s_logger.LogError("Threw exception getting Pipe {URL} from RestMS Server {ErrorMessage}", _pipe.PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error retrieving the domain from the RestMS server, see log for details"));

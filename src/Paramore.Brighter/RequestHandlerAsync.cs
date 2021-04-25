@@ -115,7 +115,7 @@ namespace Paramore.Brighter
         {
             if (_successor != null)
             {
-                s_logger.LogDebug("Passing request from {0} to {1}", Name, _successor.Name);
+                s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
                 return await _successor.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 
@@ -146,7 +146,7 @@ namespace Paramore.Brighter
         {
             if (_successor != null)
             {
-                s_logger.LogDebug("Falling back from {0} to {1}", Name, _successor.Name);
+                s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);
                 return await _successor.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
 

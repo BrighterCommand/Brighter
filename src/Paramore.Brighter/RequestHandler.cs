@@ -103,7 +103,7 @@ namespace Paramore.Brighter
         {
             if (_successor != null)
             {
-                s_logger.LogDebug("Passing request from {0} to {1}", Name, _successor.Name);
+                s_logger.LogDebug("Passing request from {HandlerName} to {NextHandler}", Name, _successor.Name);
                 return _successor.Handle(command);
             }
 
@@ -133,7 +133,7 @@ namespace Paramore.Brighter
         {
             if (_successor != null)
             {
-                s_logger.LogDebug("Falling back from {0} to {1}", Name, _successor.Name);
+                s_logger.LogDebug("Falling back from {HandlerName} to {NextHandler}", Name, _successor.Name);
                 return _successor.Fallback(command);
             }
 

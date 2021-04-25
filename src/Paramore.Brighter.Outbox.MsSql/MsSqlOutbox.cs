@@ -111,7 +111,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                             sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
                             s_logger.LogWarning(
-                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
@@ -147,7 +147,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                             sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                         {
                             s_logger.LogWarning(
-                                "MsSqlOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                                "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }

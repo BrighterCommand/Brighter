@@ -30,7 +30,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an MsSqlSubscription or MsSqlSubscription<T> as a parameter");
             
-            s_logger.LogDebug("MsSqlInputChannelFactory: create input channel {ChannelName} for topic {RoutingKey}", subscription.ChannelName, subscription.RoutingKey);
+            s_logger.LogDebug("MsSqlInputChannelFactory: create input channel {ChannelName} for topic {Topic}", subscription.ChannelName, subscription.RoutingKey);
             return new Channel(
                 subscription.ChannelName,
                 _msSqlMessageConsumerFactory.Create(subscription),

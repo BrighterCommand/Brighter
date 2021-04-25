@@ -131,7 +131,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 s_logger.LogDebug(
-                    "Sending message to Kafka. Servers {0} Topic: {1} Body: {2}",
+                    "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}",
                     _producerConfig.BootstrapServers,
                     message.Header.Topic,
                     message.Body.Value
@@ -143,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (ProduceException<string, string> pe)
             {
                 s_logger.LogError(pe,
-                    "Error sending message to Kafka servers {0} because {1} ",
+                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
                     _producerConfig.BootstrapServers,
                     pe.Error.Reason
                 );
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (InvalidOperationException ioe)
             {
                 s_logger.LogError(ioe,
-                    "Error sending message to Kafka servers {0} because {1} ",
+                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
                     _producerConfig.BootstrapServers,
                     ioe.Message
                 );
@@ -162,7 +162,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (ArgumentException ae)
             {
                 s_logger.LogError(ae,
-                    "Error sending message to Kafka servers {0} because {1} ",
+                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
                     _producerConfig.BootstrapServers,
                     ae.Message
                 );
@@ -197,7 +197,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             try
             {
                 s_logger.LogDebug(
-                    "Sending message to Kafka. Servers {0} Topic: {1} Body: {2}",
+                    "Sending message to Kafka. Servers {Servers} Topic: {Topic} Body: {Request}",
                     _producerConfig.BootstrapServers,
                     message.Header.Topic,
                     message.Body.Value
@@ -209,7 +209,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (ProduceException<string, string> pe)
             {
                 s_logger.LogError(pe,
-                    "Error sending message to Kafka servers {0} because {1} ",
+                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
                     _producerConfig.BootstrapServers,
                     pe.Error.Reason
                 );
@@ -218,7 +218,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (InvalidOperationException ioe)
             {
                 s_logger.LogError(ioe,
-                    "Error sending message to Kafka servers {0} because {1} ",
+                    "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
                     _producerConfig.BootstrapServers,
                     ioe.Message
                 );
@@ -228,7 +228,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             catch (ArgumentException ae)
             {
                  s_logger.LogError(ae,
-                     "Error sending message to Kafka servers {0} because {1} ",
+                     "Error sending message to Kafka servers {Servers} because {ErrorMessage} ",
                      _producerConfig.BootstrapServers,
                      ae.Message
                  );

@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            s_logger.LogDebug($"Preparing  to send message on topic {message.Header.Topic}");
+            s_logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
 
             EnsureTopicExists(message.Header.Topic);
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     .Handle<Exception>()
                     .Retry(TopicConnectionRetryCount, (exception, retryNumber) =>
                     {
-                        s_logger.LogError(exception, $"Failed to connect to topic {message.Header.Topic}, retrying...");
+                        s_logger.LogError(exception, "Failed to connect to topic {Topic}, retrying...", message.Header.Topic);
 
                         Thread.Sleep(TimeSpan.FromMilliseconds(TopicConnectionSleepBetweenRetriesInMilliseconds));
                     }
@@ -58,13 +58,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, $"Failed to connect to topic {message.Header.Topic}, aborting.");
+                s_logger.LogError(e, "Failed to connect to topic {Topic}, aborting.", message.Header.Topic);
                 throw;
             }
 
             try
             {
-                s_logger.LogDebug($"Publishing message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}.");
+                s_logger.LogDebug(
+                    "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}.",
+                    message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
 
                 var azureServiceBusMessage = new Microsoft.Azure.ServiceBus.Message(message.Body.Bytes);
                 azureServiceBusMessage.UserProperties.Add("MessageType", message.Header.MessageType.ToString());
@@ -79,11 +81,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 }
 
                 s_logger.LogDebug(
-                    $"Published message to topic {message.Header.Topic} with a delay of {delayMilliseconds} and body {message.Body.Value} and id {message.Id}");
+                    "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}", message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
+                ;
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, $"Failed to publish message to topic {message.Header.Topic} with id {message.Id}, message will not be retried.");
+                s_logger.LogError(e, "Failed to publish message to topic {Topic} with id {Id}, message will not be retried.", message.Header.Topic, message.Id);
             }
             finally
             {

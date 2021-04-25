@@ -135,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.LogDebug("No message id found in message MessageId, new message id is {0}", newMessageId);
+                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}", newMessageId);
                         return new HeaderResult<Guid>(newMessageId, true);
                     }
 
@@ -144,7 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<Guid>(messageId, true);
                     }
 
-                    s_logger.LogDebug("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+                    s_logger.LogDebug("Could not parse message MessageId, new message id is {Id}", Guid.Empty);
                     return new HeaderResult<Guid>(Guid.Empty, false);
                 });
         }
@@ -182,7 +182,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception e)
                 {
                     var firstTwentyBytes = BitConverter.ToString(lastHeader.Take(20).ToArray());
-                    s_logger.LogWarning(e, "Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
+                    s_logger.LogWarning(e, "Failed to read the value of header {Topic} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
                     return new HeaderResult<string>(null, false);
                 }
             }

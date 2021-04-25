@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         public RestMSJoin CreateJoin(string pipeUri, string routingKey)
         {
-            s_logger.LogDebug("Creating the join with key {0} for pipe {1}", routingKey, pipeUri);
+            s_logger.LogDebug("Creating the join with key {Key} for pipe {URL}", routingKey, pipeUri);
             var client = _gateway.Client();
             try
             {
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError(exception,"Threw exception adding join with routingKey {0} to Pipe {1} on RestMS Server {2}", routingKey, pipeUri, exception.Message);
+                    s_logger.LogError(exception,"Threw exception adding join with routingKey {Key} to Pipe {URL} on RestMS Server {URL}", routingKey, pipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the join with routingKey {0} to Pipe {1} to the RestMS server, see log for details", routingKey, pipeUri));
