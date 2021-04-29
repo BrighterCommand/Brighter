@@ -30,10 +30,9 @@ using System.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Inbox.MsSql.ConnectionFactories;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.MsSql
@@ -47,18 +46,28 @@ namespace Paramore.Brighter.Inbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private const string _azureUserName = "AZURE_USERNAME";
-        private const string _azureTenantId = "AZURE_TENANT_ID";
         private readonly MsSqlInboxConfiguration _configuration;
+        private readonly IMsSqlInboxConnectionFactory _connectionFactory;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlInbox(MsSqlInboxConfiguration configuration)
+        /// <param name="connectionFactory">The Connection Factory.</param>
+        public MsSqlInbox(MsSqlInboxConfiguration configuration, IMsSqlInboxConnectionFactory connectionFactory)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
+            _connectionFactory = connectionFactory;
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        public MsSqlInbox(MsSqlInboxConfiguration configuration) : this(configuration,
+            new MsSqlInboxSqlAuthConnectionFactory(configuration.ConnectionString))
+        {
         }
 
         /// <summary>
@@ -73,7 +82,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             {
                 connection.Open();
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
@@ -150,7 +159,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = await GetConnectionAsync(cancellationToken))
+            using (var connection = await _connectionFactory.GetConnectionAsync(cancellationToken))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
@@ -251,7 +260,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -271,7 +280,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             CancellationToken cancellationToken = default(CancellationToken),
             params DbParameter[] parameters)
         {
-            using (var connection = await GetConnectionAsync(cancellationToken))
+            using (var connection = await _connectionFactory.GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -282,63 +291,6 @@ namespace Paramore.Brighter.Inbox.MsSql
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
-        }
-
-        private DbConnection GetConnection()
-        {
-            var sqlConnection = new SqlConnection(_configuration.ConnectionString);
-            if (_configuration.UseTokenBasedAuthentication)
-            {
-                TokenCredential credential;
-                if (_configuration.UseSharedTokenCacheCredential)
-                {
-                    credential = new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()
-                    {
-                        Username = Environment.GetEnvironmentVariable(_azureUserName), 
-                        TenantId = Environment.GetEnvironmentVariable(_azureTenantId)
-                    });
-                }
-                else
-                {
-                    credential = new DefaultAzureCredential();
-                }
-
-                var accessToken = credential
-                    .GetToken(new TokenRequestContext(new string[1] {_configuration.AuthenticationTokenScope}),
-                        default(CancellationToken)).Token;
-                sqlConnection.AccessToken = accessToken;
-            }
-
-            return sqlConnection;
-        }
-
-        private async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var sqlConnection = new SqlConnection(_configuration.ConnectionString);
-            if (_configuration.UseTokenBasedAuthentication)
-            {
-                TokenCredential credential;
-                if (_configuration.UseSharedTokenCacheCredential)
-                {
-                    credential = new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()
-                    {
-                        Username = Environment.GetEnvironmentVariable(_azureUserName),
-                        TenantId = Environment.GetEnvironmentVariable(_azureTenantId)
-                    });
-                }
-                else
-                {
-                    credential = new DefaultAzureCredential();
-                }
-
-                var accessToken =
-                    (await credential.GetTokenAsync(
-                        new TokenRequestContext(new string[1] {_configuration.AuthenticationTokenScope}),
-                        cancellationToken)).Token;
-                sqlConnection.AccessToken = accessToken;
-            }
-
-            return sqlConnection;
         }
 
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
