@@ -11,14 +11,14 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
-    public class AWSValidateInfrastructureTests  : IDisposable
+    public class AWSValidateInfrastructureByConventionTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSValidateInfrastructureTests()
+        public AWSValidateInfrastructureByConventionTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
             Guid correlationId = Guid.NewGuid();
@@ -50,23 +50,21 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
             
-            //Now change the subscription to validate, just check what we made
+            //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
             subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
                 routingKey: routingKey,
-                findTopicBy: TopicFindBy.Name,
+                findTopicBy: TopicFindBy.Convention,
                 makeChannels: OnMissingChannel.Validate
             );
             
             _messageProducer = new SqsMessageProducer(
                 awsConnection, 
-                new SqsPublication
-                {
-                    FindTopicBy = TopicFindBy.Name,
+                new SqsPublication{
+                    FindTopicBy = TopicFindBy.Convention,
                     MakeChannels = OnMissingChannel.Validate, 
-                    RoutingKey = routingKey
-                }
+                    RoutingKey = routingKey}
                 );
 
             _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

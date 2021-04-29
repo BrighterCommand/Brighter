@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
+using Amazon.SimpleNotificationService;
+using Amazon.SimpleNotificationService.Model;
+using Amazon.SQS.Model;
 using FluentAssertions;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -11,14 +16,14 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
-    public class AWSValidateInfrastructureTests  : IDisposable
+    public class AWSValidateInfrastructureByArnTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSValidateInfrastructureTests()
+        public AWSValidateInfrastructureByArnTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
             Guid correlationId = Guid.NewGuid();
@@ -49,13 +54,16 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
-            
+
+            var topicArn = FindTopicArn(credentials, region, routingKey.Value);
+            var routingKeyArn = new RoutingKey(topicArn);
+
             //Now change the subscription to validate, just check what we made
             subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
-                routingKey: routingKey,
-                findTopicBy: TopicFindBy.Name,
+                routingKey: routingKeyArn,
+                findTopicBy: TopicFindBy.Arn,
                 makeChannels: OnMissingChannel.Validate
             );
             
@@ -63,11 +71,10 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 awsConnection, 
                 new SqsPublication
                 {
-                    FindTopicBy = TopicFindBy.Name,
+                    FindTopicBy = TopicFindBy.Arn,
                     MakeChannels = OnMissingChannel.Validate, 
-                    RoutingKey = routingKey
-                }
-                );
+                    RoutingKey = routingKeyArn
+                });
 
             _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
         }
@@ -98,6 +105,12 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _messageProducer.Dispose();
         }
         
+        private string FindTopicArn(AWSCredentials credentials, RegionEndpoint region, string topicName)
+        {
+            var snsClient = new AmazonSimpleNotificationServiceClient(credentials, region);
+            var topicResponse = snsClient.FindTopicAsync(topicName).GetAwaiter().GetResult();
+            return topicResponse.TopicArn;
+        }
     
    }
 }
