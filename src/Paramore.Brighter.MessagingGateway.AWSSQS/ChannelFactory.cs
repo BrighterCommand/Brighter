@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 SqsSubscription sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.MakeChannels);
+                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels);
                 EnsureQueue();
 
                 return new Channel(
@@ -266,7 +266,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     .Result;
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
+                    throw new InvalidOperationException("Unable to set subscription attribute for raw message delivery");
                 }
             }
             else
@@ -357,7 +357,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     catch (Exception)
                     {
                         //don't break on an exception here, if we can't delete, just exit
-                        s_logger.LogError($"Could not delete queue {queueExists.name}");
+                        s_logger.LogError("Could not delete queue {0}", queueExists.name);
                     }
                 }
             }
@@ -370,7 +370,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
-                bool exists = FindTopicByArn(snsClient);
+                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(_channelTopicArn);
                 if (exists)
                 {
                     try
@@ -382,7 +382,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     catch (Exception)
                     {
                         //don't break on an exception here, if we can't delete, just exit
-                        s_logger.LogError($"Could not delete topic {_channelTopicArn}");
+                        s_logger.LogError("Could not delete topic {0}", _channelTopicArn);
                     }
                 }
             }
@@ -393,19 +393,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             snsClient.DeleteTopicAsync(_channelTopicArn).GetAwaiter().GetResult();
         }
 
-
-        private bool FindTopicByArn(AmazonSimpleNotificationServiceClient snsClient)
-        {
-            bool exists = false;
-            ListTopicsResponse response;
-            do
-            {
-                response = snsClient.ListTopicsAsync().GetAwaiter().GetResult();
-                exists = response.Topics.Any(topic => topic.TopicArn == _channelTopicArn);
-            } while (!exists && response.NextToken != null);
-
-            return exists;
-        }
 
         private string GetQueueARNForChannel(AmazonSQSClient sqsClient)
         {
@@ -432,7 +419,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest {SubscriptionArn = sub.SubscriptionArn}).GetAwaiter().GetResult();
                     if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                     {
-                        s_logger.LogError($"Error unsubscribing from {_channelTopicArn} for sub {sub.SubscriptionArn}");
+                        s_logger.LogError("Error unsubscribing from {0} for sub {1}", _channelTopicArn, sub.SubscriptionArn);
                     }
                 }
             } while (response.NextToken != null);
