@@ -10,7 +10,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="ServiceStack.Redis.Core" Version="5.10.4" />
+    <PackageReference Include="ServiceStack.Redis.Core" Version="5.11.0" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
   </ItemGroup>
 </Project>
