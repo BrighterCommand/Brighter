@@ -113,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             if (!(dict[key] is byte[] bytes))
             {
-                s_logger.LogWarning("The value of header {0} could not be cast to a byte array", key);
+                s_logger.LogWarning("The value of header {Key} could not be cast to a byte array", key);
                 return new HeaderResult<string>(null, false);
             }
 
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (Exception e)
             {
                 var firstTwentyBytes = BitConverter.ToString(bytes.Take(20).ToArray());
-                s_logger.LogWarning(e,"Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
+                s_logger.LogWarning(e,"Failed to read the value of header {Key} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
                 return new HeaderResult<string>(null, false);
             }
         }
@@ -234,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             if (string.IsNullOrEmpty(messageId))
             {
-                s_logger.LogDebug("No message id found in message MessageId, new message id is {0}", newMessageId);
+                s_logger.LogDebug("No message id found in message MessageId, new message id is {Id}", newMessageId);
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
@@ -243,7 +243,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 return new HeaderResult<Guid>(newMessageId, true);
             }
 
-            s_logger.LogDebug("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+            s_logger.LogDebug("Could not parse message MessageId, new message id is {Id}", Guid.Empty);
             return new HeaderResult<Guid>(Guid.Empty, false);
         }
 

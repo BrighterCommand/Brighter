@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Inbox.MySql
                     if (sqlException.Number == MySqlDuplicateKeyError)
                     {
                         s_logger.LogWarning(
-                            "MySqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
+                            "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }
@@ -190,7 +190,7 @@ namespace Paramore.Brighter.Inbox.MySql
                     if (sqlException.Number == MySqlDuplicateKeyError)
                     {
                         s_logger.LogWarning(
-                            "MySqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
+                            "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }

@@ -135,7 +135,7 @@ internal class RmqMessagePublisher
             var messageId = Guid.NewGuid() ;
             const string deliveryTag = "1";
 
-            s_logger.LogInformation("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag, messageId, 1);
+            s_logger.LogInformation("RmqMessagePublisher: Regenerating message {Id} with DeliveryTag of {1} to {2} with DeliveryTag of {DeliveryTag}", message.Id, deliveryTag, messageId, 1);
 
             var headers = new Dictionary<string, object>
             {

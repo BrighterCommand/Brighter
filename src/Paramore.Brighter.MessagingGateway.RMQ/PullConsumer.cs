@@ -121,7 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (Exception e)
             {
                 //don't impede shutdown, just log
-                s_logger.LogWarning("Tried to nack unhandled messages on shutdown but failed for {0}",
+                s_logger.LogWarning("Tried to nack unhandled messages on shutdown but failed for {ErrorMessage}",
                     e.Message);
             }
            

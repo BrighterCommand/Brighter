@@ -41,20 +41,24 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private void GetMessageReceiverProvider()
         {
-            s_logger.LogInformation($"Getting message receiver provider for topic {_topicName} and subscription {_subscriptionName} with receive Mode {_receiveMode}...");
+            s_logger.LogInformation(
+                "Getting message receiver provider for topic {Topic} and subscription {ChannelName} with receive Mode {ReceiveMode}...",
+                _topicName, _subscriptionName, _receiveMode);
             try
             {
                 _messageReceiver = _messageReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode);
             }
             catch (Exception e)
             {
-                s_logger.LogError(e, $"Failed to get message receiver provider for topic {_topicName} and subscription {_subscriptionName}.");
+                s_logger.LogError(e, "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}.", _topicName, _subscriptionName);
             }
         }
 
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            s_logger.LogDebug($"Preparing to retrieve next message(s) from topic {_topicName} via subscription {_subscriptionName} with timeout {timeoutInMilliseconds} and batch size {_batchSize}.");
+            s_logger.LogDebug(
+                "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}.",
+                _topicName, _subscriptionName, timeoutInMilliseconds, _batchSize);
 
             IEnumerable<IBrokeredMessageWrapper> messages;
             EnsureSubscription();
@@ -96,11 +100,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             if (azureServiceBusMessage.MessageBodyValue == null)
             {
-                s_logger.LogWarning($"Null message body received from topic {_topicName} via subscription {_subscriptionName}.");
+                s_logger.LogWarning(
+                    "Null message body received from topic {Topic} via subscription {ChannelName}.",
+                    _topicName, _subscriptionName);
             }
 
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
-            s_logger.LogDebug($"Received message from topic {_topicName} via subscription {_subscriptionName} with body {messageBody}.");
+            s_logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}.",
+                _topicName, _subscriptionName, messageBody);
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var headers = new MessageHeader(Guid.NewGuid(), _topicName, messageType);
             if(_receiveMode.Equals(ReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
@@ -144,7 +151,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             catch (MessagingEntityAlreadyExistsException)
             {
-                s_logger.LogWarning($"Message entity already exists with topic {_topicName} and subscription {_subscriptionName}.");
+                s_logger.LogWarning("Message entity already exists with topic {Topic} and subscription {ChannelName}.", _topicName,
+                    _subscriptionName);
                 _subscriptionCreated = true;
             }
             catch (Exception e)
@@ -162,7 +170,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             var topic = message.Header.Topic;
 
-            s_logger.LogInformation($"Requeuing message with topic {topic} and id {message.Id}.");
+            s_logger.LogInformation("Requeuing message with topic {Topic} and id {Id}.", topic, message.Id);
 
             if (delayMilliseconds > 0)
             {
@@ -186,13 +194,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                     if (string.IsNullOrEmpty(lockToken))
                         throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    s_logger.LogDebug($"Acknowledging Message with Id {message.Id} Lock Token : {lockToken}");
+                    s_logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
                     _messageReceiver.Complete(lockToken).Wait();
                 }
                 catch(Exception ex)
                 {
-                    s_logger.LogError(ex, $"Error completing message with id {message.Id}");
+                    s_logger.LogError(ex, "Error completing message with id {Id}", message.Id);
                     throw;
                 }
             }

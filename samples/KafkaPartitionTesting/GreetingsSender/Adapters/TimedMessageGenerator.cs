@@ -56,11 +56,12 @@ namespace GreetingsSender.Adapters
             }
             catch (Exception e)
             {
-                s_logger.LogError($"Kafka Message Generator is stopping due to {e.Message}");
+                s_logger.LogError("Kafka Message Generator is stopping due to {ErrorMessage}", e.Message);
                 _appLifetime.StopApplication();
             }
 
-            s_logger.LogInformation($"Sending message with id {greetingEvent.Id} and greeting {greetingEvent.Greeting}");
+            s_logger.LogInformation("Sending message with id {Id} and greeting {Response}", greetingEvent.Id,
+                greetingEvent.Greeting);
         }
 
         public void Dispose()

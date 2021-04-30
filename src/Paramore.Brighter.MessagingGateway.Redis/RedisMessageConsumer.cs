@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
-            s_logger.LogInformation("RmqMessageConsumer: Acknowledging message {0}", message.Id.ToString());
+            s_logger.LogInformation("RmqMessageConsumer: Acknowledging message {Id}", message.Id.ToString());
             _inflight.Remove(message.Id);
         }
 
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             using (var client = Pool.Value.GetClient())
             {
-                s_logger.LogDebug("RmqMessageConsumer: Purging channel {0}", _queueName);
+                s_logger.LogDebug("RmqMessageConsumer: Purging channel {ChannelName}", _queueName);
                 //This kills the queue, not the messages, which we assume expire
                 client.RemoveAllFromList(_queueName);
             }
@@ -107,11 +107,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The message read from the list</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            s_logger.LogDebug("RedisMessageConsumer: Preparing to retrieve next message from queue {0} with routing key {1} via exchange {2} on subscription {3}", _queueName, Topic);
+            s_logger.LogDebug("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName} with routing key {Topic} via exchange {ExchangeName} on subscription {3}", _queueName, Topic);
 
             if (_inflight.Any())
             {
-                 s_logger.LogError("RedisMessageConsumer: Preparing to retrieve next message from queue {0}, but have unacked or not rejected message", _queueName);
+                 s_logger.LogError("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName}, but have unacked or not rejected message", _queueName);
                 throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First().ToString()}");   
             }
             
@@ -131,12 +131,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             catch (TimeoutException te)
             {
-                s_logger.LogError("Could not connect to Redis client within {0} milliseconds", timeoutInMilliseconds.ToString());
+                s_logger.LogError("Could not connect to Redis client within {Timeout} milliseconds", timeoutInMilliseconds.ToString());
                 throw new ChannelFailureException($"Could not connect to Redis client within {timeoutInMilliseconds.ToString()} milliseconds", te);
             }
             catch (RedisException re)
             {
-                s_logger.LogError($"Could not connect to Redis: {re.Message}");
+                s_logger.LogError("Could not connect to Redis: {ErrorMessage}", re.Message);
                 throw new ChannelFailureException("Could not connect to Redis client - see inner exception for details", re);
                  
             }
@@ -202,7 +202,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void EnsureConnection(IRedisClient client)
         {
-            s_logger.LogDebug("RedisMessagingGateway: Creating queue {0}", _queueName);
+            s_logger.LogDebug("RedisMessagingGateway: Creating queue {ChannelName}", _queueName);
             //what is the queue list key
             var key = Topic + "." + QUEUES;
             //subscribe us 
@@ -219,13 +219,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 var key = Topic + "." + latestId;
                 msg = client.GetValue(key);
                 s_logger.LogInformation(
-                    "Redis: Received message from queue {0} with routing key {0}, message: {1}",
+                    "Redis: Received message from queue {ChannelName} with routing key {Topic}, message: {Request}",
                     _queueName, Topic, JsonSerializer.Serialize(msg, JsonSerialisationOptions.Options), Environment.NewLine);
             }
             else
             {
                s_logger.LogDebug(
-                   "RmqMessageConsumer: Time out without receiving message from queue {0} with routing key {1}",
+                   "RmqMessageConsumer: Time out without receiving message from queue {ChannelName} with routing key {Topic}",
                     _queueName, Topic);
   
             }

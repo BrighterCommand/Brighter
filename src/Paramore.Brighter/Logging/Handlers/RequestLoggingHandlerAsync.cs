@@ -92,13 +92,13 @@ namespace Paramore.Brighter.Logging.Handlers
         private void LogCommand(TRequest request)
         {
             //TODO: LibLog has no async support, so remains a blocking call for now
-            s_logger.LogInformation("Logging handler pipeline call. Pipeline timing {0} target, for {1} with values of {2} at: {3}", _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request), DateTime.UtcNow);
+            s_logger.LogInformation("Logging handler pipeline call. Pipeline timing {HandlerTiming} target, for {RequestType} with values of {Request} at: {Time}", _timing.ToString(), typeof(TRequest), JsonSerializer.Serialize(request), DateTime.UtcNow);
         }
 
         private void LogFailure(TRequest request)
         {
             //TODO: LibLog has no async support, so remains a blocking call for now
-            s_logger.LogInformation("Failure in pipeline call for {0} with values of {1} at: {2}", typeof(TRequest), JsonSerializer.Serialize(request), DateTime.UtcNow);
+            s_logger.LogInformation("Failure in pipeline call for {RequestType} with values of {Request} at: {Time}", typeof(TRequest), JsonSerializer.Serialize(request), DateTime.UtcNow);
         }
     }
 }

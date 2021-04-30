@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// <exception cref="RestMSClientException"></exception>
         public RestMSDomain GetDomain()
         {
-            s_logger.LogDebug("Getting the default domain from the RestMS server: {0}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            s_logger.LogDebug("Getting the default domain from the RestMS server: {URL}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
 
             try
             {
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError(exception,"Threw exception getting Domain from RestMS Server {0}", exception.Message);
+                    s_logger.LogError(exception,"Threw exception getting Domain from RestMS Server {ErrorMessage}", exception.Message);
                 }
 
                 throw new RestMSClientException("Error retrieving the domain from the RestMS server, see log for details");
