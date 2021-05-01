@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -109,7 +110,23 @@ namespace Paramore.Brighter
             PostBack = postBack;
         }
 
-       /// <summary>
+         /// <summary>
+         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
+         /// TODO: We don't support the range of options on Span<T> on netstandard2.0 that let's us
+         /// flow through a ReadOnlyMemory<byte> for serialization so we allocate here as well as in
+         /// PullConsumer when we probably don't need this allocation.
+         /// We can fix in .NET 5.0 over the dead-end fork of netstandard2.1
+         /// </summary>
+         /// <param name="bytes"></param>
+         /// <param name="bodyType"></param>
+         /// <param name="postBack"></param>
+         [JsonConstructor]
+         public MessageBody(byte[] bytes, string bodyType, PostBackItem postBack) : this(bytes, bodyType)
+         {
+             PostBack = postBack;
+         }
+
+        /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>

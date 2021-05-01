@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -70,6 +71,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="header">The header.</param>
         /// <param name="body">The body.</param>
+        [JsonConstructor]
         public Message(MessageHeader header, MessageBody body)
         {
             Header = header;
