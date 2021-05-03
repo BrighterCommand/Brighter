@@ -59,12 +59,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The message body as a callback function with state - usually used with a MessagePumpAsync for a continuation that should be
-        /// executed on the message pump thread. Intended for internal use to <see cref="Channel"/>
-        /// </summary>
-        public PostBackItem PostBack { get; set; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class with a string.  Use Value property to retrieve.
         /// </summary>
         /// <param name="body">The body of the message, usually XML or JSON.</param>
@@ -78,11 +72,12 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
         /// </summary>
-        /// <param name="body"></param>
+        /// <param name="bytes">The Body of the Message</param>
         /// <param name="bodyType">Hint for deserilization, the type of message encoded in body</param>
-        public MessageBody(byte[] body, string bodyType)
+        [JsonConstructor]
+        public MessageBody(byte[] bytes, string bodyType)
         {
-            Bytes = body;
+            Bytes = bytes;
             BodyType = bodyType ?? "JSON";
         }
 
@@ -99,31 +94,6 @@ namespace Paramore.Brighter
         {
             Bytes = body.ToArray();
             BodyType = bodyType ?? "JSON";
-         }
-
-         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageBody"/> class.
-        /// </summary>
-        /// <param name="postBack">The continuation to run</param>
-        public MessageBody(PostBackItem postBack)
-        {
-            PostBack = postBack;
-        }
-
-         /// <summary>
-         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
-         /// TODO: We don't support the range of options on Span<T> on netstandard2.0 that let's us
-         /// flow through a ReadOnlyMemory<byte> for serialization so we allocate here as well as in
-         /// PullConsumer when we probably don't need this allocation.
-         /// We can fix in .NET 5.0 over the dead-end fork of netstandard2.1
-         /// </summary>
-         /// <param name="bytes"></param>
-         /// <param name="bodyType"></param>
-         /// <param name="postBack"></param>
-         [JsonConstructor]
-         public MessageBody(byte[] bytes, string bodyType, PostBackItem postBack) : this(bytes, bodyType)
-         {
-             PostBack = postBack;
          }
 
         /// <summary>
