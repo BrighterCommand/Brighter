@@ -110,13 +110,6 @@ namespace Paramore.Brighter.ServiceActivator
                     break;
                 }
 
-                //async callback
-                if (message.Header.MessageType == MessageType.MT_CALLBACK)
-                {
-                    message.Execute();
-                    break;
-                }
-
                 // Serviceable message
                 try
                 {

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -58,12 +59,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The message body as a callback function with state - usually used with a MessagePumpAsync for a continuation that should be
-        /// executed on the message pump thread. Intended for internal use to <see cref="Channel"/>
-        /// </summary>
-        public PostBackItem PostBack { get; set; }
-
-        /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class with a string.  Use Value property to retrieve.
         /// </summary>
         /// <param name="body">The body of the message, usually XML or JSON.</param>
@@ -77,11 +72,12 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
         /// </summary>
-        /// <param name="body"></param>
+        /// <param name="bytes">The Body of the Message</param>
         /// <param name="bodyType">Hint for deserilization, the type of message encoded in body</param>
-        public MessageBody(byte[] body, string bodyType)
+        [JsonConstructor]
+        public MessageBody(byte[] bytes, string bodyType)
         {
-            Bytes = body;
+            Bytes = bytes;
             BodyType = bodyType ?? "JSON";
         }
 
@@ -100,16 +96,7 @@ namespace Paramore.Brighter
             BodyType = bodyType ?? "JSON";
          }
 
-         /// <summary>
-        /// Initializes a new instance of the <see cref="MessageBody"/> class.
-        /// </summary>
-        /// <param name="postBack">The continuation to run</param>
-        public MessageBody(PostBackItem postBack)
-        {
-            PostBack = postBack;
-        }
-
-       /// <summary>
+        /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
         /// <param name="other">An object to compare with this object.</param>
