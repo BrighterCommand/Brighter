@@ -25,7 +25,8 @@ THE SOFTWARE. */
  using System;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using Paramore.Brighter.Logging;
+ using Microsoft.Extensions.Logging;
+ using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     public class PullConsumer : DefaultBasicConsumer
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageConsumer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
         
         //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
         //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
@@ -120,7 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             catch (Exception e)
             {
                 //don't impede shutdown, just log
-                _logger.Value.WarnFormat("Tried to nack unhandled messages on shutdown but failed for {0}",
+                s_logger.LogWarning("Tried to nack unhandled messages on shutdown but failed for {ErrorMessage}",
                     e.Message);
             }
            

@@ -47,8 +47,10 @@ namespace HelloWorldAsync
                     {
                         services.AddBrighter().AutoFromAssemblies();
                         services.AddHostedService<RunCommandProcessor>();
+                        
                     }
                 )
+                .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
 

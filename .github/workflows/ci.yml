@@ -30,7 +30,7 @@ env:
 
 jobs:
   build:
-    timeout-minutes: 20
+    timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
       - name: setup-dotnet tests-sdk
@@ -47,13 +47,13 @@ jobs:
       - uses: actions/cache@v2
         with:
           path: ~/.nuget/packages
-          key: ubuntu-latest-nuget-${{ hashFiles('**/*.csproj') }}
+          key: Linux-nuget-${{ hashFiles('**/*.csproj') }}
           restore-keys: |
-            ubuntu-latest-nuget-
+            Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
       - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --no-build
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --no-build --verbosity d
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -65,7 +65,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
 
-     
+
   release:
     if: startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest

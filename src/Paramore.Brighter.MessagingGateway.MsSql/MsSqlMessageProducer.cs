@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 
@@ -10,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         
-        private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MsSqlMessageProducer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageProducer>();
         private readonly MsSqlMessageQueue<Message> _sqlQ;
         private Publication _publication; // -- placeholder for future use
 
@@ -28,7 +29,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             var topic = message.Header.Topic;
 
-            Logger.Value.Debug($"MsSqlMessageProducer: send message with topic {topic} and id {message.Id.ToString()}");
+            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic,
+                message.Id.ToString());
 
             _sqlQ.Send(message, topic);
         }
@@ -44,8 +46,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             var topic = message.Header.Topic;
 
-            Logger.Value.Debug(
-                $"MsSqlMessageProducer: send async message with topic {topic} and id {message.Id.ToString()}");
+            s_logger.LogDebug(
+                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic,
+                message.Id.ToString());
 
             await _sqlQ.SendAsync(message, topic);
         }

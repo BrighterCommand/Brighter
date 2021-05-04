@@ -4,7 +4,6 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Serilog;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace GreetingsReceiverConsole
@@ -13,19 +12,19 @@ namespace GreetingsReceiverConsole
     {
         private readonly IAmAnOutboxViewer<Message> _outbox;
         private readonly IAmACommandProcessor _commandProcessor;
-        private readonly ILogger _logger;
+        private readonly ILogger s_logger;
         private Timer _timer;
 
         public TimedOutboxSweeper (IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor, ILogger<TimedOutboxSweeper > logger)
         {
             _outbox = outbox;
             _commandProcessor = commandProcessor;
-            _logger = logger;
+            s_logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Outbox Sweeper Service is starting.");
+            s_logger.LogInformation("Outbox Sweeper Service is starting.");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
 
@@ -34,7 +33,7 @@ namespace GreetingsReceiverConsole
 
         private void DoWork(object state)
         {
-            _logger.LogInformation("Outbox Sweeper looking for unsent messages");
+            s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
 
             var outBoxSweeper = new OutboxSweeper(
                 milliSecondsSinceSent:5000, 
@@ -43,13 +42,13 @@ namespace GreetingsReceiverConsole
 
             outBoxSweeper.Sweep();
             
-            _logger.LogInformation("Outbox Sweeper sleeping");
+            s_logger.LogInformation("Outbox Sweeper sleeping");
            
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
-            _logger.LogInformation("Outbox Sweeper Service is stopping.");
+            s_logger.LogInformation("Outbox Sweeper Service is stopping.");
 
             _timer?.Change(Timeout.Infinite, 0);
 

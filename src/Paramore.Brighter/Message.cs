@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -70,6 +71,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="header">The header.</param>
         /// <param name="body">The body.</param>
+        [JsonConstructor]
         public Message(MessageHeader header, MessageBody body)
         {
             Header = header;
@@ -111,16 +113,6 @@ namespace Paramore.Brighter
         public bool HandledCountReached(int requeueCount)
         {
             return Header.HandledCount >= requeueCount;
-        }
-
-        public void Execute()
-        {
-            if (Header.MessageType != MessageType.MT_CALLBACK)
-            {
-                throw new InvalidOperationException("You cannot execute a callback unless the message is a callback method");
-            }
-
-            Body.PostBack.Call();
         }
 
         /// <summary>

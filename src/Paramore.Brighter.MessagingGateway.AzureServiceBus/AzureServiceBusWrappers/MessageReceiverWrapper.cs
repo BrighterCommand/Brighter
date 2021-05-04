@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus.Core;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
@@ -10,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
     public class MessageReceiverWrapper : IMessageReceiverWrapper
     {
         private readonly IMessageReceiver _messageReceiver;
-        private static readonly Lazy<ILog> Logger = new Lazy<ILog>(LogProvider.For<MessageReceiverWrapper>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessageReceiverWrapper>();
 
         public MessageReceiverWrapper(IMessageReceiver messageReceiver)
         {
@@ -30,9 +31,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
       
         public void Close()
         {
-            Logger.Value.Warn("Closing the MessageReceiver connection");
+            s_logger.LogWarning("Closing the MessageReceiver connection");
             _messageReceiver.CloseAsync().GetAwaiter().GetResult();
-            Logger.Value.Warn("MessageReceiver connection stopped");
+            s_logger.LogWarning("MessageReceiver connection stopped");
         }
 
         public async Task Complete(string lockToken)

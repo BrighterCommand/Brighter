@@ -30,7 +30,9 @@ using System.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
+using Paramore.Brighter.Inbox.MsSql.ConnectionFactories;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Inbox.MsSql
@@ -40,20 +42,32 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// </summary>
     public class MsSqlInbox : IAmAnInbox, IAmAnInboxAsync
     {
-        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<MsSqlInbox>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlInbox>();
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly MsSqlInboxConfiguration _configuration;
+        private readonly IMsSqlInboxConnectionFactory _connectionFactory;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlInbox(MsSqlInboxConfiguration configuration)
+        /// <param name="connectionFactory">The Connection Factory.</param>
+        public MsSqlInbox(MsSqlInboxConfiguration configuration, IMsSqlInboxConnectionFactory connectionFactory)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
+            _connectionFactory = connectionFactory;
+        }
+
+        /// <summary>
+        ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration.</param>
+        public MsSqlInbox(MsSqlInboxConfiguration configuration) : this(configuration,
+            new MsSqlInboxSqlAuthConnectionFactory(configuration.ConnectionString))
+        {
         }
 
         /// <summary>
@@ -68,7 +82,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             {
                 connection.Open();
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
@@ -80,8 +94,8 @@ namespace Paramore.Brighter.Inbox.MsSql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        s_logger.Value.WarnFormat(
-                            "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }
@@ -145,7 +159,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            using (var connection = await _connectionFactory.GetConnectionAsync(cancellationToken))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
@@ -157,8 +171,8 @@ namespace Paramore.Brighter.Inbox.MsSql
                 {
                     if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation || sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
                     {
-                        s_logger.Value.WarnFormat(
-                            "MsSqlOutbox: A duplicate Command with the CommandId {0} was inserted into the Outbox, ignoring and continuing",
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
                             command.Id);
                         return;
                     }
@@ -246,7 +260,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -266,7 +280,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             CancellationToken cancellationToken = default(CancellationToken),
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
+            using (var connection = await _connectionFactory.GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -277,11 +291,6 @@ namespace Paramore.Brighter.Inbox.MsSql
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
-        }
-
-        private DbConnection GetConnection()
-        {
-            return new SqlConnection(_configuration.ConnectionString);
         }
 
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
