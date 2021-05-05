@@ -73,12 +73,12 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
             catch (RestMSClientException rmse)
             {
-                s_logger.LogError("Error sending to the RestMS server: {0}", rmse.ToString());
+                s_logger.LogError("Error sending to the RestMS server: {ErrorMessage}", rmse.ToString());
                 throw;
             }
             catch (HttpRequestException he)
             {
-                s_logger.LogError("HTTP error on request to the RestMS server: {0}", he.ToString());
+                s_logger.LogError("HTTP error on request to the RestMS server: {ErrorMessage}", he.ToString());
                 throw;
             }
         }
@@ -155,7 +155,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError("Threw exception sending message to feed {0} with Id {1} due to {2}", feedName, message.Header.Id, exception.Message);
+                    s_logger.LogError("Threw exception sending message to feed {0} with Id {Id} due to {ErrorMessage}", feedName, message.Header.Id, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error sending message to feed {0} with Id {1} , see log for details", feedName, message.Header.Id));

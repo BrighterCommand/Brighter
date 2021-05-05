@@ -95,7 +95,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
   
                 var redisMessage = CreateRedisMessage(message);
 
-                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
+                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value);
                 //increment a counter to get the next message id
                 var nextMsgId = IncrementMessageCounter(client);
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 StoreMessage(client, redisMessage, nextMsgId);
                 //If there are subscriber queues, push the message to the subscriber queues
                 var pushedTo = PushToQueues(client, nextMsgId);
-                s_logger.LogDebug("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2} to queues: {3}", 
+                s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
             }
         }

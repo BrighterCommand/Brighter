@@ -100,7 +100,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 lock (_lock)
                 {
-                    s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {0}", Connection.Exchange.Name);
+                    s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}", Connection.Exchange.Name);
                     EnsureBroker(makeExchange: _publication.MakeChannels);
                     
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
@@ -113,12 +113,12 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
          
 
                     s_logger.LogDebug(
-                        "RmqMessageProducer: Publishing message to exchange {0} on subscription {1} with a delay of {5} and topic {2} and persisted {6} and id {3} and body: {4}",
-                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
-                        message.Id, message.Body.Value, delayMilliseconds, message.Persist);
-                    
+                        "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}",
+                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delayMilliseconds,
+                        message.Header.Topic, message.Persist, message.Id, message.Body.Value);
                     
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
+
                     if (DelaySupported)
                     {
                         rmqMessagePublisher.PublishMessage(message, delayMilliseconds);
@@ -130,15 +130,16 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     }
 
                     s_logger.LogInformation(
-                        "RmqMessageProducer: Published message to exchange {0} on subscription {1} with a delay of {6} and topic {2} and persisted {7} and id {3} and message: {4} at {5}",
-                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), message.Header.Topic,
-                        message.Id, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow, delayMilliseconds, message.Persist);
+                        "RmqMessageProducer: Published message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and message: {Request} at {Time}",
+                        Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delayMilliseconds,
+                        message.Header.Topic, message.Persist, message.Id,
+                        JsonSerializer.Serialize(message, JsonSerialisationOptions.Options), DateTime.UtcNow);
                 }
             }
             catch (IOException io)
             {
                 s_logger.LogError(io,
-                    "RmqMessageProducer: Error talking to the socket on {0}, resetting subscription",
+                    "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription",
                     Connection.AmpqUri.GetSanitizedUri()
                     );
                 ResetConnectionToBroker();

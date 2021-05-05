@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         public void EnsurePipeExists(string pipeTitle, string routingKey, RestMSDomain domain)
         {
-            s_logger.LogDebug("Checking for existence of the pipe {0} on the RestMS server: {1}", pipeTitle, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            s_logger.LogDebug("Checking for existence of the pipe {0} on the RestMS server: {URL}", pipeTitle, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var pipeExists = PipeExists(pipeTitle, domain);
             if (!pipeExists)
             {
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             /*TODO: Optimize this by using a repository approach with the repository checking for modification 
             through etag and serving existing version if not modified and grabbing new version if changed*/
 
-            s_logger.LogDebug("Getting the pipe from the RestMS server: {0}", PipeUri);
+            s_logger.LogDebug("Getting the pipe from the RestMS server: {URL}", PipeUri);
             var client = _gateway.Client();
 
             try
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError(exception, "Threw exception getting Pipe {0} from RestMS Server {1}", PipeUri, exception.Message);
+                    s_logger.LogError(exception, "Threw exception getting Pipe {URL} from RestMS Server {Request}", PipeUri, exception.Message);
                 }
 
                 throw new RestMSClientException("Error retrieving the domain from the RestMS server, see log for details");
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         private RestMSDomain CreatePipe(string domainUri, string title)
         {
-            s_logger.LogDebug("Creating the pipe {0} on the RestMS server: {1}", title, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            s_logger.LogDebug("Creating the pipe {0} on the RestMS server: {URL}", title, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var client = _gateway.Client();
             try
             {
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError(exception, "Threw exception adding Pipe {0} to RestMS Server {1}", title, exception.Message);
+                    s_logger.LogError(exception, "Threw exception adding Pipe {0} to RestMS Server {URL}", title, exception.Message);
                 }
 
                 throw new RestMSClientException(string.Format("Error adding the Feed {0} to the RestMS server, see log for details", title));

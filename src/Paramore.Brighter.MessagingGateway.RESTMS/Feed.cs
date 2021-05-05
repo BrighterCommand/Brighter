@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         public void EnsureFeedExists(RestMSDomain domain)
         {
             var feedName = _gateway.Configuration.Feed.Name;
-            s_logger.LogDebug("Checking for existence of the feed {0} on the RestMS server: {1}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            s_logger.LogDebug("Checking for existence of the feed {0} on the RestMS server: {URL}", feedName, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var isFeedDeclared = IsFeedDeclared(domain, feedName);
             if (!isFeedDeclared)
             {
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         private RestMSDomain CreateFeed(string domainUri, string name)
         {
-            s_logger.LogDebug("Creating the feed {0} on the RestMS server: {1}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            s_logger.LogDebug("Creating the feed {0} on the RestMS server: {URL}", name, _gateway.Configuration.RestMS.Uri.AbsoluteUri);
             var client = _gateway.Client();
             try
             {
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    s_logger.LogError(exception,"Threw exception adding Feed {0} to RestMS Server {1}", name, exception.Message);
+                    s_logger.LogError(exception,"Threw exception adding Feed {0} to RestMS Server {ErrorMessage}", name, exception.Message);
                 }
 
                 throw new RestMSClientException($"Error adding the Feed {name} to the RestMS server, see log for details");

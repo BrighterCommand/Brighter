@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 var header = reader.ReadLine();
                 if (header.TrimEnd() != "<HEADER")
                 {
-                    s_logger.LogError("Expected message to begin with <HEADER, but was {0}", redisMessage);
+                    s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
                 
@@ -72,14 +72,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 header = reader.ReadLine();
                 if (header.TrimStart() != "HEADER/>")
                 {
-                    s_logger.LogError("Expected message to find end of HEADER/>, but was {0}", redisMessage);
+                    s_logger.LogError("Expected message to find end of HEADER/>, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
 
                 var body = reader.ReadLine();
                 if (body.TrimEnd() != "<BODY")
                 {
-                    s_logger.LogError("Expected message to have beginning of <BODY, but was {0}", redisMessage);
+                    s_logger.LogError("Expected message to have beginning of <BODY, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
                 
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 body = reader.ReadLine();
                 if (body.TrimStart() != "BODY/>")
                 {
-                    s_logger.LogError("Expected message to find end of BODY/>, but was {0}", redisMessage);
+                    s_logger.LogError("Expected message to find end of BODY/>, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
                 

@@ -48,10 +48,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="message">The message.</param>
         public void Reject(Message message)
-        {
-            s_logger.LogInformation(
-                $"MsSqlMessagingConsumer: rejecting message with topic {message.Header.Topic} and id {message.Id.ToString()}, NOT IMPLEMENTED");
-        }
+         {
+             s_logger.LogInformation(
+                 "MsSqlMessagingConsumer: rejecting message with topic {Topic} and id {Id}, NOT IMPLEMENTED",
+                 message.Header.Topic, message.Id.ToString());
+         }
 
         /// <summary>
         /// Purges the specified queue name.
@@ -71,7 +72,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug($"MsSqlMessagingConsumer: re-queuing message with topic {topic} and id {message.Id.ToString()}");
+            s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
+                message.Id.ToString());
 
             _sqlQ.Send(message, topic);
         }

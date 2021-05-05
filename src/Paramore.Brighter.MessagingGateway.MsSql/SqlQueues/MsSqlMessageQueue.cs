@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug($"MsSqlMessageQueue({_configuration.ConnectionString}, {_configuration.QueueStoreTable})");
+                s_logger.LogDebug("MsSqlMessageQueue({ConnectionString}, {QueueStoreTable})", _configuration.ConnectionString, _configuration.QueueStoreTable);
             ContinueOnCapturedContext = false;
         }
 
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         public void Send(T message, string topic, int timeoutInMilliseconds = -1)
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"Send<{typeof(T).FullName}>(..., {topic})");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Send<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
 
             var parameters = InitAddDbParameters(topic, message);
 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public async Task SendAsync(T message, string topic, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"SendAsync<{typeof(T).FullName}>(..., {topic})");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("SendAsync<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
 
             var parameters = InitAddDbParameters(topic, message);
 
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public ReceivedResult<T> TryReceive(string topic, int timeoutInMilliseconds)
         {
             if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug($"TryReceive<{typeof(T).FullName}>(..., {timeoutInMilliseconds})");
+                s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout)", typeof(T).FullName, timeoutInMilliseconds);
             var rc = TryReceive(topic);
             var timeleft = timeoutInMilliseconds;
             while (!rc.IsDataValid && timeleft > 0)
@@ -113,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message is waiting</returns>
         private ReceivedResult<T> TryReceive(string topic)
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"TryReceive<{typeof(T).FullName}>(...)");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("TryReceive<{CommandType}>(...)", typeof(T).FullName);
 
             var parameters = InitRemoveDbParameters(topic);
 
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public async Task<ReceivedResult<T>> TryReceiveAsync(string topic,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug($"TryReceiveAsync<{typeof(T).FullName}>(...)");
+            if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("TryReceiveAsync<{CommandType}>(...)", typeof(T).FullName);
 
             var parameters = InitRemoveDbParameters(topic);
 

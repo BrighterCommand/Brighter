@@ -24,7 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
          public IAmAMessageConsumer Create(Subscription subscription)
         {
             if (subscription.ChannelName == null) throw new ArgumentNullException(nameof(subscription.ChannelName));
-            s_logger.LogDebug($"MsSqlMessageConsumerFactory: create consumer for topic {subscription.ChannelName}");
+            s_logger.LogDebug("MsSqlMessageConsumerFactory: create consumer for topic {ChannelName}", subscription.ChannelName);
             return new MsSqlMessageConsumer(_msSqlMessagingGatewayConfiguration, subscription.ChannelName);
         }
     }

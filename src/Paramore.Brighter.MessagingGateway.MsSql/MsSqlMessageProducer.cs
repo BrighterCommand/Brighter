@@ -29,7 +29,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             var topic = message.Header.Topic;
 
-            s_logger.LogDebug($"MsSqlMessageProducer: send message with topic {topic} and id {message.Id.ToString()}");
+            s_logger.LogDebug("MsSqlMessageProducer: send message with topic {Topic} and id {Id}", topic,
+                message.Id.ToString());
 
             _sqlQ.Send(message, topic);
         }
@@ -46,7 +47,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             var topic = message.Header.Topic;
 
             s_logger.LogDebug(
-                $"MsSqlMessageProducer: send async message with topic {topic} and id {message.Id.ToString()}");
+                "MsSqlMessageProducer: send async message with topic {Topic} and id {Id}", topic,
+                message.Id.ToString());
 
             await _sqlQ.SendAsync(message, topic);
         }

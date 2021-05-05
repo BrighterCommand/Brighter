@@ -103,7 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             if (!XmlResultParser.TryParse(entityBody, out domainObject))
             {
                 var errorString = $"Could not parse entity body as a domain => {entityBody}";
-                s_logger.LogError(errorString);
+                s_logger.LogError("Could not parse entity body as a domain => {Request}", entityBody);
                 throw new ResultParserException(errorString);
             }
             return domainObject;

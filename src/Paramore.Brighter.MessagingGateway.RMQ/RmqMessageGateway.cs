@@ -126,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 connection.ConnectionBlocked += HandleBlocked;
                 connection.ConnectionUnblocked += HandleUnBlocked;
 
-                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on subscription {0}",
+                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on subscription {URL}",
                     Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
@@ -138,13 +138,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void HandleBlocked(object sender, ConnectionBlockedEventArgs args)
         {
-            s_logger.LogWarning("RMQMessagingGateway: Subscription to {0} blocked. Reason: {1}", 
+            s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}", 
                 Connection.AmpqUri.GetSanitizedUri(), args.Reason);
         }
 
         private void HandleUnBlocked(object sender, EventArgs args)
         { 
-            s_logger.LogInformation("RMQMessagingGateway: Subscription to {0} unblocked", Connection.AmpqUri.GetSanitizedUri());
+            s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri.GetSanitizedUri());
         }
 
         protected void ResetConnectionToBroker()

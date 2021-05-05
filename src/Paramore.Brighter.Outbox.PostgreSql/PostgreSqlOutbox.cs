@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                         if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                         {
                             s_logger.LogWarning(
-                                "PostgresSQLOutbox: A duplicate Message with the MessageId {0} was inserted into the Outbox, ignoring and continuing",
+                                "PostgresSQLOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                                 message.Id);
                             return;
                         }
