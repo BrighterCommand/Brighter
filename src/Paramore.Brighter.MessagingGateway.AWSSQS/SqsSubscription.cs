@@ -129,7 +129,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Dictionary<string,string> tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
         )
-            : base(dataType, name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
                 unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
         {
             LockTimeout = lockTimeout;
