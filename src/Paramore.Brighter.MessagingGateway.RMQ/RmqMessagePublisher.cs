@@ -74,11 +74,12 @@ internal class RmqMessagePublisher
                 throw new ArgumentNullException(nameof(connection));
             }
 
-            _channel = channel;
             _connection = connection;
-        }
+            
+            _channel = channel;
+       }
 
-        /// <summary>
+       /// <summary>
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
