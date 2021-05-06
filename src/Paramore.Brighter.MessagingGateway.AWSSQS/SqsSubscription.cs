@@ -111,8 +111,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
-            int noOfPerformers = 1,
             int bufferSize = 1,
+            int noOfPerformers = 1,
             int timeoutInMilliseconds = 300,
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
@@ -177,8 +177,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SqsSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
-            int noOfPerformers = 1,
             int bufferSize = 1,
+            int noOfPerformers = 1,
             int timeoutInMilliseconds = 300,
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
@@ -195,7 +195,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Dictionary<string,string> tags = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
         )
-            : base(typeof(T), name, channelName, routingKey, noOfPerformers, bufferSize, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
+            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
                 unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, iAmPolicy,redrivePolicy,
                 snsAttributes, tags, makeChannels)
         {
