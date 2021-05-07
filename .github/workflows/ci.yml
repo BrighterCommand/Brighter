@@ -30,7 +30,7 @@ env:
 
 jobs:
   build:
-    timeout-minutes: 30
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - name: setup-dotnet tests-sdk
@@ -52,28 +52,57 @@ jobs:
             Linux-nuget-
       - name: Build
         run: dotnet build --configuration Release
-      - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --no-build --verbosity d
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v2
         with:
           name: nuget packages
           path: "**/*.nupkg"
-      - name: Push to GitHub Feed
+          
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [build]
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Core Tests
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal" --blame -v n
+
+  prerelease:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [test]
+    
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          name: nuget packages
+      - name: to GitHub Feed
         run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPOSITORY_OWNER: ${{ github.repository_owner }}
-          
-  tests:
-    
 
-
+  
   release:
     if: startsWith(github.ref, 'refs/tags')
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
     steps:
       - uses: actions/download-artifact@v2
         with:
