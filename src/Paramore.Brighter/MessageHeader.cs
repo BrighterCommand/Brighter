@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -58,11 +58,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// A quit message, used to end a dispatcher's message pump
         /// </summary>
-        MT_QUIT = 4,
-        /// <summary>
-        /// We are a message used to provide a callback for an uncompleted task that has finished and should be scheduled
-        /// </summary>
-        MT_CALLBACK = 5,
+        MT_QUIT = 4
     }
 
     /// <summary>
