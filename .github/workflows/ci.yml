@@ -64,6 +64,8 @@ jobs:
     needs: [build]
 
     steps:
+      - name: Current Time
+        run: date +"%T" 
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
@@ -73,8 +75,12 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Current Time
+        run: date +"%T"
       - name: Install dependencies
         run: dotnet restore
+      - name: Current Time
+        run: date +"%T"
       - name: Core Tests
         run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --logger "console;verbosity=normal" --blame -v n
 
