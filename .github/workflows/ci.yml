@@ -63,10 +63,6 @@ jobs:
     timeout-minutes: 10
     needs: [build]
 
-    strategy:
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
@@ -113,7 +109,7 @@ jobs:
   memory:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
     
     steps:
       - uses: actions/checkout@v2
@@ -133,7 +129,7 @@ jobs:
   redis-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
     
     services:
       redis:  
@@ -164,7 +160,7 @@ jobs:
   rabbitmq-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
 
     services:
       rabbitmq:
@@ -196,7 +192,7 @@ jobs:
   kafka-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    needs: [build]
+    needs: [test]
     env:
       CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
       CONFLUENT_SASL_PASSWORD: ${{ secrets.CONFLUENT_SASL_PASSWORD }}
@@ -253,7 +249,7 @@ jobs:
   postgres-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
   
     services:
       postgres:
@@ -321,7 +317,7 @@ jobs:
   sqlserver-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
   
     services:
       sqlserver:
@@ -349,7 +345,7 @@ jobs:
   mysql-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
   
     services:
       mariadb:
@@ -386,7 +382,7 @@ jobs:
   dynamo-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
-    needs: [build]
+    needs: [test]
   
     services:
       dynamo:
@@ -411,8 +407,8 @@ jobs:
 
   aws-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: [build]
+    timeout-minutes: 10
+    needs: [test]
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -445,8 +441,8 @@ jobs:
 
   azure-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
-    needs: [build]
+    timeout-minutes: 10
+    needs: [test]
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
