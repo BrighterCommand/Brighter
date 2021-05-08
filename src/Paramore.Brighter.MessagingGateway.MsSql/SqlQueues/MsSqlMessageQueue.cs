@@ -168,7 +168,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
         public int NumberOfMessageReady(string topic)
         {
-            var sql = $"select COUNT(*) from Queues where Topic='{topic}'";
+            var sql = $"select COUNT(*) from [{_configuration.QueueStoreTable}] where Topic='{topic}'";
             using (var connection = GetConnection())
             {
                 var sqlCmd = connection.CreateCommand();
@@ -213,7 +213,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
         {
             var sql =
-                $"set nocount on;insert into {_configuration.QueueStoreTable} (Topic, MessageType, Payload) values(@topic, @messageType, @payload);";
+                $"set nocount on;insert into [{_configuration.QueueStoreTable}] (Topic, MessageType, Payload) values(@topic, @messageType, @payload);";
             var sqlCmd = connection.CreateCommand();
             if (timeoutInMilliseconds != -1) sqlCmd.CommandTimeout = timeoutInMilliseconds;
 
@@ -234,7 +234,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         private DbCommand InitRemoveDbCommand(DbConnection connection, DbParameter[] parameters)
         {
             var sql =
-                $"set nocount on;with cte as (select top(1) Payload, MessageType, Topic, Id from {_configuration.QueueStoreTable}" +
+                $"set nocount on;with cte as (select top(1) Payload, MessageType, Topic, Id from [{_configuration.QueueStoreTable}]" +
                 " with (rowlock, readpast) where Topic = @topic order by Id) delete from cte output deleted.Payload, deleted.MessageType, deleted.Topic, deleted.Id;";
             var sqlCmd = connection.CreateCommand();
             sqlCmd.CommandText = sql;
@@ -244,7 +244,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
         private DbCommand InitPurgeDbCommand(DbConnection connection)
         {
-            var sql = $"delete from from {_configuration.QueueStoreTable}";
+            var sql = $"delete from [{_configuration.QueueStoreTable}]";
             var sqlCmd = connection.CreateCommand();
             sqlCmd.CommandText = sql;
             return sqlCmd;
