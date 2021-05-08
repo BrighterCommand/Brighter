@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 {
@@ -18,14 +19,16 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         private const int RetryDelay = 100;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageQueue<T>>();
         private readonly MsSqlMessagingGatewayConfiguration _configuration;
+        private readonly IMsSqlMessagingGatewayConnectionFactory _connectionFactory;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlMessageQueue{T}" /> class.
         /// </summary>
         /// <param name="configuration"></param>
-        public MsSqlMessageQueue(MsSqlMessagingGatewayConfiguration configuration)
+        public MsSqlMessageQueue(MsSqlMessagingGatewayConfiguration configuration, IMsSqlMessagingGatewayConnectionFactory connectionFactory)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _connectionFactory = connectionFactory;
             if (s_logger.IsEnabled(LogLevel.Debug))
                 s_logger.LogDebug("MsSqlMessageQueue({ConnectionString}, {QueueStoreTable})", _configuration.ConnectionString, _configuration.QueueStoreTable);
             ContinueOnCapturedContext = false;
@@ -53,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             {
                 connection.Open();
                 var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
@@ -76,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            using (var connection = GetConnection())
+            using (var connection = await _connectionFactory.GetConnectionAsync())
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
@@ -117,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             {
                 connection.Open();
                 var sqlCmd = InitRemoveDbCommand(connection, parameters);
@@ -145,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            using (var connection = GetConnection())
+            using (var connection = await _connectionFactory.GetConnectionAsync())
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlCmd = InitRemoveDbCommand(connection, parameters);
@@ -169,7 +172,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public int NumberOfMessageReady(string topic)
         {
             var sql = $"select COUNT(*) from [{_configuration.QueueStoreTable}] where Topic='{topic}'";
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             {
                 var sqlCmd = connection.CreateCommand();
                 sqlCmd.CommandText = sql;
@@ -184,16 +187,14 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         {
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("Purge()");
 
-            using (var connection = GetConnection())
+            using (var connection = _connectionFactory.GetConnection())
             {
                 connection.Open();
                 var sqlCmd = InitPurgeDbCommand(connection);
                 sqlCmd.ExecuteNonQuery();
             }
         }
-
-        private DbConnection GetConnection() => new SqlConnection(_configuration.ConnectionString);
-
+        
         private static DbParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value);
