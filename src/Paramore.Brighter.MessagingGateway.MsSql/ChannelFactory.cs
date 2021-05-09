@@ -10,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly MsSqlMessageConsumerFactory _msSqlMessageConsumerFactory;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="KafkaInputChannelFactory"/> class.
+        /// Initializes a new instance of the <see cref="MsSqlMessageConsumerFactory"/> class.
         /// </summary>
         /// <param name="msSqlMessageConsumerFactory"></param>
         public ChannelFactory(MsSqlMessageConsumerFactory msSqlMessageConsumerFactory)
