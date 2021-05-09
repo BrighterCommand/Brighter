@@ -34,7 +34,7 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class DispatcherRestartConnectionTests : IAsyncLifetime
+    public class DispatcherRestartConnectionTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -63,20 +63,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             Task.Delay(250).Wait();
             _dispatcher.Shut("test");
             _dispatcher.Shut("newTest");
-            Task.Delay(500).Wait();
+            Task.Delay(1000).Wait();
             _dispatcher.Consumers.Should().HaveCount(0);
         }
 
         [Fact]
-        public async Task When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
+        public void When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
         {
             _dispatcher.Open("newTest");
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
-            
-            await Task.Delay(500);
-            
+            Task.Delay(500).Wait();
+
+
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
             //_should_have_a_running_state
@@ -86,17 +86,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_two_connections
             _dispatcher.Connections.Should().HaveCount(2);
         }
-        public Task InitializeAsync()
-        {
-            var completionSource = new TaskCompletionSource<IDispatcher>();
-            completionSource.SetResult(_dispatcher);
 
-            return completionSource.Task;
-        }
-
-        public Task DisposeAsync()
+        public void Dispose()
         {
-            return _dispatcher.End();
+            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
+                _dispatcher.End().Wait();
         }
     }
 }
