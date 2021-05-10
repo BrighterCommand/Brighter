@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -36,12 +37,12 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherMultipleConnectionTests
+    public class MessageDispatcherMultipleConnectionTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _eventChannel;
         private readonly FakeChannel _commandChannel;
-        private int _numberOfConsumers;
+        private static int _numberOfConsumers;
 
         public MessageDispatcherMultipleConnectionTests()
         {
@@ -76,12 +77,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
 
         [Fact]
-        public async Task When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
+        public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
-            _dispatcher.State.Should().Be(DispatcherState.DS_RUNNING);
+            Task.Delay(1000).Wait();
             _numberOfConsumers = _dispatcher.Consumers.Count();
-            
-            await _dispatcher.End();
+            _dispatcher.End().Wait();
 
            //_should_have_consumed_the_messages_in_the_event_channel
             _eventChannel.Length.Should().Be(0);
@@ -94,9 +94,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_of_had_2_consumers_when_running
             _numberOfConsumers.Should().Be(2);
         }
+        
+        public void Dispose()
+        {
+            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
+                _dispatcher.End().Wait();
+        }
 
-
-     
     }
 
 }

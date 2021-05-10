@@ -52,14 +52,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public async Task When_An_Unacceptable_Message_Is_Received()
+        public void When_An_Unacceptable_Message_Is_Recieved()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            Task.Delay(1000).Wait();
 
-            var quitMessage = new Message(new MessageHeader(Guid.NewGuid(), "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            await task;
+            Task.WaitAll(new[] { task });
 
             //should_acknowledge_the_message
             _channel.AcknowledgeHappened.Should().BeTrue();
