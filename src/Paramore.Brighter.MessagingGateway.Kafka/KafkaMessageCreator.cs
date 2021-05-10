@@ -1,9 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.Linq;
 using System.Text;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
@@ -11,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessageCreator
     {
-        private static readonly Lazy<ILog> s_logger = new Lazy<ILog>(LogProvider.For<KafkaMessageCreator>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
 
         public Message CreateMessage(ConsumeResult<string, string> consumeResult)
         {
@@ -60,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception e)
             {
-                s_logger.Value.WarnException("Failed to create message from amqp message", e);
+                s_logger.LogWarning(e, "Failed to create message from amqp message");
                 message = FailureMessage(topic, messageId);
             }
 
@@ -89,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
                 else
                 {
-                    s_logger.Value.DebugFormat("Could not parse message correlation id: {0}", correlationValue);
+                    s_logger.LogDebug("Could not parse message correlation id: {CorrelationValue}", correlationValue);
                     return new HeaderResult<Guid>(Guid.Empty, false);
                 }
             }
@@ -136,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                        s_logger.Value.DebugFormat("No message id found in message MessageId, new message id is {0}", newMessageId);
+                        s_logger.LogDebug("No message id found in message MessageId, new message id is {NewMessageId}", newMessageId);
                         return new HeaderResult<Guid>(newMessageId, true);
                     }
 
@@ -145,7 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         return new HeaderResult<Guid>(messageId, true);
                     }
 
-                    s_logger.Value.DebugFormat("Could not parse message MessageId, new message id is {0}", Guid.Empty);
+                    s_logger.LogDebug("Could not parse message MessageId, new message id is {Id}", Guid.Empty);
                     return new HeaderResult<Guid>(Guid.Empty, false);
                 });
         }
@@ -157,7 +156,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                         s_logger.Value.DebugFormat("No partition key found in message");
+                         s_logger.LogDebug("No partition key found in message");
                          return new HeaderResult<string>(string.Empty, true);
                     }
 
@@ -183,7 +182,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 catch (Exception e)
                 {
                     var firstTwentyBytes = BitConverter.ToString(lastHeader.Take(20).ToArray());
-                    s_logger.Value.WarnException("Failed to read the value of header {0} as UTF-8, first 20 byes follow: \n\t{1}", e, key, firstTwentyBytes);
+                    s_logger.LogWarning(e, "Failed to read the value of header {Topic} as UTF-8, first 20 byes follow: \n\t{1}", key, firstTwentyBytes);
                     return new HeaderResult<string>(null, false);
                 }
             }

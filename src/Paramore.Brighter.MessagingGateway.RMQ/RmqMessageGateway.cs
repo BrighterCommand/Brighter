@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Polly;
 using RabbitMQ.Client;
@@ -50,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
     public class RmqMessageGateway : IDisposable
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessageGateway>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageGateway>();
         private readonly Policy _circuitBreakerPolicy;
         private readonly ConnectionFactory _connectionFactory;
         private readonly Policy _retryPolicy;
@@ -125,12 +126,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 connection.ConnectionBlocked += HandleBlocked;
                 connection.ConnectionUnblocked += HandleUnBlocked;
 
-                _logger.Value.DebugFormat("RMQMessagingGateway: Opening channel to Rabbit MQ on subscription {0}",
+                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on subscription {URL}",
                     Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();
-                
-               _logger.Value.DebugFormat("RMQMessagingGateway: Declaring exchange {0} on subscription {1}", Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri());
 
                 //desired state configuration of the exchange
                 Channel.DeclareExchangeForConnection(Connection, makeExchange);
@@ -139,13 +138,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void HandleBlocked(object sender, ConnectionBlockedEventArgs args)
         {
-            _logger.Value.WarnFormat("RMQMessagingGateway: Subscription to {0} blocked. Reason: {1}", 
+            s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}", 
                 Connection.AmpqUri.GetSanitizedUri(), args.Reason);
         }
 
         private void HandleUnBlocked(object sender, EventArgs args)
-        {
-            _logger.Value.InfoFormat("RMQMessagingGateway: Subscription to {0} unblocked", Connection.AmpqUri.GetSanitizedUri());
+        { 
+            s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri.GetSanitizedUri());
         }
 
         protected void ResetConnectionToBroker()

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.RESTMS.Exceptions;
 using Paramore.Brighter.MessagingGateway.RESTMS.Model;
@@ -32,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 {
     internal class Domain
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<Domain>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<Domain>();
 
         private readonly RestMSMessageGateway _gateway;
 
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// <exception cref="RestMSClientException"></exception>
         public RestMSDomain GetDomain()
         {
-            _logger.Value.DebugFormat("Getting the default domain from the RestMS server: {0}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
+            s_logger.LogDebug("Getting the default domain from the RestMS server: {URL}", _gateway.Configuration.RestMS.Uri.AbsoluteUri);
 
             try
             {
@@ -60,7 +61,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             {
                 foreach (var exception in ae.Flatten().InnerExceptions)
                 {
-                    _logger.Value.ErrorFormat("Threw exception getting Domain from RestMS Server {0}", exception.Message);
+                    s_logger.LogError(exception,"Threw exception getting Domain from RestMS Server {ErrorMessage}", exception.Message);
                 }
 
                 throw new RestMSClientException("Error retrieving the domain from the RestMS server, see log for details");

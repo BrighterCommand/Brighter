@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class AWSMessagingGateway
     {
-        protected static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<ChannelFactory>);
+        protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AWSMessagingGateway>();
         protected AWSMessagingGatewayConnection _awsConnection;
         protected string _channelTopicArn;
 
@@ -18,11 +19,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _awsConnection = awsConnection;
         }
 
-        protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, OnMissingChannel makeTopic)
+        protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
         {
             //on validate or assume, turn a routing key into a topicARN
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
-                ValidateTopic(topic, attributes, makeTopic);
+                ValidateTopic(topic, topicFindBy, makeTopic);
             else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
             return _channelTopicArn;
         }
@@ -44,6 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
                 };
                 
+                //create topic is idempotent, so safe to call even if topic already exists
                 var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
                 
                 if (!string.IsNullOrEmpty(createTopic.TopicArn))
@@ -53,53 +55,30 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private void ValidateTopic(RoutingKey topic, SnsAttributes attributes, OnMissingChannel onMissingChannel)
+        private void ValidateTopic(RoutingKey topic, TopicFindBy findTopicBy, OnMissingChannel onMissingChannel)
         {
-            if ((attributes != null) && (!string.IsNullOrEmpty(attributes.TopicARN)))
-            {
-                if (onMissingChannel == OnMissingChannel.Assume)
-                {
-                    _channelTopicArn = attributes.TopicARN;
-                    return;
-                }
-                else
-                {
-                    ValidateTopicByArn(attributes.TopicARN);
-                }
-            }
-
-            ValidateTopicByName(topic);
+            IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy);
+            (bool exists, string topicArn) = topicValidationStrategy.Validate(topic);
+            if (exists)
+                _channelTopicArn = topicArn;
+            else
+                throw new BrokerUnreachableException(
+                    $"Topic validation error: could not find topic {topic}. Did you want Brighter to create infrastructure?");
         }
 
-        private bool ValidateTopicByArn(string topicArn)
+        private IValidateTopic GetTopicValidationStrategy(TopicFindBy findTopicBy)
         {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
+            switch (findTopicBy)
             {
-                var response = snsClient.GetTopicAttributesAsync(new GetTopicAttributesRequest(topicArn))
-                    .GetAwaiter()
-                    .GetResult();
-                return ((response.HttpStatusCode == HttpStatusCode.OK) && (response.Attributes["TopicArn"] == topicArn));
+                case TopicFindBy.Arn:
+                    return new ValidateTopicByArn(_awsConnection.Credentials, _awsConnection.Region);
+                case TopicFindBy.Convention:
+                    return new ValidateTopicByArnConvention(_awsConnection.Credentials, _awsConnection.Region);
+                case TopicFindBy.Name:
+                    return new ValidateTopicByName(_awsConnection.Credentials, _awsConnection.Region);
+                default:
+                    throw new ConfigurationException("Unknown TopicFindBy used to determine how to read RoutingKey");
             }
-        }
-
-        private void ValidateTopicByName(RoutingKey topic)
-        {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
-            {
-                var (success, arn) = FindTopicByName(topic.ToValidSNSTopicName(), snsClient);
-                if (success)
-                    _channelTopicArn = arn;
-                else
-                    throw new BrokerUnreachableException(
-                        $"Topic validation error: could not find topic {topic.ToValidSNSTopicName()}. Did you want Brighter to create infrastructure?");
-            }
-        }
-
-        //Note that we assume here that topic names are globally unique, if not provide the topic ARN directly in the SNSAttributes of the subscription
-        private static (bool success, string topicArn) FindTopicByName(RoutingKey topicName, AmazonSimpleNotificationServiceClient snsClient)
-        {
-            var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-            return (topic != null, topic?.TopicArn);
         }
     }
 }

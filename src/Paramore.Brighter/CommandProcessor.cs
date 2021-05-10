@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Polly;
@@ -41,7 +42,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor, IDisposable
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<CommandProcessor>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
@@ -60,12 +61,12 @@ namespace Paramore.Brighter
         private readonly object _checkOutStandingMessagesObject = new object();
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
-        private static int _outStandingCount = 0;
+        private int _outStandingCount;
 
         // the following are not readonly to allow setting them to null on dispose
         private IAmAMessageProducer _messageProducer;
         private IAmAMessageProducerAsync _asyncMessageProducer;
-        private IAmAChannelFactory _responseChannelFactory;
+        private readonly IAmAChannelFactory _responseChannelFactory;
         private bool _disposed;
 
         /// <summary>
@@ -244,7 +245,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
 
-            ConfigureAsyncPublisherCalllbackMaybe();
+            ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -338,7 +339,6 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="responseChannelFactory">Add response channel if doing request reply</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -364,7 +364,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
 
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
-            if (!ConfigurePublisherCallbackMaybe()) ConfigureAsyncPublisherCalllbackMaybe();
+            if (!ConfigurePublisherCallbackMaybe()) ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -385,7 +385,7 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
             {
-                _logger.Value.InfoFormat("Building send pipeline for command: {0} {1}", command.GetType(), command.Id);
+                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -414,7 +414,7 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
             {
-                _logger.Value.InfoFormat("Building send async pipeline for command: {0} {1}", command.GetType(), command.Id);
+                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
@@ -443,12 +443,12 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
             {
-                _logger.Value.InfoFormat("Building send pipeline for event: {0} {1}", @event.GetType(), @event.Id);
+                s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(requestContext);
 
                 var handlerCount = handlerChain.Count();
 
-                _logger.Value.InfoFormat("Found {0} pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
+                s_logger.LogInformation("Found {HandlerCount} pipelines for event: {EventType} {Id}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handleRequests in handlerChain)
@@ -494,12 +494,12 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
             {
-                _logger.Value.InfoFormat("Building send async pipeline for event: {0} {1}", @event.GetType(), @event.Id);
+                s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(), @event.Id);
 
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
                 var handlerCount = handlerChain.Count();
 
-                _logger.Value.InfoFormat("Found {0} async pipelines for event: {1} {2}", handlerCount, @event.GetType(), @event.Id);
+                s_logger.LogInformation("Found {0} async pipelines for event: {EventType} {Id}", handlerCount, @event.GetType(), @event.Id);
 
                 var exceptions = new List<Exception>();
                 foreach (var handler in handlerChain)
@@ -570,7 +570,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Guid DepositPost<T>(T request) where T : class, IRequest
         {
-            _logger.Value.InfoFormat("Save request: {0} {1}", request.GetType(), request.Id);
+            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
             if (_outBox == null)
                 throw new InvalidOperationException("No outbox defined.");
@@ -605,7 +605,7 @@ namespace Paramore.Brighter
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            _logger.Value.InfoFormat("Save request: {0} {1}", request.GetType(), request.Id);
+            s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
             if (_asyncOutbox == null)
                 throw new InvalidOperationException("No async outbox defined.");
@@ -649,7 +649,7 @@ namespace Paramore.Brighter
                 if (message == null)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+                s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {
@@ -690,7 +690,7 @@ namespace Paramore.Brighter
                 if (message == null)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                _logger.Value.InfoFormat("Decoupled invocation of message: Topic:{0} Id:{1}", message.Header.Topic, messageId.ToString());
+                s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {
@@ -762,7 +762,7 @@ namespace Paramore.Brighter
                         routingKey: new RoutingKey(routingKey))))
             {
 
-                _logger.Value.InfoFormat("Create reply queue for topic {0}", routingKey);
+                s_logger.LogInformation("Create reply queue for topic {ChannelName}", routingKey);
                 request.ReplyAddress.Topic = routingKey;
                 request.ReplyAddress.CorrelationId = channelName;
 
@@ -774,25 +774,26 @@ namespace Paramore.Brighter
                 var outMessage = outMessageMapper.MapToMessage(request);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
-                _logger.Value.DebugFormat("Sending request  with routingkey {0}", routingKey);
+                //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
+                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", routingKey);
                 Retry(() => _messageProducer.Send(outMessage));
 
                 Message responseMessage = null;
 
                 //now we block on the receiver to try and get the message, until timeout.
-                _logger.Value.DebugFormat("Awaiting response on {0}", routingKey);
+                s_logger.LogDebug("Awaiting response on {ChannelName}", routingKey);
                 Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                    _logger.Value.DebugFormat("Reply received from {0}", routingKey);
+                    s_logger.LogDebug("Reply received from {ChannelName}", routingKey);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     response = inMessageMapper.MapToRequest(responseMessage);
                     Send(response);
                 }
 
-                _logger.Value.InfoFormat("Deleting queue for routingkey: {0}", routingKey);
+                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", routingKey);
 
                 return response;
 
@@ -830,7 +831,7 @@ namespace Paramore.Brighter
 
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            _logger.Value.InfoFormat("Found {0} pipelines for command: {1} {2}", handlerCount, typeof(T), command.Id);
+            s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T), command.Id);
 
             if (handlerCount > 1)
                 throw new ArgumentException($"More than one handler was found for the typeof command {typeof(T)} - a command should only have one handler.");
@@ -851,7 +852,7 @@ namespace Paramore.Brighter
             if (_asyncMessageProducer != null)
                 maxOutStandingMessages = _asyncMessageProducer.MaxOutStandingMessages;
 
-            _logger.Value.Debug($"Outbox oustanding message count is: {_outStandingCount}");
+            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
             bool exceedsOutstandingMessageLimit = maxOutStandingMessages != -1 && _outStandingCount > maxOutStandingMessages;
 
@@ -869,20 +870,20 @@ namespace Paramore.Brighter
 
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
-            _logger.Value.Debug($"Time since last check is {timeSinceLastCheck.TotalSeconds} seconds ");
+            s_logger.LogDebug("Time since last check is {SecondsSinceLastCheck} seconds.", timeSinceLastCheck.TotalSeconds);
             if (timeSinceLastCheck < checkInterval)
             {
-                _logger.Value.Debug($"Check not ready to run yet");
+                s_logger.LogDebug($"Check not ready to run yet");
                 return;
             }
 
-            _logger.Value.Debug($"Running outstanding message check at {DateTime.UtcNow} after {timeSinceLastCheck.TotalSeconds} seconds wait");
+            s_logger.LogDebug("Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait", DateTime.UtcNow, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
             Task.Run(() => OutstandingMessagesCheck());
             _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         }
 
-        private bool ConfigureAsyncPublisherCalllbackMaybe()
+        private bool ConfigureAsyncPublisherCallbackMaybe()
         {
             if (_asyncMessageProducer == null)
                 return false;
@@ -893,7 +894,7 @@ namespace Paramore.Brighter
                 {
                     if (success)
                     {
-                        _logger.Value.InfoFormat("Sent message: Id:{0}", id.ToString());
+                        s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
                         if (_asyncOutbox != null)
                             await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
                     }
@@ -906,16 +907,13 @@ namespace Paramore.Brighter
 
         private bool ConfigurePublisherCallbackMaybe()
         {
-            if (_messageProducer == null)
-                return false;
-
             if (_messageProducer is ISupportPublishConfirmation producer)
             {
                 producer.OnMessagePublished += delegate(bool success, Guid id)
                 {
                     if (success)
                     {
-                        _logger.Value.InfoFormat("Sent message: Id:{0}", id.ToString());
+                        s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
                         if (_outBox != null)
                             Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
                     }
@@ -931,7 +929,7 @@ namespace Paramore.Brighter
             if (Monitor.TryEnter(_checkOutStandingMessagesObject))
             {
 
-                _logger.Value.Debug("Begin count of oustanding messages");
+                s_logger.LogDebug("Begin count of outstanding messages");
                 try
                 {
                     if ((_outBox != null) && (_outBox is IAmAnOutboxViewer<Message> outboxViewer))
@@ -959,12 +957,12 @@ namespace Paramore.Brighter
                 {
                     //if we can't talk to the outbox, we would swallow the exception on this thread
                     //by setting the _outstandingCount to -1, we force an exception
-                    _logger.Value.ErrorException("Error getting outstanding message count, reset count", ex);
+                    s_logger.LogError(ex,"Error getting outstanding message count, reset count");
                     _outStandingCount = 0;
                 }
                 finally
                 {
-                    _logger.Value.Debug($"Current outstanding count is {_outStandingCount}");
+                    s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
                     Monitor.Exit(_checkOutStandingMessagesObject);
                 }
             }
@@ -978,7 +976,7 @@ namespace Paramore.Brighter
             {
                 if (result.FinalException != null)
                 {
-                    _logger.Value.ErrorException("Exception whilst trying to publish message", result.FinalException);
+                    s_logger.LogError(result.FinalException,"Exception whilst trying to publish message");
                     CheckOutstandingMessages();
                 }
 
@@ -999,7 +997,7 @@ namespace Paramore.Brighter
             {
                 if (result.FinalException != null)
                 {
-                    _logger.Value.ErrorException("Exception whilst trying to publish message", result.FinalException);
+                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message" );
                     CheckOutstandingMessages();
                 }
 

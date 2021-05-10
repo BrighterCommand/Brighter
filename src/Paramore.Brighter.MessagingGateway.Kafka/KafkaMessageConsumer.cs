@@ -28,6 +28,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -125,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");
                     
-                    _logger.Value.InfoFormat("Parition Added {0}", String.Join(",", partitions));
+                    s_logger.LogInformation("Partition Added {Channels}", String.Join(",", partitions));
                     
                     _partitions.AddRange(list);
                 })
@@ -134,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     _consumer.Commit(list);
                     var revokedPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
-                    _logger.Value.InfoFormat("Partitions for consumer revoked {0}", string.Join(",", revokedPartitions));
+                    s_logger.LogInformation("Partitions for consumer revoked {Channels}", string.Join(",", revokedPartitions));
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
@@ -142,17 +143,18 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     var lostPartitions = list.Select(tpo => $"{tpo.Topic} : {tpo.Partition}").ToList();
                     
-                    _logger.Value.InfoFormat("Partitions for consumer lost {0}", string.Join(",", lostPartitions));
+                    s_logger.LogInformation("Partitions for consumer lost {Channels}", string.Join(",", lostPartitions));
                     
                     _partitions = _partitions.Where(tp => list.All(tpo => tpo.TopicPartition != tp)).ToList();
                 })
                 .SetErrorHandler((consumer, error) =>
                 {
-                    _logger.Value.Error($"Code: {error.Code}, Reason: {error.Reason}, Fatal: {error.IsFatal}");
+                    s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code,
+                        error.Reason, error.IsFatal);
                 })
                 .Build();
-            
-            _logger.Value.InfoFormat($"Kakfa consumer subscribing to {Topic}");
+
+            s_logger.LogInformation("Kakfa consumer subscribing to {Topic}", Topic);
             _consumer.Subscribe(new []{ Topic.Value });
 
             _creator = new KafkaMessageCreator();
@@ -185,8 +187,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 var topicPartitionOffset = bagData as TopicPartitionOffset;
             
                 var offset = new TopicPartitionOffset(topicPartitionOffset.TopicPartition, new Offset(topicPartitionOffset.Offset + 1));
-            
-                _logger.Value.InfoFormat($"Storing offset {new Offset(topicPartitionOffset.Offset + 1).Value} to topic {topicPartitionOffset.TopicPartition.Topic} for partition {topicPartitionOffset.TopicPartition.Partition.Value}");
+
+                s_logger.LogInformation("Storing offset {Offset} to topic {Topic} for partition {ChannelName}",
+                    new Offset(topicPartitionOffset.Offset + 1).Value, topicPartitionOffset.TopicPartition.Topic,
+                    topicPartitionOffset.TopicPartition.Partition.Value);
                 _consumer.StoreOffset(offset);
                 _offsetStorage.Add(offset);
 
@@ -195,14 +199,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 else
                     SweepOffsets();
 
-                _logger.Value.InfoFormat($"Current Kafka batch count {_offsetStorage.Count.ToString()} and {_maxBatchSize.ToString()}");
+                s_logger.LogInformation("Current Kafka batch count {OffsetCount} and {MaxBatchSize}", _offsetStorage.Count.ToString(), _maxBatchSize.ToString());
             }
             catch (TopicPartitionException tpe)
             {
                 var results = tpe.Results.Select(r =>
                     $"Error committing topic {r.Topic} for partition {r.Partition.Value.ToString()} because {r.Error.Reason}");
                 var errorString = string.Join(Environment.NewLine, results);
-                _logger.Value.Debug($"Error committing offsets: {Environment.NewLine} {errorString}");
+                s_logger.LogDebug("Error committing offsets: {0} {ErrorMessage}", Environment.NewLine, errorString);
             }
         }
 
@@ -236,42 +240,43 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 LogOffSets();
 
-                _logger.Value.DebugFormat(
-                    $"Consuming messages from Kafka stream, will wait for {timeoutInMilliseconds}");
+                s_logger.LogDebug(
+                    "Consuming messages from Kafka stream, will wait for {Timeout}", timeoutInMilliseconds);
                 var consumeResult = _consumer.Consume(new TimeSpan(0, 0, 0, 0, timeoutInMilliseconds));
 
                 if (consumeResult == null)
                 {
                     CheckHasPartitions();
                     
-                    _logger.Value.DebugFormat($"No messages available from Kafka stream");
+                    s_logger.LogDebug($"No messages available from Kafka stream");
                     return new Message[] {new Message()};
                 }
 
                 if (consumeResult.IsPartitionEOF)
                 {
-                    _logger.Value.Debug($"Consumer {_consumer.MemberId} has reached the end of the partition");
+                    s_logger.LogDebug("Consumer {ConsumerMemberId} has reached the end of the partition", _consumer.MemberId);
                     return new Message[] {new Message()};
                 }
 
-                _logger.Value.DebugFormat($"Usable message retrieved from Kafka stream: {consumeResult.Message.Value}");
-                _logger.Value.Debug($"Partition: {consumeResult.Partition} Offset: {consumeResult.Offset} Value: {consumeResult.Message.Value}");
+                s_logger.LogDebug("Usable message retrieved from Kafka stream: {Request}", consumeResult.Message.Value);
+                s_logger.LogDebug("Partition: {ChannelName} Offset: {Offset} Value: {Request}", consumeResult.Partition,
+                    consumeResult.Offset, consumeResult.Message.Value);
 
                 return new[] {_creator.CreateMessage(consumeResult)};
             }
             catch (ConsumeException consumeException)
             {
-                _logger.Value.ErrorException(
-                    $"KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {_consumerConfig.GroupId} on bootstrap servers: {_consumerConfig.BootstrapServers})",
-                    consumeException);
+                s_logger.LogError( consumeException,
+                    "KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {ConsumerGroupId} on bootstrap servers: {Servers})",
+                    Topic, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", consumeException);
 
             }
             catch (KafkaException kafkaException)
             {
-                _logger.Value.ErrorException(
-                    $"KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {_consumerConfig.GroupId} on bootstrap servers: {_consumerConfig.BootstrapServers})",
-                    kafkaException);
+                s_logger.LogError(kafkaException,
+                    "KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {ConsumerGroupId} on bootstrap servers: {Servers})",
+                    Topic, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
                     throw;
                 
@@ -279,9 +284,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception exception)
             {
-                _logger.Value.ErrorException(
-                    $"KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {_consumerConfig.GroupId} on bootstrap servers: {_consumerConfig.BootstrapServers})", 
-                    exception);
+                s_logger.LogError(exception,
+                    "KafkaMessageConsumer: There was an error listening to topic {Topic} with groupId {ConsumerGroupId} on bootstrap servers: {Servers})",
+                    Topic, _consumerConfig.GroupId, _consumerConfig.BootstrapServers);
                 throw;
             }
         }
@@ -321,7 +326,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (_partitions.Count <= 0)
             {
-                _logger.Value.Debug("Consumer is not allocated any partitions");
+                s_logger.LogDebug("Consumer is not allocated any partitions");
                 return false;
             }
 
@@ -350,14 +355,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 foreach (KeyValuePair<TopicPartition,long> pair in highestReadOffset)
                 {
                     var topicPartition = pair.Key;
-                    var message = $"Offset to consume from is: {pair.Value.ToString()} on partition: {topicPartition.Partition.Value.ToString()} for topic: {topicPartition.Topic}";
-                    _logger.Value.Debug(message);
+                    s_logger.LogDebug(
+                        "Offset to consume from is: {Offset} on partition: {ChannelName} for topic: {Topic}",
+                        pair.Value.ToString(), topicPartition.Partition.Value.ToString(), topicPartition.Topic);
                 }
             }
             catch (KafkaException ke)
             {
                 //This is only loggin for debug, so skip errors here
-                _logger.Value.Debug($"kafka error logging the offsets: {ke.Message}");
+                s_logger.LogDebug("kafka error logging the offsets: {ErrorMessage}", ke.Message);
             }
         }
 
@@ -377,11 +383,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         private void CommitOffsets(DateTime flushTime)
         {
-           if (_logger.Value.IsDebugEnabled())
+           if (s_logger.IsEnabled(LogLevel.Debug))
            {
                var offsets = _offsetStorage.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
                var offsetAsString = string.Join(Environment.NewLine, offsets);
-               _logger.Value.DebugFormat($"Commiting all offsets: {Environment.NewLine} {offsetAsString}");
+               s_logger.LogDebug("Commiting all offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
            }
             
            var listOffsets = new List<TopicPartitionOffset>();
@@ -444,14 +450,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(_readCommittedOffsetsTimeoutMs));
                 foreach (var committedOffset in committedOffsets)
-                    _logger.Value.Info(
-                        $"Committed offset: {committedOffset.Offset.Value.ToString()} on partition: {committedOffset.Partition.Value.ToString()} for topic: {committedOffset.Topic}");
+                    s_logger.LogInformation("Committed offset: {Offset)} on partition: {ChannelName} for topic: {Topic}", committedOffset.Offset.Value.ToString(), committedOffset.Partition.Value.ToString(), committedOffset.Topic);
 
             }
             catch (Exception ex)
             {
                 //this may happen if the offset is already committed
-                _logger.Value.Debug($"Error committing the current offset to Kakfa before closing: {ex.Message}");
+                s_logger.LogDebug("Error committing the current offset to Kakfa before closing: {ErrorMessage}", ex.Message);
             }
         }
 

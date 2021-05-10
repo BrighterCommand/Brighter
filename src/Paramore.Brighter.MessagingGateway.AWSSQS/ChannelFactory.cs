@@ -4,13 +4,12 @@ using System.Linq;
 using System.Net;
 using System.Text.Json;
 using System.Threading;
-using Amazon;
 using Amazon.Runtime.Internal;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Amazon.SQS;
 using Amazon.SQS.Model;
-using Paramore.Brighter.Logging;
+using Microsoft.Extensions.Logging;
 using Polly;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
@@ -23,8 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private SqsSubscription _subscription;
         private string _queueUrl;
         private string _dlqARN;
-        private RetryPolicy _retryPolicy;
-
+        private readonly RetryPolicy _retryPolicy;
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
@@ -60,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 SqsSubscription sqsSubscription = subscription as SqsSubscription;
                 _subscription = sqsSubscription ?? throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
 
-                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.MakeChannels);
+                EnsureTopic(_subscription.RoutingKey, _subscription.SnsAttributes, _subscription.FindTopicBy, _subscription.MakeChannels);
                 EnsureQueue();
 
                 return new Channel(
@@ -100,20 +98,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     else if (_subscription.MakeChannels == OnMissingChannel.Validate)
                     {
                         var message = $"Queue does not exist: {queueName} for {topicName} on {_awsConnection.Region}";
-                        _logger.Value.Debug(message);
+                        s_logger.LogDebug("Queue does not exist: {ChannelName} for {Topic} on {Region}", queueName,
+                            topicName, _awsConnection.Region);
                         throw new QueueDoesNotExistException(message);
                     }
                 }
                 else
                 {
-                    _logger.Value.Debug($"Queue exists: {queueName} subscribed to {topicName} on {_awsConnection.Region}");
+                    s_logger.LogDebug("Queue exists: {ChannelName} subscribed to {Topic} on {Region}",
+                        queueName, topicName, _awsConnection.Region);
                 }
             }
         }
 
         private void CreateQueue(AmazonSQSClient sqsClient)
         {
-            _logger.Value.Debug($"Queue does not exist, creating queue: {_subscription.ChannelName.Value} subscribed to {_subscription.RoutingKey.Value} on {_awsConnection.Region}");
+            s_logger.LogDebug(
+                "Queue does not exist, creating queue: {ChannelName} subscribed to {Topic} on {Region}",
+                _subscription.ChannelName.Value, _subscription.RoutingKey.Value, _awsConnection.Region);
             _queueUrl = null;
             try
             {
@@ -150,7 +152,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (!string.IsNullOrEmpty(_queueUrl))
                 {
-                    _logger.Value.Debug($"Queue created: {_queueUrl}");
+                    s_logger.LogDebug("Queue created: {URL}", _queueUrl);
                     using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
                     {
                         CheckSubscription(_subscription.MakeChannels, sqsClient, snsClient);
@@ -167,20 +169,24 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
                 //and assume we are halfway through
                 var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
-                _logger.Value.Error(error);
+                s_logger.LogError(ex, "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry", _subscription.ChannelName.Value, ex.Message);
                 Thread.Sleep(TimeSpan.FromSeconds(30));
                 throw new ChannelFailureException(error, ex);
             }
             catch (AmazonSQSException ex)
             {
                 var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                _logger.Value.Error(error);
+                s_logger.LogError(ex,
+                    "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                    _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
             catch (HttpErrorResponseException ex)
             {
                 var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                _logger.Value.Error(error);
+                s_logger.LogError(ex,
+                    "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                    _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
         }
@@ -219,20 +225,25 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
                 //and assume we are halfway through
                 var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
-                _logger.Value.Error(error);
+                s_logger.LogError(ex,
+                    "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry",
+                    _subscription.ChannelName.Value, ex.Message);
                 Thread.Sleep(TimeSpan.FromSeconds(30));
                 throw new ChannelFailureException(error, ex);
             }
             catch (AmazonSQSException ex)
             {
                 var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                _logger.Value.Error(error);
+                s_logger.LogError(ex,
+                    "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                    _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
             catch (HttpErrorResponseException ex)
             {
                 var error = $"Could not create queue {_queueUrl} subscribed to topic {_subscription.RoutingKey.Value} in region {_awsConnection.Region.DisplayName} because {ex.Message}";
-                _logger.Value.Error(error);
+                s_logger.LogError(ex, "Could not create queue {URL} subscribed to topic {Topic} in region {Region} because {ErrorMessage}",
+                    _queueUrl, _subscription.RoutingKey.Value, _awsConnection.Region.DisplayName, ex.Message);
                 throw new InvalidOperationException(error, ex);
             }
         }
@@ -268,7 +279,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     .Result;
                 if (response.HttpStatusCode != HttpStatusCode.OK)
                 {
-                    throw new InvalidOperationException($"Unable to set subscription attribute for raw message delivery");
+                    throw new InvalidOperationException("Unable to set subscription attribute for raw message delivery");
                 }
             }
             else
@@ -278,12 +289,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private string ToSecondsAsString(int timeountInMilliseconds)
+        private string ToSecondsAsString(int timeoutInMilliseconds)
         {
             int timeOutInSeconds = 0;
-            if (timeountInMilliseconds >= 1000)
-                timeOutInSeconds = timeountInMilliseconds / 1000;
-            else if (timeountInMilliseconds > 0)
+            if (timeoutInMilliseconds >= 1000)
+                timeOutInSeconds = timeoutInMilliseconds / 1000;
+            else if (timeoutInMilliseconds > 0)
                 timeOutInSeconds = 1;
 
             return Convert.ToString(timeOutInSeconds);
@@ -359,7 +370,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     catch (Exception)
                     {
                         //don't break on an exception here, if we can't delete, just exit
-                        _logger.Value.Error($"Could not delete queue {queueExists.name}");
+                        s_logger.LogError("Could not delete queue {ChannelName}", queueExists.name);
                     }
                 }
             }
@@ -372,7 +383,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
-                bool exists = FindTopicByArn(snsClient);
+                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(_channelTopicArn);
                 if (exists)
                 {
                     try
@@ -384,7 +395,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     catch (Exception)
                     {
                         //don't break on an exception here, if we can't delete, just exit
-                        _logger.Value.Error($"Could not delete topic {_channelTopicArn}");
+                        s_logger.LogError("Could not delete topic {TopicResourceName}", _channelTopicArn);
                     }
                 }
             }
@@ -395,19 +406,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             snsClient.DeleteTopicAsync(_channelTopicArn).GetAwaiter().GetResult();
         }
 
-
-        private bool FindTopicByArn(AmazonSimpleNotificationServiceClient snsClient)
-        {
-            bool exists = false;
-            ListTopicsResponse response;
-            do
-            {
-                response = snsClient.ListTopicsAsync().GetAwaiter().GetResult();
-                exists = response.Topics.Any(topic => topic.TopicArn == _channelTopicArn);
-            } while (!exists && response.NextToken != null);
-
-            return exists;
-        }
 
         private string GetQueueARNForChannel(AmazonSQSClient sqsClient)
         {
@@ -434,7 +432,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest {SubscriptionArn = sub.SubscriptionArn}).GetAwaiter().GetResult();
                     if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                     {
-                        _logger.Value.Error($"Error unsubscribing from {_channelTopicArn} for sub {sub.SubscriptionArn}");
+                        s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}", _channelTopicArn, sub.SubscriptionArn);
                     }
                 }
             } while (response.NextToken != null);

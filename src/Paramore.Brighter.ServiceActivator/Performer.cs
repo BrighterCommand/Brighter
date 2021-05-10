@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,16 +32,13 @@ namespace Paramore.Brighter.ServiceActivator
     {
         private readonly IAmAChannel _channel;
         private readonly IAmAMessagePump _messagePump;
-        private readonly bool _runAsync;
 
         public Performer(
             IAmAChannel channel, 
-            IAmAMessagePump messagePump,
-            bool runAsync = false)
+            IAmAMessagePump messagePump)
         {
             _channel = channel;
             _messagePump = messagePump;
-            _runAsync = runAsync;
         }
 
         public void Stop()

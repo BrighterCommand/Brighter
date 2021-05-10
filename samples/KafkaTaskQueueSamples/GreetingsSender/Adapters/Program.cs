@@ -28,7 +28,6 @@ using System;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -72,26 +71,25 @@ namespace GreetingsSender.Adapters
         private static IHost BuildHost()
         {
             return new HostBuilder()
-                .ConfigureLogging(loggingBuilder =>
-                {
-                    loggingBuilder.AddConsole();
-                    loggingBuilder.AddDebug();
-                })
-               .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((hostContext, services) =>
                 {
                     var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
                     {
-                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
                     });
 
-                    var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+                    var circuitBreakerPolicy =
+                        Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
                     var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
                     {
-                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
+                        TimeSpan.FromMilliseconds(150)
                     });
 
-                    var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
+                    var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
+                        .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
 
                     var policyRegistry = new PolicyRegistry()
                     {
@@ -104,7 +102,7 @@ namespace GreetingsSender.Adapters
                     var producer = new KafkaMessageProducerFactory(
                             new KafkaMessagingGatewayConfiguration()
                             {
-                                Name = "paramore.brighter.greetingsender", 
+                                Name = "paramore.brighter.greetingsender",
                                 BootStrapServers = new[] {"localhost:9092"}
                             },
                             new KafkaPublication()
@@ -126,6 +124,7 @@ namespace GreetingsSender.Adapters
 
                     services.AddHostedService<TimedMessageGenerator>();
                 })
+                .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
         }

@@ -31,7 +31,6 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
-using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -41,8 +40,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         IAmAnOutboxViewer<Message>,
         IAmAnOutboxViewerAsync<Message>
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<DynamoDbOutbox>);
-        
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
 

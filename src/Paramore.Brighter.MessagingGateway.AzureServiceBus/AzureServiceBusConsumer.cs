@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Microsoft.Azure.ServiceBus;
 using Microsoft.Azure.ServiceBus.Management;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 
@@ -17,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private IMessageReceiverWrapper _messageReceiver;
         private readonly string _subscriptionName;
         private bool _subscriptionCreated;
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<AzureServiceBusConsumer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusConsumer>();
         private readonly OnMissingChannel _makeChannel;
         private readonly ReceiveMode _receiveMode;
 
@@ -40,20 +41,24 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private void GetMessageReceiverProvider()
         {
-            _logger.Value.Info($"Getting message receiver provider for topic {_topicName} and subscription {_subscriptionName} with recieve Mode {_receiveMode}...");
+            s_logger.LogInformation(
+                "Getting message receiver provider for topic {Topic} and subscription {ChannelName} with receive Mode {ReceiveMode}...",
+                _topicName, _subscriptionName, _receiveMode);
             try
             {
                 _messageReceiver = _messageReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode);
             }
             catch (Exception e)
             {
-                _logger.Value.ErrorException($"Failed to get message receiver provider for topic {_topicName} and subscription {_subscriptionName}.", e);
+                s_logger.LogError(e, "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}.", _topicName, _subscriptionName);
             }
         }
 
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            _logger.Value.Debug($"Preparing to retrieve next message(s) from topic {_topicName} via subscription {_subscriptionName} with timeout {timeoutInMilliseconds} and batch size {_batchSize}.");
+            s_logger.LogDebug(
+                "Preparing to retrieve next message(s) from topic {Topic} via subscription {ChannelName} with timeout {Timeout} and batch size {BatchSize}.",
+                _topicName, _subscriptionName, timeoutInMilliseconds, _batchSize);
 
             IEnumerable<IBrokeredMessageWrapper> messages;
             EnsureSubscription();
@@ -68,13 +73,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 if (_messageReceiver.IsClosedOrClosing)
                 {
-                    _logger.Value.Debug("Message Receiver is closing...");
+                    s_logger.LogDebug("Message Receiver is closing...");
                     var message = new Message(new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_QUIT), new MessageBody(string.Empty));
                     messagesToReturn.Add(message);
                     return messagesToReturn.ToArray();
                 }
 
-                _logger.Value.ErrorException("Failing to receive messages.", e);
+                s_logger.LogError(e, "Failing to receive messages.");
 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 GetMessageReceiverProvider();
@@ -95,11 +100,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             if (azureServiceBusMessage.MessageBodyValue == null)
             {
-                _logger.Value.Warn($"Null message body received from topic {_topicName} via subscription {_subscriptionName}.");
+                s_logger.LogWarning(
+                    "Null message body received from topic {Topic} via subscription {ChannelName}.",
+                    _topicName, _subscriptionName);
             }
 
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
-            _logger.Value.Debug($"Received message from topic {_topicName} via subscription {_subscriptionName} with body {messageBody}.");
+            s_logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}.",
+                _topicName, _subscriptionName, messageBody);
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var headers = new MessageHeader(Guid.NewGuid(), _topicName, messageType);
             if(_receiveMode.Equals(ReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
@@ -143,12 +151,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             catch (MessagingEntityAlreadyExistsException)
             {
-                _logger.Value.Warn($"Message entity already exists with topic {_topicName} and subscription {_subscriptionName}.");
+                s_logger.LogWarning("Message entity already exists with topic {Topic} and subscription {ChannelName}.", _topicName,
+                    _subscriptionName);
                 _subscriptionCreated = true;
             }
             catch (Exception e)
             {
-                _logger.Value.ErrorException("Failing to check or create subscription.", e);
+                s_logger.LogError(e, "Failing to check or create subscription.");
                 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 _managementClientWrapper.Reset();
@@ -161,7 +170,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             var topic = message.Header.Topic;
 
-            _logger.Value.Info($"Requeuing message with topic {topic} and id {message.Id}.");
+            s_logger.LogInformation("Requeuing message with topic {Topic} and id {Id}.", topic, message.Id);
 
             if (delayMilliseconds > 0)
             {
@@ -185,13 +194,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                     if (string.IsNullOrEmpty(lockToken))
                         throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    _logger.Value.Debug($"Acknowledging Message with Id {message.Id} Lock Token : {lockToken}");
+                    s_logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
                     _messageReceiver.Complete(lockToken).Wait();
                 }
                 catch(Exception ex)
                 {
-                    _logger.Value.ErrorException($"Error completing message with id {message.Id}", ex);
+                    s_logger.LogError(ex, "Error completing message with id {Id}", message.Id);
                     throw;
                 }
             }
@@ -199,7 +208,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void Reject(Message message)
         {
-            _logger.Value.Warn("Reject method NOT IMPLEMENTED.");
+            s_logger.LogWarning("Reject method NOT IMPLEMENTED.");
         }
 
         public void Reject(Message message, bool requeue)
@@ -212,14 +221,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void Purge()
         {
-            _logger.Value.Warn("Purge method NOT IMPLEMENTED.");
+            s_logger.LogWarning("Purge method NOT IMPLEMENTED.");
         }
 
         public void Dispose()
         {
-            _logger.Value.Info("Disposing the consumer...");
+            s_logger.LogInformation("Disposing the consumer...");
             _messageReceiver.Close();
-            _logger.Value.Info("Consumer disposed.");
+            s_logger.LogInformation("Consumer disposed.");
         }
     }
 }

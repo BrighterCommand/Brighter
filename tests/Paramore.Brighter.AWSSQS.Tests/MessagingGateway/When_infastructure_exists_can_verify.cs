@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
@@ -12,7 +13,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     public class AWSValidateInfrastructureTests  : IDisposable
     {     private readonly Message _message;
-        private readonly SqsMessageConsumer _consumer;
+        private readonly IAmAMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
@@ -54,19 +55,30 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
                 routingKey: routingKey,
+                findTopicBy: TopicFindBy.Name,
                 makeChannels: OnMissingChannel.Validate
             );
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Validate, RoutingKey = routingKey});
+            _messageProducer = new SqsMessageProducer(
+                awsConnection, 
+                new SqsPublication
+                {
+                    FindTopicBy = TopicFindBy.Name,
+                    MakeChannels = OnMissingChannel.Validate, 
+                    RoutingKey = routingKey
+                }
+                );
 
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
+            _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
         }
 
         [Fact]
-        public void When_infastructure_exists_can_verify()
+        public async Task When_infrastructure_exists_can_verify()
         {
             //arrange
             _messageProducer.Send(_message);
+
+            await Task.Delay(1000);
             
             var messages = _consumer.Receive(1000);
             

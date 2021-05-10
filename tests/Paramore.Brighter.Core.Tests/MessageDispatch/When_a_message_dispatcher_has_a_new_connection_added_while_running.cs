@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
         }
 
-        [Fact]
+        [Fact(Skip = "Breaks XUnit test runner")]
         public async Task When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
             _dispatcher.Open(_newSubscription);

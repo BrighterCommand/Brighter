@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.ServiceActivator
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, false);
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
         }
 
         private Consumer CreateAsync()
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.ServiceActivator
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
-            return new Consumer(_consumerName, _subscription.Name, channel, messagePump, true);
+            return new Consumer(_consumerName, _subscription.Name, channel, messagePump);
         }
     }
 }

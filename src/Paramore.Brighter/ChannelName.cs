@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter
         /// <returns>The result of the conversion.</returns>
         public static implicit operator string (ChannelName rhs)
         {
-            return rhs.ToString();
+            return rhs?.ToString();
         }
 
         /// <summary>

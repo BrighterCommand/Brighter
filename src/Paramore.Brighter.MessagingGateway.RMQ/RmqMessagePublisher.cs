@@ -26,10 +26,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 using RabbitMQ.Client;
-using RabbitMQ.Client.Exceptions;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// </summary>
 internal class RmqMessagePublisher
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RmqMessagePublisher>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessagePublisher>();
         private static readonly string[] _headersToReset =
         {
             HeaderNames.DELAY_MILLISECONDS,
@@ -74,11 +74,12 @@ internal class RmqMessagePublisher
                 throw new ArgumentNullException(nameof(connection));
             }
 
-            _channel = channel;
             _connection = connection;
-        }
+            
+            _channel = channel;
+       }
 
-        /// <summary>
+       /// <summary>
         /// Publishes the message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -135,7 +136,7 @@ internal class RmqMessagePublisher
             var messageId = Guid.NewGuid() ;
             const string deliveryTag = "1";
 
-            _logger.Value.InfoFormat("RmqMessagePublisher: Regenerating message {0} with DeliveryTag of {1} to {2} with DeliveryTag of {3}", message.Id, deliveryTag, messageId, 1);
+            s_logger.LogInformation("RmqMessagePublisher: Regenerating message {Id} with DeliveryTag of {1} to {2} with DeliveryTag of {DeliveryTag}", message.Id, deliveryTag, messageId, 1);
 
             var headers = new Dictionary<string, object>
             {
