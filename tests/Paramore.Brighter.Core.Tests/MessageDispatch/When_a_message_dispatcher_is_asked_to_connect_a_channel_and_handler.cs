@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -33,7 +34,7 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherRoutingTests : IAsyncLifetime
+    public class MessageDispatcherRoutingTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -61,13 +62,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
         }
 
         [Fact]
-        public async Task When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
+        public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
         {
-
-            await _dispatcher.End();
+            Task.Delay(1000).Wait();
+            _dispatcher.End().Wait();
 
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);
@@ -78,21 +80,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_published_async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.Publish);
         }
-
-        public Task InitializeAsync()
+        
+        public void Dispose()
         {
-            _dispatcher.Receive();
-            var completionSource = new TaskCompletionSource<IDispatcher>();
-            completionSource.SetResult(_dispatcher);
-
-            return completionSource.Task;
-        }
-
-        public Task DisposeAsync()
-        {
-            var completionSource = new TaskCompletionSource<object>();
-            completionSource.SetResult(null);
-            return completionSource.Task;
+            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
+                _dispatcher.End().Wait();
         }
     }
 }
