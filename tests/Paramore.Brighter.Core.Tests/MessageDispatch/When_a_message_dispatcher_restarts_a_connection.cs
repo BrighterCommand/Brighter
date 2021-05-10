@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Shut(_subscription);
         }
         		 
-        [Fact(Skip = "Breaks test runner on Rider")]
+        [Fact]
         public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
             _dispatcher.Open(_subscription);
@@ -70,6 +70,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
+
+            Task.Delay(1000).Wait();
 
             _dispatcher.End().Wait();
 

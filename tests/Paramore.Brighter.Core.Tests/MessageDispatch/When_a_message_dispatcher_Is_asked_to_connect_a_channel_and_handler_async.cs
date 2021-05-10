@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -9,7 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherRoutingAsyncTests  
+    public class MessageDispatcherRoutingAsyncTests  : IDisposable
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
@@ -38,9 +39,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _channel.Enqueue(message);
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
+            _dispatcher.Receive();
         }
         
-        [Fact(Skip = "Failing", Timeout = 50000)]
+        [Fact(Timeout = 10000)]
         public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
             Task.Delay(5000).Wait();
@@ -54,6 +56,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor.Observe<MyEvent>().Should().NotBeNull();
             //should have published async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
+        }
+        
+        public void Dispose()
+        {
+            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
+                _dispatcher.End().Wait();
         }
     }
 }
