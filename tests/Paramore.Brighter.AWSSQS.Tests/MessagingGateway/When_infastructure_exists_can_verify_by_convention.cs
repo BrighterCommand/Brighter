@@ -12,7 +12,7 @@ using Xunit;
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    [Trait("Fragile", "Cloud Infrastructure Delay")]
+    [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureByConventionTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;
