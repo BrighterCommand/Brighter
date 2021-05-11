@@ -295,10 +295,10 @@ jobs:
       sqlserver:
         image: mcr.microsoft.com/mssql/server
         ports: 
-          - 1433:1433
+          - 11433:1433
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: Password123!
+          SA_PASSWORD: Password1!
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
