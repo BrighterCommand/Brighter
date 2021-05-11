@@ -7,7 +7,6 @@ using Xunit;
 
 namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 {
-    [Collection("MSSQL")]
     [Trait("Category", "MSSQL")]
     public class MsSqlMessageConsumerRequeueTests
     {

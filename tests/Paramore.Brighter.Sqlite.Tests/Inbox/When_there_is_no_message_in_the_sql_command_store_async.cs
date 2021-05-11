@@ -33,7 +33,6 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Inbox
 {
     [Trait("Category", "Sqlite")]
-    [Collection("Sqlite Inbox")]
     public class SqliteInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;

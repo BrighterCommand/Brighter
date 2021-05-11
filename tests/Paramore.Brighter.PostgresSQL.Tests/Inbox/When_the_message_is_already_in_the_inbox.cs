@@ -33,7 +33,6 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
 {
     [Trait("Category", "PostgresSql")]
-    [Collection("PostgresSql inbox")]
     public class SqlInboxDuplicateMessageTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;

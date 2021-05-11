@@ -32,7 +32,6 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
-    [Collection("MSSQL OutBox")]
     public class MsSqlOutboxMessageAlreadyExistsAsyncTests : IDisposable
     {
         private Exception _exception;

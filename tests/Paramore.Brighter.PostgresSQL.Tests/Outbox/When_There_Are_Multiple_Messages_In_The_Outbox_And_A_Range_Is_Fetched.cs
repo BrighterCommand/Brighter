@@ -34,7 +34,6 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    [Collection("PostgresSql OutBox")]
     public class PostgreSqlOutboxRangeRequestTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;

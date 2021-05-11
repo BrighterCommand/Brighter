@@ -32,7 +32,6 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
-    [Collection("MSSQL OutBox")]
     public class MsSqlOutboxEmptyStoreAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;

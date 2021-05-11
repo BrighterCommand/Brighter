@@ -33,7 +33,6 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Inbox
 {
     [Trait("Category", "MySql")]
-    [Collection("MySql Inbox")]
     public class  SqlInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mysqlTestHelper;

@@ -34,7 +34,6 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
-    [Collection("MySql OutBox")]
     public class MySqlOutboxWritingMessagesAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
