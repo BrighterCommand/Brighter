@@ -2,12 +2,12 @@
 using System;
 using Amazon;
 using Amazon.Runtime;
-using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")] 
     public class AWSValidateMissingTopicTests 
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;

@@ -11,6 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")] 
+    [Trait("Fragile", "Cloud Infrastructure Delay")]
     public class AWSValidateInfrastructureTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;

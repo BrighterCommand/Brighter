@@ -53,7 +53,7 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release
       - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj -c Release --no-restore --no-build --verbosity d
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Category!=Fragile" -c Release --no-restore --no-build--verbosity d
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v2
         with:
@@ -96,7 +96,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n  
+        run: dotnet test ./tests/Paramore.Brighter.InMemory.Tests/Paramore.Brighter.InMemory.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n  
         
   redis-ci:
     runs-on: ubuntu-latest
@@ -127,7 +127,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.Redis.Tests/Paramore.Brighter.Redis.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
   
   rabbitmq-ci:
     runs-on: ubuntu-latest
@@ -159,7 +159,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.RMQ.Tests/Paramore.Brighter.RMQ.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   kafka-ci:
     runs-on: ubuntu-latest
@@ -216,7 +216,7 @@ jobs:
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
-      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&Category!=Confluent" --configuration Release --logger "console;verbosity=normal" --blame -v n
+      run: dotnet test ./tests/Paramore.Brighter.Kafka.Tests/Paramore.Brighter.Kafka.Tests.csproj --filter "Category=Kafka&(Category!=Confluent|Category!=Fragile)" --configuration Release --logger "console;verbosity=normal" --blame -v n
  
   postgres-ci:
     runs-on: ubuntu-latest
@@ -248,7 +248,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
-        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.PostgresSQL.Tests/Paramore.Brighter.PostgresSQL.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
   eventstore-ci:
     runs-on: ubuntu-latest
@@ -284,7 +284,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: EventStore Tests
-        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.EventStore.Tests/Paramore.Brighter.EventStore.Tests.csproj  --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
   
   sqlserver-ci:
     runs-on: ubuntu-latest
@@ -312,7 +312,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MSSQL.Tests/Paramore.Brighter.MSSQL.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
         
   mysql-ci:
     runs-on: ubuntu-latest
@@ -349,7 +349,7 @@ jobs:
             sleep 1
           done
       - name: MySQL Tests
-        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.MySQL.Tests/Paramore.Brighter.MySQL.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   dynamo-ci:
     runs-on: ubuntu-latest
@@ -375,7 +375,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
-        run: dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.DynamoDB.Tests/Paramore.Brighter.DynamoDB.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   aws-ci:
     runs-on: ubuntu-latest
@@ -409,7 +409,7 @@ jobs:
         run: |
           aws sns list-topics
       - name: SQS Tests
-        run: dotnet test ./tests/Paramore.Brighter.AWSSQS.Tests/Paramore.Brighter.AWSSQS.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.AWSSQS.Tests/Paramore.Brighter.AWSSQS.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
 
   azure-ci:
     runs-on: ubuntu-latest
@@ -428,4 +428,4 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
-        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --configuration Release --logger "console;verbosity=normal" --blame -v n
+        run: dotnet test ./tests/Paramore.Brighter.AzureServiceBus.Tests/Paramore.Brighter.AzureServiceBus.Tests.csproj --filter "Category!=Fragile" --configuration Release --logger "console;verbosity=normal" --blame -v n
