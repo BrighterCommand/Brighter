@@ -33,7 +33,8 @@ using Paramore.Brighter.Policies.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.Timeout
 {
-     public class MyPassesTimeoutHandlerTests : IDisposable
+    [Trait("Fragile", "Thread Delay")]
+    public class MyPassesTimeoutHandlerTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout
         }
 
         //We have to catch the final exception that bubbles out after retry
-        [Fact(Skip="Fragile. Replace with Polly Timeout")]
+        [Fact(Skip="Replace with Polly Timeout")]
         public void When_Sending_A_Command_To_The_Processor_Passing_A_Timeout_Policy_Check()
         {
             _commandProcessor.Send(_myCommand);

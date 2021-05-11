@@ -13,7 +13,6 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
 {
-    [Collection("Request Logger Async")]
     public class CommandProcessorWithLoggingInPipelineAsyncTests
     {
 

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -33,14 +34,14 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessageDispatcherResetConnection : IAsyncLifetime
+    public class MessageDispatcherResetConnection : IDisposable
     {
         private readonly Dispatcher _dispatcher;
         private readonly FakeChannel _channel;
         private readonly IAmACommandProcessor _commandProcessor;
         private readonly Subscription _subscription;
 
-        public MessageDispatcherResetConnection() 
+        public MessageDispatcherResetConnection()
         {
             _channel = new FakeChannel();
             _commandProcessor = new SpyCommandProcessor();
@@ -57,11 +58,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
-
+            Task.Delay(1000).Wait();
+            _dispatcher.Shut(_subscription);
         }
         		 
-        [Fact(Skip ="Breaks XUnit test runner")]
-        public async Task When_A_Message_Dispatcher_Restarts_A_Connection()
+        [Fact]
+        public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
             _dispatcher.Open(_subscription);
 
@@ -69,22 +71,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
 
-            await _dispatcher.End();
+            Task.Delay(1000).Wait();
+
+            _dispatcher.End().Wait();
 
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
             //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
-
-        public Task InitializeAsync()
+        
+        public void Dispose()
         {
-            return Task.Delay(500).ContinueWith(task =>   _dispatcher.Shut(_subscription));
-        }
-
-        public Task DisposeAsync()
-        {
-            return _dispatcher?.End();
+            if (_dispatcher?.State == DispatcherState.DS_RUNNING)
+                _dispatcher.End().Wait();
         }
     }
 }

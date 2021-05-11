@@ -5,7 +5,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
-    [Collection("Redis")]
     [Trait("Category", "Redis")]
     public class RedisRequeueMessageTests : IClassFixture<RedisFixture>
     {

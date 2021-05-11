@@ -17,8 +17,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
-    [Collection("AWS")]
     [Trait("Category", "AWS")]
+    [Trait("Fragile", "Cloud Infrastructure Delay")]
     public class SqsMessageProducerDlqTests : IDisposable
     {
         private readonly IAmAMessageProducer _sender;
@@ -66,14 +66,14 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         public void When_requeueing_redrives_to_the_queue()
         { 
             _sender.Send(_message);
-             var receivedMessage = _channel.Receive(2000); 
+             var receivedMessage = _channel.Receive(5000); 
             _channel.Requeue(receivedMessage );
 
-            receivedMessage = _channel.Receive(1000);
+            receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage );
             
             //should force us into the dlq
-            receivedMessage = _channel.Receive(1000);
+            receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage) ;
             
             //inspect the dlq

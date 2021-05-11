@@ -6,6 +6,7 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Sweeper
 {
+    [Trait("Category", "InMemory")]
     public class SweeperTests
     {
 

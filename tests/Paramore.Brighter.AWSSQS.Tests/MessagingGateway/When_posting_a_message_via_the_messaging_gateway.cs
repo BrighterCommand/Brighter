@@ -9,7 +9,6 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
-    [Collection("AWS")]
     [Trait("Category", "AWS")]
     public class SqsMessageProducerSendTests : IDisposable
     {
@@ -63,7 +62,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //arrange
             _messageProducer.Send(_message);
             
-            var message =_channel.Receive(1000);
+            var message =_channel.Receive(5000);
             
             //clear the queue
             _channel.Acknowledge(message);

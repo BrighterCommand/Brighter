@@ -10,8 +10,8 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
-    [Collection("Kafka")]
     [Trait("Category", "Kafka")]
+    [Trait("Fragile", "Thread Delay")]
     public class KafkaMessageConsumerUpdateOffset : IDisposable
     {
         private readonly ITestOutputHelper _output;
@@ -43,8 +43,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }).Create();
         }
 
-        //[Fact (Skip = "Due to requirement to yield for offsets, don't run in CI. Manually enable") ]
-        //[Fact]
+        [Fact]
         public async Task When_a_message_is_acknowldgede_update_offset()
         {
             var groupId = Guid.NewGuid().ToString();

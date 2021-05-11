@@ -31,7 +31,6 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    [Collection("PostgresSql OutBox")]
     public class PostgreSqlOutboxEmptyStoreTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;

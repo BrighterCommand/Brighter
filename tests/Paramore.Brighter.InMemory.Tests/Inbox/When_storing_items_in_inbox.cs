@@ -30,7 +30,8 @@ using Xunit;
 
 namespace Paramore.Brighter.InMemory.Tests.Inbox
 {
-    public class InMemoryInboxTests
+    [Trait("Category", "InMemory")]
+     public class InMemoryInboxTests
     {
 
         [Fact]
