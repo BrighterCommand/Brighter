@@ -87,7 +87,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
             Task.Delay(1000).Wait();
             
-            var messages = _consumer.Receive(1000);
+            var messages = _consumer.Receive(5000);
             
             //Assert
             var message = messages.First();

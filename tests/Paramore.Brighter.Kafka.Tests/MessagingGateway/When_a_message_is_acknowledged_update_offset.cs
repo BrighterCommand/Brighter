@@ -11,7 +11,7 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Trait("Category", "Kafka")]
-    [Trait("Fragile", "Yields")]
+    [Trait("Fragile", "Thread Delay")]
     public class KafkaMessageConsumerUpdateOffset : IDisposable
     {
         private readonly ITestOutputHelper _output;
