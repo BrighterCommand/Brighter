@@ -5,7 +5,9 @@ using Xunit;
 
 namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
+    [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
     [Trait("Category", "Redis")]
+    [Trait("Fragile", "CI")]
     public class RedisRequeueMessageTests : IClassFixture<RedisFixture>
     {
         private readonly RedisFixture _redisFixture;

@@ -13,6 +13,7 @@ using Xunit;
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
     public class SQSBufferedConsumerTests : IDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
