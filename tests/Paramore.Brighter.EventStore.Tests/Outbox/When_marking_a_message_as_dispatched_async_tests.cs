@@ -43,7 +43,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var eventStoreOutbox = new EventStoreOutbox(Connection);
             var messageToMarkAsDispatched = CreateMessage(0, StreamName);
             var dispatchedAt = DateTime.UtcNow;
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, StreamName}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
             
             await eventStoreOutbox.AddAsync(messageToMarkAsDispatched);
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // assert
             var messages = await eventStoreOutbox.GetAsync(1, 2, args);
 
-            messages.Should().ContainSingle().Which.Header.Bag[EventStoreOutbox.DispatchedAtKey].Should().Be(dispatchedAt);
+            messages.Should().ContainSingle().Which.Header.Bag[Globals.DispatchedAtKey].Should().Be(dispatchedAt);
         }
         
         [Fact]
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, null}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
             // act

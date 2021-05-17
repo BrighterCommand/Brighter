@@ -50,7 +50,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             await eventStoreOutbox.AddAsync(message2);
             await eventStoreOutbox.AddAsync(message3);
 
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, StreamName}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
 
             // act
             var messages = await eventStoreOutbox.GetAsync(1, 3, args);
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, null}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
 
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.GetAsync(1, 1, args);

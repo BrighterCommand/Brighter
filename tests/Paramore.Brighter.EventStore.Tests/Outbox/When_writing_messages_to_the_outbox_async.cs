@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -65,18 +66,17 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             
             //Bag serialization
             //should read the message header first bag item from the sql outbox
-            messages[0].Header.Bag["impersonatorId"].Should().Be(123);
+            Convert.ToInt32(messages[0].Header.Bag["impersonatorId"]).Should().Be(123);
             //should read the message header second bag item from the sql outbox
-            messages[0].Header.Bag["eventNumber"].Should().Be(0);
-            messages[0].Header.Bag["streamId"].Should().Be(StreamName);
+            Convert.ToInt32(messages[0].Header.Bag["eventNumber"]).Should().Be(0);
+            Convert.ToString(messages[0].Header.Bag["streamId"]).Should().Be(StreamName);
             
             //Bag serialization
-            //should read the message header first bag item from the sql outbox
-            messages[1].Header.Bag["impersonatorId"].Should().Be(123);
+            Convert.ToInt32(messages[1].Header.Bag["impersonatorId"]).Should().Be(123);
             //should read the message header second bag item from the sql outbox
-            messages[1].Header.Bag["eventNumber"].Should().Be(1);
-            messages[1].Header.Bag["streamId"].Should().Be(StreamName); 
-
+            Convert.ToInt32(messages[1].Header.Bag["eventNumber"]).Should().Be(1);
+            Convert.ToString(messages[1].Header.Bag["streamId"]).Should().Be(StreamName);
+ 
         }
     }
 }

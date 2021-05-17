@@ -42,7 +42,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
             
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, StreamName}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
             
             var outstandingMessage = CreateMessage(0, StreamName);
             var dispatchedMessage = CreateMessage(1, StreamName);
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, null}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
             Action getWithoutArgs = () => eventStoreOutbox.OutstandingMessages(500, 100, 1, args);
