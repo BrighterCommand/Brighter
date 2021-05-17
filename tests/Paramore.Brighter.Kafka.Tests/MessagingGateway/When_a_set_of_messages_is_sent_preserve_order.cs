@@ -12,7 +12,8 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Trait("Category", "Kafka")]
-    public class KafkaMessageConsumerPreservesOrder : IDisposable
+    [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+     public class KafkaMessageConsumerPreservesOrder : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();

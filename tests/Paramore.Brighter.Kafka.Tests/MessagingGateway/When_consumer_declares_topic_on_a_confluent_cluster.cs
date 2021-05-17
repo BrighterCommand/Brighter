@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Trait("Category", "Kafka")]
     [Trait("Category", "Confluent")]
+    [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
     public class KafkaConfluentConsumerDeclareTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
