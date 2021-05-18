@@ -190,4 +190,50 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
     }
+
+    internal class SpyThrowingCommandProcessor : SpyCommandProcessor
+    {
+        public int SendCount { get; set; }
+        public int PublishCount { get; set; }
+
+        public SpyThrowingCommandProcessor()
+        {
+            SendCount = 0;
+            PublishCount = 0;
+        }
+
+        public override void Send<T>(T command)
+        {
+            base.Send(command);
+            SendCount++;
+            throw new Exception("Something went wrong");
+        }
+
+        public override void Publish<T>(T @event)
+        {
+            base.Publish(@event);
+            PublishCount++;
+
+            var exceptions = new List<Exception> { new Exception("Something went wrong.") };
+
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+
+        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            throw new Exception("Something went wrong");
+        }
+
+        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
+            PublishCount++;
+
+            var exceptions = new List<Exception> { new Exception("Something went wrong.") };
+
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+    }
 }

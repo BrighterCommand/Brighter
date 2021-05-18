@@ -159,6 +159,9 @@ namespace Paramore.Brighter.ServiceActivator
                     s_logger.LogError(e,
                         "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+
+                    // if Message was Rejected then go on to next Iteration, no need to ACK
+                    if(!RequeueMessage(message)) continue;
                 }
 
                 AcknowledgeMessage(message);
@@ -188,7 +191,7 @@ namespace Paramore.Brighter.ServiceActivator
         // Implemented in a derived class to dispatch to the relevant type of pipeline via the command processor
         // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
         protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request);
-        
+
         protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
@@ -227,11 +230,17 @@ namespace Paramore.Brighter.ServiceActivator
         protected void RejectMessage(Message message)
         {
             s_logger.LogDebug("MessagePump: Rejecting message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+            IncrementUnacceptableMessageLimit();
 
             Channel.Reject(message);
         }
 
-        protected void RequeueMessage(Message message)
+        /// <summary>
+        /// Requeue Message
+        /// </summary>
+        /// <param name="message">Message to be Requeued</param>
+        /// <returns>Returns True if Message was Requeued, False if it was Rejected</returns>
+        protected bool RequeueMessage(Message message)
         {
             message.UpdateHandledCount();
 
@@ -253,8 +262,8 @@ namespace Paramore.Brighter.ServiceActivator
                         Environment.NewLine,
                         message.Body.Value);
 
-                    AcknowledgeMessage(message);
-                    return;
+                    RejectMessage(message);
+                    return false;
                 }
             }
 
@@ -263,6 +272,7 @@ namespace Paramore.Brighter.ServiceActivator
                 Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
             Channel.Requeue(message, RequeueDelayInMilliseconds);
+            return true;
         }
 
         protected TRequest TranslateMessage(Message message)
