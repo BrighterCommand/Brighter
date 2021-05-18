@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Paramore.Brighter.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -88,6 +90,7 @@ namespace Paramore.Brighter
         /// Gets the bag.
         /// </summary>
         /// <value>The bag.</value>
+        [JsonConverter(typeof(DictionaryStringObjectJsonConverter))]
         public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
         /// <summary>
         /// Gets the number of times this message has been seen 

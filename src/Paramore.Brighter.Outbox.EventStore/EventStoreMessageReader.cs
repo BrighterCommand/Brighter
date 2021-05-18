@@ -61,61 +61,9 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             var json = Encoding.UTF8.GetString(metadata);
             var messageHeader = JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
-            
-            FixBagElements(messageHeader);
-            
             return messageHeader;
         }
-
-        private static void FixBagElements(MessageHeader messageHeader)
-        {
-            //fix the bag elements; System.Json will read them as a JsonElement not an object, so we have to guess for it
-            var bagEntries = new Dictionary<string, object>();
-            foreach (var entry in messageHeader.Bag)
-            {
-                if (entry.Value != null)
-                {
-                     var value = (JsonElement)entry.Value;
-                     bagEntries.Add(entry.Key, ConvertJsonElementToObject(value));
-                }
-                else
-                {
-                    bagEntries.Add(entry.Key, null);
-                }
-            }
-
-            messageHeader.Bag = bagEntries;
-        }
-
-        private static object ConvertJsonElementToObject(JsonElement value)
-        {
-            switch (value.ValueKind)
-            {
-                case JsonValueKind.Number:
-                    if (value.TryGetInt32(out var integer))
-                        return integer;
-                    return value.GetDecimal();
-                case JsonValueKind.String:
-                    if (value.TryGetDateTime(out var date))
-                    {
-                        return date; 
-                    }
-                    return value.GetString();
-                case JsonValueKind.False:
-                    return false;
-                case JsonValueKind.True:
-                    return true;
-                case JsonValueKind.Object:
-                    return value.EnumerateObject().ToDictionary(property => ConvertJsonElementToObject(property.Value)); 
-                case JsonValueKind.Null:
-                    return null;
-                case JsonValueKind.Array:
-                    return value.EnumerateArray().Select(element => ConvertJsonElementToObject(element)).ToArray();
-                default:
-                    throw new ConfigurationException("Bag contains an unsupported type");
-            }
-        }
-
+        
         private static void ResetEventStoreProperties(long eventNumber, string stream, DateTime? dispatchedDate, Guid? previousEventId, MessageHeader messageHeader)
         {
             messageHeader.Bag.Add("streamId", stream);
