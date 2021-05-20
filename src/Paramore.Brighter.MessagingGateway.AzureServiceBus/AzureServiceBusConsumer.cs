@@ -208,7 +208,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void Reject(Message message)
         {
-            s_logger.LogWarning("Reject method NOT IMPLEMENTED.");
+            //Only Reject if ReceiveMode is Peek
+            if (_receiveMode.Equals(ReceiveMode.PeekLock))
+            {
+                try
+                {
+                    EnsureSubscription();
+                    var lockToken = message.Header.Bag[_lockTokenKey].ToString();
+
+                    if (string.IsNullOrEmpty(lockToken))
+                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                    s_logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+
+                    _messageReceiver.DeadLetter(lockToken).Wait();
+                }
+                catch (Exception ex)
+                {
+                    s_logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
+                    throw;
+                }
+            }
         }
 
         public void Reject(Message message, bool requeue)
