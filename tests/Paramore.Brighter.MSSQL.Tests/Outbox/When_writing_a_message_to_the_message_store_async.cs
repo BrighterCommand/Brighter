@@ -33,16 +33,22 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     [Trait("Category", "MSSQL")]
     public class SqlOutboxWritingMessageAsyncTests : IDisposable
     {
-        private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
-        private readonly Message _messageEarliest;
+        private readonly string _key3 = "name3";
+        private readonly string _key4 = "name4";
+        private readonly string _key5 = "name5";
+        private readonly Message _message;
         private readonly MsSqlOutbox _sqlOutbox;
         private Message _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
+        private readonly int _value3 = 123;
+        private readonly Guid _value4 = Guid.NewGuid();
+        private readonly DateTime _value5 = DateTime.UtcNow;
+        private readonly MsSqlTestHelper _msSqlTestHelper;
 
-        public SqlOutboxWritingMessageAsyncTests()
+        public SqlOutboxWritingMessageAsyncTests ()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -60,36 +66,44 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
+            messageHeader.Bag.Add(_key3, _value3);
+            messageHeader.Bag.Add(_key4, _value4);
+            messageHeader.Bag.Add(_key5, _value5);
 
-            _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
+            _message = new Message(messageHeader, new MessageBody("message body"));
+            _sqlOutbox.Add(_message);
         }
 
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_message);
 
-            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_message.Id);
             //should read the message from the sql outbox
-            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
+            _storedMessage.Body.Value.Should().Be(_message.Body.Value);
             //should read the header from the sql outbox
-            _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
-            _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
+            _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
+            _storedMessage.Header.TimeStamp.Should().Be(_message.Header.TimeStamp);
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
-            _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
-            _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
-            _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
+            _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);
+            _storedMessage.Header.ReplyTo.Should().Be(_message.Header.ReplyTo);
+            _storedMessage.Header.ContentType.Should().Be(_message.Header.ContentType);
              
             
             //Bag serialization
-            //should read the message header first bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            //should read the message header second bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
             _storedMessage.Header.Bag[_key2].Should().Be(_value2);
+            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
+            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
+            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
+            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
+            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
+            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
         }
 
         public void Dispose()
