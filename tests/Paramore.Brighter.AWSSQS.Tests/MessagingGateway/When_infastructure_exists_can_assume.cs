@@ -10,6 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
     public class AWSAssumeInfrastructureTests  : IDisposable
     {     private readonly Message _message;
         private readonly SqsMessageConsumer _consumer;
@@ -68,7 +70,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //arrange
             _messageProducer.Send(_message);
             
-            var messages = _consumer.Receive(1000);
+            var messages = _consumer.Receive(5000);
             
             //Assert
             var message = messages.First();

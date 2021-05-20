@@ -31,7 +31,6 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    [Collection("PostgresSql OutBox")]
     public class SqlOutboxWritingMessageTests : IDisposable
     {
         private readonly string _key1 = "name1";

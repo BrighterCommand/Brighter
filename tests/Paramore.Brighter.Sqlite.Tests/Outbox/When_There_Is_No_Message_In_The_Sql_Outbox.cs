@@ -31,7 +31,6 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    [Collection("Sqlite OutBox")]
     public class SqliteOutboxEmptyStoreTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;

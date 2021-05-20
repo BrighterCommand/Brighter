@@ -32,7 +32,6 @@ using Xunit;
 [assembly: CollectionBehavior(DisableTestParallelization = true)]
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
-    [Collection("RMQ")]
     [Trait("Category", "RMQ")]
     public class RmqMessageConsumerOperationInterruptedTests : IDisposable
     {

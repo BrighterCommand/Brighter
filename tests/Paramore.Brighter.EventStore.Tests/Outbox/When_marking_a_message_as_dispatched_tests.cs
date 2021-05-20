@@ -32,7 +32,6 @@ using Xunit;
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
-    [Collection("EventStore Outbox")]
     public class EventStoreOutboxMarkDispatchedTests : EventStoreFixture
     {
         [Fact]

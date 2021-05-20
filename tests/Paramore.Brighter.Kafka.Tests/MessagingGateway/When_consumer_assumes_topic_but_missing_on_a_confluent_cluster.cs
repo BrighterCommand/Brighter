@@ -37,9 +37,7 @@ using SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtoc
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
-    [Collection("Kafka")]
     [Trait("Category", "Kafka")]
-    [Trait("Category", "Confluent")]
     [Trait("Category", "Confluent")]
     public class KafkaConfluentProducerAssumeTests : IDisposable
     {

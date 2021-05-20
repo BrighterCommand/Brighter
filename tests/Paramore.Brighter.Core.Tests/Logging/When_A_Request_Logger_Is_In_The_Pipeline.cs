@@ -12,7 +12,6 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
 {
-    [Collection("Request Logger")]
     public class CommandProcessorWithLoggingInPipelineTests
     {
         private readonly ITestOutputHelper _output;

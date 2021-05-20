@@ -32,7 +32,6 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Inbox
 {
     [Trait("Category", "MSSQL")]
-    [Collection("MSSQL Inbox")]
     public class SqlInboxAddMessageTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
