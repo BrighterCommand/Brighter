@@ -9,7 +9,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task<IEnumerable<IBrokeredMessageWrapper>> Receive(int batchSize, TimeSpan serverWaitTime);
 
         Task Complete(string lockToken);
-        
+
+        Task DeadLetter(string lockToken);
+
         void Close();
         
         bool IsClosedOrClosing { get; }
