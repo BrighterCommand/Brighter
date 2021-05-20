@@ -87,7 +87,9 @@ namespace Paramore.Brighter
         public MessageType MessageType { get; set; }
 
         /// <summary>
-        /// Gets the bag.
+        /// A property bag that can be used for extended header attributes.
+        /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property
+        /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
         public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();

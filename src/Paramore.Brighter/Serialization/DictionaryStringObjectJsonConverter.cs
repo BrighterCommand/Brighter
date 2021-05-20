@@ -54,10 +54,18 @@ namespace Paramore.Brighter.Serialization
             foreach (var entry in dictionary)
             {
                 var propertyName = entry.Key;
-                writer.WritePropertyName(options.PropertyNamingPolicy?.ConvertName(propertyName) ?? propertyName);
+                var convertedPropName = options.PropertyNamingPolicy?.ConvertName(propertyName) ?? propertyName;
 
-                var valueConverter = new ObjectToInferredTypesConverter();
-                valueConverter.Write(writer, entry.Value, options);
+                if (entry.Value != null)
+                {
+                    writer.WritePropertyName(convertedPropName);
+                    var valueConverter = new ObjectToInferredTypesConverter();
+                    valueConverter.Write(writer, entry.Value, options);
+                }
+                else
+                {
+                    writer.WriteNull(convertedPropName);
+                }
             }
 
             writer.WriteEndObject();

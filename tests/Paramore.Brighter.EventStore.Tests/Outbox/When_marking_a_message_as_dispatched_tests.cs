@@ -40,8 +40,15 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var messageToMarkAsDispatched = CreateMessage(0, StreamName);
+            var body = new MessageBody("{companyId:123}");
+            var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header.Bag.Add("impersonatorId", 123);
+            header.Bag.Add("eventNumber", 0);
+            header.Bag.Add("streamId", StreamName);
+            
+            var messageToMarkAsDispatched = new Message(header, body);
             var dispatchedAt = DateTime.UtcNow;
+            
             var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
             
             eventStoreOutbox.Add(messageToMarkAsDispatched);

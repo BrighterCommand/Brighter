@@ -43,10 +43,27 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var eventStoreOutbox = new EventStoreOutbox(Connection);
             
             var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
+
+            var body = new MessageBody("{companyId:123}");
+            var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header.Bag.Add("impersonatorId", 123);
+            header.Bag.Add("eventNumber", 0);
+            header.Bag.Add("streamId", StreamName);
+            var outstandingMessage = new Message(header, body);
             
-            var outstandingMessage = CreateMessage(0, StreamName);
-            var dispatchedMessage = CreateMessage(1, StreamName);
-            var outstandingRecentMessage = CreateMessage(3, StreamName);
+            var body1 = new MessageBody("{companyId:123}");
+            var header1 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header1.Bag.Add("impersonatorId", 123);
+            header1.Bag.Add("eventNumber", 1);
+            header1.Bag.Add("streamId", StreamName);
+            var dispatchedMessage = new Message(header1, body1);
+            var body2 = new MessageBody("{companyId:123}");
+            
+            var header2 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header2.Bag.Add("impersonatorId", 123);
+            header2.Bag.Add("eventNumber", 3);
+            header2.Bag.Add("streamId", StreamName);
+            var outstandingRecentMessage = new Message(header2, body2);
             
             eventStoreOutbox.Add(outstandingMessage);
             eventStoreOutbox.Add(dispatchedMessage);

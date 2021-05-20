@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using FluentAssertions;
-using Paramore.Brighter.Serialization;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Serialization

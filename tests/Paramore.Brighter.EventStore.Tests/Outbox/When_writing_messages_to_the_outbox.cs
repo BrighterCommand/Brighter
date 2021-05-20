@@ -52,6 +52,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             header.Bag.Add("impersonatorId", 123);
             header.Bag.Add("eventNumber", 0);
             header.Bag.Add("streamId", StreamName);
+            var conversationId = Guid.NewGuid();
+            header.Bag.Add("conversationId", conversationId);
+            var now = DateTime.UtcNow;
+            header.Bag.Add("timeStamp", now);
             
             var message1 = new Message(header, body);
 
@@ -67,6 +71,8 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             header1.Bag.Add("impersonatorId", 123);
             header1.Bag.Add("eventNumber", 1);
             header1.Bag.Add("streamId", StreamName);
+            header1.Bag.Add("conversationId", conversationId);
+            header1.Bag.Add("timeStamp", now);
             
             var message2 = new Message(header1, body1);
             
@@ -91,18 +97,17 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
              
             
             //Bag serialization
-            //should read the message header first bag item from the sql outbox
             messages[0].Header.Bag["impersonatorId"].Should().Be(123);
-            //should read the message header second bag item from the sql outbox
             messages[0].Header.Bag["eventNumber"].Should().Be(0);
             messages[0].Header.Bag["streamId"].Should().Be(StreamName);
+            messages[0].Header.Bag["conversationId"].Should().Be(conversationId);
+            messages[0].Header.Bag["timeStamp"].Should().Be(now);
             
-            //Bag serialization
-            //should read the message header first bag item from the sql outbox
             messages[1].Header.Bag["impersonatorId"].Should().Be(123);
-            //should read the message header second bag item from the sql outbox
             messages[1].Header.Bag["eventNumber"].Should().Be(1);
             messages[1].Header.Bag["streamId"].Should().Be(StreamName);
+            messages[1].Header.Bag["conversationId"].Should().Be(conversationId);
+            messages[1].Header.Bag["timeStamp"].Should().Be(now);
 
         }
     }
