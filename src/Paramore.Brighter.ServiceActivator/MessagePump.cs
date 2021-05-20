@@ -126,17 +126,15 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (DeferMessageAction)
                 {
-                    RequeueMessage(message);
-                    continue;
+                    if (!RequeueMessage(message)) continue;
                 }
                 catch (AggregateException aggregateException)
                 {
                     var (stop, requeue) = HandleProcessingException(aggregateException);
 
-                    if (requeue)   
+                    if (requeue)
                     {
-                        RequeueMessage(message);
-                        continue;
+                        if (!RequeueMessage(message)) continue;
                     }
 
                     if (stop)   
@@ -159,9 +157,6 @@ namespace Paramore.Brighter.ServiceActivator
                     s_logger.LogError(e,
                         "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
-
-                    // if Message was Rejected then go on to next Iteration, no need to ACK
-                    if(!RequeueMessage(message)) continue;
                 }
 
                 AcknowledgeMessage(message);

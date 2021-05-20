@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
-        private readonly SpyThrowingCommandProcessor _commandProcessor;
+        private readonly SpyRequeueCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
         public MessagePumpCommandProcessingExceptionTests()
         {
-            _commandProcessor = new SpyThrowingCommandProcessor();
+            _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var mapper = new MyCommandMessageMapper();
             _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };

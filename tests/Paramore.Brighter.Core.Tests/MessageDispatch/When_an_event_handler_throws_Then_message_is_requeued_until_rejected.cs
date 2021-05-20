@@ -33,26 +33,26 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpCommandProcessingExceptionTestsAsync
+    public class MessagePumpEventProcessingExceptionTests
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
-        public MessagePumpCommandProcessingExceptionTestsAsync()
+        public MessagePumpEventProcessingExceptionTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
-            var mapper = new MyCommandMessageMapper();
-            _messagePump = new MessagePumpAsync<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+            var mapper = new MyEventMessageMapper();
+            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
-            var msg = mapper.MapToMessage(new MyCommand());
+            var msg = mapper.MapToMessage(new MyEvent());
             _channel.Enqueue(msg);
         }
 
         [Fact]
-        public void When_a_command_handler_throws_Then_message_is_requeued_until_rejectedAsync()
+        public void When_an_event_handler_throws_Then_message_is_requeued_until_rejected()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
