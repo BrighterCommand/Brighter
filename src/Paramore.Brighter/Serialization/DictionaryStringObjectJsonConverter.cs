@@ -1,5 +1,6 @@
 ﻿#region License
 //Based on code byn Josef Ottoson. See: https://josef.codes/custom-dictionary-string-object-jsonconverter-for-system-text-json/
+//itself derived from: https://docs.microsoft.com/en-us/dotnet/standard/serialization/system-text-json-converters-how-to?WT.mc_id=DT-MVP-5004074&pivots=dotnet-5-0
 #endregion
 
 using System;
@@ -40,18 +41,29 @@ namespace Paramore.Brighter.Serialization
 
                 reader.Read();
 
-                dictionary.Add(propertyName, ExtractValue(ref reader, options));
+                dictionary.Add(propertyName, ReadJsonElement(ref reader, options));
             }
 
             return dictionary;
         }
 
-        public override void Write(Utf8JsonWriter writer, Dictionary<string, object> value, JsonSerializerOptions options)
+        public override void Write(Utf8JsonWriter writer, Dictionary<string, object> dictionary, JsonSerializerOptions options)
         {
-            JsonSerializer.Serialize(writer, value, options);
+            writer.WriteStartObject();
+
+            foreach (var entry in dictionary)
+            {
+                var propertyName = entry.Key;
+                writer.WritePropertyName(options.PropertyNamingPolicy?.ConvertName(propertyName) ?? propertyName);
+
+                var valueConverter = new ObjectToInferredTypesConverter();
+                valueConverter.Write(writer, entry.Value, options);
+            }
+
+            writer.WriteEndObject();
         }
 
-        private object ExtractValue(ref Utf8JsonReader reader, JsonSerializerOptions options)
+        private object ReadJsonElement(ref Utf8JsonReader reader, JsonSerializerOptions options)
         {
             switch (reader.TokenType)
             {
@@ -59,6 +71,11 @@ namespace Paramore.Brighter.Serialization
                     if (reader.TryGetDateTime(out var date))
                     {
                         return date;
+                    }
+
+                    if (reader.TryGetGuid(out var guid))
+                    {
+                        return guid;
                     }
                     return reader.GetString();
                 case JsonTokenType.False:
@@ -79,7 +96,7 @@ namespace Paramore.Brighter.Serialization
                     var list = new List<object>();
                     while (reader.Read() && reader.TokenType != JsonTokenType.EndArray)
                     {
-                        list.Add(ExtractValue(ref reader, options));
+                        list.Add(ReadJsonElement(ref reader, options));
                     }
                     return list;
                 default:

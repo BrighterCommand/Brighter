@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using System.Text.Json.Serialization;
+using Paramore.Brighter.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -21,6 +22,9 @@ namespace Paramore.Brighter
             };
 
             opts.Converters.Add(new JsonStringConverter());
+            opts.Converters.Add(new DictionaryStringObjectJsonConverter());
+            opts.Converters.Add(new ObjectToInferredTypesConverter());
+            opts.Converters.Add(new JsonStringEnumConverter());
 
             Options = opts;
         }

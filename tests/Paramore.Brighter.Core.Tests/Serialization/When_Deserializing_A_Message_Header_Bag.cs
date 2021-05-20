@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text.Json;
 using FluentAssertions;
+using Paramore.Brighter.Serialization;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Serialization
@@ -22,16 +23,18 @@ namespace Paramore.Brighter.Core.Tests.Serialization
                  messageType: MessageType.MT_EVENT,
                  timeStamp: DateTime.UtcNow,
                  correlationId: Guid.NewGuid());
-             
+
+             var myGuid = Guid.NewGuid();
              var expectedBag = new Dictionary<string, object>
              {
-                 {"MyStringKey", "A string value"},
-                 {"MyDateTimeKey", DateTime.UtcNow},
-                 {"MyIntegerKey", 123},
-                 {"MyDecimalKey", 123.56},
-                 {"MyBooleanKeyTrue", true},
-                 {"MyBooleanKey", false},
-                 {"MyArrayKey", new int[]{1,2,3,4,}}
+                 {"myStringKey", "A string value"},
+                 {"myDateTimeKey", DateTime.UtcNow},
+                 {"myIntegerKey", 123},
+                 {"myDecimalKey", 123.56},
+                 {"myBooleanKeyTrue", true},
+                 {"myBooleanKey", false},
+                 {"myGuid", myGuid},
+                 {"myArrayKey", new int[]{1,2,3,4,}}
              };
 
              foreach (var key in expectedBag.Keys)
@@ -39,17 +42,17 @@ namespace Paramore.Brighter.Core.Tests.Serialization
                 header.Bag.Add(key, expectedBag[key]);
              }
 
-             var json = JsonSerializer.Serialize(header);
+             var json = JsonSerializer.Serialize(header, JsonSerialisationOptions.Options);
              
              //Act
-             MessageHeader deserializedHeader = JsonSerializer.Deserialize<MessageHeader>(json);
+             MessageHeader deserializedHeader = JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
              //fix the headers to pass
              
              //Assert
              foreach (var key in expectedBag.Keys)
              {
-                 if (key != "MyArrayKey") deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
-                 if (key == "MyArrayKey")
+                 if (key != "myArrayKey") deserializedHeader.Bag[key].Should().Be(expectedBag[key]);
+                 if (key == "myArrayKey")
                  {
                      var expectedVals = (int[])expectedBag[key];
                      var providedVals = (List<Object>)deserializedHeader.Bag[key];
