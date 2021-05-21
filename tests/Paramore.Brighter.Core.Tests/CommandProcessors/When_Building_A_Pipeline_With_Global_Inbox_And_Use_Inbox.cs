@@ -10,6 +10,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelineGlobalInboxWhenUseInboxTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;

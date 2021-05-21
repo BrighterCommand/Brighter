@@ -11,6 +11,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorBuildDefaultInboxSendTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;

@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _message = _mapper.MapToMessage(_command);
 
             // _should_serialize_the_command_type_to_the_message_body
-            _message.Body.Value.Should().Contain("\"type\":1");
+            _message.Body.Value.Should().Contain("\"type\":\"CM_STARTALL");
             //_should_serialize_the_message_type_to_the_header
             _message.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             //_should_serialize_the_connection_name_to_the_message_body

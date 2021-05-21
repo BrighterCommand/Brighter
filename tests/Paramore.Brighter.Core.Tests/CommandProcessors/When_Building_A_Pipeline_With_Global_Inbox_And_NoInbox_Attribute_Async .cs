@@ -7,6 +7,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelineGlobalInboxNoInboxAttributeAsyncTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;

@@ -34,7 +34,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
-    public class ControlBusSenderPostMessageAsyneTests : IDisposable
+    [Collection("CommandProcessor")]
+     public class ControlBusSenderPostMessageAsyneTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly ControlBusSender _controlBusSender;

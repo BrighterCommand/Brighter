@@ -8,6 +8,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelineGlobalInboxTests
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
@@ -15,7 +16,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly RequestContext _requestContext;
         private readonly InboxConfiguration _inboxConfiguration;
         private IAmAnInbox _inbox;
-
 
         public PipelineGlobalInboxTests()
         {

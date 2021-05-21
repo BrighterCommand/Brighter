@@ -3,9 +3,11 @@ using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelinePreAndPostFiltersAsyncTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
@@ -27,6 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             PipelineBuilder<MyCommand>.ClearPipelineCache();
         }
 
+        [Fact]
         private void When_Building_An_Async_Pipeline_Allow_Pre_And_Post_Tasks()
         {
             _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();

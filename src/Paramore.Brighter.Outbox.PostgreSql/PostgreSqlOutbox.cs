@@ -370,7 +370,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 replyTo: replyTo,
                 contentType: contentType);
 
-            Dictionary<string, string> dictionaryBag = GetContextBag(dr);
+            Dictionary<string, object> dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
             {
                 foreach (var key in dictionaryBag.Keys)
@@ -417,11 +417,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
              return replyTo;
         }
 
-        private static Dictionary<string, string> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, string>>(headerBag, JsonSerialisationOptions.Options);
+            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 

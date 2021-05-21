@@ -50,11 +50,7 @@ namespace Paramore.Brighter.Outbox.EventStore
 
         private readonly IEventStoreConnection _eventStore;
 
-        public static readonly string StreamArg = "streamid";
-        public static readonly string DispatchedAtKey = "dispatchedAt";
-        public static readonly string PreviousEventIdKey = "previousEventId";
-
-        /// <summary>
+       /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
         /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
         /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
@@ -88,7 +84,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             var streamId = ExtractStreamIdFromHeader(headerBag, message.Id);
             var eventNumber = ExtractEventNumberFromHeader(headerBag, message.Id);
             var numberOfPreviousEvent = eventNumber - 1;
-            var eventData = CreateEventData(message);
+            var eventData = EventStoreMessageWriter.CreateEventData(message);
 
             _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData).Wait();
         }
@@ -109,7 +105,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             var streamId = ExtractStreamIdFromHeader(message.Header.Bag, message.Id);
             var eventNumber = ExtractEventNumberFromHeader(message.Header.Bag, message.Id);
             var numberOfPreviousEvent = eventNumber - 1;
-            var eventData = CreateEventData(message);
+            var eventData = EventStoreMessageWriter.CreateEventData(message);
 
             await _eventStore.AppendToStreamAsync(streamId, numberOfPreviousEvent, eventData);
         }
@@ -160,7 +156,7 @@ namespace Paramore.Brighter.Outbox.EventStore
 
             var eventStreamSlice = await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, pageSize, true);
 
-            return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
+            return eventStreamSlice.Events.Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
         /// <summary>
@@ -186,7 +182,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             var eventStreamSlice = _eventStore
                 .ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true).Result;
-            return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
+            return eventStreamSlice.Events.Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
         /// <summary>
@@ -216,7 +212,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             var eventStreamSlice =
                 await _eventStore.ReadStreamEventsForwardAsync(stream, fromEventNumber, numberOfEvents, true);
-            return eventStreamSlice.Events.Select(e => ConvertEventToMessage(e.Event, stream)).ToList();
+            return eventStreamSlice.Events.Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream)).ToList();
         }
 
         /// <summary>
@@ -254,9 +250,9 @@ namespace Paramore.Brighter.Outbox.EventStore
             if (resolvedEvent is null)
                 return;
 
-            var message = ConvertEventToMessage(resolvedEvent, stream, dispatchedAt, nextEventNumber.Value);
+            var message = EventStoreMessageReader.ConvertEventToMessage(resolvedEvent, stream, dispatchedAt, nextEventNumber.Value);
 
-            var eventData = CreateEventData(message);
+            var eventData = EventStoreMessageWriter.CreateEventData(message);
 
             await _eventStore.AppendToStreamAsync(stream, nextEventNumber.Value, eventData);
         }
@@ -294,7 +290,7 @@ namespace Paramore.Brighter.Outbox.EventStore
 
             var messages = eventStreamSlice.Events
                 .Where(e => e.Event.Created <= sentBefore)
-                .Select(e => ConvertEventToMessage(e.Event, stream))
+                .Select(e => EventStoreMessageReader.ConvertEventToMessage(e.Event, stream))
                 .ToList();
 
             HashSet<Guid> dispatchedIds = new HashSet<Guid>();
@@ -302,8 +298,8 @@ namespace Paramore.Brighter.Outbox.EventStore
 
             foreach (var message in messages)
             {
-                var dispatchedAt = message.Header.Bag.ContainsKey(DispatchedAtKey)
-                    ? message.Header.Bag[DispatchedAtKey] as string
+                var dispatchedAt = message.Header.Bag.ContainsKey(Globals.DispatchedAtKey)
+                    ? message.Header.Bag[Globals.DispatchedAtKey] as string
                     : null;
 
                 if (dispatchedAt is null)
@@ -312,7 +308,7 @@ namespace Paramore.Brighter.Outbox.EventStore
                     continue;
                 }
 
-                var previousEventId = message.Header.Bag[PreviousEventIdKey] as string;
+                var previousEventId = message.Header.Bag[Globals.PreviousEventIdKey] as string;
 
                 if (!Guid.TryParse(previousEventId, out Guid eventId))
                     continue;
@@ -327,48 +323,6 @@ namespace Paramore.Brighter.Outbox.EventStore
             }
 
             return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
-        }
-
-        private static MessageHeader CreateHeader(byte[] metadata, long eventNumber, string stream, DateTime? dispatchedDate = null, Guid? previousEventId = null)
-        {
-            var json = Encoding.UTF8.GetString(metadata);
-            var messageHeader =
-                JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
-            
-            messageHeader.Bag.Add("streamId", stream);
-            messageHeader.Bag.Add("eventNumber", eventNumber);
-
-            if (dispatchedDate != null)
-            {
-                messageHeader.Bag.Add(DispatchedAtKey, dispatchedDate);
-                messageHeader.Bag.Add(PreviousEventIdKey, previousEventId);
-            }
-            
-            return messageHeader;
-        }
-
-        private static EventData[] CreateEventData(Message message)
-        {
-            var eventBody = Encoding.UTF8.GetBytes(message.Body.Value);
-
-            var headerCopy = message.Header.Copy();
-            RemoveEventStoreHeaderItems(headerCopy.Bag);
-
-            var headerJson = JsonSerializer.Serialize(headerCopy, JsonSerialisationOptions.Options);
-            var eventHeader = Encoding.UTF8.GetBytes(headerJson);
-
-            return new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};
-        }
-
-        private static Message ConvertEventToMessage(RecordedEvent @event, string stream, DateTime? dispatchedAt = null, long? eventNumber = null)
-        {
-            var messageBody = new MessageBody(Encoding.UTF8.GetString(@event.Data));
-
-            eventNumber = eventNumber.HasValue ? eventNumber : @event.EventNumber;
-
-            var messageHeader = CreateHeader(@event.Metadata, eventNumber.Value, stream, dispatchedAt);
-
-            return new Message(messageHeader, messageBody);
         }
 
         private static int ExtractEventNumberFromHeader(Dictionary<string, object> headerBag, Guid messageId)
@@ -389,24 +343,18 @@ namespace Paramore.Brighter.Outbox.EventStore
             return (string)streamId;
         }
 
-        private static void RemoveEventStoreHeaderItems(Dictionary<string, object> headerBag)
-        {
-            headerBag.Remove("streamId");
-            headerBag.Remove("eventNumber");
-        }
-
         private static string GetStreamFromArgs(Dictionary<string, object> args)
         {
             if (args is null)
                 throw new ArgumentNullException(nameof(args));
 
-            if (!args.ContainsKey(StreamArg))
-                throw new ArgumentException($"{StreamArg} missing", nameof(args));
+            if (!args.ContainsKey(Globals.StreamArg))
+                throw new ArgumentException($"{Globals.StreamArg} missing", nameof(args));
 
-            var stream = args[StreamArg] as string;
+            var stream = args[Globals.StreamArg] as string;
 
             if (string.IsNullOrEmpty(stream))
-                throw new ArgumentException($"{StreamArg} value must not be null or empty", nameof(args));
+                throw new ArgumentException($"{Globals.StreamArg} value must not be null or empty", nameof(args));
             return stream;
         }
     }

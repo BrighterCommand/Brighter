@@ -1,7 +1,7 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
+Copyright © 2021 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -21,30 +21,34 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 
-#endregion
+# endregion
 
-using FluentAssertions;
-using Paramore.Brighter.Outbox.EventStore;
-using Xunit;
+using System.Collections.Generic;
+using System.Text;
+using System.Text.Json;
+using EventStore.ClientAPI;
 
-namespace Paramore.Brighter.EventStore.Tests.Outbox
+namespace Paramore.Brighter.Outbox.EventStore
 {
-    [Trait("Category", "EventStore")]
-    [Collection("EventStore")]
-    public class EventStoreEmptyTests : EventStoreFixture
+    internal class EventStoreMessageWriter
     {
-        [Fact]
-        public void When_There_Is_No_Message_In_The_Outbox()
+        public static EventData[] CreateEventData(Message message)
         {
-            // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
-            
-            // act
-            var messages = eventStoreOutbox.Get(StreamName, 0, 1);
+            var eventBody = Encoding.UTF8.GetBytes(message.Body.Value);
 
-            // assert
-            //_returns_an_empty_list
-            messages.Count.Should().Be(0);
+            var headerCopy = message.Header.Copy();
+            RemoveEventStoreHeaderItems(headerCopy.Bag);
+
+            var headerJson = JsonSerializer.Serialize(headerCopy, JsonSerialisationOptions.Options);
+            var eventHeader = Encoding.UTF8.GetBytes(headerJson);
+
+            return new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};
+        } 
+        
+        private static void RemoveEventStoreHeaderItems(Dictionary<string, object> headerBag)
+        {
+            headerBag.Remove("streamId");
+            headerBag.Remove("eventNumber");
         }
     }
 }

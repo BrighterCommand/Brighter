@@ -35,13 +35,18 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
-        private readonly string key1 = "name1";
-        private readonly string key2 = "name2";
+        private readonly string _key1 = "name1";
+        private readonly string _key2 = "name2";
+        private readonly string _key3 = "name3";
+        private readonly string _key4 = "name4";
+        private readonly string _key5 = "name5";
         private readonly Message _messageEarliest;
         private Message _storedMessage;
-        private readonly string value1 = "value1";
-        private readonly string value2 = "value2";
-
+        private readonly string _value1 = "value1";
+        private readonly string _value2 = "value2";
+        private readonly int _value3 = 123;
+        private readonly Guid _value4 = Guid.NewGuid();
+        private readonly DateTime _value5 = DateTime.UtcNow;
         public MySqlOutboxWritingMessageAsyncTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
@@ -49,8 +54,11 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,DateTime.UtcNow.AddDays(-1), 5, 5);
-            messageHeader.Bag.Add(key1, value1);
-            messageHeader.Bag.Add(key2, value2);
+            messageHeader.Bag.Add(_key1, _value1);
+            messageHeader.Bag.Add(_key2, _value2);
+            messageHeader.Bag.Add(_key3, _value3);
+            messageHeader.Bag.Add(_key4, _value4);
+            messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
         }
@@ -76,12 +84,16 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
              
             
             //Bag serialization
-            //should read the message header first bag item from the sql outbox
-            _storedMessage.Header.Bag.ContainsKey(key1).Should().BeTrue();
-            _storedMessage.Header.Bag[key1].Should().Be(value1);
-            //should read the message header second bag item from the sql outbox
-            _storedMessage.Header.Bag.ContainsKey(key2).Should().BeTrue();
-            _storedMessage.Header.Bag[key2].Should().Be(value2);
+            _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
+            _storedMessage.Header.Bag[_key1].Should().Be(_value1);
+            _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
+            _storedMessage.Header.Bag[_key2].Should().Be(_value2);
+            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
+            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
+            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
+            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
+            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
+            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
         }
 
         public void Dispose()

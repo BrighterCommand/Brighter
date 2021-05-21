@@ -163,7 +163,7 @@ jobs:
 
   kafka-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     needs: [build]
     env:
       CONFLUENT_BOOSTRAP_SERVER: ${{ secrets.CONFLUENT_BOOSTRAP_SERVER }}
@@ -252,7 +252,7 @@ jobs:
         
   eventstore-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     needs: [build]
     
     services:
