@@ -13,7 +13,8 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
-    public class CommandProcessorBuildDefaultInboxSendAsyncTests : IDisposable
+    [Collection("CommandProcessor")]
+     public class CommandProcessorBuildDefaultInboxSendAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly InMemoryInbox _inbox = new InMemoryInbox();

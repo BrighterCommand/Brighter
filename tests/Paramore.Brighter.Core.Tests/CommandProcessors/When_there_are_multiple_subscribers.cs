@@ -33,6 +33,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorPublishMultipleMatchesTests
     {
         private readonly CommandProcessor _commandProcessor;

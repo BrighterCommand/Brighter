@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelineMixedHandlersAsyncTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
