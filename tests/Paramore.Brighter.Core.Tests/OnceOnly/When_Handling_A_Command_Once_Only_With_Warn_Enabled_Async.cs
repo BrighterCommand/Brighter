@@ -34,6 +34,8 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
+    [Trait("Fragile", "CI")]
+    [Collection("CommandProcessor")]
     public class OnceOnlyAttributeWithWarnExceptionAsyncTests
     {
         private readonly MyCommand _command;

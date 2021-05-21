@@ -10,7 +10,8 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
-    public class OnceOnlyAttributeTests 
+    [Collection("CommandProcessor")]
+     public class OnceOnlyAttributeTests 
     {
         private readonly MyCommand _command;
         private readonly IAmAnInbox _inbox;
