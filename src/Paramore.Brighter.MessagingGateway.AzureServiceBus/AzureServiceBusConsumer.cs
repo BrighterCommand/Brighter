@@ -130,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             var count = 0;
-            if (azureServiceBusMessage.UserProperties.ContainsKey("HandledCount"))
+            if (azureServiceBusMessage.UserProperties != null && azureServiceBusMessage.UserProperties.ContainsKey("HandledCount"))
             {
                 int.TryParse(azureServiceBusMessage.UserProperties["HandledCount"].ToString(), out count);
             }
