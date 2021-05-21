@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -34,27 +33,26 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpUnacceptableMessageTests
+    public class MessagePumpCommandProcessingExceptionTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
+        private readonly int _requeueCount = 5;
 
-        public MessagePumpUnacceptableMessageTests()
+        public MessagePumpCommandProcessingExceptionTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
-            var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            var mapper = new MyCommandMessageMapper();
+            _messagePump = new MessagePumpAsync<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
-            var myMessage = JsonSerializer.Serialize(new MyEvent());
-            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
-
-            _channel.Enqueue(unacceptableMessage);
+            var msg = mapper.MapToMessage(new MyCommand());
+            _channel.Enqueue(msg);
         }
 
         [Fact]
-        public void When_An_Unacceptable_Message_Is_Recieved()
+        public void When_a_command_handler_throws_Then_message_is_requeued_until_rejectedAsync()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
@@ -64,8 +62,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             Task.WaitAll(new[] { task });
 
-            //should_acknowledge_the_message
-            _channel.AcknowledgeHappened.Should().BeTrue();
+            _channel.RequeueCount.Should().Be(_requeueCount-1);
+            _channel.RejectCount.Should().Be(1);
         }
     }
 }

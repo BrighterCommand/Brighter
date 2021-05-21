@@ -286,9 +286,6 @@ namespace Paramore.Brighter
                 var hashCode = Id.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Topic != null ? Topic.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)MessageType;
-                hashCode = (hashCode * 397) ^ TimeStamp.GetHashCode();
-                hashCode = (hashCode * 397) ^ HandledCount.GetHashCode();
-                hashCode = (hashCode * 397) ^ DelayedMilliseconds.GetHashCode();
                 return hashCode;
             }
         }

@@ -189,5 +189,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
+        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            throw new DeferMessageAction();
+        }
+
+        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
+            PublishCount++;
+
+            var exceptions = new List<Exception> { new DeferMessageAction() };
+
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+
     }
 }
