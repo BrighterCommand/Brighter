@@ -5,10 +5,11 @@ using Paramore.Brighter.Logging;
 using Polly;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Polly.Retry;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
-    public class AzureServiceBusMessageProducer : IAmAMessageProducer
+    public class AzureServiceBusMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
@@ -33,8 +34,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             SendWithDelay(message);
         }
+        public async Task SendAsync(Message message)
+        {
+            await SendWithDelayAsync(message);
+        }
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
+        {
+            SendWithDelayAsync(message, delayMilliseconds).Wait();
+        }
+
+        public async Task SendWithDelayAsync(Message message, int delayMilliseconds = 0)
         {
             s_logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
 
@@ -70,14 +80,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 var azureServiceBusMessage = new Microsoft.Azure.ServiceBus.Message(message.Body.Bytes);
                 azureServiceBusMessage.UserProperties.Add("MessageType", message.Header.MessageType.ToString());
+                azureServiceBusMessage.UserProperties.Add("HandledCount", message.Header.HandledCount);
                 if (delayMilliseconds == 0)
                 {
-                    topicClient.Send(azureServiceBusMessage);
+                    await topicClient.SendAsync(azureServiceBusMessage);
                 }
                 else
                 {
                     var dateTimeOffset = new DateTimeOffset(DateTime.UtcNow.AddMilliseconds(delayMilliseconds));
-                    topicClient.ScheduleMessage(azureServiceBusMessage, dateTimeOffset);
+                    await topicClient.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset);
                 }
 
                 s_logger.LogDebug(
@@ -90,7 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             finally
             {
-                topicClient.Close();
+                await topicClient.CloseAsync();
             }
         }
 
