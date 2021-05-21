@@ -34,6 +34,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorUsingInboxTests
     {
         private readonly MyCommand _command;
