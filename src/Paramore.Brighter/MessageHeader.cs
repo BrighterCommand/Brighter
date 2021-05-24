@@ -24,6 +24,8 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
+using Paramore.Brighter.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -85,10 +87,12 @@ namespace Paramore.Brighter
         public MessageType MessageType { get; set; }
 
         /// <summary>
-        /// Gets the bag.
+        /// A property bag that can be used for extended header attributes.
+        /// Use camelCase for the key names if you intend to read it yourself, as when converted to and from Json serializers will tend convert the property
+        /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
         /// <summary>
         /// Gets the number of times this message has been seen 
         /// </summary>
@@ -286,9 +290,6 @@ namespace Paramore.Brighter
                 var hashCode = Id.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Topic != null ? Topic.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (int)MessageType;
-                hashCode = (hashCode * 397) ^ TimeStamp.GetHashCode();
-                hashCode = (hashCode * 397) ^ HandledCount.GetHashCode();
-                hashCode = (hashCode * 397) ^ DelayedMilliseconds.GetHashCode();
                 return hashCode;
             }
         }

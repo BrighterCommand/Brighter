@@ -35,7 +35,6 @@ using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
-    [Collection("Feature Switch Check")]
     public class FeatureSwitchByConfigMissingConfigStrategyExceptionTests : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();

@@ -32,7 +32,6 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
-    [Collection("DynamoDB Inbox")]
     public class DynamoDbImboxDuplicateMessageTests : DynamoDBInboxBaseTest
     {
         private readonly DynamoDbInbox _dynamoDbInbox;

@@ -109,7 +109,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             s_logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}.",
                 _topicName, _subscriptionName, messageBody);
             MessageType messageType = GetMessageType(azureServiceBusMessage);
-            var headers = new MessageHeader(Guid.NewGuid(), _topicName, messageType);
+            var handledCount = GetHandledCount(azureServiceBusMessage);
+            var headers = new MessageHeader(Guid.NewGuid(), _topicName, messageType, DateTime.UtcNow, handledCount, 0);
             if(_receiveMode.Equals(ReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
             var message = new Message(headers, new MessageBody(messageBody));
             return message;
@@ -124,6 +125,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 return messageType;
 
             return MessageType.MT_EVENT;
+        }
+
+        private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)
+        {
+            var count = 0;
+            if (azureServiceBusMessage.UserProperties != null && azureServiceBusMessage.UserProperties.ContainsKey("HandledCount"))
+            {
+                int.TryParse(azureServiceBusMessage.UserProperties["HandledCount"].ToString(), out count);
+            }
+            return count;
         }
 
         private void EnsureSubscription()
@@ -208,7 +219,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void Reject(Message message)
         {
-            s_logger.LogWarning("Reject method NOT IMPLEMENTED.");
+            //Only Reject if ReceiveMode is Peek
+            if (_receiveMode.Equals(ReceiveMode.PeekLock))
+            {
+                try
+                {
+                    EnsureSubscription();
+                    var lockToken = message.Header.Bag[_lockTokenKey].ToString();
+
+                    if (string.IsNullOrEmpty(lockToken))
+                        throw new Exception($"LockToken for message with id {message.Id} is null or empty");
+                    s_logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+
+                    _messageReceiver.DeadLetter(lockToken).Wait();
+                }
+                catch (Exception ex)
+                {
+                    s_logger.LogError(ex, "Error Dead Lettering message with id {Id}", message.Id);
+                    throw;
+                }
+            }
         }
 
         public void Reject(Message message, bool requeue)

@@ -5,6 +5,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelineWithHandlerDependenciesTests
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;

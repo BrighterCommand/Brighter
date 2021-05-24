@@ -31,7 +31,6 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 {
     [Trait("Category", "DynamoDB")]
-    [Collection("DynamoDB OutBox")]
     public class DynamoDbOutboxMessageAlreadyExistsTests : DynamoDBOutboxBaseTest
     {
         private readonly Message _messageEarliest;

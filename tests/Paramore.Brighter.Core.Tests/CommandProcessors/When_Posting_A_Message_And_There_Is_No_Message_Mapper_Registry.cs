@@ -28,10 +28,11 @@ using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
 using Polly.Registry;
+using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
-
+    [Collection("CommandProcessor")]
     public class CommandProcessorNoMessageMapperTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;

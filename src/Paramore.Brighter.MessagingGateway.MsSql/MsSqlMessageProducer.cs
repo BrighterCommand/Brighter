@@ -1,7 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
@@ -17,12 +17,19 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public MsSqlMessageProducer(
             MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
-            Publication publication = null)
+            IMsSqlMessagingGatewayConnectionFactory connectionFactory,
+        Publication publication = null)
         {
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration);
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration, connectionFactory);
             _publication = publication ?? new Publication() {MakeChannels = OnMissingChannel.Create};
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
+        }
+
+        public MsSqlMessageProducer(
+            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
+            Publication publication = null) : this(msSqlMessagingGatewayConfiguration, new MsSqlMessagingGatewaySqlAuthConnectionFactory(msSqlMessagingGatewayConfiguration.ConnectionString), publication)
+        {
         }
 
         public void Send(Message message)

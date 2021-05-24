@@ -31,7 +31,6 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Tests.MessagingGateway 
 {
-    [Collection("RMQ")]
     [Trait("Category", "RMQ")]
     public class RmqMessageConsumerConnectionClosedTests : IDisposable
     {

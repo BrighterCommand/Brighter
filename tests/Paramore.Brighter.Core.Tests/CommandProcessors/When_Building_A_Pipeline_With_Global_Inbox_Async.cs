@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     //Respects different global choices i.e. throw, what to capture, context
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
  
-    
+    [Collection("CommandProcessor")]
     public class PipelineGlobalInboxTestsAsync
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;

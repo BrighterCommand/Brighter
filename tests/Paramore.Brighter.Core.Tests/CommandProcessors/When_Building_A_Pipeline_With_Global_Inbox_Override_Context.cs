@@ -8,6 +8,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class PipelineGlobalInboxContextTests
     {
         private const string CONTEXT_KEY = "TestHandlerNameOverride";

@@ -10,8 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
-    [Collection("AWS")]
     [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
     public class SqsMessageConsumerRequeueTests : IDisposable
     {
         private readonly Message _message;
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         {
             _messageProducer.Send(_message);
 
-            var message = _channel.Receive(1000);
+            var message = _channel.Receive(5000);
             
             _channel.Reject(message);
 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             Task.Delay(TimeSpan.FromMilliseconds(3000));
 
             //should requeue_the_message
-            message = _channel.Receive(3000);
+            message = _channel.Receive(5000);
             
             //clear the queue
             _channel.Acknowledge(message);

@@ -31,16 +31,21 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    [Collection("PostgresSql OutBox")]
     public class SqlOutboxWritingMessageTests : IDisposable
     {
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
+        private readonly string _key3 = "name3";
+        private readonly string _key4 = "name4";
+        private readonly string _key5 = "name5";
         private readonly Message _messageEarliest;
         private readonly PostgreSqlOutbox _sqlOutbox;
         private Message _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
+        private readonly int _value3 = 123;
+        private readonly Guid _value4 = Guid.NewGuid();
+        private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
 
         public SqlOutboxWritingMessageTests()
@@ -61,6 +66,9 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
                 contentType: "text/plain");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
+            messageHeader.Bag.Add(_key3, _value3);
+            messageHeader.Bag.Add(_key4, _value4);
+            messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
             _sqlOutbox.Add(_messageEarliest);
@@ -85,12 +93,16 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
              
             
             //Bag serialization
-            //should read the message header first bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
-            //should read the message header second bag item from the sql outbox
             _storedMessage.Header.Bag.ContainsKey(_key2).Should().BeTrue();
             _storedMessage.Header.Bag[_key2].Should().Be(_value2);
+            _storedMessage.Header.Bag.ContainsKey(_key3).Should().BeTrue();
+            _storedMessage.Header.Bag[_key3].Should().Be(_value3);
+            _storedMessage.Header.Bag.ContainsKey(_key4).Should().BeTrue();
+            _storedMessage.Header.Bag[_key4].Should().Be(_value4);
+            _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
+            _storedMessage.Header.Bag[_key5].Should().Be(_value5);
         }
 
         public void Dispose()

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -46,20 +47,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var mapper = new MyEventMessageMapper();
             _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
-            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
+            var myMessage = JsonSerializer.Serialize(new MyEvent());
+            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
 
             _channel.Enqueue(unacceptableMessage);
         }
 
         [Fact]
-        public async Task When_An_Unacceptable_Message_Is_Received()
+        public void When_An_Unacceptable_Message_Is_Recieved()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            Task.Delay(1000).Wait();
 
-            var quitMessage = new Message(new MessageHeader(Guid.NewGuid(), "", MessageType.MT_QUIT), new MessageBody(""));
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            await task;
+            Task.WaitAll(new[] { task });
 
             //should_acknowledge_the_message
             _channel.AcknowledgeHappened.Should().BeTrue();

@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
-    [Collection("EventStore Outbox")]
+    [Collection("EventStore")]
     public class EventStoreOutboxRangeAsyncTests : EventStoreFixture
     {
         [Fact]
@@ -42,15 +42,32 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
 
-            var message1 = CreateMessage(0, StreamName);
-            var message2 = CreateMessage(1, StreamName);
-            var message3 = CreateMessage(2, StreamName);
+            var body = new MessageBody("{companyId:123}");
+            var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header.Bag.Add("impersonatorId", 123);
+            header.Bag.Add("eventNumber", 0);
+            header.Bag.Add("streamId", StreamName);
+            var message1 = new Message(header, body);
+            
+            var body1 = new MessageBody("{companyId:123}");
+            var header1 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header1.Bag.Add("impersonatorId", 123);
+            header1.Bag.Add("eventNumber", 1);
+            header1.Bag.Add("streamId", StreamName);
+            var message2 = new Message(header1, body1);
+            
+            var body2 = new MessageBody("{companyId:123}");
+            var header2 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header2.Bag.Add("impersonatorId", 123);
+            header2.Bag.Add("eventNumber", 2);
+            header2.Bag.Add("streamId", StreamName);
+            var message3 = new Message(header2, body2);
 
             await eventStoreOutbox.AddAsync(message1);
             await eventStoreOutbox.AddAsync(message2);
             await eventStoreOutbox.AddAsync(message3);
 
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, StreamName}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
 
             // act
             var messages = await eventStoreOutbox.GetAsync(1, 3, args);
@@ -77,7 +94,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, null}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
 
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.GetAsync(1, 1, args);

@@ -37,9 +37,9 @@ using SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtoc
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
-    [Collection("Kafka")]
     [Trait("Category", "Kafka")]
-    public class KafkaProducerAssumeTests : IDisposable
+    [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
+     public class KafkaProducerAssumeTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 

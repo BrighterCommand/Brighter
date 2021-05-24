@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.EventStore.Tests.Outbox
 {
     [Trait("Category", "EventStore")]
-    [Collection("EventStore Outbox")]
+    [Collection("EventStore")]
     public class EventStoreOutboxMarkDispatchedAsyncTests : EventStoreFixture
     {
         [Fact]
@@ -41,9 +41,16 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var messageToMarkAsDispatched = CreateMessage(0, StreamName);
+            var body = new MessageBody("{companyId:123}");
+            var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
+            header.Bag.Add("impersonatorId", 123);
+            header.Bag.Add("eventNumber", 0);
+            header.Bag.Add("streamId", StreamName);
+            
+            var messageToMarkAsDispatched = new Message(header, body);
+            
             var dispatchedAt = DateTime.UtcNow;
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, StreamName}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
             
             await eventStoreOutbox.AddAsync(messageToMarkAsDispatched);
 
@@ -53,7 +60,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // assert
             var messages = await eventStoreOutbox.GetAsync(1, 2, args);
 
-            messages.Should().ContainSingle().Which.Header.Bag[EventStoreOutbox.DispatchedAtKey].Should().Be(dispatchedAt);
+            messages.Should().ContainSingle().Which.Header.Bag[Globals.DispatchedAtKey].Should().Be(dispatchedAt);
         }
         
         [Fact]
@@ -74,7 +81,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutbox(Connection);
-            var args = new Dictionary<string, object> {{EventStoreOutbox.StreamArg, null}};
+            var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
             // act

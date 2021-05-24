@@ -11,6 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureByConventionTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;
@@ -71,14 +73,14 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         }
 
         [Fact]
-        public async Task When_infrastructure_exists_can_verify()
+        public void When_infrastructure_exists_can_verify()
         {
             //arrange
             _messageProducer.Send(_message);
 
-            await Task.Delay(1000);
+            Task.Delay(1000).Wait();
             
-            var messages = _consumer.Receive(1000);
+            var messages = _consumer.Receive(5000);
             
             //Assert
             var message = messages.First();

@@ -32,8 +32,8 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
-    [Collection("Kafka")]
     [Trait("Category", "Kafka")]
+    [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
     public class KafkaConsumerDeclareTests : IDisposable
     {
         private readonly ITestOutputHelper _output;

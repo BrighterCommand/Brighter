@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")] 
     public class AWSValidateQueuesTests  : IDisposable
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;

@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorCallTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;

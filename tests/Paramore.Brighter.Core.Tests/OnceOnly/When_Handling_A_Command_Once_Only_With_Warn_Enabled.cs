@@ -33,6 +33,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
+    [Collection("CommandProcessor")]
     public class OnceOnlyAttributeWithWarnExceptionTests
     {
         private readonly MyCommand _command;
