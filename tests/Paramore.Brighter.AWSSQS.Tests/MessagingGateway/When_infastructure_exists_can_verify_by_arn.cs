@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -69,6 +70,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 awsConnection, 
                 new SqsPublication
                 {
+                    TopicArns = new Dictionary<string, string>(){{topicName, topicArn}},
                     FindTopicBy = TopicFindBy.Arn,
                     MakeChannels = OnMissingChannel.Validate
                 });

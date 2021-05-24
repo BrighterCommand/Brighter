@@ -3,11 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
-using Amazon.Runtime.CredentialManagement;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using FluentAssertions;
@@ -21,7 +19,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
     [Trait("Fragile", "CI")]
     public class SqsMessageProducerDlqTests : IDisposable
     {
-        private readonly IAmAMessageProducer _sender;
+        private readonly SqsMessageProducer _sender;
         private readonly IAmAChannel _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
@@ -57,6 +55,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             _sender = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
             
+            _sender.ConfirmTopicExists(topicName);
+            
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
@@ -75,6 +75,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //should force us into the dlq
             receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage) ;
+
+            Task.Delay(5000);
             
             //inspect the dlq
             GetDLQCount(_dlqChannelName).Should().Be(1);
