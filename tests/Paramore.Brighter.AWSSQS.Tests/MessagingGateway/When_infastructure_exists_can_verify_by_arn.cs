@@ -70,8 +70,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 new SqsPublication
                 {
                     FindTopicBy = TopicFindBy.Arn,
-                    MakeChannels = OnMissingChannel.Validate, 
-                    RoutingKey = routingKeyArn
+                    MakeChannels = OnMissingChannel.Validate
                 });
 
             _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

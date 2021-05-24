@@ -33,8 +33,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                     _awsConnection, 
                     new SqsPublication
                     {
-                        MakeChannels = OnMissingChannel.Validate, 
-                        RoutingKey = _routingKey
+                        MakeChannels = OnMissingChannel.Validate 
                     }));
         }
    }
