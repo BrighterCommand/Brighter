@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories
     {
         private readonly string _connectionString;
         private readonly string[] _authenticationTokenScopes;
-        private MsSqlMessagingGatewayDefaultAzureConnectionFactory(string connectionString, string authenticationTokenScopes = "https://database.windows.net/.default")
+        public MsSqlMessagingGatewayDefaultAzureConnectionFactory(string connectionString, string authenticationTokenScopes = "https://database.windows.net/.default")
         {
             _connectionString = connectionString;
             _authenticationTokenScopes = new string[1] {authenticationTokenScopes};
