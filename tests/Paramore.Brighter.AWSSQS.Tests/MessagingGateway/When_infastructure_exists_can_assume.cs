@@ -59,7 +59,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 makeChannels: OnMissingChannel.Assume
             );
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume, RoutingKey = routingKey});
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume});
 
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }

@@ -31,12 +31,14 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
             //create the topic, we want the queue to be the issue
-            var _ = new SqsMessageProducer(awsConnection, 
+            //We need to create the topic at least, to check the queues
+            var producer = new SqsMessageProducer(awsConnection, 
                 new SqsPublication
                 {
-                    MakeChannels = OnMissingChannel.Create, 
-                    RoutingKey = routingKey
+                    MakeChannels = OnMissingChannel.Create 
                 });
+            
+           producer.ConfirmTopicExists(topicName); 
             
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);

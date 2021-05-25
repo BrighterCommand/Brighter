@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.MessagingGateway.AWSSQS
+﻿using System.Collections.Generic;
+
+namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
     public class SqsPublication : Publication
     {
@@ -10,19 +12,19 @@
         /// </summary>
 
         public TopicFindBy FindTopicBy { get; set; } = TopicFindBy.Convention;
-         /// <summary>
-        /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
-        /// Either the topic name if we are creating or validating infrastructure
-        /// Or the TopicARN if we are assuming infrastructure exists
-        /// </summary>
-        /// <value>The name.</value>
-        public RoutingKey RoutingKey { get; set; } 
         
         /// <summary>
-        /// The attributes of the topic. If TopicARN is set we will always assume that we do not
+        /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
         /// need to create or validate the SNS Topic
         /// </summary>
         public SnsAttributes SnsAttributes { get; set; }
 
-   }
+        /// <summary>
+        /// If we want to use topic Arns and not topics you need to supply a mapping file that tells us
+        /// the Arn to use for any message that you send to us, as we use the topic from the header to dispatch to
+        /// an Arn.
+        /// Internally we construct this routing table when creating on other paths
+        /// </summary>
+        public Dictionary<string,string> TopicArns { get; set; }
+    }
 }
