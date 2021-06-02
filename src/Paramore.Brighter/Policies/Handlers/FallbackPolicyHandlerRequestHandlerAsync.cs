@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Policies.Handlers
 
         private async Task<TRequest> CatchNone(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<TRequest>();
+            var tcs = new TaskCompletionSource<TRequest>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (cancellationToken.IsCancellationRequested)
             {
                 tcs.SetCanceled();
