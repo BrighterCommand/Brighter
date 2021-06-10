@@ -58,7 +58,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="connection">The subscription information needed to talk to RMQ</param>
         ///     Make Channels = Create
-        /// </param>
         public RmqMessageProducer(RmqMessagingGatewayConnection connection) 
             : this(connection, new RmqPublication{MakeChannels = OnMissingChannel.Create})
         { }
@@ -155,7 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <returns></returns>
         public Task SendAsync(Message message)
         {
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             Send(message);
             tcs.SetResult(new object());
             return tcs.Task;

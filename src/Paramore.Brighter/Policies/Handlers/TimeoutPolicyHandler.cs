@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* 
 ------------------------------------------------------------------------------------------------  
 TimeoutAfter method derived from work by Joe Hoag http://blogs.msdn.com/b/pfxteam/archive/2011/11/10/10235834.aspx 
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.Policies.Handlers
 
             var task = TimeoutAfter(task: timeoutTask, millisecondsTimeout: _milliseconds, cancellationTokenSource: cts);
 
-            task.Wait();
+            task.Wait(ct);
 
             return task.Result;
         }
@@ -134,7 +134,7 @@ namespace Paramore.Brighter.Policies.Handlers
             }
 
             // tcs.Task will be returned as a proxy to the caller
-            var tcs = new TaskCompletionSource<TRequest>();
+            var tcs = new TaskCompletionSource<TRequest>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             // Short-circuit #2: zero timeout
             if (millisecondsTimeout == 0)

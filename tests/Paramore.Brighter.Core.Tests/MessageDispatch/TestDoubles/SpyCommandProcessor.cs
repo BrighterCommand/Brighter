@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.SendAsync);
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             _requests.Enqueue(@event);
             Commands.Add(CommandType.PublishAsync);
 
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);
 
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -118,7 +118,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _postBox.Add(request.Id, request);
 
-            var tcs = new TaskCompletionSource<Guid>();
+            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
         }
@@ -139,7 +139,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             ClearOutbox(posts.ToArray());
 
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }

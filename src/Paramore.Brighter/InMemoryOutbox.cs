@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -120,7 +120,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -202,7 +202,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<Message>();
+            var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
 
             if (cancellationToken.IsCancellationRequested)
             {
@@ -222,7 +222,7 @@ namespace Paramore.Brighter
         /// <param name="id">The message to mark as dispatched</param>
         public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             MarkDispatched(id, dispatchedAt);
             

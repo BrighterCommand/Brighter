@@ -14,28 +14,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
-        private readonly InboxConfiguration _inboxConfiguration;
-        private IAmAnInbox _inbox;
 
         public PipelineGlobalInboxTests()
         {
-            _inbox = new InMemoryInbox();
+            IAmAnInbox inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyCommandHandler>();
-            container.AddSingleton<IAmAnInbox>(_inbox);
+            container.AddSingleton<IAmAnInbox>(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
             _requestContext = new RequestContext();
             
-            _inboxConfiguration = new InboxConfiguration();
+            InboxConfiguration inboxConfiguration = new InboxConfiguration();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactory)handlerFactory, _inboxConfiguration);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactory)handlerFactory, inboxConfiguration);
             PipelineBuilder<MyCommand>.ClearPipelineCache(); 
         }
 
