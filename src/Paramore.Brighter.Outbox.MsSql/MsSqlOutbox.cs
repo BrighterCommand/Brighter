@@ -27,12 +27,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Outbox.MsSql.ConnectionFactories;
@@ -52,8 +50,6 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private const string _azureUserName = "AZURE_USERNAME";
-        private const string _azureTenantId = "AZURE_TENANT_ID";
         private readonly MsSqlOutboxConfiguration _configuration;
         private readonly IMsSqlOutboxConnectionFactory _connectionFactory;
 
