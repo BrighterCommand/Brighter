@@ -25,8 +25,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Data;
-using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -355,7 +353,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
         
-        private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+        private void CreatePagedDispatchedCommand(SqlCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
             var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
@@ -371,7 +369,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             command.Parameters.AddRange(parameters);
         }
 
-        private void CreatePagedReadCommand(DbCommand command, int pageSize, int pageNumber)
+        private void CreatePagedReadCommand(SqlCommand command, int pageSize, int pageNumber)
         {
             var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
@@ -386,7 +384,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             command.Parameters.AddRange(parameters);
         }
         
-        private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        private void CreatePagedOutstandingCommand(SqlCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
             var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
@@ -404,13 +402,13 @@ namespace Paramore.Brighter.Outbox.MsSql
 
 
        //Fold this code back in as there is only one choice
-        private DbParameter CreateSqlParameter(string parameterName, object value)
+        private SqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value ?? DBNull.Value);
 
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int outboxTimeout, params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<SqlCommand, T> execute, string sql, int outboxTimeout, params SqlParameter[] parameters)
         {
             using (var connection = _connectionFactory.GetConnection())
             using (var command = connection.CreateCommand())
@@ -426,11 +424,11 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute,
+            Func<SqlCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
             CancellationToken cancellationToken = default(CancellationToken),
-            params DbParameter[] parameters)
+            params SqlParameter[] parameters)
         {
             using (var connection = await _connectionFactory.GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
@@ -444,7 +442,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
         
-        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters)
+        private SqlCommand InitAddDbCommand(SqlConnection connection, SqlParameter[] parameters)
         {
             var command = connection.CreateCommand();
             var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
@@ -453,7 +451,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return command;
         }
 
-        private DbParameter[] InitAddDbParameters(Message message)
+        private SqlParameter[] InitAddDbParameters(Message message)
         {
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             var parameters = new[]
@@ -471,7 +469,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return parameters;
         }
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
+        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, Guid messageId, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
             var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
@@ -481,7 +479,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return command;
          }
         
-        private Message MapAMessage(IDataReader dr)
+        private Message MapAMessage(SqlDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -524,22 +522,22 @@ namespace Paramore.Brighter.Outbox.MsSql
             return new Message(header, body);
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static string GetTopic(SqlDataReader dr)
         {
             return dr.GetString(dr.GetOrdinal("Topic"));
         }
 
-        private static MessageType GetMessageType(IDataReader dr)
+        private static MessageType GetMessageType(SqlDataReader dr)
         {
             return (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
-        private static Guid GetMessageId(IDataReader dr)
+        private static Guid GetMessageId(SqlDataReader dr)
         {
             return dr.GetGuid(dr.GetOrdinal("MessageId"));
         }
 
-        private string GetContentType(IDataReader dr)
+        private string GetContentType(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null; 
@@ -548,7 +546,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return replyTo;
         }
 
-        private string GetReplyTo(IDataReader dr)
+        private string GetReplyTo(SqlDataReader dr)
         {
              var ordinal = dr.GetOrdinal("ReplyTo");
              if (dr.IsDBNull(ordinal)) return null; 
@@ -557,7 +555,7 @@ namespace Paramore.Brighter.Outbox.MsSql
              return replyTo;
         }
 
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(SqlDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
@@ -565,7 +563,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return dictionaryBag;
         }
 
-        private Guid? GetCorrelationId(IDataReader dr)
+        private Guid? GetCorrelationId(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
             if (dr.IsDBNull(ordinal)) return null; 
@@ -574,7 +572,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return correlationId;
         }
 
-        private static DateTime GetTimeStamp(IDataReader dr)
+        private static DateTime GetTimeStamp(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("Timestamp");
             var timeStamp = dr.IsDBNull(ordinal)
@@ -583,7 +581,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return timeStamp;
         }
 
-        private Message MapFunction(IDataReader dr)
+        private Message MapFunction(SqlDataReader dr)
         {
             if (dr.Read())
             {

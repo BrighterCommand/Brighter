@@ -24,8 +24,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Data;
-using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -252,13 +250,13 @@ namespace Paramore.Brighter.Inbox.MsSql
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private DbParameter CreateSqlParameter(string parameterName, object value)
+        private SqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value ?? DBNull.Value);
         }
 
-        private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
-            params DbParameter[] parameters)
+        private T ExecuteCommand<T>(Func<SqlCommand, T> execute, string sql, int timeoutInMilliseconds,
+            params SqlParameter[] parameters)
         {
             using (var connection = _connectionFactory.GetConnection())
             using (var command = connection.CreateCommand())
@@ -274,11 +272,11 @@ namespace Paramore.Brighter.Inbox.MsSql
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
-            Func<DbCommand, Task<T>> execute,
+            Func<SqlCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
             CancellationToken cancellationToken = default(CancellationToken),
-            params DbParameter[] parameters)
+            params SqlParameter[] parameters)
         {
             using (var connection = await _connectionFactory.GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
@@ -293,7 +291,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             }
         }
 
-        private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
+        private SqlCommand InitAddDbCommand(SqlConnection connection, SqlParameter[] parameters, int timeoutInMilliseconds)
         {
             var sqlAdd =
                 $"insert into {_configuration.InBoxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
@@ -306,7 +304,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             return sqlcmd;
         }
 
-        private DbParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
+        private SqlParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
         {
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
@@ -320,7 +318,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(IDataReader dr, Guid commandId) where TResult : class, IRequest
+        private TResult ReadCommand<TResult>(SqlDataReader dr, Guid commandId) where TResult : class, IRequest
         {
             if (dr.Read())
             {

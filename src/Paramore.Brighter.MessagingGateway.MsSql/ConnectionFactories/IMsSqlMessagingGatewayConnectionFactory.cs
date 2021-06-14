@@ -1,12 +1,12 @@
-﻿using System.Data.Common;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories
 {
     public interface IMsSqlMessagingGatewayConnectionFactory
     {
-        DbConnection GetConnection();
-        Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
+        SqlConnection GetConnection();
+        Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
     }
 }

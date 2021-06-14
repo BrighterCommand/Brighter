@@ -1,4 +1,4 @@
-﻿using System.Data.Common;
+﻿using Microsoft.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
 {
     public interface IMsSqlOutboxConnectionFactory
     {
-        DbConnection GetConnection();
-        Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
+        SqlConnection GetConnection();
+        Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
     }
 }
