@@ -628,23 +628,6 @@
     </HelpTOCNode>
     <HelpTOCNode Title="MsSqlMessageStoreConfiguration.DatabaseType Enumeration" Url="html/2087338180.htm" />
   </HelpTOCNode>
-  <HelpTOCNode Id="fdf1390f-d5c5-42de-aef3-766824921291" Title="paramore.brighter.commandprocessor.messagestore.ravendb Namespace" Url="html/886576783.htm">
-    <HelpTOCNode Id="8d3879e7-b01c-4d51-bed1-a584307696fc" Title="MessageStoreFactory Class" Url="html/553421105.htm">
-      <HelpTOCNode Title="MessageStoreFactory Members" Url="html/1175572812.htm" />
-      <HelpTOCNode Title="MessageStoreFactory Methods" Url="html/1055001854.htm" />
-      <HelpTOCNode Id="61b3640b-0345-4bd3-bc08-c0efc09384ca" Title="MessageStoreFactory Properties" Url="html/1602321613.htm">
-        <HelpTOCNode Title="DocumentStore Property " Url="html/1621430240.htm" />
-      </HelpTOCNode>
-    </HelpTOCNode>
-    <HelpTOCNode Id="ae8a82cd-e02f-494a-85c6-62f129e15f3e" Title="RavenMessageStore Class" Url="html/1854999159.htm">
-      <HelpTOCNode Title="RavenMessageStore Members" Url="html/185968216.htm" />
-      <HelpTOCNode Title="RavenMessageStore Constructor " Url="html/72660583.htm" />
-      <HelpTOCNode Id="d860cff3-1535-4d74-a2e7-73b59a530519" Title="RavenMessageStore Methods" Url="html/1857114624.htm">
-        <HelpTOCNode Title="Add Method " Url="html/415988835.htm" />
-        <HelpTOCNode Title="Get Method " Url="html/46531503.htm" />
-      </HelpTOCNode>
-    </HelpTOCNode>
-  </HelpTOCNode>
   <HelpTOCNode Id="1eacc751-5894-45d7-8942-01af7a0a227d" Title="paramore.brighter.commandprocessor.messaginggateway.restms Namespace" Url="html/2102985179.htm">
     <HelpTOCNode Id="f9be5ca3-40f0-4a62-b569-da5f988e55fd" Title="RestMsMessageConsumer Class" Url="html/1820480977.htm">
       <HelpTOCNode Title="RestMsMessageConsumer Members" Url="html/91487984.htm" />
