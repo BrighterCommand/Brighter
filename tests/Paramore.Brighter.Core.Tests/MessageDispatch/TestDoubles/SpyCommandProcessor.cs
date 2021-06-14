@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.SendAsync);
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             _requests.Enqueue(@event);
             Commands.Add(CommandType.PublishAsync);
 
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);
 
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -118,7 +118,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             _postBox.Add(request.Id, request);
 
-            var tcs = new TaskCompletionSource<Guid>();
+            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
         }
@@ -139,7 +139,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             ClearOutbox(posts.ToArray());
 
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }
@@ -189,5 +189,22 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
+        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            throw new DeferMessageAction();
+        }
+
+        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
+            PublishCount++;
+
+            var exceptions = new List<Exception> { new DeferMessageAction() };
+
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+
     }
 }

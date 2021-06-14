@@ -11,10 +11,11 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorBuildDefaultInboxSendTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
-        ServiceProvider _provider;
+        private readonly ServiceProvider _provider;
 
         public CommandProcessorBuildDefaultInboxSendTests()
         {
@@ -64,8 +65,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Send(command);
 
             //assert we are in, and auto-context added us under our name
-            var _inbox = _provider.GetService<IAmAnInbox>();
-            var boxed = _inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, 100);
+            var inbox = _provider.GetService<IAmAnInbox>();
+            inbox.Should().NotBeNull();
+            var boxed = inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, 100);
             boxed.Should().BeTrue();
         }
         

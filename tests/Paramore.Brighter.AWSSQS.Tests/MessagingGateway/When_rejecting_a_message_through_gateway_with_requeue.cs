@@ -11,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    [Trait("Fragile", "Cloud Infrastructure Delay")]
+    [Trait("Fragile", "CI")]
     public class SqsMessageConsumerRequeueTests : IDisposable
     {
         private readonly Message _message;
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
         }
 
         [Fact]

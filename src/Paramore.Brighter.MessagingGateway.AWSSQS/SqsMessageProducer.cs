@@ -12,6 +12,8 @@
 // <summary></summary>
 // ***********************************************************************
 
+using System.Collections.Generic;
+using System.Linq;
 using Amazon.SimpleNotificationService;
 using Microsoft.Extensions.Logging;
 
@@ -25,8 +27,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
 
-         private readonly AWSMessagingGatewayConnection _connection;
-        private readonly string _topicArn;
+        private readonly AWSMessagingGatewayConnection _connection;
+        private readonly SqsPublication _publication;
+        private readonly Dictionary<string, string> _ensuredTopics = new Dictionary<string, string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
@@ -45,10 +48,34 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             : base(connection)
         {
             _connection = connection;
-            _topicArn = EnsureTopic(new RoutingKey(publication.RoutingKey), publication.SnsAttributes, publication.FindTopicBy, publication.MakeChannels);
+            _publication = publication;
+
+            //If the user has already established these by external creation, copy them
+            if (_publication.TopicArns != null && _publication.TopicArns.Keys.Any())
+            {
+                foreach (var key in _publication.TopicArns.Keys)
+                {
+                    _ensuredTopics.Add(key, _publication.TopicArns[key]);
+                }
+            }
+
             MaxOutStandingMessages = publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingMessages;
         }
+        
+       public void ConfirmTopicExists(string topic)
+       {
+           //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
+           if (!_ensuredTopics.ContainsKey(topic))
+           {
+               var topicArn = EnsureTopic(
+                   new RoutingKey(topic),
+                   _publication.SnsAttributes,
+                   _publication.FindTopicBy,
+                   _publication.MakeChannels);
+               _ensuredTopics.Add(topic, topicArn);
+           }
+       }
 
        /// <summary>
         /// Sends the specified message.
@@ -58,10 +85,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
                 message.Header.Topic, message.Id, message.Body);
+            
+            ConfirmTopicExists(message.Header.Topic);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
             {
-                var publisher = new SqsMessagePublisher(_topicArn, client);
+                var publisher = new SqsMessagePublisher(_ensuredTopics[message.Header.Topic], client);
                 publisher.Publish(message);
             }
         }
@@ -85,5 +114,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             
         }
-    }
+       
+   }
 }

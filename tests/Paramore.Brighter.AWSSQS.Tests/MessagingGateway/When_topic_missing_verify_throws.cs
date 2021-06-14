@@ -2,12 +2,12 @@
 using System;
 using Amazon;
 using Amazon.Runtime;
-using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")] 
     public class AWSValidateMissingTopicTests 
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -28,14 +28,16 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         public void When_topic_missing_verify_throws()
         {
             //arrange
-            Assert.Throws<BrokerUnreachableException>(() => 
-                new SqsMessageProducer(
-                    _awsConnection, 
-                    new SqsPublication
-                    {
-                        MakeChannels = OnMissingChannel.Validate, 
-                        RoutingKey = _routingKey
-                    }));
+            var producer = new SqsMessageProducer(_awsConnection, 
+                new SqsPublication
+                {
+                    MakeChannels = OnMissingChannel.Validate
+                });
+            
+            //act && assert
+            Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(
+                new MessageHeader{Topic = _routingKey, ContentType = "plain/text"},
+                new MessageBody("Test"))));
         }
    }
 }

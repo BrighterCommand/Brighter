@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -35,6 +35,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         public bool AcknowledgeHappened { get; set; }
         public int AcknowledgeCount { get; set; }
         public int RejectCount { get; set; }
+        public int RequeueCount { get; set; }
         public virtual ChannelName Name { get; }
         public virtual int Length => _messageQueue.Count;
 
@@ -76,6 +77,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
 
         public virtual void Requeue(Message message, int delayMilliseconds = 0)
         {
+            RequeueCount++;
             _messageQueue.Enqueue(message);
         }
 

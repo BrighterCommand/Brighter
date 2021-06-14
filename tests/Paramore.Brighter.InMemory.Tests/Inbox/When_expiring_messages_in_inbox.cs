@@ -8,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.InMemory.Tests.Inbox
 {
     [Trait("Category", "InMemory")]
-    [Trait("Fragile", "Thread Delay")]
+    [Trait("Fragile", "CI")]
     public class InboxEntryTimeToLiveTests
     {
         [Fact]

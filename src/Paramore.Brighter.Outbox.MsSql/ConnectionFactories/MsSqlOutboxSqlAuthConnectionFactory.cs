@@ -21,7 +21,10 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
 
         public async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return GetConnection();
+            var tcs = new TaskCompletionSource<DbConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(GetConnection());
+            return await tcs.Task;
         }
     }
 }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Toby Henderson <hendersont@gmail.com>
 
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public Task SendAsync(Message message)
         {
-            var tcs = new TaskCompletionSource<Message>();
+            var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);
             Send(message);
             tcs.SetResult(message);
             return tcs.Task;

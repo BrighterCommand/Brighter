@@ -3,11 +3,9 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
-using Amazon.Runtime.CredentialManagement;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using FluentAssertions;
@@ -18,10 +16,10 @@ using Xunit;
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
-    [Trait("Fragile", "Cloud Infrastructure Delay")]
+    [Trait("Fragile", "CI")]
     public class SqsMessageProducerDlqTests : IDisposable
     {
-        private readonly IAmAMessageProducer _sender;
+        private readonly SqsMessageProducer _sender;
         private readonly IAmAChannel _channel;
         private readonly ChannelFactory _channelFactory;
         private readonly Message _message;
@@ -55,7 +53,9 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
-            _sender = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create, RoutingKey = routingKey});
+            _sender = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
+            
+            _sender.ConfirmTopicExists(topicName);
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
@@ -75,6 +75,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //should force us into the dlq
             receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage) ;
+
+            Task.Delay(5000);
             
             //inspect the dlq
             GetDLQCount(_dlqChannelName).Should().Be(1);

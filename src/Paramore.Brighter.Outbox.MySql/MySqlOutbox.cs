@@ -389,7 +389,7 @@ namespace Paramore.Brighter.Outbox.MySql
          
         private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NULL AND TIMESTAMP < DATE_ADD(CURRENT_DATE(), INTERVAL @OutStandingSince SECOND) ORDER BY Timestamp DESC";
+            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NULL AND TIMESTAMP < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL @OutStandingSince SECOND) ORDER BY Timestamp DESC";
             var seconds = TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds > 0 ? TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds : 1;
             var parameters = new[]
             {
@@ -558,7 +558,7 @@ namespace Paramore.Brighter.Outbox.MySql
                     replyTo: replyTo,
                     contentType: contentType);
                 
-                Dictionary<string, string> dictionaryBag = GetContextBag(dr);
+                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
                     foreach (var key in dictionaryBag.Keys)
@@ -606,11 +606,11 @@ namespace Paramore.Brighter.Outbox.MySql
             return replyTo;
         }
 
-        private static Dictionary<string, string> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, string>>(headerBag, JsonSerialisationOptions.Options);
+            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 

@@ -31,6 +31,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Collection("CommandProcessor")]
     public class  PipelineForCommandAsyncTests
     {
         private static PipelineBuilder<MyCommand> _chainBuilder;

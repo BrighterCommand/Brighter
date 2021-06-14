@@ -8,6 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")] 
     public class AWSValidateQueuesTests  : IDisposable
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
@@ -31,12 +32,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
             //We need to create the topic at least, to check the queues
-            var _ = new SqsMessageProducer(_awsConnection, 
+            var producer = new SqsMessageProducer(_awsConnection, 
                 new SqsPublication
                 {
-                    MakeChannels = OnMissingChannel.Create, 
-                    RoutingKey = routingKey
+                    MakeChannels = OnMissingChannel.Create 
                 });
+           producer.ConfirmTopicExists(topicName); 
+            
         }
 
         [Fact]

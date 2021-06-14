@@ -11,6 +11,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureByConventionTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;
@@ -63,8 +65,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 awsConnection, 
                 new SqsPublication{
                     FindTopicBy = TopicFindBy.Convention,
-                    MakeChannels = OnMissingChannel.Validate, 
-                    RoutingKey = routingKey}
+                    MakeChannels = OnMissingChannel.Validate 
+                    }
                 );
 
             _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

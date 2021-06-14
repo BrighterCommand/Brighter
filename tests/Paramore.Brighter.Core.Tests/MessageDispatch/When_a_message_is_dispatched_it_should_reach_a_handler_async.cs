@@ -1,7 +1,6 @@
 ﻿using System;
-using System.Threading.Tasks;
+using System.Text.Json;
 using FluentAssertions;
-using Newtonsoft.Json;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
@@ -34,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var mapper = new MyEventMessageMapper();
             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 5000 };
 
-            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonConvert.SerializeObject(_myEvent)));
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
             channel.Enqueue(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);

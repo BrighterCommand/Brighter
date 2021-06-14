@@ -106,7 +106,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
             var timestamp = DateTime.Parse(CreatedAt);
             var correlationId = Guid.Parse(CorrelationId);
-            var bag = JsonSerializer.Deserialize<Dictionary<string, string>>(HeaderBag, JsonSerialisationOptions.Options);
+            var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(HeaderBag, JsonSerialisationOptions.Options);
 
             var header = new MessageHeader(
                 messageId:messageId, 

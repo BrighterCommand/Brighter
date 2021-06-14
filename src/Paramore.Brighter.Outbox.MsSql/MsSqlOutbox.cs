@@ -27,12 +27,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Azure.Core;
-using Azure.Identity;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.Outbox.MsSql.ConnectionFactories;
@@ -52,8 +50,6 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private const string _azureUserName = "AZURE_USERNAME";
-        private const string _azureTenantId = "AZURE_TENANT_ID";
         private readonly MsSqlOutboxConfiguration _configuration;
         private readonly IMsSqlOutboxConnectionFactory _connectionFactory;
 
@@ -513,7 +509,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                     replyTo: replyTo,
                     contentType: contentType);
 
-                Dictionary<string, string> dictionaryBag = GetContextBag(dr);
+                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
                 {
                     foreach (var key in dictionaryBag.Keys)
@@ -561,11 +557,11 @@ namespace Paramore.Brighter.Outbox.MsSql
              return replyTo;
         }
 
-        private static Dictionary<string, string> GetContextBag(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, string>>(headerBag, JsonSerialisationOptions.Options);
+            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 

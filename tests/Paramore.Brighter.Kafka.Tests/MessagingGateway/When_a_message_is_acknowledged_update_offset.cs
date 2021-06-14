@@ -11,7 +11,8 @@ using Xunit.Abstractions;
 namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Trait("Category", "Kafka")]
-    [Trait("Fragile", "Thread Delay")]
+    [Trait("Fragile", "CI")]
+    [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
     public class KafkaMessageConsumerUpdateOffset : IDisposable
     {
         private readonly ITestOutputHelper _output;

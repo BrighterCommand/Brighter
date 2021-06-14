@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
-using Amazon.SimpleNotificationService.Model;
-using Amazon.SQS.Model;
 using FluentAssertions;
 using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
@@ -16,6 +13,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")] 
+    [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureByArnTests  : IDisposable
     {     private readonly Message _message;
         private readonly IAmAMessageConsumer _consumer;
@@ -71,9 +70,9 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 awsConnection, 
                 new SqsPublication
                 {
+                    TopicArns = new Dictionary<string, string>(){{topicName, topicArn}},
                     FindTopicBy = TopicFindBy.Arn,
-                    MakeChannels = OnMissingChannel.Validate, 
-                    RoutingKey = routingKeyArn
+                    MakeChannels = OnMissingChannel.Validate
                 });
 
             _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);

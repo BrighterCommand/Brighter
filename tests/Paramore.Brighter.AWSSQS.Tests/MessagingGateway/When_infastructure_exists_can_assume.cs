@@ -10,6 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
+    [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
     public class AWSAssumeInfrastructureTests  : IDisposable
     {     private readonly Message _message;
         private readonly SqsMessageConsumer _consumer;
@@ -57,7 +59,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 makeChannels: OnMissingChannel.Assume
             );
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume, RoutingKey = routingKey});
+            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Assume});
 
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }

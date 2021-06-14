@@ -22,7 +22,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var tcs = new TaskCompletionSource<T>();
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if (cancellationToken.IsCancellationRequested)
                 tcs.SetCanceled();
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-              var tcs = new TaskCompletionSource<T>();
+              var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
               if (cancellationToken.IsCancellationRequested)
                   tcs.SetCanceled();
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-              var tcs = new TaskCompletionSource<T>();
+              var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
               if (cancellationToken.IsCancellationRequested)
                   tcs.SetCanceled();
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var tcs = new TaskCompletionSource<Guid>();
+            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
                 tcs.SetCanceled();
@@ -97,7 +97,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<Guid>();
+            var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
                 tcs.SetCanceled();
