@@ -57,7 +57,7 @@ namespace GreetingsReceiverConsole
                             channelName:new ChannelName("greeting.event"),
                             routingKey:new RoutingKey("greeting.event"),
                             bufferSize: 10,
-                            timeoutInMilliseconds: 200,
+                            timeoutInMs: 200,
                             isDurable: true,
                             highAvailability: true,
                             makeChannels: OnMissingChannel.Create)

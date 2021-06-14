@@ -55,7 +55,7 @@ namespace GreetingsServer
                             new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("Greeting.Request"),
                             new RoutingKey("Greeting.Request"),
-                            timeoutInMilliseconds: 200,
+                            timeoutInMs: 200,
                             isDurable: true,
                             highAvailability: true)
                     };

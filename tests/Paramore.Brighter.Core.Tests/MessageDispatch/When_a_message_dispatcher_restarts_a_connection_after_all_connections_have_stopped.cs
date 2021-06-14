@@ -50,8 +50,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
-            _subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
-            _newSubscription = new Subscription<MyEvent>(new SubscriptionName("newTest"), noOfPerformers: 1, timeoutInMilliseconds: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _subscription = new Subscription<MyEvent>(new SubscriptionName("test"), noOfPerformers: 1, timeoutInMs: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
+            _newSubscription = new Subscription<MyEvent>(new SubscriptionName("newTest"), noOfPerformers: 1, timeoutInMs: 100, channelFactory: new InMemoryChannelFactory(_channel), channelName: new ChannelName("fakeChannel"), routingKey: new RoutingKey("fakekey"));
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { _subscription, _newSubscription });
 
             var @event = new MyEvent();

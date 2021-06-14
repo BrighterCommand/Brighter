@@ -55,9 +55,11 @@ namespace Paramore.Brighter.ServiceActivator
             var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                PollDelayInMilliseconds = _subscription.PollDelayInMs,
+                NoWorkPauseInMilliseconds = _subscription.NoWorkPauseInMs,
+                TimeoutInMilliseconds = _subscription.TimeoutInMs,
                 RequeueCount = _subscription.RequeueCount,
-                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMs,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 
@@ -70,9 +72,11 @@ namespace Paramore.Brighter.ServiceActivator
             var messagePump = new MessagePumpAsync<TRequest>(_commandProcessor, _messageMapperRegistry.Get<TRequest>())
             {
                 Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                PollDelayInMilliseconds =  _subscription.PollDelayInMs,
+                NoWorkPauseInMilliseconds = _subscription.NoWorkPauseInMs,
+                TimeoutInMilliseconds = _subscription.TimeoutInMs,
                 RequeueCount = _subscription.RequeueCount,
-                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
+                RequeueDelayInMilliseconds = _subscription.RequeueDelayInMs,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
             };
 

@@ -34,14 +34,58 @@ namespace Paramore.Brighter.ServiceActivator
             _messageMapper = messageMapper;
         }
 
-        public int TimeoutInMilliseconds { get; set; }
 
-        public int RequeueCount { get; set; }
+        /// <summary>
+        /// How long should we pause following a failed attempt to connect to middleware
+        /// Defaults to 1000ms
+        /// </summary>
+        public int ConnectionFailureRetryIntervalinMs { get; set; } = 1000;
 
-        public int RequeueDelayInMilliseconds { get; set; }
+        /// <summary>
+        /// If there is no work when we poll for work, pause to allow work to appear. Note that this is not a polling delay as if there is work we will not
+        /// invoke this pause
+        /// Defaults to 500ms if not set
+        /// </summary>
+        public int NoWorkPauseInMilliseconds { get; set; } = 500;
 
-        public int UnacceptableMessageLimit { get; set; }
+        /// <summary>
+        /// This property allows a delay between polling attempts, it represents a pause after work is read
+        /// it is not used if the work queue is empty, use NoWorkPauseInMs instead. Instead it is used to either
+        /// (a) yield to other consumers of the CPU (b) act as a delay for a delay queue implementation that uses polling interval
+        /// Defaults to -1, or no delay, if not set
+        /// </summary>
+        public int PollDelayInMilliseconds { get; set; } = -1;
 
+        /// <summary>
+        /// When reading from a queue, how long before we give up on the read attempt and time out
+        /// On some transports, this will include time waiting for a message to be available, not just connecting to the
+        /// transport. Either way we mean: do we have a message yet, if not timeout
+        /// Defaults to 30s
+        /// </summary>
+        public int TimeoutInMilliseconds { get; set; } = 30000;
+
+        /// <summary>
+        /// How many times can we requeue a message before we reject it
+        /// On -1 we never reject a message and it can requeue endlessly
+        /// </summary>
+        public int RequeueCount { get; set; } = -1;
+
+        /// <summary>
+        /// When requeueing a message, what delay should we use on the requeue?
+        /// Defaults to 0ms
+        /// </summary>
+        public int RequeueDelayInMilliseconds { get; set; } = 0;
+
+        /// <summary>
+        /// When this number of messages cannot be parsed, kill the pump, assuming that we are badly configured and rejecting good messages for someone else
+        /// or a different version
+        /// Defaults to 0, or no limit
+        /// </summary>
+        public int UnacceptableMessageLimit { get; set; } = 0;
+
+        /// <summary>
+        /// Abstraction for the transport we are actually using from the pump
+        /// </summary>
         public IAmAChannel Channel { get; set; }
 
         public void Run()
@@ -64,13 +108,13 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
                     s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(1000).Wait();
+                    Task.Delay(ConnectionFailureRetryIntervalinMs).Wait();
                     continue;
                 }
                 catch (ChannelFailureException)
                 {
                     s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(1000).Wait();
+                    Task.Delay(ConnectionFailureRetryIntervalinMs).Wait();
                     continue;
                 }
                 catch (Exception exception)
@@ -87,7 +131,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    Task.Delay(500).Wait();
+                    Task.Delay(NoWorkPauseInMilliseconds).Wait();
                     continue;
                 }
 
@@ -160,6 +204,9 @@ namespace Paramore.Brighter.ServiceActivator
                 }
 
                 AcknowledgeMessage(message);
+
+                //yield if a polling delay has been set
+                if (PollDelayInMilliseconds != -1) Task.Delay(PollDelayInMilliseconds).Wait();
 
             } while (true);
 

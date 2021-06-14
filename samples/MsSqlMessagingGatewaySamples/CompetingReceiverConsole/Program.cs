@@ -32,7 +32,7 @@ namespace CompetingReceiverConsole
                         new SubscriptionName("paramore.example.multipleconsumer.command"),
                         new ChannelName("multipleconsumer.command"),
                         new RoutingKey("multipleconsumer.command"),
-                        timeoutInMilliseconds: 200)
+                        timeoutInMs: 200)
                     };
 
                     var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");

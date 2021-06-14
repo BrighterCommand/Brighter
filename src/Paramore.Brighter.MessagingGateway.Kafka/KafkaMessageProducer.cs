@@ -30,7 +30,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
         public int MaxOutStandingMessages { get; set; } = -1;

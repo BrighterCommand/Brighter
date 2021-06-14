@@ -129,7 +129,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 attributes.Add("DelaySeconds", _subscription.DelaySeconds.ToString());
                 attributes.Add("MessageRetentionPeriod", _subscription.MessageRetentionPeriod.ToString());
                 if (_subscription.IAMPolicy != null )attributes.Add("Policy", _subscription.IAMPolicy);
-                attributes.Add("ReceiveMessageWaitTimeSeconds", ToSecondsAsString(_subscription.TimeoutInMiliseconds));
+                attributes.Add("ReceiveMessageWaitTimeSeconds", ToSecondsAsString(_subscription.TimeoutInMs));
                 attributes.Add("VisibilityTimeout", _subscription.LockTimeout.ToString());
 
                 var tags = new Dictionary<string, string>();

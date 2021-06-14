@@ -56,7 +56,7 @@ namespace GreetingsReceiverConsole
                             channelName: new ChannelName("greeting.event"),
                             routingKey: new RoutingKey("greeting.event"),
                             groupId: "kafka-GreetingsReceiverConsole-Sample",
-                            timeoutInMilliseconds: 100,
+                            timeoutInMs: 100,
                             offsetDefault: AutoOffsetReset.Earliest,
                             commitBatchSize:5)
                     };

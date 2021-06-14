@@ -58,7 +58,7 @@ namespace GreetingsReceiverConsole
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
-                            timeoutInMilliseconds: 20, 
+                            timeoutInMs: 20, 
                             lockTimeout: 30)
                     };
 

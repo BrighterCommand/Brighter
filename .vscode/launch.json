@@ -4,6 +4,7 @@
    // For further information visit https://github.com/OmniSharp/omnisharp-vscode/blob/master/debugger-launchjson.md
    "version": "0.2.0",
    "configurations": [
+
         {
             "name": ".NET Core Launch (console)",
             "type": "coreclr",
@@ -23,6 +24,14 @@
             "type": "coreclr",
             "request": "attach",
             "processId": "${command:pickProcess}"
+        },
+        {
+            "type": "bashdb",
+            "request": "launch",
+            "name": "Bash-Debug (select script from list of sh files)",
+            "cwd": "${workspaceFolder}",
+            "program": "${command:SelectScriptName}",
+            "args": []
         }
     ]
 }

@@ -1,4 +1,5 @@
 #region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,11 +35,11 @@ namespace Paramore.Brighter
     /// </summary>
     public enum OnMissingChannel
     {
-        Create = 0, 
+        Create = 0,
         Validate = 1,
         Assume = 2
     }
-    
+
     /// <summary>
     /// Class Subscription.
     /// A <see cref="Subscription"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
@@ -53,7 +54,7 @@ namespace Paramore.Brighter
         /// Must be greater than 1 and less than 10.
         /// </summary>
         public int BufferSize { get; }
-        
+
         /// <summary>
         /// Gets the channel.
         /// </summary>
@@ -95,6 +96,27 @@ namespace Paramore.Brighter
         public int NoOfPeformers { get; }
 
         /// <summary>
+        /// If there is no work on the channel, how long should we pause before polling again
+        /// When work has been found but you want to yield in between polling attempts, use
+        /// PollDelayInMs
+        /// Designed to solve the problem of rapid polling consuming the CPU on a mostly-empty queue
+        /// If you set a PollDelayInMs you may not need this
+        /// Defaults to 500ms.
+        /// A -1 indicates no delay (usually because PollDelayInMs is set)
+        /// </summary>
+        public int NoWorkPauseInMs { get; set; } = 500;
+
+        /// <summary>
+        /// Sets the interval between attempts to poll for work. In effect yields from the worker to other processes
+        /// Only called if work was found, between receive attempts. If no work is found use the NoWorkPauseInMs
+        /// property instead.
+        /// Because the pump is a single-threaded apartment, Brighter can soak up that thread consuming work on a busy queue
+        /// without yielding. This provides high-throughput at low latency but will not be friendly to sharing unless it yields
+        /// during handling of the message
+        /// </summary>
+        public int PollDelayInMs { get; set; } = -1;
+
+        /// <summary>
         /// Gets or sets the number of times that we can requeue a message before we abandon it as poison pill.
         /// </summary>
         /// <value>The requeue count.</value>
@@ -103,7 +125,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
         /// </summary>
-        public int RequeueDelayInMilliseconds { get; }
+        public int RequeueDelayInMs { get; }
 
         /// <summary>
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
@@ -111,19 +133,19 @@ namespace Paramore.Brighter
         /// <value>The name.</value>
         public RoutingKey RoutingKey { get; }
 
-         /// <summary>
+        /// <summary>
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
         /// or busy
         /// </summary>
         /// <value>The timeout in miliseconds.</value>
-        public int TimeoutInMiliseconds { get; }
-        
+        public int TimeoutInMs { get; }
+
         /// <summary>
         /// Gets the number of messages before we will terminate the channel due to high error rates
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
-     
+
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
@@ -138,9 +160,11 @@ namespace Paramore.Brighter
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMs">The timeout in milliseconds.</param>
+        /// <param name="pollDelayInMs">Interval between polling attempts</param>
+        /// <param name="noWorkPauseInMs">When a queue is empty, delay this long before re-reading from the queue</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -151,10 +175,12 @@ namespace Paramore.Brighter
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int bufferSize = 1,
-            int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300,
+            int noOfPerformers = 1,
+            int timeoutInMs = 300,
+            int pollDelayInMs = -1,
+            int noWorkPauseInMs = 500,
             int requeueCount = -1,
-            int requeueDelayInMilliseconds = 0,
+            int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
@@ -166,9 +192,11 @@ namespace Paramore.Brighter
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
             BufferSize = bufferSize;
             NoOfPeformers = noOfPerformers;
-            TimeoutInMiliseconds = timeoutInMilliseconds;
+            TimeoutInMs = timeoutInMs;
+            PollDelayInMs = pollDelayInMs;
+            NoWorkPauseInMs = noWorkPauseInMs;
             RequeueCount = requeueCount;
-            RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
+            RequeueDelayInMs = requeueDelayInMs;
             UnacceptableMessageLimit = unacceptableMessageLimit;
             RunAsync = runAsync;
             ChannelFactory = channelFactory;
@@ -187,9 +215,11 @@ namespace Paramore.Brighter
         /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="bufferSize">The number of messages to buffer on the channel</param>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="timeoutInMs">The timeout in milliseconds.</param>
+        /// <param name="pollDelayInMs">Interval between polling attempts</param>
+        /// <param name="noWorkPauseInMs">When a queue is empty, delay this long before re-reading from the queue</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="runAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -200,26 +230,30 @@ namespace Paramore.Brighter
             RoutingKey routingKey = null,
             int noOfPerformers = 1,
             int bufferSize = 1,
-            int timeoutInMilliseconds = 300,
+            int timeoutInMs = 300,
+            int pollDelayInMs = -1,
+            int noWorkPauseInMs = 500,
             int requeueCount = -1,
-            int requeueDelayInMilliseconds = 0,
+            int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(
-                typeof(T), 
-                name, 
-                channelName, 
-                routingKey, 
+                typeof(T),
+                name,
+                channelName,
+                routingKey,
                 bufferSize,
-                noOfPerformers, 
-                timeoutInMilliseconds, 
-                requeueCount, 
-                requeueDelayInMilliseconds, 
-                unacceptableMessageLimit, 
-                runAsync, 
-                channelFactory, 
+                noOfPerformers,
+                timeoutInMs,
+                pollDelayInMs,
+                noWorkPauseInMs,
+                requeueCount,
+                requeueDelayInMs,
+                unacceptableMessageLimit,
+                runAsync,
+                channelFactory,
                 makeChannels)
         {
         }

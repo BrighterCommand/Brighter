@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 throw new ConfigurationException("We expect an AzureServiceBusSubscription or AzureServiceBusSubscription<T> as a parameter");
             }
 
-            if (subscription.TimeoutInMiliseconds < 400)
+            if (subscription.TimeoutInMs < 400)
             {
                 throw new ArgumentException("The minimum allowed timeout is 400 milliseconds");
             }

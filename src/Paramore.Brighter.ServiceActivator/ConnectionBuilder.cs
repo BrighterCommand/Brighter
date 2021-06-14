@@ -174,11 +174,11 @@ namespace Paramore.Brighter.ServiceActivator
                 new ChannelName(_channelName),
                 new RoutingKey(_routingKey),
                 channelFactory:_channelFactory,
-                timeoutInMilliseconds: _milliseconds,
+                timeoutInMs: _milliseconds,
                 bufferSize: _buffersize,
                 noOfPerformers: _noOfPeformers,
                 requeueCount: _requeueCount,
-                requeueDelayInMilliseconds: _requeueDelayInMilliseconds,
+                requeueDelayInMs: _requeueDelayInMilliseconds,
                 unacceptableMessageLimit: _unacceptableMessageLimit,
                 runAsync: _isAsync,
                 makeChannels:_makeChannel);

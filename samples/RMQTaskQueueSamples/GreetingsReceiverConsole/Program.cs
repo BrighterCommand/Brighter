@@ -56,7 +56,7 @@ namespace GreetingsReceiverConsole
                             new SubscriptionName("paramore.example.greeting"),
                             new ChannelName("greeting.event"),
                             new RoutingKey("greeting.event"),
-                            timeoutInMilliseconds: 200,
+                            timeoutInMs: 200,
                             isDurable: true,
                             highAvailability: true,
                             makeChannels: OnMissingChannel.Create),   //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -64,7 +64,7 @@ namespace GreetingsReceiverConsole
                             new SubscriptionName("paramore.example.farewell"), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
                             new ChannelName("farewell.event"),
                             new RoutingKey("farewell.event"),
-                            timeoutInMilliseconds: 200,
+                            timeoutInMs: 200,
                             isDurable: true,
                             highAvailability: true,
                             makeChannels: OnMissingChannel.Create)
