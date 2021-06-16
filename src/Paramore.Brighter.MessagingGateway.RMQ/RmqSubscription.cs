@@ -75,6 +75,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeoutInMs">The timeout in milliseconds.</param>
+        /// <param name="pollDelayInMs">Interval between polling attempts</param>
+        /// <param name="noWorkPauseInMs">When a queue is empty, delay this long before re-reading from the queue</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
@@ -95,6 +97,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int bufferSize = 1, 
             int noOfPerformers = 1, 
             int timeoutInMs = 300, 
+            int pollDelayInMs = -1,
+            int noWorkPauseInMs = 500,
             int requeueCount = -1, 
             int requeueDelayInMs = 0, 
             int unacceptableMessageLimit = 0, 
@@ -106,7 +110,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             string deadLetterRoutingKey = null, 
             int? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, pollDelayInMs, 
+                noWorkPauseInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, 
+                runAsync, channelFactory, makeChannels)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -127,6 +133,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="bufferSize">The number of messages to buffer at any one time, also the number of messages to retrieve at once. Min of 1 Max of 10</param>
         /// <param name="noOfPerformers">The no of threads reading this channel.</param>
         /// <param name="timeoutInMs">The timeout in milliseconds.</param>
+        /// <param name="pollDelayInMs">Interval between polling attempts</param>
+        /// <param name="noWorkPauseInMs">When a queue is empty, delay this long before re-reading from the queue</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
@@ -145,6 +153,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int bufferSize = 1,
             int noOfPerformers = 1,
             int timeoutInMs = 300,
+            int pollDelayInMs = -1,
+            int noWorkPauseInMs = 500,
             int requeueCount = -1,
             int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
@@ -156,8 +166,9 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             string deadLetterRoutingKey = null, 
             int? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, requeueCount, requeueDelayInMs,
-                unacceptableMessageLimit, isDurable, runAsync, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels)
+            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, pollDelayInMs, 
+                noWorkPauseInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isDurable, runAsync, channelFactory, 
+                highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels)
         { }
 
     }
