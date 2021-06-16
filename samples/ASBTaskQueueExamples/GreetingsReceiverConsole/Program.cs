@@ -26,7 +26,6 @@ namespace GreetingsReceiverConsole
                     var subscriptions = new Subscription[]
                     {
                         new AzureServiceBusSubscription<GreetingAsyncEvent>(
-                            typeof(GreetingAsyncEvent),
                             new SubscriptionName(GreetingEventAsyncMessageMapper.Topic),
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey(GreetingEventAsyncMessageMapper.Topic),
@@ -35,7 +34,6 @@ namespace GreetingsReceiverConsole
                             requeueCount: 3,
                             isAsync: true),
                         new AzureServiceBusSubscription<GreetingEvent>(
-                            typeof(GreetingEvent),
                             new SubscriptionName(GreetingEventMessageMapper.Topic),
                             new ChannelName("paramore.example.greeting"),
                             new RoutingKey(GreetingEventMessageMapper.Topic),

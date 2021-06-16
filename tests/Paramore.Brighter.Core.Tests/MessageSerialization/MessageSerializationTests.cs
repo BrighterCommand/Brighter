@@ -2,9 +2,9 @@
 using System.Text.Json;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageSerilisation
+namespace Paramore.Brighter.Core.Tests.MessageSerialization
 {
-    public class MessageSerilisationTests
+    public class MessageSerializationTests
     {
 
         [Fact]
