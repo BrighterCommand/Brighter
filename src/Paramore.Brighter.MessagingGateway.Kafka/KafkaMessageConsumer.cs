@@ -48,11 +48,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly ConcurrentBag<TopicPartitionOffset> _offsetStorage = new ConcurrentBag<TopicPartitionOffset>();
         private readonly long _maxBatchSize;
         private readonly int _readCommittedOffsetsTimeoutMs;
+        private readonly RoutingKey _deferQueueTopic;
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
         private readonly object _flushLock = new object();
         private bool _disposedValue;
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="configuration"></param>
+        /// <param name="routingKey"></param>
+        /// <param name="groupId"></param>
+        /// <param name="offsetDefault"></param>
+        /// <param name="sessionTimeoutMs"></param>
+        /// <param name="maxPollIntervalMs"></param>
+        /// <param name="isolationLevel"></param>
+        /// <param name="commitBatchSize"></param>
+        /// <param name="sweepUncommittedOffsetsIntervalMs"></param>
+        /// <param name="readCommittedOffsetsTimeoutMs"></param>
+        /// <param name="numPartitions"></param>
+        /// <param name="replicationFactor"></param>
+        /// <param name="topicFindTimeoutMs"></param>
+        /// <param name="deferQueueTopic"></param>
+        /// <param name="makeChannels"></param>
+        /// <exception cref="ConfigurationException"></exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
             RoutingKey routingKey,
@@ -67,6 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int numPartitions = 1,
             short replicationFactor = 1,
             int topicFindTimeoutMs = 10000,
+            RoutingKey deferQueueTopic = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create
             )
         {
@@ -120,6 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _maxBatchSize = commitBatchSize;
             _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsIntervalMs);
             _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
+            _deferQueueTopic = deferQueueTopic;
 
             _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
                 .SetPartitionsAssignedHandler((consumer, list) =>
@@ -304,7 +326,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
+        /// Requeues the specified message.
+        /// We requeue if the  
         /// </summary>
         /// <param name="message"></param>
         public void Requeue(Message message)
