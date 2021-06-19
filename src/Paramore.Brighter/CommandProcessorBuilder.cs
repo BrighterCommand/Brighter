@@ -152,12 +152,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext TaskQueues(MessagingConfiguration configuration)
+        public INeedARequestContext TaskQueues(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmAnOutboxAsync<Message> outboxAsync)
         {
             _useTaskQueues = true;
-            _outbox = configuration.OutBox;
-            _asyncOutbox = configuration.OutboxAsync;
             _messagingGateway = configuration.MessageProducer;
+            _outbox = outbox;
+            _asyncOutbox = outboxAsync;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
@@ -182,8 +182,6 @@ namespace Paramore.Brighter
         public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
         {
             _useRequestReplyQueues = true;
-            _outbox = configuration.OutBox;
-            _asyncOutbox = configuration.OutboxAsync;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
@@ -313,8 +311,10 @@ namespace Paramore.Brighter
         /// Configure a task queue to send messags out of process
         /// </summary>
         /// <param name="configuration">The configuration.</param>
+        /// <param name="outbox">The outbox.</param>
+        /// <param name="outboxAsync">The Async Outbox.</param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext TaskQueues(MessagingConfiguration configuration);
+        INeedARequestContext TaskQueues(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmAnOutboxAsync<Message> outboxAsync);
         /// <summary>
         /// We don't send messages out of process
         /// </summary>

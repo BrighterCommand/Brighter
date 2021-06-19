@@ -9,6 +9,7 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
 {
     public class MsSqlOutboxSharedTokenCacheConnectionFactory : IMsSqlOutboxConnectionFactory
     {
+        private const string _azureScope = "https://database.windows.net/.default";
         private const string _azureUserNameKey = "AZURE_USERNAME";
         private const string _azureTenantIdKey = "AZURE_TENANT_ID";
 
@@ -17,21 +18,21 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
         private readonly string _azureUserName;
         private readonly string _azureTenantId;
 
-        public MsSqlOutboxSharedTokenCacheConnectionFactory(string connectionString,
-            string authenticationTokenScopes = "https://database.windows.net/.default") : this(connectionString,
-            Environment.GetEnvironmentVariable(_azureUserNameKey),
-            Environment.GetEnvironmentVariable(_azureTenantIdKey), authenticationTokenScopes)
+        public MsSqlOutboxSharedTokenCacheConnectionFactory(MsSqlOutboxConfiguration configuration)
         {
+            _connectionString = configuration.ConnectionString;
+            _authenticationTokenScopes = new string[1] {_azureScope};
+            IsScoped = configuration.IsScoped;
         }
 
-        public MsSqlOutboxSharedTokenCacheConnectionFactory(string connectionString, string azureUserName,
-            string azureTenantId, string authenticationTokenScopes = "https://database.windows.net/.default")
+        public MsSqlOutboxSharedTokenCacheConnectionFactory(MsSqlOutboxConfiguration configuration, string azureUserName,
+            string azureTenantId) : this(configuration)
         {
-            _connectionString = connectionString;
             _azureUserName = azureUserName;
             _azureTenantId = azureTenantId;
-            _authenticationTokenScopes = new string[1] {authenticationTokenScopes};
         }
+
+        public bool IsScoped { get; }
 
         public SqlConnection GetConnection()
         {

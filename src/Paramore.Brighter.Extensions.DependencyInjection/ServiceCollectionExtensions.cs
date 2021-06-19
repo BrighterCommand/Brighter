@@ -24,12 +24,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
             services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
-            
+
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services);
             services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
+
+        public static IBrighterHandlerBuilder UseInMemoryOutbox(
+            this IBrighterHandlerBuilder brighterBuilder, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        {
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), serviceLifetime));
+
+            return brighterBuilder;
+        }
+        
+        
 
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
@@ -40,6 +51,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
+
+            var outbox = provider.GetService<IAmAnOutbox<Message>>();
+            var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
 
             var policyBuilder = CommandProcessorBuilder.With()
                 .Handlers(handlerConfiguration);
@@ -58,9 +72,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 
                 taskQueuesBuilder = options.BrighterMessaging == null
                     ? messagingBuilder.NoTaskQueues()
-                    : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.OutBox,
-                        options.BrighterMessaging.AsyncOutBox, options.BrighterMessaging.Producer,
-                        options.BrighterMessaging.AsyncProducer, messageMapperRegistry));
+                    : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.Producer,
+                        options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox, asyncOutbox);
             }
             else
             {
@@ -72,12 +85,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 {
                     taskQueuesBuilder = options.BrighterMessaging.UseRequestReplyQueues
                         ? messagingBuilder.RequestReplyQueues(new MessagingConfiguration(
-                            options.BrighterMessaging.OutBox,
                             options.BrighterMessaging.Producer, messageMapperRegistry,
                             responseChannelFactory: options.ChannelFactory))
-                        : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.OutBox,
-                            options.BrighterMessaging.AsyncOutBox, options.BrighterMessaging.Producer,
-                            options.BrighterMessaging.AsyncProducer, messageMapperRegistry));
+                        : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.Producer,
+                            options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox, asyncOutbox);
                 }
             }
 
@@ -105,8 +116,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
     public class BrighterMessaging
     {
-        public IAmAnOutbox<Message> OutBox { get; }
-        public IAmAnOutboxAsync<Message> AsyncOutBox { get; }
         public IAmAMessageProducer Producer { get; }
         public IAmAMessageProducerAsync AsyncProducer { get; }
 
@@ -118,15 +127,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Constructor for use with a Producer
         /// </summary>
-        /// <param name="outBox">The outbox to store messages - use InMemoryInbox if you do not require a persistent outbox</param>
-        /// <param name="asyncOutBox">The outbox to store messages - use InMemoryInbox if you do not require a persistent outbox</param>
         /// <param name="producer">The Message producer</param>
         /// <param name="asyncProducer">The Message producer's async interface</param>
         /// <param name="useRequestReplyQueues">Use Request Reply Queues - This will need to set a Channel Factory as well.</param>
-        public BrighterMessaging(IAmAnOutbox<Message> outBox, IAmAnOutboxAsync<Message> asyncOutBox, IAmAMessageProducer producer, IAmAMessageProducerAsync asyncProducer, bool useRequestReplyQueues = true)
+        public BrighterMessaging(IAmAMessageProducer producer, IAmAMessageProducerAsync asyncProducer, bool useRequestReplyQueues = true)
         {
-            OutBox = outBox;
-            AsyncOutBox = asyncOutBox;
             Producer = producer;
             AsyncProducer = asyncProducer;
             UseRequestReplyQueues = useRequestReplyQueues;
@@ -135,13 +140,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Simplified constructor - we
         /// </summary>
-        /// <param name="outbox">The outbox</param>
         /// <param name="producer">Producer</param>
         /// <param name="useRequestReplyQueues">Use Request Reply Queues - This will need to set a Channel Factory as well.</param>
-        public BrighterMessaging(IAmAnOutbox<Message> outbox, IAmAMessageProducer producer, bool useRequestReplyQueues = true)
+        public BrighterMessaging(IAmAMessageProducer producer, bool useRequestReplyQueues = true)
         {
-            OutBox = outbox;
-            if (outbox is IAmAnOutboxAsync<Message> outboxAsync) AsyncOutBox = outboxAsync;
             Producer = producer;
             if (producer is IAmAMessageProducerAsync producerAsync) AsyncProducer = producerAsync;
             UseRequestReplyQueues = useRequestReplyQueues;

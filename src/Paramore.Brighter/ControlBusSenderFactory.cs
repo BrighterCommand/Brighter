@@ -45,10 +45,12 @@ namespace Paramore.Brighter
             var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
+            //TODO : Fix Newing up In Memory Outbox
+            
             return new ControlBusSender(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(outbox, gateway, mapper))
+                    .TaskQueues(new MessagingConfiguration(gateway, mapper),outbox, new InMemoryOutbox())
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

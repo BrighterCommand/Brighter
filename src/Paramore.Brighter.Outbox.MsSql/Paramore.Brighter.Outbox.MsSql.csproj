@@ -12,6 +12,7 @@
     <EmbeddedResource Include="DDL_SCRIPTS\MSSQL\Outbox.sql" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>

@@ -8,10 +8,13 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
     {
         private readonly string _connectionString;
 
-        public MsSqlOutboxSqlAuthConnectionFactory(string connectionString)
+        public MsSqlOutboxSqlAuthConnectionFactory(MsSqlOutboxConfiguration configuration)
         {
-            _connectionString = connectionString;
+            _connectionString = configuration.ConnectionString;
+            IsScoped = configuration.IsScoped;
         }
+
+        public bool IsScoped { get; }
 
         public SqlConnection GetConnection()
         {

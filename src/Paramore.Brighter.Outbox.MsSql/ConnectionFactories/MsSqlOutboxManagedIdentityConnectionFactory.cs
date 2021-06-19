@@ -8,14 +8,18 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
 {
     public class MsSqlOutboxManagedIdentityConnectionFactory : IMsSqlOutboxConnectionFactory
     {
+        private const string _azureScope = "https://database.windows.net/.default";
         private readonly string _connectionString;
         private readonly string[] _authenticationTokenScopes;
 
-        public MsSqlOutboxManagedIdentityConnectionFactory(string connectionString, string authenticationTokenScopes = "https://database.windows.net/.default")
+        public MsSqlOutboxManagedIdentityConnectionFactory(MsSqlOutboxConfiguration configuration)
         {
-            _connectionString = connectionString;
-            _authenticationTokenScopes = new string[1] { authenticationTokenScopes };
+            _connectionString = configuration.ConnectionString;
+            _authenticationTokenScopes = new string[1] { _azureScope };
+            IsScoped = configuration.IsScoped;
         }
+
+        public bool IsScoped { get; private set; }
 
         public SqlConnection GetConnection()
         {
