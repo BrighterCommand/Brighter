@@ -11,10 +11,7 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
         public MsSqlOutboxSqlAuthConnectionFactory(MsSqlOutboxConfiguration configuration)
         {
             _connectionString = configuration.ConnectionString;
-            IsScoped = configuration.IsScoped;
         }
-
-        public bool IsScoped { get; }
 
         public SqlConnection GetConnection()
         {
@@ -28,5 +25,14 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
             tcs.SetResult(GetConnection());
             return await tcs.Task;
         }
+
+        public SqlTransaction GetTransaction()
+        {
+            //This Connection Factory does not support Transactions 
+            return null;
+        }
+
+        public bool HasOpenTransaction { get => false; }
+        public bool IsSharedConnection { get => false; }
     }
 }

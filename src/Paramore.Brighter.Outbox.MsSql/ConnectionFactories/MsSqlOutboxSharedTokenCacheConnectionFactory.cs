@@ -22,7 +22,6 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
         {
             _connectionString = configuration.ConnectionString;
             _authenticationTokenScopes = new string[1] {_azureScope};
-            IsScoped = configuration.IsScoped;
         }
 
         public MsSqlOutboxSharedTokenCacheConnectionFactory(MsSqlOutboxConfiguration configuration, string azureUserName,
@@ -31,8 +30,6 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
             _azureUserName = azureUserName;
             _azureTenantId = azureTenantId;
         }
-
-        public bool IsScoped { get; }
 
         public SqlConnection GetConnection()
         {
@@ -61,6 +58,15 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
                 return sqlConnection;
             }
         }
+
+        public SqlTransaction GetTransaction()
+        {
+            //This Connection Factory does not support Transactions 
+            return null;
+        }
+
+        public bool HasOpenTransaction { get => false; }
+        public bool IsSharedConnection { get => false; }
 
         private SharedTokenCacheCredential GetCredential()
         {

@@ -34,11 +34,10 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="connectionString">The subscription string.</param>
         /// <param name="outBoxTableName">Name of the outbox table.</param>
-        public MsSqlOutboxConfiguration(string connectionString, string outBoxTableName, bool isScoped = false)
+        public MsSqlOutboxConfiguration(string connectionString, string outBoxTableName)
         {
             OutBoxTableName = outBoxTableName;
             ConnectionString = connectionString;
-            IsScoped = isScoped;
         }
 
         /// <summary>
@@ -51,10 +50,5 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <value>The name of the outbox table.</value>
         public string OutBoxTableName { get; private set; }
-        
-        /// <summary>
-        /// Is this a Scoped Outbox where we don't need to dispose of the connections
-        /// </summary>
-        public bool IsScoped { get; private set; }
     }
 }
