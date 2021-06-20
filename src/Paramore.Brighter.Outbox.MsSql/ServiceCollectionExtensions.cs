@@ -13,18 +13,18 @@ namespace Paramore.Brighter.Outbox.MsSql
             brighterBuilder.Services.AddSingleton<MsSqlOutboxConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMsSqlOutboxConnectionFactory), connectionFactory, serviceLifetime));
             
-            if (serviceLifetime == ServiceLifetime.Scoped)
-            {
-                brighterBuilder.Services.AddScoped<IAmAnOutbox<Message>, MsSqlOutbox>();
-                brighterBuilder.Services.AddScoped<IAmAnOutboxAsync<Message>, MsSqlOutbox>();
-            }
-            else
-            {
-                brighterBuilder.Services.AddSingleton<IAmAnOutbox<Message>>();
-                brighterBuilder.Services.AddSingleton<IAmAnOutboxAsync<Message>>();
-            }
-
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildMsSqlOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMsSqlOutbox, serviceLifetime));
+            
             return brighterBuilder;
+        }
+
+        private static MsSqlOutbox BuildMsSqlOutbox(IServiceProvider provider)
+        {
+            var connectionFactory = provider.GetService<IMsSqlOutboxConnectionFactory>();
+            var config = provider.GetService<MsSqlOutboxConfiguration>();
+
+            return new MsSqlOutbox(config, connectionFactory);
         }
     }
 }
