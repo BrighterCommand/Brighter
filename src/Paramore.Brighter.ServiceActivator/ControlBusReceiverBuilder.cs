@@ -153,13 +153,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var producer = _producerFactory.Create();
 
             var outbox = new SinkOutbox();
-
-            //TODO: Fix newing up the in Memory
+            
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .TaskQueues(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox, new InMemoryOutbox())
+                .TaskQueues(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 

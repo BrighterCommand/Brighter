@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 taskQueuesBuilder = options.BrighterMessaging == null
                     ? messagingBuilder.NoTaskQueues()
                     : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.Producer,
-                        options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox, asyncOutbox);
+                        options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox);
             }
             else
             {
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                             options.BrighterMessaging.Producer, messageMapperRegistry,
                             responseChannelFactory: options.ChannelFactory))
                         : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.Producer,
-                            options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox, asyncOutbox);
+                            options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox);
                 }
             }
 
