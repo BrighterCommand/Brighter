@@ -20,7 +20,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var handleRequests = (IHandleRequests)scope.ServiceProvider.GetService(handlerType);
 
-            _scopeCache.SetIdentifierOnHandlerContext(handleRequests.Context, scopeId);
+            // TODO: decide if we want to set here or in the LifetimeScope
+            //_scopeCache.SetIdentifierOnHandlerContext(handleRequests.Context, scopeId);
             return handleRequests;
         }
 
@@ -31,7 +32,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var handleRequests = (IHandleRequestsAsync)scope.ServiceProvider.GetService(handlerType);
 
-            _scopeCache.SetIdentifierOnHandlerContext(handleRequests.Context, scopeId);
+            // TODO: decide if we want to set here or in the LifetimeScope
+            //_scopeCache.SetIdentifierOnHandlerContext(handleRequests.Context, scopeId);
             return handleRequests;
         }
 

@@ -78,12 +78,14 @@ namespace Paramore.Brighter
 
         private void SetScopeId(IHandleRequests instance) 
         {
-            //TODO: err if id not set
+            // TODO: decide if we want to set here or in the ScopedServiceProviderHandlerFactory
+            // TODO: err if id not set
             instance.Context.Bag.Add(_scopeIdentifier, _scopeId);
         }
 
         private void SetScopeId(IHandleRequestsAsync instance) 
         {
+            // TODO: decide if we want to set here or in the ScopedServiceProviderHandlerFactory
             //TODO: err if id not set
             instance.Context.Bag.Add(_scopeIdentifier, _scopeId);
         }
