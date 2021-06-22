@@ -15,6 +15,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         IHandleRequests IAmAHandlerFactory.Create(Type handlerType)
         {
+            //TODO: ISSUE - we need to get the scope id for the lifetime
             var scope = _scopeCache.GetOrCreateScope(out var scopeId);
 
             var handleRequests = (IHandleRequests)scope.ServiceProvider.GetService(handlerType);
@@ -25,6 +26,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
         {
+            //TODO: ISSUE - we need to get the scope id for the lifetime
             var scope = _scopeCache.GetOrCreateScope(out var scopeId);
 
             var handleRequests = (IHandleRequestsAsync)scope.ServiceProvider.GetService(handlerType);
