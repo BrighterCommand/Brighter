@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter
 {
@@ -46,5 +47,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="handler">The handler.</param>
         void Release(IHandleRequests handler);
+
+        bool TryReleaseScope(IEnumerable<IHandleRequests> handleRequestsList);
+        bool TryCreateScope(IAmALifetime instanceScope);
     }
 }

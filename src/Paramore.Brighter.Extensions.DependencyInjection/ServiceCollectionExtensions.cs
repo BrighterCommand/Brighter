@@ -16,14 +16,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             configure?.Invoke(options);
             services.AddSingleton<IBrighterOptions>(options);
 
-            return BrighterHandlerBuilder(services, options);
+            return BrighterHandlerBuilder(services, options, 
+                provider => (new ServiceProviderHandlerFactory(provider), new ServiceProviderHandlerFactory(provider)));
         }
-        public static IBrighterHandlerBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
+
+        public static IBrighterHandlerBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options, 
+            Func<IServiceProvider, (IAmAHandlerFactory, IAmAHandlerFactoryAsync)> serviceProviderHandlerFactory)
         {
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
-            services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
+            services.AddSingleton(subscriberRegistry);
 
-            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
+            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor),
+                provider =>
+                {
+                    (IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync handlerFactoryAsync) = serviceProviderHandlerFactory(provider);
+                    return BuildCommandProcessor(provider, handlerFactory, handlerFactoryAsync);
+                }, options.CommandProcessorLifetime));
             
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services);
             services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
@@ -31,13 +39,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
 
-        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
+        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider, IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync handlerFactoryAsync)
         {
             var options = provider.GetService<IBrighterOptions>();
             var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
 
-            var handlerFactory = new ServiceProviderHandlerFactory(provider);
-            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
+            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactoryAsync);
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
 

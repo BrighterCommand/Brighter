@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -54,6 +55,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 s_released += "|" + handler.Name;
             }
+            
+            public bool TryReleaseScope(IEnumerable<IHandleRequests> handleRequestsList) => false;
+            public bool TryCreateScope(IAmALifetime instanceScope) => false;
         }
 
 

@@ -44,5 +44,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="instance">The instance.</param>
         void Add(IHandleRequestsAsync instance);
+
+        void SetScopeId(Guid scopeId);
     }
 }

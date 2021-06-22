@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -49,5 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             }
             handler = null;
         }
+        public bool TryReleaseScope(IEnumerable<IHandleRequestsAsync> handleRequestsAsync) => false;
+        public bool TryCreateScope(IAmALifetime instanceScope) => false;
     }
 }

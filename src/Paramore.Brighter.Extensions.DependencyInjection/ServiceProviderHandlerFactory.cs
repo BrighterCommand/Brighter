@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -32,5 +33,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var disposal = handler as IDisposable;
             disposal?.Dispose();
         }
+
+        public bool TryReleaseScope(IEnumerable<IHandleRequestsAsync> handleRequestsAsync) => false;
+        public bool TryReleaseScope(IEnumerable<IHandleRequests> handleRequestsList) => false;
+        public bool TryCreateScope(IAmALifetime instanceScope) => false;
     }
 }

@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using FluentAssertions;
@@ -88,6 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             }
 
             public void Release(IHandleRequests handler) {}
-        }
+            public bool TryReleaseScope(IEnumerable<IHandleRequests> handleRequestsList) => false;
+            public bool TryCreateScope(IAmALifetime instanceScope) => false;        }
     }
 }

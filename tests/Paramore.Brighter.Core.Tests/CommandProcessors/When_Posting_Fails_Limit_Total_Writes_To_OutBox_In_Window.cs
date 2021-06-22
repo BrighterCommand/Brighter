@@ -101,6 +101,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             }
 
             public void Release(IHandleRequests handler) {}
+            public bool TryReleaseScope(IEnumerable<IHandleRequests> handleRequestsList) => false;
+            public bool TryCreateScope(IAmALifetime instanceScope) => false;
         }
     }
 }

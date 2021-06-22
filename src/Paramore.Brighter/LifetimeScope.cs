@@ -38,6 +38,8 @@ namespace Paramore.Brighter
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
+        private Guid _scopeId;
+        private const string _scopeIdentifier = "scopeIdentifier";
 
         public LifetimeScope(IAmAHandlerFactory handlerFactory) 
             : this(handlerFactory, null)
@@ -51,6 +53,7 @@ namespace Paramore.Brighter
         {
             _handlerFactory = handlerFactory;
             _asyncHandlerFactory = asyncHandlerFactory;
+            handlerFactory?.TryCreateScope(this);
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
@@ -60,6 +63,7 @@ namespace Paramore.Brighter
             if (_handlerFactory == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
+            SetScopeId(instance);
             s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
@@ -68,11 +72,38 @@ namespace Paramore.Brighter
             if (_asyncHandlerFactory == null)
                 throw new ArgumentException("An instance of an async handler can not be added without an AsyncHandlerFactory.");
             _trackedAsyncObjects.Add(instance);
+            SetScopeId(instance);
             s_logger.LogDebug("Tracking async handler instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
-        public void Dispose()
+        private void SetScopeId(IHandleRequests instance) 
         {
+            //err if id not set
+            instance.Context.Bag.Add(_scopeIdentifier, _scopeId);
+        }
+
+        private void SetScopeId(IHandleRequestsAsync instance) 
+        {
+            //err if id not set
+            instance.Context.Bag.Add(_scopeIdentifier, _scopeId);
+        }
+        
+        public void SetScopeId(Guid scopeId)
+        {
+            _scopeId = scopeId;
+        }
+
+        public virtual void Dispose()
+        {
+            bool? tryReleaseScope = _handlerFactory?.TryReleaseScope(_trackedObjects);
+            if (tryReleaseScope.HasValue && tryReleaseScope.Value)
+            {
+                //duplicated here to early exit as non-regular flow
+                _trackedObjects.Clear();
+                _trackedAsyncObjects.Clear();
+                return;
+            }
+            
             _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items

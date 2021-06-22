@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
@@ -37,5 +38,8 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         public void Release(IHandleRequests handler)
         {
         }
+
+        public bool TryReleaseScope(IEnumerable<IHandleRequests> handleRequestsList) => false;
+        public bool TryCreateScope(IAmALifetime instanceScope) => false;
     }
 }

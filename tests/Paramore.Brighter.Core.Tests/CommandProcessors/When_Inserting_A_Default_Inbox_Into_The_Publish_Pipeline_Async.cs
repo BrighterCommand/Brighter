@@ -34,8 +34,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
              var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-
-            var retryPolicy = Policy
+             var retryPolicy = Policy
                 .Handle<Exception>()
                 .RetryAsync();
 
@@ -60,7 +59,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 },
                 inboxConfiguration: inboxConfiguration
                 );
-            
         }
  
         

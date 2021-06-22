@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter
 {
@@ -46,5 +47,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="handler">The handler.</param>
         void Release(IHandleRequestsAsync handler);
+        bool TryReleaseScope(IEnumerable<IHandleRequestsAsync> handleRequestsAsync);
     }
 }
