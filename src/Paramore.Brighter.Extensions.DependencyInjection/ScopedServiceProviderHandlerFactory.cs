@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public class ScopedServiceProviderHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
     {
-        private readonly ScopeCache _scopeCache ;
+        private readonly ScopeCache _scopeCache;
 
         public ScopedServiceProviderHandlerFactory(IServiceProvider serviceProvider)
         {
@@ -16,8 +16,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IHandleRequests IAmAHandlerFactory.Create(Type handlerType)
         {
             //TODO: ISSUE - we need to get the scope id for the lifetime
-            var scope = _scopeCache.GetOrCreateScope(out var scopeId);
+            Guid scopeId;
+            var scope = _scopeCache.Get(scopeId);
 
+            //TODO: no scope - error
+            
             var handleRequests = (IHandleRequests)scope.ServiceProvider.GetService(handlerType);
 
             // TODO: decide if we want to set here or in the LifetimeScope
