@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2015 Toby Henderson <hendersont@gmail.com>
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<object>();
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             MarkDispatched(id, dispatchedAt);
             

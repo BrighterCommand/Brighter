@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests
         }
         public static async Task<Exception> ExceptionAsync(Func<Task> action)
         {
-            var tcs = new TaskCompletionSource<Exception>();
+            var tcs = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
             //Exception exception = null;
             
             try

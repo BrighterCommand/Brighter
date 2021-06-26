@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using System.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -18,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories
             _authenticationTokenScopes = new string[1] { authenticationTokenScopes };
         }
 
-        public DbConnection GetConnection()
+        public SqlConnection GetConnection()
         {
             var sqlConnection = new SqlConnection(_connectionString);
             var credential = new ManagedIdentityCredential();
@@ -28,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories
             return sqlConnection;
         }
 
-        public async Task<DbConnection> GetConnectionAsync(
+        public async Task<SqlConnection> GetConnectionAsync(
             CancellationToken cancellationToken = default(CancellationToken))
         {
             var sqlConnection = new SqlConnection(_connectionString);

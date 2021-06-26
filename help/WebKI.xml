@@ -1812,15 +1812,6 @@
     <HelpKINode Title="MsSqlMessageStoreConfiguration Members" Url="html/421658246.htm" />
   </HelpKINode>
   <HelpKINode Title="paramore.brighter.commandprocessor.messagestore.mssql.MsSqlMessageStoreConfiguration.DatabaseType enumeration" Url="html/2087338180.htm" />
-  <HelpKINode Title="paramore.brighter.commandprocessor.messagestore.ravendb namespace" Url="html/886576783.htm" />
-  <HelpKINode Title="paramore.brighter.commandprocessor.messagestore.ravendb.MessageStoreFactory class">
-    <HelpKINode Title="MessageStoreFactory Class" Url="html/553421105.htm" />
-    <HelpKINode Title="MessageStoreFactory Members" Url="html/1175572812.htm" />
-  </HelpKINode>
-  <HelpKINode Title="paramore.brighter.commandprocessor.messagestore.ravendb.RavenMessageStore class">
-    <HelpKINode Title="RavenMessageStore Class" Url="html/1854999159.htm" />
-    <HelpKINode Title="RavenMessageStore Members" Url="html/185968216.htm" />
-  </HelpKINode>
   <HelpKINode Title="paramore.brighter.commandprocessor.MessageType enumeration" Url="html/308548437.htm" />
   <HelpKINode Title="paramore.brighter.commandprocessor.MessagingConfiguration class">
     <HelpKINode Title="MessagingConfiguration Class" Url="html/1221912875.htm" />
@@ -2229,17 +2220,6 @@
   <HelpKINode Title="Queues property" Url="html/753436669.htm" />
   <HelpKINode Title="Queues.HighAvailability property" Url="html/621178345.htm" />
   <HelpKINode Title="Queues.QosPrefetchSize property" Url="html/1452160696.htm" />
-  <HelpKINode Title="RavenMessageStore class">
-    <HelpKINode Title="RavenMessageStore Class" Url="html/1854999159.htm" />
-    <HelpKINode Title="RavenMessageStore Members" Url="html/185968216.htm" />
-    <HelpKINode Title="about RavenMessageStore class" Url="html/1854999159.htm" />
-    <HelpKINode Title="all members" Url="html/185968216.htm" />
-    <HelpKINode Title="constructor" Url="html/72660583.htm" />
-    <HelpKINode Title="methods" Url="html/1857114624.htm" />
-  </HelpKINode>
-  <HelpKINode Title="RavenMessageStore.Add method" Url="html/415988835.htm" />
-  <HelpKINode Title="RavenMessageStore.Get method" Url="html/46531503.htm" />
-  <HelpKINode Title="RavenMessageStore.RavenMessageStore constructor" Url="html/72660583.htm" />
   <HelpKINode Title="Receive method">
     <HelpKINode Title="Receive Method " Url="html/1179460299.htm" />
     <HelpKINode Title="Receive Method " Url="html/118420468.htm" />

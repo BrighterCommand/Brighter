@@ -1,6 +1,5 @@
 ﻿using System;
-using System.Data.Common;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -195,12 +194,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             }
         }
         
-        private static DbParameter CreateSqlParameter(string parameterName, object value)
+        private static SqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value);
         }
 
-        private static DbParameter[] InitAddDbParameters(string topic, T message)
+        private static SqlParameter[] InitAddDbParameters(string topic, T message)
         {
             var parameters = new[]
             {
@@ -211,7 +210,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             return parameters;
         }
 
-        private DbCommand InitAddDbCommand(int timeoutInMilliseconds, DbConnection connection, DbParameter[] parameters)
+        private SqlCommand InitAddDbCommand(int timeoutInMilliseconds, SqlConnection connection, SqlParameter[] parameters)
         {
             var sql =
                 $"set nocount on;insert into [{_configuration.QueueStoreTable}] (Topic, MessageType, Payload) values(@topic, @messageType, @payload);";
@@ -223,7 +222,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             return sqlCmd;
         }
 
-        private static DbParameter[] InitRemoveDbParameters(string topic)
+        private static SqlParameter[] InitRemoveDbParameters(string topic)
         {
             var parameters = new[]
             {
@@ -232,7 +231,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             return parameters;
         }
 
-        private DbCommand InitRemoveDbCommand(DbConnection connection, DbParameter[] parameters)
+        private SqlCommand InitRemoveDbCommand(SqlConnection connection, SqlParameter[] parameters)
         {
             var sql =
                 $"set nocount on;with cte as (select top(1) Payload, MessageType, Topic, Id from [{_configuration.QueueStoreTable}]" +
@@ -243,7 +242,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
             return sqlCmd;
         }
 
-        private DbCommand InitPurgeDbCommand(DbConnection connection)
+        private SqlCommand InitPurgeDbCommand(SqlConnection connection)
         {
             var sql = $"delete from [{_configuration.QueueStoreTable}]";
             var sqlCmd = connection.CreateCommand();

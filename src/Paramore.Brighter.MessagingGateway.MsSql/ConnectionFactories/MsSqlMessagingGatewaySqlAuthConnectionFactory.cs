@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using System.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,14 +13,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories
             _connectionString = connectionString;
         }
 
-        public DbConnection GetConnection()
+        public SqlConnection GetConnection()
         {
             return new SqlConnection(_connectionString);
         }
 
-        public async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return GetConnection();
+            var tcs = new TaskCompletionSource<SqlConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(GetConnection());
+
+            return await tcs.Task;
         }
     }
 }
