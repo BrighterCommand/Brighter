@@ -10,6 +10,9 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
     {
         private readonly T _context;
         
+        /// <summary>
+        /// Initialise a new instance of Ms Sql Connection provider using the Database Connection from an Entity Framework Core DbContext.
+        /// </summary>
         public MsSqlEntityFrameworkCoreConnectionProvider(T context)
         {
             _context = context;

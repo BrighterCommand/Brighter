@@ -7,16 +7,20 @@ namespace Paramore.Brighter.MsSql.Azure
 {
     public class MsSqlManagedIdentityConnectionProvider : MsSqlAzureConnectionProviderBase
     {
+        /// <summary>
+        /// Initialise a new instance of Ms Sql Connection provider using Managed Idenity Credentials to acquire Access Tokens.
+        /// </summary>
+        /// <param name="configuration">Ms Sql Configuration</param>
         public MsSqlManagedIdentityConnectionProvider(MsSqlConfiguration configuration) : base(configuration)
         {
         }
 
-        protected override AccessToken GetAccessToken()
+        protected override AccessToken GetAccessTokenFromProvider()
         {
-            return GetAccessTokenAsync(CancellationToken.None).Result;
+            return GetAccessTokenFromProviderAsync(CancellationToken.None).GetAwaiter().GetResult();
         }
 
-        protected override async Task<AccessToken> GetAccessTokenAsync(CancellationToken cancellationToken)
+        protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
             var credential = new ManagedIdentityCredential();
             return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);

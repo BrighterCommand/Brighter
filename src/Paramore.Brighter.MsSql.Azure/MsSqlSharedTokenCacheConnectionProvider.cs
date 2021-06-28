@@ -14,24 +14,32 @@ namespace Paramore.Brighter.MsSql.Azure
         private readonly string _azureUserName;
         private readonly string _azureTenantId;
         
+        /// <summary>
+        /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
+        /// </summary>
+        /// <param name="configuration">Ms Sql Configuration</param>
         public MsSqlSharedTokenCacheConnectionProvider(MsSqlConfiguration configuration) : base(configuration)
         {
             _azureUserName = Environment.GetEnvironmentVariable(_azureUserNameKey);
             _azureTenantId = Environment.GetEnvironmentVariable(_azureTenantIdKey);
         }
         
+        /// <summary>
+        /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
+        /// </summary>
+        /// <param name="configuration">Ms Sql Configuration</param>
         public MsSqlSharedTokenCacheConnectionProvider(MsSqlConfiguration configuration, string userName, string tenantId) : base(configuration)
         {
             _azureUserName = userName;
             _azureTenantId = tenantId;
         }
 
-        protected override AccessToken GetAccessToken()
+        protected override AccessToken GetAccessTokenFromProvider()
         {
-            return GetAccessTokenAsync(CancellationToken.None).Result;
+            return GetAccessTokenFromProviderAsync(CancellationToken.None).GetAwaiter().GetResult();
         }
 
-        protected override async Task<AccessToken> GetAccessTokenAsync(CancellationToken cancellationToken)
+        protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
             var credential = GetCredential();
             return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
