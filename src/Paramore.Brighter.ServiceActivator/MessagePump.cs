@@ -108,13 +108,13 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
                     s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(ConnectionFailureRetryIntervalinMs).Wait();
+                    Channel.Pause(ConnectionFailureRetryIntervalinMs);
                     continue;
                 }
                 catch (ChannelFailureException)
                 {
                     s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(ConnectionFailureRetryIntervalinMs).Wait();
+                    Channel.Pause(ConnectionFailureRetryIntervalinMs);
                     continue;
                 }
                 catch (Exception exception)
@@ -130,8 +130,8 @@ namespace Paramore.Brighter.ServiceActivator
 
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
-                {
-                    Task.Delay(NoWorkPauseInMilliseconds).Wait();
+                {   
+                    Channel.Pause(NoWorkPauseInMilliseconds);
                     continue;
                 }
 
