@@ -35,27 +35,29 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
     public class MessagePumpRetryCommandOnConnectionFailureTests
     {
+        private const int CONN_FAIL_PAUSE = 2000;
         private readonly IAmAMessagePump _messagePump;
         private readonly SpyCommandProcessor _commandProcessor;
+        private FailingChannel _channel;
 
         public MessagePumpRetryCommandOnConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
-            var channel = new FailingChannel { NumberOfRetries = 1 };
+            _channel = new FailingChannel { NumberOfRetries = 1 };
             var mapper = new MyCommandMessageMapper();
-            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
+            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 500, RequeueCount = -1, ConnectionFailureRetryIntervalinMs = CONN_FAIL_PAUSE};
 
             var command = new MyCommand();
 
             //two command, will be received when subscription restored
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
-            channel.Enqueue(message1);
-            channel.Enqueue(message2);
+            _channel.Enqueue(message1);
+            _channel.Enqueue(message2);
             
             //end the pump
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Enqueue(quitMessage);
+            _channel.Enqueue(quitMessage);
         }
 
         [Fact]
@@ -67,6 +69,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor.Commands.Count().Should().Be(2);
             _commandProcessor.Commands[0].Should().Be(CommandType.Send);
             _commandProcessor.Commands[1].Should().Be(CommandType.Send);
+            _channel.PauseWaitInMs.Should().Be(CONN_FAIL_PAUSE);
+
         }
     }
 }

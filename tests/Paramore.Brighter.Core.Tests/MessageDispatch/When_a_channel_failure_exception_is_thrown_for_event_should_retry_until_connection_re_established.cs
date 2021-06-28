@@ -37,25 +37,28 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly SpyCommandProcessor _commandProcessor;
+        private FailingChannel _channel;
+        private int CONN_FAIL_PAUSE;
 
         public MessagePumpRetryEventConnectionFailureTests()
         {
             _commandProcessor = new SpyCommandProcessor();
-            var channel = new FailingChannel { NumberOfRetries = 1 };
+            _channel = new FailingChannel { NumberOfRetries = 1 };
             var mapper = new MyEventMessageMapper();
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper) { Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1 };
+            CONN_FAIL_PAUSE = 2000;
+            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 500, RequeueCount = -1, ConnectionFailureRetryIntervalinMs = CONN_FAIL_PAUSE};
 
             var @event = new MyEvent();
 
             //Two events will be received when channel fixed
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
-            channel.Enqueue(message1);
-            channel.Enqueue(message2);
+            _channel.Enqueue(message1);
+            _channel.Enqueue(message2);
             
             //Quit the message pump
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Enqueue(quitMessage);
+            _channel.Enqueue(quitMessage);
         }
 
         [Fact]
@@ -67,6 +70,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _commandProcessor.Commands.Count().Should().Be(2);
             _commandProcessor.Commands[0].Should().Be(CommandType.Publish);
             _commandProcessor.Commands[1].Should().Be(CommandType.Publish);
+            _channel.PauseWaitInMs.Should().Be(CONN_FAIL_PAUSE);
         }
 
     }
