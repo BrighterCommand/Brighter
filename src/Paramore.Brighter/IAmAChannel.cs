@@ -45,6 +45,14 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         void Acknowledge(Message message);
 
+         /// <summary>
+         /// Used to pause the channel for a number of seconds. The default implementation just returns a Task Delay
+         /// It is provided mainly to allow derived types to intercept the pump request to delay reading from the channel
+         /// Verification via a fake for testing is the major use case
+         /// </summary>
+         /// <param name="waitInMs">The amount of time the channel creates a delay for in ms</param>
+         void Pause(int waitInMs);
+
         /// <summary>
         /// Clears the queue
         /// </summary>

@@ -206,7 +206,7 @@ namespace Paramore.Brighter.ServiceActivator
                 AcknowledgeMessage(message);
 
                 //yield if a polling delay has been set
-                if (PollDelayInMilliseconds != -1) Task.Delay(PollDelayInMilliseconds).Wait();
+                if (PollDelayInMilliseconds != -1) Channel.Pause(PollDelayInMilliseconds);
 
             } while (true);
 

@@ -24,21 +24,25 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
     internal class MyEventHandler : RequestHandler<MyEvent>
     {
-        private readonly IDictionary<string, Guid> _receivedMessages;
-
+        public IDictionary<string, Guid> ReceivedMessages = new Dictionary<string, Guid>();
+        
+        public MyEventHandler() { }
+        
         public MyEventHandler(IDictionary<string, Guid> receivedMessages)
         {
-            _receivedMessages = receivedMessages;
+            ReceivedMessages = receivedMessages;
         }
-
+        
+        
         public override MyEvent Handle(MyEvent command)
         {
-            _receivedMessages.Add(nameof(MyEventHandler), command.Id);
+            ReceivedMessages.Add(nameof(MyEventHandler), command.Id);
             return base.Handle(command);
         }
     }

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Concurrent;
+using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -70,6 +71,18 @@ namespace Paramore.Brighter
         public void Acknowledge(Message message)
         {
             _messageConsumer.Acknowledge(message);
+        }
+
+         /// <summary>
+         /// Used to pause the channel for a number of seconds. The default implementation just executes a blocking Task Delay
+         /// It is provided mainly to allow derived types to intercept the pump request to delay reading from the channel
+         /// Verification via a fake for testing is the major use case for that - although it's testing an implementation detail
+         /// it's hard to observe from outside without fragile and slow tests otherwise.
+         /// </summary>
+         /// <param name="waitInMs">The amount of time the channel creates a delay for in ms</param>
+        public void Pause(int waitInMs)
+        {
+            Task.Delay(waitInMs).GetAwaiter().GetResult();
         }
 
         /// <summary>

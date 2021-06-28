@@ -34,6 +34,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         public bool DisposeHappened { get; set; }
         public bool AcknowledgeHappened { get; set; }
         public int AcknowledgeCount { get; set; }
+        public int PauseWaitInMs { get; set; }
         public int RejectCount { get; set; }
         public int RequeueCount { get; set; }
         public virtual ChannelName Name { get; }
@@ -48,6 +49,11 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         {
             AcknowledgeHappened = true;
             AcknowledgeCount++;
+        }
+
+        public void Pause(int waitInMs)
+        {
+            PauseWaitInMs = waitInMs;
         }
 
         public virtual void Dispose()
