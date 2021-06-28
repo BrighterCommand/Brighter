@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -7,6 +8,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
+        private static bool s_useRequestReplyQueues = false;
+        
         public static IBrighterHandlerBuilder AddBrighter(this IServiceCollection services, Action<BrighterOptions> configure = null)
         {
             if (services == null)
@@ -39,9 +42,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return brighterBuilder;
         }
-        
-        
 
+        public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestReplyQueues = false)
+        {
+            brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
+            if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
+
+            s_useRequestReplyQueues = useRequestReplyQueues;
+            
+            return brighterBuilder;
+        }
+        
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
             var options = provider.GetService<IBrighterOptions>();
@@ -54,6 +65,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var outbox = provider.GetService<IAmAnOutbox<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
+
+            var producer = provider.GetService<IAmAMessageProducer>();
+            var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
 
             var policyBuilder = CommandProcessorBuilder.With()
                 .Handlers(handlerConfiguration);
@@ -68,27 +82,24 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedARequestContext taskQueuesBuilder;
             if (options.ChannelFactory is null)
             {
-                //TODO: Need to add async outbox 
-                
-                taskQueuesBuilder = options.BrighterMessaging == null
+                taskQueuesBuilder = producer == null
                     ? messagingBuilder.NoTaskQueues()
-                    : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.Producer,
-                        options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox);
+                    : messagingBuilder.TaskQueues(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
             }
             else
             {
-                if (options.BrighterMessaging == null)
+                // If Producer has been added to DI
+                if (producer == null)
                 {
                     taskQueuesBuilder = messagingBuilder.NoTaskQueues();
                 }
                 else
                 {
-                    taskQueuesBuilder = options.BrighterMessaging.UseRequestReplyQueues
+                    taskQueuesBuilder = s_useRequestReplyQueues
                         ? messagingBuilder.RequestReplyQueues(new MessagingConfiguration(
-                            options.BrighterMessaging.Producer, messageMapperRegistry,
+                            producer, messageMapperRegistry,
                             responseChannelFactory: options.ChannelFactory))
-                        : messagingBuilder.TaskQueues(new MessagingConfiguration(options.BrighterMessaging.Producer,
-                            options.BrighterMessaging.AsyncProducer, messageMapperRegistry), outbox);
+                        : messagingBuilder.TaskQueues(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
                 }
             }
 
@@ -111,42 +122,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             return messageMapperRegistry;
-        }
-    }
-
-    public class BrighterMessaging
-    {
-        public IAmAMessageProducer Producer { get; }
-        public IAmAMessageProducerAsync AsyncProducer { get; }
-
-        /// <summary>
-        /// Use Request Reply Queues if Channel Factory is also set
-        /// </summary>
-        public bool UseRequestReplyQueues { get; }
-
-        /// <summary>
-        /// Constructor for use with a Producer
-        /// </summary>
-        /// <param name="producer">The Message producer</param>
-        /// <param name="asyncProducer">The Message producer's async interface</param>
-        /// <param name="useRequestReplyQueues">Use Request Reply Queues - This will need to set a Channel Factory as well.</param>
-        public BrighterMessaging(IAmAMessageProducer producer, IAmAMessageProducerAsync asyncProducer, bool useRequestReplyQueues = true)
-        {
-            Producer = producer;
-            AsyncProducer = asyncProducer;
-            UseRequestReplyQueues = useRequestReplyQueues;
-        }
-
-        /// <summary>
-        /// Simplified constructor - we
-        /// </summary>
-        /// <param name="producer">Producer</param>
-        /// <param name="useRequestReplyQueues">Use Request Reply Queues - This will need to set a Channel Factory as well.</param>
-        public BrighterMessaging(IAmAMessageProducer producer, bool useRequestReplyQueues = true)
-        {
-            Producer = producer;
-            if (producer is IAmAMessageProducerAsync producerAsync) AsyncProducer = producerAsync;
-            UseRequestReplyQueues = useRequestReplyQueues;
         }
     }
 }

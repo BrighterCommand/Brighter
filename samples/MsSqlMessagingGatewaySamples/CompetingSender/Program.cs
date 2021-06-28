@@ -42,11 +42,9 @@ namespace CompetingSender
                     //create the gateway
                     var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
-                    services.AddBrighter(options =>
-                    {
-                        options.BrighterMessaging = new BrighterMessaging(new MsSqlMessageProducer(messagingConfiguration));
-                    })
+                    services.AddBrighter()
                         .UseInMemoryOutbox()
+                        .UseExternalBus(new MsSqlMessageProducer(messagingConfiguration))
                         .AutoFromAssemblies();
 
                     services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetService<IAmACommandProcessor>(),  repeatCount));

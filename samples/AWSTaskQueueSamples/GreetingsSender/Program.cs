@@ -53,11 +53,9 @@ namespace GreetingsSender
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
                 var producer = new SqsMessageProducer(awsConnection);
 
-                serviceCollection.AddBrighter(options =>
-                {
-                    options.BrighterMessaging = new BrighterMessaging(producer);
-                })
+                serviceCollection.AddBrighter()
                     .UseInMemoryOutbox()
+                    .UseExternalBus(producer)
                     .AutoFromAssemblies();
 
                 var serviceProvider = serviceCollection.BuildServiceProvider();

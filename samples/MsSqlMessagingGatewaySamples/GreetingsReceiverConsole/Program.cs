@@ -69,9 +69,9 @@ namespace GreetingsReceiverConsole
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
-                        options.BrighterMessaging = new BrighterMessaging(new MsSqlMessageProducer(messagingConfiguration)); 
                     })
                         .UseInMemoryOutbox()
+                        .UseExternalBus(new MsSqlMessageProducer(messagingConfiguration))
                         .AutoFromAssemblies();
 
 

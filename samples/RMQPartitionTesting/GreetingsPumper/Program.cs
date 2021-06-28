@@ -41,11 +41,9 @@ namespace GreetingsPumper
                                 MakeChannels =OnMissingChannel.Create
                             });
 
-                        services.AddBrighter(options =>
-                        {
-                            options.BrighterMessaging = new BrighterMessaging(producer);
-                        })
+                        services.AddBrighter()
                             .UseInMemoryOutbox()
+                            .UseExternalBus(producer)
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
                         services.AddSingleton<IAmAnOutboxViewer<Message>>(outbox);

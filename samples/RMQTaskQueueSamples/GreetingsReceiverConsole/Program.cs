@@ -82,9 +82,9 @@ namespace GreetingsReceiverConsole
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                        options.BrighterMessaging = new BrighterMessaging(new RmqMessageProducer(rmqConnection));
                     })
                         .UseInMemoryOutbox()
+                        .UseExternalBus(new RmqMessageProducer(rmqConnection))
                         .AutoFromAssemblies();
 
                     

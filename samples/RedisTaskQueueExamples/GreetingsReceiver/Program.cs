@@ -48,10 +48,9 @@ namespace GreetingsReceiver
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(redisConsumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging (new RedisMessageProducer(redisConnection));
                     })
                         .UseInMemoryOutbox()
+                        .UseExternalBus(new RedisMessageProducer(redisConnection))
                         .AutoFromAssemblies();
 
 

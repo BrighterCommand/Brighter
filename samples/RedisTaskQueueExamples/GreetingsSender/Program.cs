@@ -56,11 +56,9 @@ namespace GreetingsSender
             };
             var producer = new RedisMessageProducer(redisConnection);
 
-            serviceCollection.AddBrighter(options =>
-            {
-                options.BrighterMessaging = new BrighterMessaging(producer);
-            })
+            serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
+                .UseExternalBus(producer)
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
