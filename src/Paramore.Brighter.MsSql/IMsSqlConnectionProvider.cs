@@ -2,11 +2,14 @@
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 
-namespace Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories
+namespace Paramore.Brighter.MsSql
 {
-    public interface IMsSqlMessagingGatewayConnectionFactory
+    public interface IMsSqlConnectionProvider
     {
         SqlConnection GetConnection();
         Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
+        SqlTransaction GetTransaction();
+        bool HasOpenTransaction { get; }
+        bool IsSharedConnection { get; }
     }
 }

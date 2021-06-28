@@ -1,14 +1,14 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
 
-namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
+namespace Paramore.Brighter.MsSql
 {
-    public class MsSqlOutboxSqlAuthConnectionFactory : IMsSqlOutboxConnectionFactory
+    public class MsSqlSqlAuthConnectionProvider : IMsSqlConnectionProvider
     {
         private readonly string _connectionString;
 
-        public MsSqlOutboxSqlAuthConnectionFactory(MsSqlOutboxConfiguration configuration)
+        public MsSqlSqlAuthConnectionProvider(MsSqlConfiguration configuration)
         {
             _connectionString = configuration.ConnectionString;
         }

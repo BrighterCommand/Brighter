@@ -1,18 +1,18 @@
-﻿using Microsoft.Data.SqlClient;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
-using Azure.Identity;
+using Microsoft.Data.SqlClient;
 
-namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
+namespace Paramore.Brighter.MsSql.Azure
 {
-    public class MsSqlOutboxDefaultAzureConnectionFactory : IMsSqlOutboxConnectionFactory
+    public abstract class MsSqlAzureConnectionProviderBase
     {
         private const string _azureScope = "https://database.windows.net/.default";
         
         private readonly string _connectionString;
-        private readonly string[] _authenticationTokenScopes;
-        public MsSqlOutboxDefaultAzureConnectionFactory(MsSqlOutboxConfiguration configuration)
+        protected readonly string[] _authenticationTokenScopes;
+
+        protected MsSqlAzureConnectionProviderBase(MsSqlConfiguration configuration)
         {
             _connectionString = configuration.ConnectionString;
             _authenticationTokenScopes = new string[1] {_azureScope};
@@ -21,9 +21,8 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
         public SqlConnection GetConnection()
         {
             var sqlConnection = new SqlConnection(_connectionString);
-            var credential = new DefaultAzureCredential();
-            var accessToken = credential.GetToken(new TokenRequestContext(_authenticationTokenScopes)).Token;
-            sqlConnection.AccessToken = accessToken;
+            var accessToken = GetAccessToken();
+            sqlConnection.AccessToken = accessToken.Token;
 
             return sqlConnection;
         }
@@ -32,15 +31,15 @@ namespace Paramore.Brighter.Outbox.MsSql.ConnectionFactories
             CancellationToken cancellationToken = default(CancellationToken))
         {
             var sqlConnection = new SqlConnection(_connectionString);
-            var credential = new DefaultAzureCredential();
-            var accessToken =
-                (await credential.GetTokenAsync(
-                    new TokenRequestContext(_authenticationTokenScopes),
-                    cancellationToken)).Token;
-            sqlConnection.AccessToken = accessToken;
+            var accessToken = await GetAccessTokenAsync(cancellationToken);
+            sqlConnection.AccessToken = accessToken.Token;
 
             return sqlConnection;
         }
+
+        protected abstract AccessToken GetAccessToken();
+        
+        protected abstract Task<AccessToken> GetAccessTokenAsync(CancellationToken cancellationToken);
 
         public SqlTransaction GetTransaction()
         {

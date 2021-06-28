@@ -32,7 +32,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Outbox.MsSql.ConnectionFactories;
+using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.Outbox.MsSql
 {
@@ -49,8 +49,8 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private readonly MsSqlOutboxConfiguration _configuration;
-        private readonly IMsSqlOutboxConnectionFactory _connectionFactory;
+        private readonly MsSqlConfiguration _configuration;
+        private readonly IMsSqlConnectionProvider _connectionProvider;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -65,19 +65,19 @@ namespace Paramore.Brighter.Outbox.MsSql
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        /// <param name="connectionFactory">The connection factory.</param>
-        public MsSqlOutbox(MsSqlOutboxConfiguration configuration, IMsSqlOutboxConnectionFactory connectionFactory)
+        /// <param name="connectionProvider">The connection factory.</param>
+        public MsSqlOutbox(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
-            _connectionFactory = connectionFactory;
+            _connectionProvider = connectionProvider;
         }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlOutbox(MsSqlOutboxConfiguration configuration) : this(configuration, new MsSqlOutboxSqlAuthConnectionFactory(configuration))
+        public MsSqlOutbox(MsSqlConfiguration configuration) : this(configuration, new MsSqlSqlAuthConnectionProvider(configuration))
         {
         }
 
@@ -91,14 +91,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var parameters = InitAddDbParameters(message);
 
-            var connection = _connectionFactory.GetConnection();
+            var connection = _connectionProvider.GetConnection();
             
             if(connection.State!= ConnectionState.Open) connection.Open();
             using (var command = InitAddDbCommand(connection, parameters))
             {
                 try
                 {
-                    if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                    if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                     command.ExecuteNonQuery();
                 }
                 catch (SqlException sqlException)
@@ -116,8 +116,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 finally
                 {
-                    if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                    else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                    if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
         }
@@ -132,14 +132,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var parameters = InitAddDbParameters(message);
 
-            var connection = await _connectionFactory.GetConnectionAsync(cancellationToken);
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             
             if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             using (var command = InitAddDbCommand(connection, parameters))
             {
                 try
                 {
-                    if (_connectionFactory.IsSharedConnection) command.Transaction = _connectionFactory.GetTransaction();
+                    if (_connectionProvider.IsSharedConnection) command.Transaction = _connectionProvider.GetTransaction();
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (SqlException sqlException)
@@ -157,8 +157,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 finally
                 {
-                    if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                    else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                    if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
             
@@ -180,14 +180,14 @@ namespace Paramore.Brighter.Outbox.MsSql
             int outboxTimeout = -1, 
             Dictionary<string, object> args = null)
         {
-            var connection = _connectionFactory.GetConnection();
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
 
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -197,8 +197,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 dbDataReader.Close();
                 
-                if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 
                 return messages;
             }
@@ -255,14 +255,14 @@ namespace Paramore.Brighter.Outbox.MsSql
          /// <returns>A list of messages</returns>
        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            var connection = _connectionFactory.GetConnection();
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 if(connection.State != ConnectionState.Open) connection.Open();
 
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -272,8 +272,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 dbDataReader.Close();
                 
-                if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
 
                 return messages;
             }
@@ -293,14 +293,14 @@ namespace Paramore.Brighter.Outbox.MsSql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionFactory.GetConnectionAsync(cancellationToken);
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             using (var command = connection.CreateCommand())
             {
                 CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
@@ -310,8 +310,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 dbDataReader.Close();
                 
-                if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 
                 return messages;
             }
@@ -326,16 +326,16 @@ namespace Paramore.Brighter.Outbox.MsSql
  
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            var connection = await _connectionFactory.GetConnectionAsync(cancellationToken);
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
            
             if(connection.State!= ConnectionState.Open)await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
             {
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction();
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-            else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+            if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+            else if (!_connectionProvider.HasOpenTransaction) connection.Close();
         }
  
         /// <summary>
@@ -345,15 +345,15 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            var connection = _connectionFactory.GetConnection();
+            var connection = _connectionProvider.GetConnection();
             if(connection.State!= ConnectionState.Open) connection.Open();
             using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
             {
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction();
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();
                 command.ExecuteNonQuery();
             }
-            if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-            else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+            if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+            else if (!_connectionProvider.HasOpenTransaction) connection.Close();
         }
 
        /// <summary>
@@ -368,14 +368,14 @@ namespace Paramore.Brighter.Outbox.MsSql
            int pageNumber = 1,
             Dictionary<string, object> args = null)
        {
-           var connection = _connectionFactory.GetConnection();
+           var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
 
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -385,8 +385,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 dbDataReader.Close();
                 
-                if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 
                 return messages;
             }
@@ -449,7 +449,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private T ExecuteCommand<T>(Func<SqlCommand, T> execute, string sql, int outboxTimeout, params SqlParameter[] parameters)
         {
-            var connection = _connectionFactory.GetConnection();
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = sql;
@@ -458,11 +458,11 @@ namespace Paramore.Brighter.Outbox.MsSql
                 if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var response = execute(command);
                 
-                if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 
                 return response;
             }
@@ -475,7 +475,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             CancellationToken cancellationToken = default(CancellationToken),
             params SqlParameter[] parameters)
         {
-            var connection = await _connectionFactory.GetConnectionAsync(cancellationToken);
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -483,11 +483,11 @@ namespace Paramore.Brighter.Outbox.MsSql
                 command.Parameters.AddRange(parameters);
 
                 if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                if (_connectionFactory.HasOpenTransaction) command.Transaction = _connectionFactory.GetTransaction(); 
+                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var response =  await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 
-                if(!_connectionFactory.IsSharedConnection) connection.Dispose();
-                else if (!_connectionFactory.HasOpenTransaction) connection.Close();
+                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
                 
                 return response;
             }
