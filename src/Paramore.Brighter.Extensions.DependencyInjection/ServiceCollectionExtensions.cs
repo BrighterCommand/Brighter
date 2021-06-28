@@ -66,6 +66,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var outbox = provider.GetService<IAmAnOutbox<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
 
+            if (outbox == null) outbox = new InMemoryOutbox();
+            if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
+            
             var producer = provider.GetService<IAmAMessageProducer>();
             var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
 
