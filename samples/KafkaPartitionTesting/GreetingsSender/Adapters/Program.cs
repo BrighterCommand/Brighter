@@ -120,8 +120,10 @@ namespace GreetingsSender.Adapters
                     services.AddBrighter(options =>
                     {
                         options.PolicyRegistry = policyRegistry;
-                        options.BrighterMessaging = new BrighterMessaging(new InMemoryOutbox(), producer);
-                    }).MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
+                        options.BrighterMessaging = new BrighterMessaging(producer);
+                    })
+                        .UseInMemoryOutbox()
+                        .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
                     services.AddHostedService<TimedMessageGenerator>();
                 })

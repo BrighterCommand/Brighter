@@ -60,8 +60,10 @@ namespace GreetingsSender
             {
                 var outBox = new InMemoryOutbox();
                 options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                options.BrighterMessaging = new BrighterMessaging(outBox, producer);
-            }).AutoFromAssemblies();
+                options.BrighterMessaging = new BrighterMessaging(producer);
+            })
+                .UseInMemoryOutbox()
+                .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 

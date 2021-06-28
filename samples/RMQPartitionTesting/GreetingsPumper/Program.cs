@@ -43,8 +43,10 @@ namespace GreetingsPumper
 
                         services.AddBrighter(options =>
                         {
-                            options.BrighterMessaging = new BrighterMessaging(outbox, producer);
-                        }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                            options.BrighterMessaging = new BrighterMessaging(producer);
+                        })
+                            .UseInMemoryOutbox()
+                            .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
                         services.AddSingleton<IAmAnOutboxViewer<Message>>(outbox);
 

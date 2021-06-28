@@ -30,6 +30,7 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using Paramore.Brighter.MsSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Serilog;
@@ -61,16 +62,17 @@ namespace GreetingsReceiverConsole
 
                     //create the gateway
                     var messagingConfiguration =
-                        new MsSqlMessagingGatewayConfiguration(
-                            @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
+                        new MsSqlConfiguration(
+                            @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
                     var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, new MsSqlMessageProducer(messagingConfiguration)); 
-                    }).AutoFromAssemblies();
+                        options.BrighterMessaging = new BrighterMessaging(new MsSqlMessageProducer(messagingConfiguration)); 
+                    })
+                        .UseInMemoryOutbox()
+                        .AutoFromAssemblies();
 
 
                     services.AddHostedService<ServiceActivatorHostedService>();

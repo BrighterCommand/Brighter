@@ -34,10 +34,10 @@ namespace Tests
             serviceCollection
                 .AddBrighter(options =>
                 {
-                    var outBox = new InMemoryOutbox();
                     var producer = new FakeProducer();
-                    options.BrighterMessaging = new BrighterMessaging(outBox, producer);
+                    options.BrighterMessaging = new BrighterMessaging(producer);
                 })
+                .UseInMemoryOutbox()
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
