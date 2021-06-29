@@ -1,19 +1,20 @@
 ﻿using System;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public class MsSqlMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageConsumerFactory>();
-        private readonly MsSqlMessagingGatewayConfiguration _msSqlMessagingGatewayConfiguration;
+        private readonly MsSqlConfiguration _msSqlConfiguration;
 
-        public MsSqlMessageConsumerFactory(MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration)
+        public MsSqlMessageConsumerFactory(MsSqlConfiguration msSqlConfiguration)
         {
-            _msSqlMessagingGatewayConfiguration = msSqlMessagingGatewayConfiguration ??
+            _msSqlConfiguration = msSqlConfiguration ??
                                                   throw new ArgumentNullException(
-                                                      nameof(msSqlMessagingGatewayConfiguration));
+                                                      nameof(msSqlConfiguration));
         }
 
         /// <summary>
@@ -25,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         {
             if (subscription.ChannelName == null) throw new ArgumentNullException(nameof(subscription.ChannelName));
             s_logger.LogDebug("MsSqlMessageConsumerFactory: create consumer for topic {ChannelName}", subscription.ChannelName);
-            return new MsSqlMessageConsumer(_msSqlMessagingGatewayConfiguration, subscription.ChannelName);
+            return new MsSqlMessageConsumer(_msSqlConfiguration, subscription.ChannelName);
         }
     }
 }

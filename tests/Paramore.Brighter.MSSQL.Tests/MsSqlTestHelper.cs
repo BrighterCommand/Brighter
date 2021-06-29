@@ -3,6 +3,7 @@ using System.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
 
 namespace Paramore.Brighter.MSSQL.Tests
@@ -70,11 +71,11 @@ namespace Paramore.Brighter.MSSQL.Tests
             CreateQueueTable();
         }
 
-        public MsSqlInboxConfiguration InboxConfiguration => new MsSqlInboxConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
+        public MsSqlConfiguration InboxConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public MsSqlOutboxConfiguration OutboxConfiguration => new MsSqlOutboxConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
+        public MsSqlConfiguration OutboxConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName);
 
-        public MsSqlMessagingGatewayConfiguration QueueConfiguration => new MsSqlMessagingGatewayConfiguration(_sqlSettings.TestsBrighterConnectionString, _tableName);
+        public MsSqlConfiguration QueueConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
         
         private void CreateQueueTable()
         {
