@@ -26,9 +26,10 @@ namespace Paramore.Brighter
             //find all the unsent messages
             var outstandingMessages = _outbox.OutstandingMessages(_milliSecondsSinceSent);
            
-            //send them
-            _commandProcessor.ClearOutbox(outstandingMessages.Select(message => message.Id).ToArray());
-           
+            //send them if we have them
+            if (outstandingMessages.Any())
+                _commandProcessor.ClearOutbox(outstandingMessages.Select(message => message.Id).ToArray());
+
         } 
     }
 }
