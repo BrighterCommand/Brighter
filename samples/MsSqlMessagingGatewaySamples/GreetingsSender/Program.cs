@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using Paramore.Brighter.MsSql;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -22,14 +23,13 @@ namespace GreetingsSender
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
-            var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
+            var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
             var producer = new MsSqlMessageProducer(messagingConfiguration);
 
-            serviceCollection.AddBrighter(options =>
-            {
-                var outBox = new InMemoryOutbox();
-                options.BrighterMessaging = new BrighterMessaging(outBox, producer);
-            }).AutoFromAssemblies();
+            serviceCollection.AddBrighter()
+                .UseInMemoryOutbox()
+                .UseExternalBus(producer)
+                .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 

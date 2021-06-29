@@ -16,11 +16,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public IPolicyRegistry<string> PolicyRegistry { get; set; } = new DefaultPolicy();
 
         /// <summary>
-        ///     Configures task queues to send messages.  
-        /// </summary>
-        public BrighterMessaging BrighterMessaging { get; set; }  
-
-        /// <summary>
         ///     Configures the life time of the Command Processor. Defaults to Singleton.
         /// </summary>
         public ServiceLifetime CommandProcessorLifetime { get; set; } = ServiceLifetime.Singleton;
@@ -39,11 +34,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///     Configures the polly policy registry.
         /// </summary>
         IPolicyRegistry<string> PolicyRegistry { get; set; }
-
-        /// <summary>
-        ///     Configures task queues to send messages. 
-        /// </summary>
-        BrighterMessaging BrighterMessaging { get; set; }
 
         /// <summary>
         ///     Configures the life time of the Command Processor. Defaults to Singleton

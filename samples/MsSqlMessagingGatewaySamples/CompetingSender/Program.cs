@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.MsSql;
+using Paramore.Brighter.MsSql;
 using Serilog;
 
 namespace CompetingSender
@@ -39,13 +40,12 @@ namespace CompetingSender
                 .ConfigureServices((hostContext, services) =>
                 {
                     //create the gateway
-                    var messagingConfiguration = new MsSqlMessagingGatewayConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", "QueueData");
+                    var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
-                    services.AddBrighter(options =>
-                    {
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, new MsSqlMessageProducer(messagingConfiguration));
-                    }).AutoFromAssemblies();
+                    services.AddBrighter()
+                        .UseInMemoryOutbox()
+                        .UseExternalBus(new MsSqlMessageProducer(messagingConfiguration))
+                        .AutoFromAssemblies();
 
                     services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetService<IAmACommandProcessor>(),  repeatCount));
                 })

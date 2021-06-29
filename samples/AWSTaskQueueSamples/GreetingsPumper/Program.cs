@@ -32,11 +32,10 @@ namespace GreetingsPumper
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
                         var producer = new SqsMessageProducer(awsConnection);
 
-                        services.AddBrighter(options =>
-                        {
-                            var outBox = new InMemoryOutbox();
-                            options.BrighterMessaging = new BrighterMessaging(outBox, producer);
-                        }).AutoFromAssemblies(typeof(GreetingEvent).Assembly);
+                        services.AddBrighter()
+                            .UseInMemoryOutbox()
+                            .UseExternalBus(producer)
+                            .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
                     }
 
                     services.AddHostedService<RunCommandProcessor>();

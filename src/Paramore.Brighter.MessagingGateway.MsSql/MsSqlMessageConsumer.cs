@@ -2,8 +2,8 @@
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
+using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -14,16 +14,16 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
         public MsSqlMessageConsumer(
-            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration, 
-            string topic, IMsSqlMessagingGatewayConnectionFactory connectionFactory)
+            MsSqlConfiguration msSqlConfiguration, 
+            string topic, IMsSqlConnectionProvider connectionProvider)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration, connectionFactory);
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
         }
 
         public MsSqlMessageConsumer(
-            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
-            string topic) :this(msSqlMessagingGatewayConfiguration, topic, new MsSqlMessagingGatewaySqlAuthConnectionFactory(msSqlMessagingGatewayConfiguration.ConnectionString))
+            MsSqlConfiguration msSqlConfiguration,
+            string topic) :this(msSqlConfiguration, topic, new MsSqlSqlAuthConnectionProvider(msSqlConfiguration))
         {
         }
 

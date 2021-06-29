@@ -153,12 +153,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var producer = _producerFactory.Create();
 
             var outbox = new SinkOutbox();
-
+            
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .TaskQueues(new MessagingConfiguration(outbox, producer, outgoingMessageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
