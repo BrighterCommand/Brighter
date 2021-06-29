@@ -212,7 +212,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 catch(Exception ex)
                 {
                     s_logger.LogError(ex, "Error completing message with id {Id}", message.Id);
-                    throw;
                 }
             }
         }
