@@ -212,7 +212,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 }
                 catch (MessageLockLostException ex)
                 {
-                    s_logger.LogError(ex, "Error releasing peak lock on message with id {Id}", message.Id);
+                    s_logger.LogError(ex, "Error releasing completing peak lock on message with id {Id}", message.Id);
                 }
                 catch(Exception ex)
                 {
