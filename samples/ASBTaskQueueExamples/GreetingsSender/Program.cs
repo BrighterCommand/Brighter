@@ -15,14 +15,13 @@ namespace GreetingsSender
 
             serviceCollection.AddLogging();
 
-            var asbConnection = new AzureServiceBusConfiguration("Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity", true);
+            var asbConnection = new AzureServiceBusConfiguration("Endpoint=sb://fim-development-bus.servicebus.windows.net/;Authentication=Managed Identity", true);
 
             var producer = AzureServiceBusMessageProducerFactory.Get(asbConnection);
-            serviceCollection.AddBrighter(options =>
-            {
-                var outBox = new InMemoryOutbox();
-                options.BrighterMessaging = new BrighterMessaging(outBox, producer: producer);
-            }).AutoFromAssemblies();
+            serviceCollection.AddBrighter()
+                .UseInMemoryOutbox()
+                .UseExternalBus(producer, false)
+                .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 

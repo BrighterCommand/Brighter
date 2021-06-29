@@ -1,8 +1,8 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.MessagingGateway.MsSql.ConnectionFactories;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
+using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -16,19 +16,19 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private Publication _publication; // -- placeholder for future use
 
         public MsSqlMessageProducer(
-            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
-            IMsSqlMessagingGatewayConnectionFactory connectionFactory,
+            MsSqlConfiguration msSqlConfiguration,
+            IMsSqlConnectionProvider connectionProvider,
         Publication publication = null)
         {
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlMessagingGatewayConfiguration, connectionFactory);
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
             _publication = publication ?? new Publication() {MakeChannels = OnMissingChannel.Create};
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
         }
 
         public MsSqlMessageProducer(
-            MsSqlMessagingGatewayConfiguration msSqlMessagingGatewayConfiguration,
-            Publication publication = null) : this(msSqlMessagingGatewayConfiguration, new MsSqlMessagingGatewaySqlAuthConnectionFactory(msSqlMessagingGatewayConfiguration.ConnectionString), publication)
+            MsSqlConfiguration msSqlConfiguration,
+            Publication publication = null) : this(msSqlConfiguration, new MsSqlSqlAuthConnectionProvider(msSqlConfiguration), publication)
         {
         }
 
