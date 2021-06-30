@@ -74,9 +74,10 @@ namespace GreetingsServer
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = amAChannelFactory;
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, producer);
-                    }).AutoFromAssemblies();
+                    })
+                        .UseInMemoryOutbox()
+                        .UseExternalBus(producer, true)
+                        .AutoFromAssemblies();
 
 
                     services.AddHostedService<ServiceActivatorHostedService>();

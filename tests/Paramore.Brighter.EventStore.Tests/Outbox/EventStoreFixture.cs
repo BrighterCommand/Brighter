@@ -79,7 +79,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task DisposeAsync()
         {
             Connection.Close();
-            var completionSource = new TaskCompletionSource<object>();
+            var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
         }

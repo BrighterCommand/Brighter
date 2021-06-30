@@ -6,7 +6,6 @@
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
 | Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://paramore.readthedocs.io)  |
 | Source  |https://github.com/BrighterCommand/Brighter |
-| Chat | [![Join the chat at https://gitter.im/iancooper/Paramore](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/iancooper/Paramore?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge) |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kakfa, redis, c#, command, command dispatcher, command  processor, queue, distributed |
 
 ## What Scenarios Can You Use Brighter in?

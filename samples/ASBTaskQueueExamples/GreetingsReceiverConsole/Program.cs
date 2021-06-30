@@ -44,16 +44,16 @@ namespace GreetingsReceiverConsole
                     };
 
                     //create the gateway
-                    var asbConfig = new AzureServiceBusConfiguration("Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity", true);
+                    var asbConfig = new AzureServiceBusConfiguration("Endpoint=sb://fim-development-bus.servicebus.windows.net/;Authentication=Managed Identity", true);
 
                     var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbConfig);
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-                        var outBox = new InMemoryOutbox();
-                        options.BrighterMessaging = new BrighterMessaging(outBox, AzureServiceBusMessageProducerFactory.Get(asbConfig), false);
-                    }).AutoFromAssemblies();
+                    }).UseInMemoryOutbox()
+                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(asbConfig))
+                        .AutoFromAssemblies();
 
 
                     services.AddHostedService<ServiceActivatorHostedService>();

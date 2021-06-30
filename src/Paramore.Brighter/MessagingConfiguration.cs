@@ -53,16 +53,6 @@ namespace Paramore.Brighter
         /// </summary>
         public int OutboxWriteTimeout { get; }
         /// <summary>
-        /// Gets the outbox.
-        /// </summary>
-        /// <value>The outbox.</value>
-        public IAmAnOutbox<Message> OutBox { get; }
-        /// <summary>
-        /// Gets the outbox that supports async/await.
-        /// </summary>
-        /// <value>The outbox.</value>
-        public IAmAnOutboxAsync<Message> OutboxAsync { get; }
-         /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
@@ -77,7 +67,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
         /// </summary>
-        /// <param name="outBox">The outBox.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
@@ -85,7 +74,6 @@ namespace Paramore.Brighter
         /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipelie</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
         public MessagingConfiguration(
-            IAmAnOutbox<Message> outBox,
             IAmAMessageProducer messageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,
@@ -94,7 +82,6 @@ namespace Paramore.Brighter
             InboxConfiguration useInbox = null
             )
         {
-            OutBox = outBox;
             MessageProducer = messageProducer;
             MessageMapperRegistry = messageMapperRegistry;
             OutboxWriteTimeout = outboxWriteTimeout;
@@ -106,14 +93,12 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
         /// </summary>
-        /// <param name="outboxAsync">The OutBox which supports async/await.</param>
         /// <param name="asyncMessageProducer">The messaging gateway that supports async/await.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, by hand</param>
         public MessagingConfiguration(
-            IAmAnOutboxAsync<Message> outboxAsync,
             IAmAMessageProducerAsync asyncMessageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,
@@ -121,7 +106,6 @@ namespace Paramore.Brighter
             InboxConfiguration useInbox = null
              )
         {
-            OutboxAsync = outboxAsync;
             MessageProducerAsync = asyncMessageProducer;
             MessageMapperRegistry = messageMapperRegistry;
             OutboxWriteTimeout = outboxWriteTimeout;
@@ -132,8 +116,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
         /// </summary>
-        /// <param name="outBox">The OutBox.</param>
-        /// <param name="outboxAsync">The OutBox that supports async/await.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="asyncMessageProducer">The messaging gateway that supports async/await.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
@@ -141,8 +123,6 @@ namespace Paramore.Brighter
         /// <param name="messagingGatewaySendTimeout">How long to wait when sending via the gateway</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, by hand</param>
         public MessagingConfiguration(
-            IAmAnOutbox<Message> outBox,
-            IAmAnOutboxAsync<Message> outboxAsync,
             IAmAMessageProducer messageProducer,
             IAmAMessageProducerAsync asyncMessageProducer,
             IAmAMessageMapperRegistry messageMapperRegistry,
@@ -151,8 +131,6 @@ namespace Paramore.Brighter
             InboxConfiguration useInbox = null
           )
         {
-            OutBox = outBox;
-            OutboxAsync = outboxAsync;
             MessageProducer = messageProducer;
             MessageProducerAsync = asyncMessageProducer;
             MessageMapperRegistry = messageMapperRegistry;
