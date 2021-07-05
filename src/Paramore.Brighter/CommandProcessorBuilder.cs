@@ -124,10 +124,10 @@ namespace Paramore.Brighter
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
         public INeedMessaging Policies(IPolicyRegistry<string> thePolicyRegistry)
         {
-            if (!thePolicyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
+            if (!thePolicyRegistry.ContainsKey(CommandProcessorService.RETRYPOLICY))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
                 
-            if (!thePolicyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
+            if (!thePolicyRegistry.ContainsKey(CommandProcessorService.CIRCUITBREAKER))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
             
             _policyRegistry = thePolicyRegistry;
@@ -216,55 +216,61 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Builds the <see cref="CommandProcessor"/> from the configuration.
+        /// Builds the <see cref="CommandProcessorService"/> from the configuration.
         /// </summary>
-        /// <returns>CommandProcessor.</returns>
-        public CommandProcessor Build()
+        /// <returns>CommandProcessorService.</returns>
+        public CommandProcessorService BuildService()
         {
             if (!(_useTaskQueues || _useRequestReplyQueues))
             {
-                return new CommandProcessor(
-                    
-                    subscriberRegistry: _registry,
-                    handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
-                    requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
-                    featureSwitchRegistry: _featureSwitchRegistry);
+                return new CommandProcessorService(
+
+                        subscriberRegistry: _registry,
+                        requestContextFactory: _requestContextFactory,
+                        policyRegistry: _policyRegistry,
+                        featureSwitchRegistry: _featureSwitchRegistry);
             }
             else if (_useTaskQueues)
             {
-                return new CommandProcessor(
-                    subscriberRegistry: _registry,
-                    handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
-                    requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry,
-                    outBox: _outbox,
-                    asyncOutbox: _asyncOutbox,
-                    messageProducer: _messagingGateway,
-                    asyncMessageProducer: _asyncMessagingGateway,
-                    outboxTimeout: _outboxWriteTimeout,
-                    featureSwitchRegistry: _featureSwitchRegistry
-                );
+                return new CommandProcessorService(
+                        subscriberRegistry: _registry,
+                        requestContextFactory: _requestContextFactory,
+                        policyRegistry: _policyRegistry,
+                        mapperRegistry: _messageMapperRegistry,
+                        outBox: _outbox,
+                        asyncOutbox: _asyncOutbox,
+                        messageProducer: _messagingGateway,
+                        asyncMessageProducer: _asyncMessagingGateway,
+                        outboxTimeout: _outboxWriteTimeout,
+                        featureSwitchRegistry: _featureSwitchRegistry
+                    );
             }
             else if (_useRequestReplyQueues)
             {
-                 return new CommandProcessor(
+                return new CommandProcessorService(
                     subscriberRegistry: _registry,
-                    handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
+                    handlerFactory: _handlerFactory,
                     mapperRegistry: _messageMapperRegistry,
                     messageProducer: _messagingGateway,
-                    responseChannelFactory: _responseChannelFactory 
-                    );
+                    responseChannelFactory: _responseChannelFactory
+                );
             }
             else
             {
                 throw new ConfigurationException("Unknown Command Processor Type");
             }
+        }
+
+        /// <summary>
+        /// Builds the <see cref="CommandProcessor"/> from the configuration.
+        /// </summary>
+        /// <returns>CommandProcessor.</returns>
+        public CommandProcessor Build()
+        {
+            return new CommandProcessor(BuildService(),
+                _handlerFactory);
         }
     }
 
@@ -352,7 +358,13 @@ namespace Paramore.Brighter
     public interface IAmACommandProcessorBuilder
     {
         /// <summary>
-        /// Builds this instance.
+        /// Builds the Command Processor Service.
+        /// </summary>
+        /// <returns>CommandProcessorService.</returns>
+        CommandProcessorService BuildService();
+        
+        /// <summary>
+        /// Builds this instance of the Command Processor and Service.
         /// </summary>
         /// <returns>CommandProcessor.</returns>
         CommandProcessor Build();

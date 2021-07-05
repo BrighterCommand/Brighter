@@ -51,14 +51,15 @@ namespace GreetingsSender.Web
                 .AddBrighter(opt =>
                 {
                     opt.PolicyRegistry = new DefaultPolicy();
+                    opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
                 })
                 .UseExternalBus(producer)
                 .UseInMemoryOutbox()
-                .UseScopedCommandProcessor()
                 //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlOutboxSqlAuthConnectionFactory))
                 //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>), ServiceLifetime.Scoped)
                 .MapperRegistry(r =>
                 {
+                    r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
                     r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));
                 }).AsyncHandlers(h =>
                 {

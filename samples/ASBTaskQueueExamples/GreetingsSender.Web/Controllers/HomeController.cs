@@ -15,11 +15,11 @@ namespace GreetingsSender.Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IAmAScopedCommandProcessor _commandProcessor;
+        private readonly IAmACommandProcessor _commandProcessor;
         private readonly GreetingsDataContext _context;
         private readonly ILogger<HomeController> _logger;
 
-        public HomeController(IAmAScopedCommandProcessor commandProcessor, GreetingsDataContext context, ILogger<HomeController> logger)
+        public HomeController(IAmACommandProcessor commandProcessor, GreetingsDataContext context, ILogger<HomeController> logger)
         {
             _commandProcessor = commandProcessor;
             _context = context;

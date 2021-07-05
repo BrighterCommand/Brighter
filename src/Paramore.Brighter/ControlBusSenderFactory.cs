@@ -45,12 +45,13 @@ namespace Paramore.Brighter
             var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
-            return new ControlBusSender(CommandProcessorBuilder.With()
+            return new ControlBusSender(new CommandProcessor(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
                     .TaskQueues(new MessagingConfiguration(gateway, mapper),outbox)
                     .RequestContextFactory(new InMemoryRequestContextFactory())
-                    .Build()
+                    .BuildService(),
+                null, null)
                 );
         }
     }

@@ -130,8 +130,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var policyRegistry = new PolicyRegistry
             {
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
-                { CommandProcessor.RETRYPOLICY, retryPolicy }
+                { CommandProcessorService.CIRCUITBREAKER, circuitBreakerPolicy },
+                { CommandProcessorService.RETRYPOLICY, retryPolicy }
             };
 
             var subscriberRegistry = new SubscriberRegistry();

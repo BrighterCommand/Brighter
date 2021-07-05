@@ -15,7 +15,7 @@ namespace GreetingsSender
 
             serviceCollection.AddLogging();
 
-            var asbConnection = new AzureServiceBusConfiguration("Endpoint=sb://fim-development-bus.servicebus.windows.net/;Authentication=Managed Identity", true);
+            var asbConnection = new AzureServiceBusConfiguration("Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity", true);
 
             var producer = AzureServiceBusMessageProducerFactory.Get(asbConnection);
             serviceCollection.AddBrighter()

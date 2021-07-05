@@ -55,16 +55,16 @@ namespace Paramore.Brighter
 
         private void AddDefaultPolicies()
         {
-            Add(CommandProcessor.CIRCUITBREAKER, Policy.Handle<Exception>().CircuitBreaker(10, new TimeSpan(5000)));
-            Add(CommandProcessor.CIRCUITBREAKERASYNC,
+            Add(CommandProcessorService.CIRCUITBREAKER, Policy.Handle<Exception>().CircuitBreaker(10, new TimeSpan(5000)));
+            Add(CommandProcessorService.CIRCUITBREAKERASYNC,
                 Policy.Handle<Exception>().CircuitBreakerAsync(10, new TimeSpan(5000)));
-            Add(CommandProcessor.RETRYPOLICY,
+            Add(CommandProcessorService.RETRYPOLICY,
                 Policy.Handle<Exception>().WaitAndRetry(new[]
                 {
                     TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
                     TimeSpan.FromMilliseconds(150)
                 }));
-            Add(CommandProcessor.RETRYPOLICYASYNC,
+            Add(CommandProcessorService.RETRYPOLICYASYNC,
                 Policy.Handle<Exception>().WaitAndRetryAsync(new[]
                 {
                     TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),

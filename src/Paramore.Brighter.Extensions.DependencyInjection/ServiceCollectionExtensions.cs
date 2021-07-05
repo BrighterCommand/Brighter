@@ -26,6 +26,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
             services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
+            services.AddSingleton<IAmACommandProcessorService>(BuildCommandProcessorService);
             services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services);
@@ -37,21 +38,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterHandlerBuilder UseInMemoryOutbox(
             this IBrighterHandlerBuilder brighterBuilder, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
+            // WILL NEED TO LOOK INTO THIS FOR SCOPED VS SINGLETON!!!
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), serviceLifetime));
 
             return brighterBuilder;
         }
-
-        public static IBrighterHandlerBuilder UseScopedCommandProcessor(this IBrighterHandlerBuilder brighterBuilder)
-        {
-            brighterBuilder.Services.AddScoped<IAmAHandlerFactory, ServiceProviderHandlerFactory>();
-            brighterBuilder.Services.AddScoped<IAmAHandlerFactoryAsync, ServiceProviderHandlerFactory>();
-            brighterBuilder.Services.AddScoped<IAmAScopedCommandProcessor, ScopedCommandProcessor>();
-            
-            return brighterBuilder;
-        }
-
+        
         public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestReplyQueues = false)
         {
             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
@@ -61,8 +54,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             return brighterBuilder;
         }
-        
+
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
+        {
+            var service = provider.GetService<IAmACommandProcessorService>();
+            var handlerFactory = new ServiceProviderHandlerFactory(provider);
+
+            return new CommandProcessor(service, handlerFactory);
+        }
+        
+        private static CommandProcessorService BuildCommandProcessorService(IServiceProvider provider)
         {
             var options = provider.GetService<IBrighterOptions>();
             var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
@@ -115,11 +116,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 }
             }
 
-            var commandProcessor = taskQueuesBuilder
+            var commandProcessorService = taskQueuesBuilder
                 .RequestContextFactory(options.RequestContextFactory)
-                .Build();
+                .BuildService();
 
-            return commandProcessor;
+            return commandProcessorService;
         }
 
         public static MessageMapperRegistry MessageMapperRegistry(IServiceProvider provider)
