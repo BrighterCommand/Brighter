@@ -1,6 +1,8 @@
+using Greetings.Ports.Command;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
 using GreetingsSender.Web.Data;
+using GreetingsSender.Web.Handlers.Command;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
@@ -49,15 +51,18 @@ namespace GreetingsSender.Web
                 .AddBrighter(opt =>
                 {
                     opt.PolicyRegistry = new DefaultPolicy();
-                    opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
                 })
                 .UseExternalBus(producer)
+                .UseInMemoryOutbox()
+                .UseScopedCommandProcessor()
                 //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlOutboxSqlAuthConnectionFactory))
-                .UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>), ServiceLifetime.Scoped)
+                //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>), ServiceLifetime.Scoped)
                 .MapperRegistry(r =>
                 {
                     r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));
-                    r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
+                }).AsyncHandlers(h =>
+                {
+                    h.RegisterAsync<PutGreetingDirectIntoDbCommand, PutGreetingDirectIntoDbCommandHandler>();
                 });
 
 

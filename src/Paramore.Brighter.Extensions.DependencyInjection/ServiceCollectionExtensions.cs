@@ -43,6 +43,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return brighterBuilder;
         }
 
+        public static IBrighterHandlerBuilder UseScopedCommandProcessor(this IBrighterHandlerBuilder brighterBuilder)
+        {
+            brighterBuilder.Services.AddScoped<IAmAHandlerFactory, ServiceProviderHandlerFactory>();
+            brighterBuilder.Services.AddScoped<IAmAHandlerFactoryAsync, ServiceProviderHandlerFactory>();
+            brighterBuilder.Services.AddScoped<IAmAScopedCommandProcessor, ScopedCommandProcessor>();
+            
+            return brighterBuilder;
+        }
+
         public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestReplyQueues = false)
         {
             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);

@@ -1,24 +1,25 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
+using Greetings.Ports.Command;
 using Greetings.Ports.Events;
 using GreetingsSender.Web.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using GreetingsSender.Web.Models;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace GreetingsSender.Web.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IAmAScopedCommandProcessor _commandProcessor;
         private readonly GreetingsDataContext _context;
         private readonly ILogger<HomeController> _logger;
 
-        public HomeController(IAmACommandProcessor commandProcessor, GreetingsDataContext context, ILogger<HomeController> logger)
+        public HomeController(IAmAScopedCommandProcessor commandProcessor, GreetingsDataContext context, ILogger<HomeController> logger)
         {
             _commandProcessor = commandProcessor;
             _context = context;
@@ -44,6 +45,19 @@ namespace GreetingsSender.Web.Controllers
             _commandProcessor.Post(greeting);
             await _commandProcessor.PostAsync(greetingAsync);
 
+            return View("Index");
+        }
+
+        [HttpGet("SaveMessageToDbAsync")]
+        public async Task<IActionResult> SaveMessageToDbAsync()
+        {
+            var greeting = new GreetingEvent("Hello Inside Process");
+
+            var command = new PutGreetingDirectIntoDbCommand(new Guid());
+            command.Greeting = greeting;
+
+            await _commandProcessor.SendAsync(command);
+            
             return View("Index");
         }
         

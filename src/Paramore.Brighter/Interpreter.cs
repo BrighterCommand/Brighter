@@ -27,40 +27,21 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    internal class Interpreter<TRequest> where TRequest : class, IRequest
+    internal static class Interpreter<TRequest> where TRequest : class, IRequest
     {
-        private readonly IAmASubscriberRegistry _registry;
-        private readonly IAmAHandlerFactory _handlerFactory;
-        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
-
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
-            : this(registry, handlerFactory, null)
-        { }
-
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
-            : this(registry, null, asyncHandlerFactory)
-        { }
-
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory)
-        {
-            _registry = registry;
-            _handlerFactory = handlerFactory;
-            _asyncHandlerFactory = asyncHandlerFactory;
-        }
-
-        internal IEnumerable<RequestHandler<TRequest>> GetHandlers()
+        internal static IEnumerable<RequestHandler<TRequest>> GetHandlers(IAmASubscriberRegistry subscriberRegistry, IAmAHandlerFactory handlerFactory)
         {
             return new RequestHandlers<TRequest>(
-                _registry.Get<TRequest>()
-                    .Select(handlerType => _handlerFactory.Create(handlerType))
+                subscriberRegistry.Get<TRequest>()
+                    .Select(handlerType => handlerFactory.Create(handlerType))
                     .Cast<IHandleRequests<TRequest>>());
         }
 
-        internal IEnumerable<RequestHandlerAsync<TRequest>> GetAsyncHandlers()
+        internal static IEnumerable<RequestHandlerAsync<TRequest>> GetAsyncHandlers(IAmASubscriberRegistry subscriberRegistry, IAmAHandlerFactoryAsync handlerFactoryAsync)
         {
             return new AsyncRequestHandlers<TRequest>(
-                _registry.Get<TRequest>()
-                    .Select(handlerType => _asyncHandlerFactory.Create(handlerType))
+                subscriberRegistry.Get<TRequest>()
+                    .Select(handlerType => handlerFactoryAsync.Create(handlerType))
                     .Cast<IHandleRequestsAsync<TRequest>>());
         }
     }

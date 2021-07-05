@@ -39,9 +39,9 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<PipelineBuilder<TRequest>>();
 
+        private readonly IAmASubscriberRegistry _registry;
         private readonly IAmAHandlerFactory _handlerFactory;
         private readonly InboxConfiguration _inboxConfiguration;
-        private readonly Interpreter<TRequest> _interpreter;
         private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
@@ -60,10 +60,10 @@ namespace Paramore.Brighter
             IAmAHandlerFactory handlerFactory,
             InboxConfiguration inboxConfiguration = null) 
         {
+            _registry = registry;
             _handlerFactory = handlerFactory;
             _inboxConfiguration = inboxConfiguration;
             _instanceScope = new LifetimeScope(handlerFactory);
-            _interpreter = new Interpreter<TRequest>(registry, handlerFactory);
         }
 
         public PipelineBuilder(
@@ -71,15 +71,15 @@ namespace Paramore.Brighter
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration inboxConfiguration = null)
         {
+            _registry = registry;
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
             _instanceScope = new LifetimeScope(asyncHandlerFactory);
-            _interpreter = new Interpreter<TRequest>(registry, asyncHandlerFactory);
         }
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = _interpreter.GetHandlers();
+            var handlers = Interpreter<TRequest>.GetHandlers(_registry, _handlerFactory);
 
             var pipelines = new Pipelines<TRequest>();
 
@@ -147,10 +147,9 @@ namespace Paramore.Brighter
             return firstInPipeline;
         }
 
-
         public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
         {
-            var handlers = _interpreter.GetAsyncHandlers();
+            var handlers = Interpreter<TRequest>.GetAsyncHandlers(_registry, _asyncHandlerFactory);
 
             var pipelines = new AsyncPipelines<TRequest>();
             handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext, continueOnCapturedContext)));

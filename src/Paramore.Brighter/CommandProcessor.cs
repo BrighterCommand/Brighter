@@ -376,14 +376,18 @@ namespace Paramore.Brighter
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
-            if (_handlerFactory == null)
+            Send(command, _handlerFactory);
+        }
+        public void Send<T>(T command, IAmAHandlerFactory handlerFactory) where T : class, IRequest
+        {
+            if (handlerFactory == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, handlerFactory, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
@@ -405,14 +409,19 @@ namespace Paramore.Brighter
         public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
-            if (_asyncHandlerFactory == null)
+            await SendAsync(command, _asyncHandlerFactory, continueOnCapturedContext, cancellationToken);
+        }
+        public async Task SendAsync<T>(T command, IAmAHandlerFactoryAsync handlerFactory, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+            where T : class, IRequest
+        {
+            if (handlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
-
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
+            
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, handlerFactory, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
@@ -434,14 +443,19 @@ namespace Paramore.Brighter
         /// <param name="event">The event.</param>
         public void Publish<T>(T @event) where T : class, IRequest
         {
-            if (_handlerFactory == null)
+            Publish(@event, _handlerFactory);
+        }
+
+        public void Publish<T>(T @event, IAmAHandlerFactory handlerFactory) where T : class, IRequest
+        {
+            if (handlerFactory == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, handlerFactory, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(requestContext);
@@ -482,17 +496,23 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            await PublishAsync<T>(@event, _asyncHandlerFactory, continueOnCapturedContext, cancellationToken);
+        }
+
+        public async Task PublishAsync<T>(T @event, IAmAHandlerFactoryAsync handlerFactory, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
-            if (_asyncHandlerFactory == null)
+            if (handlerFactory == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, handlerFactory, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(), @event.Id);
 
