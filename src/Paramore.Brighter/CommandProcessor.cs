@@ -55,10 +55,6 @@ namespace Paramore.Brighter
         private readonly IAmAnOutboxAsync<Message> _asyncOutbox;
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
-        private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
-
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
-        private readonly object _checkOutStandingMessagesObject = new object();
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
@@ -68,7 +64,7 @@ namespace Paramore.Brighter
         private IAmAMessageProducerAsync _asyncMessageProducer;
         private readonly IAmAChannelFactory _responseChannelFactory;
         private bool _disposed;
-
+        
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
         /// Register that policy with your <see cref="IPolicyRegistry{TKey}"/> such as <see cref="PolicyRegistry"/>
@@ -96,6 +92,10 @@ namespace Paramore.Brighter
         /// You can use this an identifier for you own policies, if your generic policy is the same as your Work Queue policy.
         /// </summary>
         public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
+        
+        //We want to use double lock to let us pass parameters to the constructor from the first instance
+        private static CommandProcessorService _service = null;
+        private static readonly object padlock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
@@ -177,6 +177,8 @@ namespace Paramore.Brighter
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(null, subscriberRegistry, policyRegistry, 0, null, null, inboxConfiguration, featureSwitchRegistry, null, null);
         }
 
         /// <summary>
@@ -209,8 +211,10 @@ namespace Paramore.Brighter
             _messageProducer = messageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(mapperRegistry, null, policyRegistry, outboxTimeout, outBox, null, inboxConfiguration, featureSwitchRegistry, messageProducer, null);
 
-            ConfigurePublisherCallbackMaybe();
+            _service.ConfigurePublisherCallbackMaybe();
         }
 
 
@@ -245,7 +249,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
 
-            ConfigureAsyncPublisherCallbackMaybe();
+            _service.ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -282,7 +286,7 @@ namespace Paramore.Brighter
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
 
-            ConfigurePublisherCallbackMaybe();
+            _service.ConfigurePublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -319,7 +323,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
 
-            ConfigurePublisherCallbackMaybe();
+            _service.ConfigurePublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -364,7 +368,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
 
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
-            if (!ConfigurePublisherCallbackMaybe()) ConfigureAsyncPublisherCallbackMaybe();
+            if (!_service.ConfigurePublisherCallbackMaybe()) _service.ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -388,7 +392,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                _service.AssertValidSendPipeline(command, handlerChain.Count());
 
                 handlerChain.First().Handle(command);
             }
@@ -417,7 +421,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                _service.AssertValidSendPipeline(command, handlerChain.Count());
 
                 await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
             }
@@ -616,7 +620,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            var written = await RetryAsync(async ct =>
+            var written = await _service.RetryAsync(async ct =>
             {
                 await _asyncOutbox.AddAsync(message, _outboxTimeout, ct).ConfigureAwait(continueOnCapturedContext);
             }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
@@ -640,7 +644,7 @@ namespace Paramore.Brighter
             if (_messageProducer == null)
                 throw new InvalidOperationException("No message producer defined.");
 
-            CheckOutboxOutstandingLimit();
+            _service.CheckOutboxOutstandingLimit();
 
 
             foreach (var messageId in posts)
@@ -654,17 +658,17 @@ namespace Paramore.Brighter
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {
                     //mark dispatch handled by a callback - set in constructor
-                    Retry(() => { _messageProducer.Send(message); });
+                    _service.Retry(() => { _messageProducer.Send(message); });
                 }
                 else
                 {
-                    var sent = Retry(() => { _messageProducer.Send(message); });
+                    var sent = _service.Retry(() => { _messageProducer.Send(message); });
                     if (sent)
-                        Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
+                        _service.Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
                 }
             }
             
-            CheckOutstandingMessages();
+            _service.CheckOutstandingMessages();
 
         }
 
@@ -682,7 +686,7 @@ namespace Paramore.Brighter
             if (_asyncMessageProducer == null)
                 throw new InvalidOperationException("No async message producer defined.");
 
-            CheckOutboxOutstandingLimit();
+                    ._service.CheckOutboxOutstandingLimit();
 
             foreach (var messageId in posts)
             {
@@ -695,7 +699,7 @@ namespace Paramore.Brighter
                 if (_messageProducer is ISupportPublishConfirmation producer)
                 {
                     //mark dispatch handled by a callback - set in constructor
-                    await RetryAsync(
+                    await _service.RetryAsync(
                             async ct =>
                                 await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
                             continueOnCapturedContext,
@@ -705,7 +709,7 @@ namespace Paramore.Brighter
                 else
                 {
 
-                    var sent = await RetryAsync(
+                    var sent = await _service.RetryAsync(
                             async ct =>
                                 await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
                             continueOnCapturedContext,
@@ -713,11 +717,11 @@ namespace Paramore.Brighter
                         .ConfigureAwait(continueOnCapturedContext);
 
                     if (sent)
-                        await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
+                        await _service.RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
                 }
             }
             
-            CheckOutstandingMessages();
+            _service.CheckOutstandingMessages();
 
         }
 
@@ -769,20 +773,20 @@ namespace Paramore.Brighter
                 //we do this to create the channel on the broker, or we won't have anything to send to; we 
                 //retry in case the subscription is poor. An alternative would be to extract the code from
                 //the channel to create the subscription, but this does not do much on a new queue
-                Retry(() => responseChannel.Purge());
+                _service.Retry(() => responseChannel.Purge());
 
                 var outMessage = outMessageMapper.MapToMessage(request);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
                 s_logger.LogDebug("Sending request  with routingkey {ChannelName}", routingKey);
-                Retry(() => _messageProducer.Send(outMessage));
+                _service.Retry(() => _messageProducer.Send(outMessage));
 
                 Message responseMessage = null;
 
                 //now we block on the receiver to try and get the message, until timeout.
                 s_logger.LogDebug("Awaiting response on {ChannelName}", routingKey);
-                Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+                _service.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
@@ -799,6 +803,33 @@ namespace Paramore.Brighter
 
             } //clean up everything at this point, whatever happens
 
+        }
+
+        private void InitService(IAmAMessageMapperRegistry mapperRegistry, IAmASubscriberRegistry subscriberRegistry, IPolicyRegistry<string> policyRegistry,
+            int outboxTimeout, IAmAnOutbox<Message> outbox, IAmAnOutboxAsync<Message> asyncOutbox, InboxConfiguration inboxConfiguration,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry, IAmAMessageProducer messageProducer, IAmAMessageProducerAsync asyncMessageProducer)
+        {
+            if (_service == null)
+            {
+                lock (padlock)
+                {
+                    if (_service == null)
+                    {
+                        _service = new CommandProcessorService(
+                             mapperRegistry,
+                             subscriberRegistry,
+                             policyRegistry,
+                             outboxTimeout,
+                             outbox,
+                             asyncOutbox,
+                             inboxConfiguration,
+                             featureSwitchRegistry,
+                             messageProducer,
+                             asyncMessageProducer
+                            );
+                    }
+                }
+            }
         }
 
 
@@ -828,184 +859,5 @@ namespace Paramore.Brighter
 
             _disposed = true;
         }
-
-        private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
-        {
-            s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T), command.Id);
-
-            if (handlerCount > 1)
-                throw new ArgumentException($"More than one handler was found for the typeof command {typeof(T)} - a command should only have one handler.");
-            if (handlerCount == 0)
-                throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
-        }
-
-        private void CheckOutboxOutstandingLimit()
-        {
-            bool hasOutBox = (_outBox != null || _asyncOutbox != null);
-            if (!hasOutBox)
-                return;
-
-            int maxOutStandingMessages = -1;
-            if (_messageProducer != null)
-                maxOutStandingMessages = _messageProducer.MaxOutStandingMessages;
-
-            if (_asyncMessageProducer != null)
-                maxOutStandingMessages = _asyncMessageProducer.MaxOutStandingMessages;
-
-            s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
-            // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
-            bool exceedsOutstandingMessageLimit = maxOutStandingMessages != -1 && _outStandingCount > maxOutStandingMessages;
-
-            if (exceedsOutstandingMessageLimit)
-                throw new OutboxLimitReachedException($"The outbox limit of {maxOutStandingMessages} has been exceeded");
-        }
-
-        private void CheckOutstandingMessages()
-        {
-            if (_messageProducer == null)
-                return;
-
-            var now = DateTime.UtcNow;
-            var checkInterval = TimeSpan.FromMilliseconds(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds);
-
-
-            var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
-            s_logger.LogDebug("Time since last check is {SecondsSinceLastCheck} seconds.", timeSinceLastCheck.TotalSeconds);
-            if (timeSinceLastCheck < checkInterval)
-            {
-                s_logger.LogDebug($"Check not ready to run yet");
-                return;
-            }
-
-            s_logger.LogDebug("Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait", DateTime.UtcNow, timeSinceLastCheck.TotalSeconds);
-            //This is expensive, so use a background thread
-            Task.Run(() => OutstandingMessagesCheck());
-            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
-        }
-
-        private bool ConfigureAsyncPublisherCallbackMaybe()
-        {
-            if (_asyncMessageProducer == null)
-                return false;
-
-            if (_asyncMessageProducer is ISupportPublishConfirmation producer)
-            {
-                producer.OnMessagePublished += async delegate(bool success, Guid id)
-                {
-                    if (success)
-                    {
-                        s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
-                        if (_asyncOutbox != null)
-                            await RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
-                    }
-                };
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool ConfigurePublisherCallbackMaybe()
-        {
-            if (_messageProducer is ISupportPublishConfirmation producer)
-            {
-                producer.OnMessagePublished += delegate(bool success, Guid id)
-                {
-                    if (success)
-                    {
-                        s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
-                        if (_outBox != null)
-                            Retry(() => _outBox.MarkDispatched(id, DateTime.UtcNow));
-                    }
-                };
-                return true;
-            }
-
-            return false;
-        }
-
-        private void OutstandingMessagesCheck()
-        {
-            if (Monitor.TryEnter(_checkOutStandingMessagesObject))
-            {
-
-                s_logger.LogDebug("Begin count of outstanding messages");
-                try
-                {
-                    if ((_outBox != null) && (_outBox is IAmAnOutboxViewer<Message> outboxViewer))
-                    {
-                        _outStandingCount = outboxViewer
-                            .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
-                            .Count();
-                        return;
-                    }
-
-                    //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
-                    if ((_asyncOutbox != null) && (_asyncOutbox is IAmAnOutboxViewer<Message> asyncOutboxViewer))
-                    {
-                        _outStandingCount = asyncOutboxViewer
-                            .OutstandingMessages(_messageProducer.MaxOutStandingCheckIntervalMilliSeconds)
-                            .Count();
-                        return;
-                    }
-
-                    if ((_outBox == null) && (_asyncOutbox == null))
-                        _outStandingCount = 0;
-
-                }
-                catch (Exception ex)
-                {
-                    //if we can't talk to the outbox, we would swallow the exception on this thread
-                    //by setting the _outstandingCount to -1, we force an exception
-                    s_logger.LogError(ex,"Error getting outstanding message count, reset count");
-                    _outStandingCount = 0;
-                }
-                finally
-                {
-                    s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
-                    Monitor.Exit(_checkOutStandingMessagesObject);
-                }
-            }
-        }
-
-        private bool Retry(Action send)
-        {
-            var policy = _policyRegistry.Get<Policy>(RETRYPOLICY);
-            var result = policy.ExecuteAndCapture(send);
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    s_logger.LogError(result.FinalException,"Exception whilst trying to publish message");
-                    CheckOutstandingMessages();
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-
-        private async Task<bool> RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            var result = await _policyRegistry.Get<AsyncPolicy>(RETRYPOLICYASYNC)
-                .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
-                .ConfigureAwait(continueOnCapturedContext);
-
-            if (result.Outcome != OutcomeType.Successful)
-            {
-                if (result.FinalException != null)
-                {
-                    s_logger.LogError(result.FinalException, "Exception whilst trying to publish message" );
-                    CheckOutstandingMessages();
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-
     }
 }
