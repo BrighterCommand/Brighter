@@ -171,6 +171,8 @@ namespace Paramore.Brighter
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(null, subscriberRegistry, policyRegistry, 0, null, null, inboxConfiguration, featureSwitchRegistry, null, null);
         }
 
         /// <summary>
@@ -377,7 +379,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                _service.AssertValidSendPipeline(command, handlerChain.Count());
 
                 handlerChain.First().Handle(command);
             }
@@ -406,7 +408,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                _service.AssertValidSendPipeline(command, handlerChain.Count());
 
                 await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
             }
@@ -728,8 +730,11 @@ namespace Paramore.Brighter
             }
         }
 
+        protected virtual void Dispose(bool disposing)
         private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
+            if (_disposed)
+                return;
             s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T), command.Id);
 
             if (handlerCount > 1)
@@ -738,6 +743,7 @@ namespace Paramore.Brighter
                 throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
 
+            if (disposing)
         //Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
         //set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         //if needed as a "get out of gaol" card.
@@ -750,6 +756,8 @@ namespace Paramore.Brighter
         {
             if (_bus == null)
             {
+                _messageProducer?.Dispose();
+                _asyncMessageProducer?.Dispose();
                 lock (padlock)
                 {
                     if (_bus == null)
@@ -764,6 +772,11 @@ namespace Paramore.Brighter
                     }
                 }
             }
+
+            _messageProducer = null;
+            _asyncMessageProducer = null;
+
+            _disposed = true;
         }
 
     }
