@@ -86,15 +86,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (options.ChannelFactory is null)
             {
                 taskQueuesBuilder = producer == null
-                    ? messagingBuilder.NoTaskQueues()
-                    : messagingBuilder.TaskQueues(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
+                    ? messagingBuilder.NoExternalBus()
+                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
             }
             else
             {
                 // If Producer has been added to DI
                 if (producer == null)
                 {
-                    taskQueuesBuilder = messagingBuilder.NoTaskQueues();
+                    taskQueuesBuilder = messagingBuilder.NoExternalBus();
                 }
                 else
                 {
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         ? messagingBuilder.RequestReplyQueues(new MessagingConfiguration(
                             producer, messageMapperRegistry,
                             responseChannelFactory: options.ChannelFactory))
-                        : messagingBuilder.TaskQueues(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
+                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
                 }
             }
 

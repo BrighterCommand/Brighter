@@ -71,7 +71,6 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
         public void Dispose()
         {
-            _commandProcessor?.Dispose();
             GC.SuppressFinalize(this);
         }
     }    

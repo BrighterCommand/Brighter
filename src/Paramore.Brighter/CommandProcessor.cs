@@ -40,7 +40,7 @@ namespace Paramore.Brighter
     /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
     /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
     /// </summary>
-    public class CommandProcessor : IAmACommandProcessor, IDisposable
+    public class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
@@ -50,20 +50,14 @@ namespace Paramore.Brighter
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string> _policyRegistry;
-        private readonly int _outboxTimeout;
-        private readonly IAmAnOutbox<Message> _outBox;
-        private readonly IAmAnOutboxAsync<Message> _asyncOutbox;
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
-        private int _outStandingCount;
 
         // the following are not readonly to allow setting them to null on dispose
-        private IAmAMessageProducer _messageProducer;
-        private IAmAMessageProducerAsync _asyncMessageProducer;
         private readonly IAmAChannelFactory _responseChannelFactory;
-        private bool _disposed;
+
         
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -94,12 +88,12 @@ namespace Paramore.Brighter
         public const string RETRYPOLICYASYNC = "Paramore.Brighter.CommandProcessor.RetryPolicy.Async";
         
         //We want to use double lock to let us pass parameters to the constructor from the first instance
-        private static CommandProcessorService _service = null;
+        private static ExternalBusServices _bus = null;
         private static readonly object padlock = new object();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no task queue support is required
+        /// Use this constructor when external us support is required and both sync and async handlers are needed
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -128,7 +122,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no task queue support is required
+        /// Use this constructor when no external bus is required and only sync handlers are needed
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -155,7 +149,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no task queue support is required and only async handlers are used
+        /// Use this constructor when no external bus is required and only async handlers are needed
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
@@ -177,13 +171,11 @@ namespace Paramore.Brighter
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
-            
-            InitService(null, subscriberRegistry, policyRegistry, 0, null, null, inboxConfiguration, featureSwitchRegistry, null, null);
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when only task queue support is required
+        /// Use this constructor when only posting messages to an external bus is required
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
@@ -205,22 +197,19 @@ namespace Paramore.Brighter
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _outboxTimeout = outboxTimeout;
             _mapperRegistry = mapperRegistry;
-            _outBox = outBox;
-            _messageProducer = messageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             
-            InitService(mapperRegistry, null, policyRegistry, outboxTimeout, outBox, null, inboxConfiguration, featureSwitchRegistry, messageProducer, null);
+            InitService(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
-            _service.ConfigurePublisherCallbackMaybe();
+            _bus.ConfigurePublisherCallbackMaybe();
         }
 
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when only task queue support is required
+        /// Use this constructor when only posting messages async to an external bus is required
         /// </summary>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
@@ -242,19 +231,18 @@ namespace Paramore.Brighter
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _outboxTimeout = outboxTimeout;
             _mapperRegistry = mapperRegistry;
-            _asyncOutbox = asyncOutbox;
-            _asyncMessageProducer = asyncMessageProducer;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
 
-            _service.ConfigureAsyncPublisherCallbackMaybe();
+            _bus.ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both rpc and command processor support is required
+        /// Use this constructor when both rpc support is required
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -272,6 +260,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
+            IAmAnOutbox<Message> outBox,
             IAmAMessageProducer messageProducer,
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
@@ -280,18 +269,18 @@ namespace Paramore.Brighter
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _messageProducer = messageProducer;
-            _outboxTimeout = outboxTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
-            _service.ConfigurePublisherCallbackMaybe();
+            _bus.ConfigurePublisherCallbackMaybe();
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required
+        /// Use this constructor when both external bus and command processor support is required
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="asyncHandlerFactory">The async handler factory.</param>
@@ -317,18 +306,17 @@ namespace Paramore.Brighter
             : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _asyncOutbox = asyncOutbox;
-            _asyncMessageProducer = asyncMessageProducer;
-            _outboxTimeout = outboxTimeout;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
 
-            _service.ConfigurePublisherCallbackMaybe();
+            _bus.ConfigurePublisherCallbackMaybe();
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both task queue and command processor support is required, and you want to inject a test logger
+        /// Use this constructor when both external bus and command processor support is required, and you want to inject a test logger
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -360,15 +348,12 @@ namespace Paramore.Brighter
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
-            _outBox = outBox;
-            _asyncOutbox = asyncOutbox;
-            _messageProducer = messageProducer;
-            _asyncMessageProducer = asyncMessageProducer;
-            _outboxTimeout = outboxTimeout;
             _inboxConfiguration = inboxConfiguration;
+            
+            InitService(policyRegistry, outBox, asyncOutbox, outboxTimeout, messageProducer, asyncMessageProducer);
 
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
-            if (!_service.ConfigurePublisherCallbackMaybe()) _service.ConfigureAsyncPublisherCallbackMaybe();
+            if (!_bus.ConfigurePublisherCallbackMaybe()) _bus.ConfigureAsyncPublisherCallbackMaybe();
         }
 
         /// <summary>
@@ -392,7 +377,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
 
-                _service.AssertValidSendPipeline(command, handlerChain.Count());
+                AssertValidSendPipeline(command, handlerChain.Count());
 
                 handlerChain.First().Handle(command);
             }
@@ -421,7 +406,7 @@ namespace Paramore.Brighter
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
-                _service.AssertValidSendPipeline(command, handlerChain.Count());
+                AssertValidSendPipeline(command, handlerChain.Count());
 
                 await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
             }
@@ -576,7 +561,7 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            if (_outBox == null)
+            if (!_bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
@@ -585,13 +570,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            var written = Retry(() =>
-            {
-                _outBox.Add(message, _outboxTimeout);
-            });
-
-            if (!written)
-                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+            _bus.AddToOutbox(request, message);
 
             return message.Id;
         }
@@ -611,7 +590,7 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            if (_asyncOutbox == null)
+            if (!_bus.HasOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
@@ -620,13 +599,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            var written = await _service.RetryAsync(async ct =>
-            {
-                await _asyncOutbox.AddAsync(message, _outboxTimeout, ct).ConfigureAwait(continueOnCapturedContext);
-            }, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-
-            if (!written)
-                throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+            await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message);
 
             return message.Id;
         }
@@ -639,37 +612,7 @@ namespace Paramore.Brighter
         /// <param name="posts">The posts to flush</param>
         public void ClearOutbox(params Guid[] posts)
         {
-            if (_outBox == null)
-                throw new InvalidOperationException("No outbox defined.");
-            if (_messageProducer == null)
-                throw new InvalidOperationException("No message producer defined.");
-
-            _service.CheckOutboxOutstandingLimit();
-
-
-            foreach (var messageId in posts)
-            {
-                var message = _outBox.Get(messageId);
-                if (message == null)
-                    throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
-
-                s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
-
-                if (_messageProducer is ISupportPublishConfirmation producer)
-                {
-                    //mark dispatch handled by a callback - set in constructor
-                    _service.Retry(() => { _messageProducer.Send(message); });
-                }
-                else
-                {
-                    var sent = _service.Retry(() => { _messageProducer.Send(message); });
-                    if (sent)
-                        _service.Retry(() => _outBox.MarkDispatched(messageId, DateTime.UtcNow));
-                }
-            }
-            
-            _service.CheckOutstandingMessages();
-
+            _bus.ClearOutbox(posts); 
         }
 
         /// <summary>
@@ -677,52 +620,12 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The posts to flush</param>
-        public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+        public async Task ClearOutboxAsync(
+            IEnumerable<Guid> posts, 
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-
-            if (_asyncOutbox == null)
-                throw new InvalidOperationException("No async outbox defined.");
-            if (_asyncMessageProducer == null)
-                throw new InvalidOperationException("No async message producer defined.");
-
-                    ._service.CheckOutboxOutstandingLimit();
-
-            foreach (var messageId in posts)
-            {
-                var message = await _asyncOutbox.GetAsync(messageId, _outboxTimeout, cancellationToken);
-                if (message == null)
-                    throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
-
-                s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
-
-                if (_messageProducer is ISupportPublishConfirmation producer)
-                {
-                    //mark dispatch handled by a callback - set in constructor
-                    await _service.RetryAsync(
-                            async ct =>
-                                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                            continueOnCapturedContext,
-                            cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
-                }
-                else
-                {
-
-                    var sent = await _service.RetryAsync(
-                            async ct =>
-                                await _asyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                            continueOnCapturedContext,
-                            cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
-
-                    if (sent)
-                        await _service.RetryAsync(async ct => await _asyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
-                }
-            }
-            
-            _service.CheckOutstandingMessages();
-
+            await _bus.ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken); 
         }
 
 
@@ -773,20 +676,20 @@ namespace Paramore.Brighter
                 //we do this to create the channel on the broker, or we won't have anything to send to; we 
                 //retry in case the subscription is poor. An alternative would be to extract the code from
                 //the channel to create the subscription, but this does not do much on a new queue
-                _service.Retry(() => responseChannel.Purge());
+                _bus.Retry(() => responseChannel.Purge());
 
                 var outMessage = outMessageMapper.MapToMessage(request);
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
                 s_logger.LogDebug("Sending request  with routingkey {ChannelName}", routingKey);
-                _service.Retry(() => _messageProducer.Send(outMessage));
+                _bus.SendViaExternalBus<T, TResponse>(outMessage);
 
                 Message responseMessage = null;
 
                 //now we block on the receiver to try and get the message, until timeout.
                 s_logger.LogDebug("Awaiting response on {ChannelName}", routingKey);
-                _service.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
+                _bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
@@ -805,59 +708,42 @@ namespace Paramore.Brighter
 
         }
 
-        private void InitService(IAmAMessageMapperRegistry mapperRegistry, IAmASubscriberRegistry subscriberRegistry, IPolicyRegistry<string> policyRegistry,
-            int outboxTimeout, IAmAnOutbox<Message> outbox, IAmAnOutboxAsync<Message> asyncOutbox, InboxConfiguration inboxConfiguration,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry, IAmAMessageProducer messageProducer, IAmAMessageProducerAsync asyncMessageProducer)
+        internal void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
-            if (_service == null)
+            s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T), command.Id);
+
+            if (handlerCount > 1)
+                throw new ArgumentException($"More than one handler was found for the typeof command {typeof(T)} - a command should only have one handler.");
+            if (handlerCount == 0)
+                throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
+        }
+
+        //Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
+        //set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
+        //if needed as a "get out of gaol" card.
+        private void InitService(IPolicyRegistry<string> policyRegistry,
+            IAmAnOutbox<Message> outbox,
+            IAmAnOutboxAsync<Message> asyncOutbox,
+            int outboxTimeout,
+            IAmAMessageProducer messageProducer,
+            IAmAMessageProducerAsync asyncMessageProducer)
+        {
+            if (_bus == null)
             {
                 lock (padlock)
                 {
-                    if (_service == null)
+                    if (_bus == null)
                     {
-                        _service = new CommandProcessorService(
-                             mapperRegistry,
-                             subscriberRegistry,
-                             policyRegistry,
-                             outboxTimeout,
-                             outbox,
-                             asyncOutbox,
-                             inboxConfiguration,
-                             featureSwitchRegistry,
-                             messageProducer,
-                             asyncMessageProducer
-                            );
+                        _bus = new ExternalBusServices();
+                        _bus.AsyncOutbox = asyncOutbox;
+                        _bus.MessageProducer = messageProducer;
+                        _bus.OutBox = outbox;
+                        _bus.OutboxTimeout = outboxTimeout;
+                        _bus.PolicyRegistry = policyRegistry;
+                        _bus.AsyncMessageProducer = asyncMessageProducer;
                     }
                 }
             }
-        }
-
-
-        /// <summary>
-        /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
-        /// </summary>
-        public void Dispose()
-        {
-            Dispose(true);
-            GC.SuppressFinalize(this);
-        }
-
-        protected virtual void Dispose(bool disposing)
-        {
-            if (_disposed)
-                return;
-
-
-            if (disposing)
-            {
-                _messageProducer?.Dispose();
-                _asyncMessageProducer?.Dispose();
-            }
-
-            _messageProducer = null;
-            _asyncMessageProducer = null;
-
-            _disposed = true;
         }
     }
 }

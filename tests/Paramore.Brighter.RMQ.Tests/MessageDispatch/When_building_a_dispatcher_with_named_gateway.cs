@@ -70,7 +70,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             var commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), (IAmAHandlerFactory)new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(policyRegistry)
-                .NoTaskQueues()
+                .NoExternalBus()
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 

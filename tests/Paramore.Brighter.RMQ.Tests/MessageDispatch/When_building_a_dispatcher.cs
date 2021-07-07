@@ -75,7 +75,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                     { CommandProcessor.RETRYPOLICY, retryPolicy },
                     { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
                 })
-                .NoTaskQueues()
+                .NoExternalBus()
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 

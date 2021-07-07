@@ -79,7 +79,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public void Dispose()
         {
-            _commandProcessor.Dispose();
         }
     }
 }

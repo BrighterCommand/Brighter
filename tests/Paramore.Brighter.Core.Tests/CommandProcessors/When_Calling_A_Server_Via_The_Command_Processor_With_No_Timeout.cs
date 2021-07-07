@@ -53,6 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                 },
                 messageMapperRegistry,
+                new InMemoryOutbox(),
                 (IAmAMessageProducer)new FakeMessageProducer(),
                 responseChannelFactory: new InMemoryChannelFactory());
             
@@ -73,7 +74,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            _commandProcessor.Dispose();
         }
     }
 }

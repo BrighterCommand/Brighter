@@ -78,10 +78,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
         }
         
-        [Fact]
         public void Dispose()
         {
-            _commandProcessor.Dispose();
         }
      }
 }
