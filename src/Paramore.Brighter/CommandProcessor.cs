@@ -201,7 +201,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             
-            InitService(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
+            InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
             _bus.ConfigurePublisherCallbackMaybe();
         }
@@ -235,7 +235,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             
-            InitService(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
+            InitExtServiceBus(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
 
             _bus.ConfigureAsyncPublisherCallbackMaybe();
         }
@@ -273,7 +273,7 @@ namespace Paramore.Brighter
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
             
-            InitService(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
+            InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
             _bus.ConfigurePublisherCallbackMaybe();
         }
@@ -309,7 +309,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             
-            InitService(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
+            InitExtServiceBus(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
 
             _bus.ConfigurePublisherCallbackMaybe();
         }
@@ -350,7 +350,7 @@ namespace Paramore.Brighter
             _mapperRegistry = mapperRegistry;
             _inboxConfiguration = inboxConfiguration;
             
-            InitService(policyRegistry, outBox, asyncOutbox, outboxTimeout, messageProducer, asyncMessageProducer);
+            InitExtServiceBus(policyRegistry, outBox, asyncOutbox, outboxTimeout, messageProducer, asyncMessageProducer);
 
             //Only register one, to avoid two callbacks where we support both interfaces on a producer
             if (!_bus.ConfigurePublisherCallbackMaybe()) _bus.ConfigureAsyncPublisherCallbackMaybe();
@@ -708,7 +708,27 @@ namespace Paramore.Brighter
 
         }
 
-        internal void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
+        /// <summary>
+        /// The external service bus is a singleton as it has app lifetime to manage an Outbox.
+        /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
+        /// It is mainly intended for testing, to allow the external service bus to be reset between tests
+        /// </summary>
+        public void ClearExtServiceBus()
+        {
+            if (_bus != null)
+            {
+                lock (padlock)
+                {
+                    if (_bus != null)
+                    {
+                        _bus.Dispose();
+                        _bus = null;
+                    }
+                }
+            }
+        }
+
+        private void AssertValidSendPipeline<T>(T command, int handlerCount) where T : class, IRequest
         {
             s_logger.LogInformation("Found {HandlerCount} pipelines for command: {Type} {Id}", handlerCount, typeof(T), command.Id);
 
@@ -721,7 +741,7 @@ namespace Paramore.Brighter
         //Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
         //set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         //if needed as a "get out of gaol" card.
-        private void InitService(IPolicyRegistry<string> policyRegistry,
+        private void InitExtServiceBus(IPolicyRegistry<string> policyRegistry,
             IAmAnOutbox<Message> outbox,
             IAmAnOutboxAsync<Message> asyncOutbox,
             int outboxTimeout,
@@ -745,5 +765,6 @@ namespace Paramore.Brighter
                 }
             }
         }
+
     }
 }
