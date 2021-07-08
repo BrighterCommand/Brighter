@@ -713,7 +713,7 @@ namespace Paramore.Brighter
         /// This method clears the external service bus, so that the next attempt to use it will create a fresh one
         /// It is mainly intended for testing, to allow the external service bus to be reset between tests
         /// </summary>
-        public void ClearExtServiceBus()
+        public static void ClearExtServiceBus()
         {
             if (_bus != null)
             {
