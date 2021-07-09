@@ -69,12 +69,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public async Task When_Posting_A_Message_And_There_Is_No_Outbox_Async()
         {
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
-        }
+            
+            //_should_throw_an_exception
+            _exception.Should().BeOfType<InvalidOperationException>();
+         }
 
         public void Dispose()
         {
-            //_should_throw_an_exception
-            _exception.Should().BeOfType<InvalidOperationException>();
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

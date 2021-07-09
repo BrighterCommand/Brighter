@@ -35,7 +35,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 {
-    public class DispatchBuilderWithNamedGateway
+    [Collection("CommandProcessor")]
+    public class DispatchBuilderWithNamedGateway : IDisposable
     {
         private readonly IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
@@ -100,6 +101,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 
             //_should_build_a_dispatcher
             AssertionExtensions.Should((object) _dispatcher).NotBeNull();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

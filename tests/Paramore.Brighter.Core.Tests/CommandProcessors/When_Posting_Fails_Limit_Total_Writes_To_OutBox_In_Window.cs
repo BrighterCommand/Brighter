@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PostFailureLimitCommandTests
+    public class PostFailureLimitCommandTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private IAmAMessageProducer _fakeMessageProducer;
@@ -91,6 +91,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             {
                 _outbox.Get(id).Should().NotBeNull();
             }
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
 
         internal class EmptyHandlerFactory : IAmAHandlerFactory

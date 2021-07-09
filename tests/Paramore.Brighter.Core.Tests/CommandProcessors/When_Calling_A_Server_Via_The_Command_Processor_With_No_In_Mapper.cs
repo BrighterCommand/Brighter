@@ -9,7 +9,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorNoInMapperTests
+    public class CommandProcessorNoInMapperTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new MyRequest();
@@ -65,5 +65,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //should throw an exception as we require a mapper for the outgoing request 
             exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
-}
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+    }
 }
