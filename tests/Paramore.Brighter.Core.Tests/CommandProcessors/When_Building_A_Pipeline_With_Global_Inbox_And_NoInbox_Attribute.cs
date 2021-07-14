@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxNoInboxAttributeTests
+    public class PipelineGlobalInboxNoInboxAttributeTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private Pipelines<MyCommand> _chainOfResponsibility;
@@ -48,6 +49,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var tracer = TracePipeline(_chainOfResponsibility.First());
             tracer.ToString().Should().NotContain("UseInboxHandler");
 
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
         
         private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)

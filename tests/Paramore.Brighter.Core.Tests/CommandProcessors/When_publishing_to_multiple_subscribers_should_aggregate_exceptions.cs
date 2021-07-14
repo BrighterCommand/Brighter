@@ -34,7 +34,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PublishingToMultipleSubscribersTests
+    public class PublishingToMultipleSubscribersTests: IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
@@ -74,6 +74,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
             //_should_publish_the_command_to_the_second_event_handler
             _receivedMessages.Should().Contain(nameof(MyOtherEventHandler), _myEvent.Id);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

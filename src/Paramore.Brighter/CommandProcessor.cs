@@ -590,7 +590,7 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            if (!_bus.HasOutbox())
+            if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();

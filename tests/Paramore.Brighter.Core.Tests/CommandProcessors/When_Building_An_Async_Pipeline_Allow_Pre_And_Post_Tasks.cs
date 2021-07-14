@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -8,7 +9,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelinePreAndPostFiltersAsyncTests
+    public class PipelinePreAndPostFiltersAsyncTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
@@ -35,6 +36,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _pipeline = _pipelineBuilder.BuildAsync(new RequestContext(), false).First();
 
             TraceFilters().ToString().Should().Be("MyValidationHandlerAsync`1|MyPreAndPostDecoratedHandlerAsync|MyLoggingHandlerAsync`1|");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
 
         private PipelineTracer TraceFilters()

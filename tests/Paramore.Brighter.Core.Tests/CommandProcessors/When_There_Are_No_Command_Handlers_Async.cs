@@ -34,7 +34,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorNoHandlersMatchAsyncTests
+    public class CommandProcessorNoHandlersMatchAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -60,6 +60,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //_should_have_an_error_message_that_tells_you_why
             _exception.Should().NotBeNull();
             _exception.Message.Should().Contain("No command handler was found for the typeof command Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand - a command should have exactly one handler.");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

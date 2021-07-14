@@ -7,7 +7,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineCleanupTests
+    public class PipelineCleanupTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private static string s_released;
@@ -68,6 +68,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             MyLoggingHandler<MyCommand>.DisposeWasCalled.Should().BeTrue();
             //_should_have_called_release_on_all_handlers
             s_released.Should().Be("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

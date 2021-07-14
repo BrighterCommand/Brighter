@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
 
     [Collection("CommandProcessor")]
-    public class PipelinePreAndPostFiltersTests
+    public class PipelinePreAndPostFiltersTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
@@ -60,6 +61,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _pipeline = _pipelineBuilder.Build(new RequestContext()).First();
 
             TraceFilters().ToString().Should().Be("MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
 
         private PipelineTracer TraceFilters()

@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +10,7 @@ using Paramore.Brighter.Inbox.Handlers;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxContextTests
+    public class PipelineGlobalInboxContextTests : IDisposable
     {
         private const string CONTEXT_KEY = "TestHandlerNameOverride";
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
@@ -58,7 +59,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var exists = _inbox.Exists<MyCommand>(myCommmand.Id, CONTEXT_KEY, 500);
             exists.Should().BeTrue();
         }
-        
 
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
     }
 }

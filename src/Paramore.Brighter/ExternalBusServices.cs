@@ -163,7 +163,7 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default(CancellationToken))
         {
 
-            if (!HasAyncOutbox())
+            if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
             if (AsyncMessageProducer == null)
                 throw new InvalidOperationException("No async message producer defined.");
@@ -248,7 +248,7 @@ namespace Paramore.Brighter
             return false;
         }
 
-        internal bool HasAyncOutbox()
+        internal bool HasAsyncOutbox()
         {
             return AsyncOutbox != null;
         }
