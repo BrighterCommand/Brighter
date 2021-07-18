@@ -91,12 +91,13 @@ namespace Paramore.Brighter
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
 
-       /// <summary>
+        /// <summary>
         /// Adds the specified message
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
-        public void Add(Message message, int outBoxTimeout = -1)
+        /// <param name="overridingConnectionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxConnectionProvider overridingConnectionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -117,8 +118,9 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
+        /// <param name="overridingConnectionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxConnectionProvider overridingConnectionProvider = null)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 

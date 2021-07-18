@@ -190,7 +190,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private class SinkOutbox : IAmAnOutbox<Message>
         {
-            public void Add(Message message, int outBoxTimeout = -1)
+            public void Add(Message message, int outBoxTimeout = -1, IAmABoxConnectionProvider overrideConnectionProvider = null)
             {
                 //discard message
             }

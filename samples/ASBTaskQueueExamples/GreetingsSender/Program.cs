@@ -15,7 +15,7 @@ namespace GreetingsSender
 
             serviceCollection.AddLogging();
 
-            var asbConnection = new AzureServiceBusConfiguration("Endpoint=sb://fim-development-bus.servicebus.windows.net/;Authentication=Managed Identity", true);
+            var asbConnection = new AzureServiceBusConfiguration("Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity", true);
 
             var producer = AzureServiceBusMessageProducerFactory.Get(asbConnection);
             serviceCollection.AddBrighter()
@@ -32,10 +32,14 @@ namespace GreetingsSender
             while (run)
             {
                 Console.WriteLine("Sending....");
-
+                var distroGreeting = new GreetingEvent("Paul - Distributed");
+                commandProcessor.DepositPost(distroGreeting);
+                
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
+                commandProcessor.ClearOutbox(distroGreeting.Id);
+                
                 Console.WriteLine("Press q to Quit or any other key to continue");
 
                 var keyPress = Console.ReadKey();
