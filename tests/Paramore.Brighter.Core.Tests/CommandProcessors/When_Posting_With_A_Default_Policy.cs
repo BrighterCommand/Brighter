@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAnOutbox<Message>)_fakeOutbox, (IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry))
+                .TaskQueues(new MessagingConfiguration((IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry), _fakeOutbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

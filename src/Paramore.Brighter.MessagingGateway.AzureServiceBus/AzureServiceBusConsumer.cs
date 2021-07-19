@@ -205,9 +205,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                     if (string.IsNullOrEmpty(lockToken))
                         throw new Exception($"LockToken for message with id {message.Id} is null or empty");
-                    s_logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
+                    s_logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
+                        lockToken);
 
                     _messageReceiver.Complete(lockToken).Wait();
+                }
+                catch (MessageLockLostException ex)
+                {
+                    s_logger.LogError(ex, "Error releasing completing peak lock on message with id {Id}", message.Id);
                 }
                 catch(Exception ex)
                 {

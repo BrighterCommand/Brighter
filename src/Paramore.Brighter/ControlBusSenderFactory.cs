@@ -48,7 +48,7 @@ namespace Paramore.Brighter
             return new ControlBusSender(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .TaskQueues(new MessagingConfiguration(outbox, gateway, mapper))
+                    .TaskQueues(new MessagingConfiguration(gateway, mapper),outbox)
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

@@ -30,14 +30,12 @@ namespace Tests
         public void WithProducer()
         {
             var serviceCollection = new ServiceCollection();
+            var producer = new FakeProducer();
             
             serviceCollection
-                .AddBrighter(options =>
-                {
-                    var outBox = new InMemoryOutbox();
-                    var producer = new FakeProducer();
-                    options.BrighterMessaging = new BrighterMessaging(outBox, producer);
-                })
+                .AddBrighter()
+                .UseInMemoryOutbox()
+                .UseExternalBus(producer, false)
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
