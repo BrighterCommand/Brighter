@@ -47,7 +47,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 queueName:subscription.ChannelName.ToValidSQSQueueName(), 
                 routingKey:subscription.RoutingKey, 
                 batchSize: subscription.BufferSize,
-                hasDLQ: sqsSubscription.RedrivePolicy == null
+                hasDLQ: sqsSubscription.RedrivePolicy == null,
+                rawMessageDelivery: sqsSubscription.RawMessageDelivery
                 );
         }
     }

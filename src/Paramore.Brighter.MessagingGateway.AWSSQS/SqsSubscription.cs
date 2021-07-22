@@ -68,6 +68,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public string IAMPolicy { get; }
 
         /// <summary>
+        /// Indicate that the Raw Message Delivery setting is enabled or disabled
+        /// </summary>
+        public bool RawMessageDelivery { get; }
+
+        /// <summary>
         /// The policy that controls when we send messages to a DLQ after too many requeue attempts
         /// </summary>
         public RedrivePolicy RedrivePolicy { get; }
@@ -107,6 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="snsAttributes">The attributes of the Topic, either ARN if created, or attributes for creation</param>
         /// <param name="tags">Resource tags to be added to the queue</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
         public SqsSubscription(Type dataType,
             SubscriptionName name = null,
             ChannelName channelName = null,
@@ -127,7 +133,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             RedrivePolicy redrivePolicy = null,
             SnsAttributes snsAttributes = null,
             Dictionary<string,string> tags = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            bool rawMessageDelivery = true
         )
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
                 unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
@@ -137,6 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             MessageRetentionPeriod = messageRetentionPeriod;
             FindTopicBy = findTopicBy;
             IAMPolicy = iAmPolicy;
+            RawMessageDelivery = rawMessageDelivery;
             RedrivePolicy = redrivePolicy;
             SnsAttributes = snsAttributes;
             Tags = tags;
@@ -152,6 +160,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// </summary>
     public class SqsSubscription<T> : SqsSubscription where T : IRequest
     {
+        /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
         /// <param name="name">The name. Defaults to the data type's full name.</param>
@@ -173,7 +182,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="snsAttributes">The attributes of the Topic, either ARN if created, or attributes for creation</param>
         /// <param name="tags">Resource tags to be added to the queue</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
-        
+        /// <param name="rawMessageDelivery">The indication of Raw Message Delivery setting is enabled or disabled</param>
         public SqsSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
@@ -193,11 +202,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             RedrivePolicy redrivePolicy = null,
             SnsAttributes snsAttributes = null,
             Dictionary<string,string> tags = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            bool rawMessageDelivery = true
         )
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
                 unacceptableMessageLimit, runAsync, channelFactory, lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, iAmPolicy,redrivePolicy,
-                snsAttributes, tags, makeChannels)
+                snsAttributes, tags, makeChannels, rawMessageDelivery)
         {
         }
     }
