@@ -23,22 +23,21 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
         public static IBrighterHandlerBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
-            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services);
+            var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
             services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
             services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
-            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services);
+            var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
 
-        public static IBrighterHandlerBuilder UseInMemoryOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterHandlerBuilder UseInMemoryOutbox(this IBrighterHandlerBuilder brighterBuilder)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
