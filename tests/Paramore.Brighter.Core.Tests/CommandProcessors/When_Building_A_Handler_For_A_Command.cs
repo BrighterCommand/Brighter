@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -30,7 +31,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineForCommandTests
+    public class PipelineForCommandTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private IHandleRequests<MyCommand> _chainOfResponsibility;
@@ -54,6 +55,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _chainOfResponsibility.Context.Should().NotBeNull();
             _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

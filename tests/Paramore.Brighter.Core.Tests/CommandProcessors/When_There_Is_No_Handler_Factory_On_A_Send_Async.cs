@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorSendMissingHandlerFactoryAsyncTests
+    public class CommandProcessorSendMissingHandlerFactoryAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -54,6 +54,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
            //_should_throw_an_invalid_operation_exception
             _exception.Should().BeOfType<InvalidOperationException>();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

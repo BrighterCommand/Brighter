@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -12,7 +13,7 @@ using Paramore.Brighter.Inbox.Handlers;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxWhenUseInboxAsyncTests
+    public class PipelineGlobalInboxWhenUseInboxAsyncTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private AsyncPipelines<MyCommand> _chainOfResponsibility;
@@ -32,7 +33,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyCommandInboxedHandlerAsync>();
             container.AddSingleton<IAmAnInboxAsync>((IAmAnInboxAsync)_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
@@ -81,7 +83,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             noException.Should().BeTrue();
 
         }
-        
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+
         private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();

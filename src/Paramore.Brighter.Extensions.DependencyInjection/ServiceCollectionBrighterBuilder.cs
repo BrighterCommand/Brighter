@@ -12,6 +12,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private readonly ServiceCollectionSubscriberRegistry _serviceCollectionSubscriberRegistry;
         private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
 
+        /// <summary>
+        /// Registers the components of Brighter pipelines
+        /// </summary>
+        /// <param name="services">The IoC container to update</param>
+        /// <param name="serviceCollectionSubscriberRegistry">The register for looking up message handlers</param>
+        /// <param name="mapperRegistry">The register for looking up message mappers</param>
         public ServiceCollectionBrighterBuilder(IServiceCollection services, ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry, ServiceCollectionMessageMapperRegistry mapperRegistry)
         {
             Services = services;
@@ -19,8 +25,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _mapperRegistry = mapperRegistry;
         }
 
+        /// <summary>
+        /// The IoC container we are populating
+        /// </summary>
         public IServiceCollection Services { get; }
 
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
+        /// </summary>
+        /// <param name="assemblies">The assemblies to scan</param>
+        /// <returns></returns>
         public IBrighterHandlerBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && !a.FullName.StartsWith("Microsoft.",true, CultureInfo.InvariantCulture) && !a.FullName.StartsWith("System.", true, CultureInfo.InvariantCulture));
@@ -34,6 +48,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return this;
         }
 
+        /// <summary>
+        /// Register message mappers
+        /// </summary>
+        /// <param name="registerMappers">A callback to register mappers</param>
+        /// <returns></returns>
         public IBrighterHandlerBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
         {
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));
@@ -43,6 +62,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return this;
         }
 
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IAmAMessageMapper and register them with ServiceCollection
+        /// </summary>
+        /// <param name="assemblies">The assemblies to scan</param>
+        /// <returns>This builder, allows chaining calls</returns>
         public IBrighterHandlerBuilder MapperRegistryFromAssemblies(params Assembly[] assemblies)
         {
             if (assemblies.Length == 0)
@@ -67,8 +91,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return this;
         }
 
-
-
+        /// <summary>
+        /// Register handers with the built in subscriber registry
+        /// </summary>
+        /// <param name="registerHandlers">A callback to register handlers</param>
+        /// <returns>This builder, allows chaining calls</returns>
         public IBrighterHandlerBuilder Handlers(Action<IAmASubscriberRegistry> registerHandlers)
         {
             if (registerHandlers == null)
@@ -78,13 +105,24 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return this;
         }
-
+        
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection
+        /// </summary>
+        /// <param name="assemblies">The assemblies to scan</param>
+        /// <returns>This builder, allows chaining calls</returns>
         public IBrighterHandlerBuilder HandlersFromAssemblies(params Assembly[] assemblies)
         {
             RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).GetTypeInfo().Assembly);
             return this;
         }
-
+        
+        
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IHandleRequestsAsyn and register them with ServiceCollection
+        /// </summary>
+        /// <param name="registerHandlers">A callback to register handlers</param>
+        /// <returns>This builder, allows chaining calls</returns>
         public IBrighterHandlerBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers)
         {
             if (registerHandlers == null)
@@ -95,6 +133,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return this;
         }
 
+        /// <summary>
+        /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection 
+        /// </summary>
+        /// <param name="assemblies">The assemblies to scan</param>
+        /// <returns>This builder, allows chaining calls</returns>
         public IBrighterHandlerBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
         {
             RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).GetTypeInfo().Assembly);

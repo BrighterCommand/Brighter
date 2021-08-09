@@ -35,7 +35,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPostCommandAsyncTests
+    public class CommandProcessorPostCommandAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -89,10 +89,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //_should_convert_the_command_into_a_message
         }
 
-        [Fact]
         public void Dispose()
         {
-            _commandProcessor.Dispose();
+            CommandProcessor.ClearExtServiceBus();
         }
 
     }

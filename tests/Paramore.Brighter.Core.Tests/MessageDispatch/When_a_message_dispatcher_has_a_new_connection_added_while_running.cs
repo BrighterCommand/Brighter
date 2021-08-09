@@ -34,6 +34,7 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
+    [Collection("CommandProcessor")]
     public class DispatcherAddNewConnectionTests : IDisposable
     {
         private readonly Dispatcher _dispatcher;

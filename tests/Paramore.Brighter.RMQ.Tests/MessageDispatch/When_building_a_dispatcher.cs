@@ -36,7 +36,8 @@ using Xunit;
 
 namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
 {
-    public class DispatchBuilderTests
+    [Collection("CommandProcessor")]
+    public class DispatchBuilderTests : IDisposable
     {
         private readonly IAmADispatchBuilder _builder;
         private Dispatcher _dispatcher;
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                     { CommandProcessor.RETRYPOLICY, retryPolicy },
                     { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
                 })
-                .NoTaskQueues()
+                .NoExternalBus()
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
@@ -111,6 +112,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             GetConnection("bar").Should().NotBeNull();
             //_should_be_in_the_awaiting_state
             AssertionExtensions.Should((object) _dispatcher.State).Be(DispatcherState.DS_AWAITING);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
 
         private Subscription GetConnection(string name)
