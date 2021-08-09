@@ -177,7 +177,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messagingConfiguration"></param>
         /// <returns></returns>
-        public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
+        public INeedARequestContext ExternalRPC(MessagingConfiguration configuration)
         {
             _useRequestReplyQueues = true;
             _messagingGateway = configuration.MessageProducer;
@@ -312,16 +312,18 @@ namespace Paramore.Brighter
         /// <param name="outbox">The outbox.</param>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox);
+        
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext NoExternalBus();
+        
         /// <summary>
-        ///  We want to use RPC to send messages to another processs
+        ///  We want to use RPC to send messages to another process
         /// </summary>
         /// <param name="messagingConfiguration"></param>
-        INeedARequestContext RequestReplyQueues(MessagingConfiguration messagingConfiguration);
+        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration);
     }
 
     /// <summary>

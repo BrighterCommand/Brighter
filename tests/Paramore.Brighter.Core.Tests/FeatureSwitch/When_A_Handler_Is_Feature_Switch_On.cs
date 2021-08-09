@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedOnHandler>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             _handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
         }

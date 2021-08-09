@@ -47,7 +47,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var container = new ServiceCollection();
             container.AddTransient<MyMixedImplicitHandler>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactory)handlerFactory);            

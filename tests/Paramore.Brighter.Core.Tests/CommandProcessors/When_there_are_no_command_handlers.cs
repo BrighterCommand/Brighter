@@ -41,7 +41,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorNoHandlersMatchTests()
         {
-            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory)new ServiceProviderHandlerFactory(new ServiceCollection().BuildServiceProvider()), new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var container = new ServiceCollection();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            
+            _commandProcessor = new CommandProcessor(
+                new SubscriberRegistry(), 
+                (IAmAHandlerFactory)new ServiceProviderHandlerFactory(container.BuildServiceProvider()), 
+                new InMemoryRequestContextFactory(), 
+                new PolicyRegistry());
         }
 
         [Fact]
