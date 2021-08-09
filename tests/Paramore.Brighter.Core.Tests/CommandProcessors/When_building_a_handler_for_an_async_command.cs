@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class  PipelineForCommandAsyncTests
+    public class  PipelineForCommandAsyncTests : IDisposable
     {
         private static PipelineBuilder<MyCommand> _chainBuilder;
         private static IHandleRequestsAsync<MyCommand> _chainOfResponsibility;
@@ -56,6 +56,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _chainOfResponsibility.Context.Should().NotBeNull();
             _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);
+        }
+
+        public void Dispose()
+        {
+           CommandProcessor.ClearExtServiceBus(); 
         }
     }
 }

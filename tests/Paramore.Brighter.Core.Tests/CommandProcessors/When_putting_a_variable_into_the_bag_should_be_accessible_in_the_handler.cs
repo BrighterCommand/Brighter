@@ -1,4 +1,5 @@
-﻿using FakeItEasy;
+﻿using System;
+using FakeItEasy;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
@@ -7,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class ContextBagVisibilityTests
+    public class ContextBagVisibilityTests : IDisposable
     {
         private const string I_AM_A_TEST_OF_THE_CONTEXT_BAG = "I am a test of the context bag";
         private readonly RequestContext _request_context;
@@ -41,6 +42,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             MyContextAwareCommandHandler.TestString.Should().Be(I_AM_A_TEST_OF_THE_CONTEXT_BAG);
             //_should_have_been_filled_by_the_handler
             _request_context.Bag["MyContextAwareCommandHandler"].Should().Be("I was called and set the context");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

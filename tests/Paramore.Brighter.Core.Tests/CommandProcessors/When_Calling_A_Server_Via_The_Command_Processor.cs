@@ -68,6 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
+                new InMemoryOutbox(),
                 (IAmAMessageProducer)_fakeMessageProducer,
                 responseChannelFactory: inMemoryChannelFactory);
             
@@ -92,11 +93,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         }
         
-        
-        
         public void Dispose()
         {
-            _commandProcessor.Dispose();
+            CommandProcessor.ClearExtServiceBus();
         }
 
    }

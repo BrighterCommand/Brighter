@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     //allow a lambda for the context, to override, and pass in a default of typeof() ????
  
     [Collection("CommandProcessor")]
-    public class PipelineGlobalInboxTestsAsync
+    public class PipelineGlobalInboxTestsAsync : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _chainBuilder;
         private AsyncPipelines<MyCommand> _chainOfResponsibility;
@@ -36,7 +36,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddSingleton<MyCommandHandlerAsync>(handler);
             container.AddSingleton<IAmAnInboxAsync>(_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
@@ -59,7 +60,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             tracer.ToString().Should().Contain("UseInboxHandlerAsync");
 
         }
-        
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+
         private PipelineTracer TracePipeline(IHandleRequestsAsync<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();

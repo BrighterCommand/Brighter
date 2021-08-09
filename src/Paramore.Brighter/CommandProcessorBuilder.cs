@@ -56,7 +56,7 @@ namespace Paramore.Brighter
     ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
     ///             provide a <see cref="IAmAMessageMapperFactory"/> so that we can create instances of your  <see cref="IAmAMessageMapper"/>. You need to provide a <see cref="IAmAMessageMapperFactory"/>
     ///             when using <see cref="MessageMapperRegistry"/> so that we can create instances of your mapper. 
-    ///             If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <see cref="NoTaskQueues"/> method to indicate your intent
+    ///             If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <see cref="NoExternalBus"/> method to indicate your intent
     ///         </description>
     ///     </item>
     ///     <item>
@@ -83,10 +83,9 @@ namespace Paramore.Brighter
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private IAmAChannelFactory _responseChannelFactory;
         private int _outboxWriteTimeout;
-        private int _messagingGatewaySendTimeout;
-        private bool _useTaskQueues = false;
+        private bool _useExternalBus = false;
         private bool _useRequestReplyQueues = false;
-
+        
         private CommandProcessorBuilder()
         {
             DefaultPolicy();
@@ -145,23 +144,22 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using Task Queues.
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
         /// 
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext TaskQueues(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox)
+        public INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox)
         {
-            _useTaskQueues = true;
+            _useExternalBus = true;
             _messagingGateway = configuration.MessageProducer;
             _outbox = outbox;
             if(outbox is IAmAnOutboxAsync<Message>) _asyncOutbox = (IAmAnOutboxAsync<Message>)outbox;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
-            _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             return this;
         }
 
@@ -169,7 +167,7 @@ namespace Paramore.Brighter
         /// Use to indicate that you are not using Task Queues.
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext NoTaskQueues()
+        public INeedARequestContext NoExternalBus()
         {
             return this;
         }
@@ -179,14 +177,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messagingConfiguration"></param>
         /// <returns></returns>
-        public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
+        public INeedARequestContext ExternalRPC(MessagingConfiguration configuration)
         {
             _useRequestReplyQueues = true;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
-            _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
              
             return this;
@@ -221,7 +218,7 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
-            if (!(_useTaskQueues || _useRequestReplyQueues))
+            if (!(_useExternalBus || _useRequestReplyQueues))
             {
                 return new CommandProcessor(
                     
@@ -232,7 +229,7 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry);
             }
-            else if (_useTaskQueues)
+            else if (_useExternalBus)
             {
                 return new CommandProcessor(
                     subscriberRegistry: _registry,
@@ -257,6 +254,7 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
+                    outBox: _outbox,
                     messageProducer: _messagingGateway,
                     responseChannelFactory: _responseChannelFactory 
                     );
@@ -313,17 +311,19 @@ namespace Paramore.Brighter
         /// <param name="configuration">The configuration.</param>
         /// <param name="outbox">The outbox.</param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext TaskQueues(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox);
+        INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox);
+        
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext NoTaskQueues();
+        INeedARequestContext NoExternalBus();
+        
         /// <summary>
-        ///  We want to use RPC to send messages to another processs
+        ///  We want to use RPC to send messages to another process
         /// </summary>
         /// <param name="messagingConfiguration"></param>
-        INeedARequestContext RequestReplyQueues(MessagingConfiguration messagingConfiguration);
+        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration);
     }
 
     /// <summary>
