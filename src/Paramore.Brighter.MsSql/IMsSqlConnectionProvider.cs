@@ -4,7 +4,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql
 {
-    public interface IMsSqlConnectionProvider : IAmABoxConnectionProvider
+    public interface IMsSqlConnectionProvider
     {
         SqlConnection GetConnection();
         Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
