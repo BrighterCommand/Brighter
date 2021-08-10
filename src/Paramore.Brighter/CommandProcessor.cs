@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string> _policyRegistry;
         private readonly InboxConfiguration _inboxConfiguration;
-        private readonly IAmABoxConnectionProvider _overridingConnectionProvider;
+        private readonly IAmABoxTransactionConnectionProvider _boxTransactionConnectionProvider;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
@@ -186,7 +186,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="overridingConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -196,14 +196,14 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxConnectionProvider overridingConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
-            _overridingConnectionProvider = overridingConnectionProvider;
+            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
             InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
@@ -223,7 +223,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="overridingConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -233,14 +233,14 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxConnectionProvider overridingConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
-            _overridingConnectionProvider = overridingConnectionProvider;
+            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
             InitExtServiceBus(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
 
@@ -262,7 +262,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="overridingConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -275,14 +275,14 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             IAmAChannelFactory responseChannelFactory = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxConnectionProvider overridingConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
-            _overridingConnectionProvider = overridingConnectionProvider;
+            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
             InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
@@ -303,7 +303,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="overridingConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
@@ -315,13 +315,13 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxConnectionProvider overridingConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
             : this(subscriberRegistry, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
-            _overridingConnectionProvider = overridingConnectionProvider;
+            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
             InitExtServiceBus(policyRegistry, null, asyncOutbox, outboxTimeout, null, asyncMessageProducer);
 
@@ -345,7 +345,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="overridingConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -360,12 +360,12 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxConnectionProvider overridingConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _inboxConfiguration = inboxConfiguration;
-            _overridingConnectionProvider = overridingConnectionProvider;
+            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
             InitExtServiceBus(policyRegistry, outBox, asyncOutbox, outboxTimeout, messageProducer, asyncMessageProducer);
 
@@ -587,7 +587,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            _bus.AddToOutbox(request, message, _overridingConnectionProvider);
+            _bus.AddToOutbox(request, message, _boxTransactionConnectionProvider);
 
             return message.Id;
         }
@@ -616,7 +616,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, _overridingConnectionProvider);
+            await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, _boxTransactionConnectionProvider);
 
             return message.Id;
         }

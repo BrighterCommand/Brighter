@@ -54,7 +54,7 @@ namespace GreetingsSender.Web
                 .UseExternalBus(producer)
                 .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
                 //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>), ServiceLifetime.Scoped)
-                .UseOverridingMsSqlConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
+                .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
                 .MapperRegistry(r =>
                 {
                     r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));

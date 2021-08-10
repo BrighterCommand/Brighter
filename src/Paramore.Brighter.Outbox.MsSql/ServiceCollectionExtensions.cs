@@ -20,11 +20,11 @@ namespace Paramore.Brighter.Outbox.MsSql
             return brighterBuilder;
         }
 
-        public static IBrighterHandlerBuilder UseOverridingMsSqlConnectionProvider(
+        public static IBrighterHandlerBuilder UseMsSqlTransactionConnectionProvider(
             this IBrighterHandlerBuilder brighterHandlerBuilder, Type connectionProvider,
             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
-            brighterHandlerBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxConnectionProvider), connectionProvider, serviceLifetime));
+            brighterHandlerBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
 
             return brighterHandlerBuilder;
         }

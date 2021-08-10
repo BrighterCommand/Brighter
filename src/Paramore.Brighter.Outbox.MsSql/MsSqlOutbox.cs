@@ -86,14 +86,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="overridingConnectionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxConnectionProvider overridingConnectionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
             
             var connectionProvider = _connectionProvider;
-            if (overridingConnectionProvider != null && overridingConnectionProvider is IMsSqlConnectionProvider provider)
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
                 connectionProvider = provider;
             
             var connection = connectionProvider.GetConnection();
@@ -133,14 +133,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken">Cancellation Token</param>
-        /// <param name="overridingConnectionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxConnectionProvider overridingConnectionProvider = null)
+        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
             
             var connectionProvider = _connectionProvider;
-            if (overridingConnectionProvider != null && overridingConnectionProvider is IMsSqlConnectionProvider provider)
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
@@ -198,7 +198,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
 
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                //if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -494,7 +494,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 command.Parameters.AddRange(parameters);
 
                 if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                //if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var response =  await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 
                 if(!_connectionProvider.IsSharedConnection) connection.Dispose();

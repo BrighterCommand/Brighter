@@ -96,8 +96,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="overridingConnectionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxConnectionProvider overridingConnectionProvider = null)
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -118,9 +118,9 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
-        /// <param name="overridingConnectionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxConnectionProvider overridingConnectionProvider = null)
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
