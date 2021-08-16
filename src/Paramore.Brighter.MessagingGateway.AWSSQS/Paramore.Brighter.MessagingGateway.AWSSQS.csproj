@@ -13,6 +13,6 @@
     <PackageReference Include="Polly" Version="7.2.2" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.2.20" />
-    <PackageReference Include="AWSSDK.SQS" Version="3.7.0.50" />
+    <PackageReference Include="AWSSDK.SQS" Version="3.7.0.52" />
   </ItemGroup>
 </Project>
