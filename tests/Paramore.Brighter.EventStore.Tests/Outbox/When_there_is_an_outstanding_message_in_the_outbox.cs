@@ -75,7 +75,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var messages = eventStoreOutbox.OutstandingMessages(500, 100, 1, args);
 
             // assert
-            messages.Should().BeEquivalentTo(outstandingMessage);
+            messages.Should().BeEquivalentTo(new [] { outstandingMessage });
         }
         
         [Fact]
