@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
             if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
-            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(false));
+            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
             
             return brighterBuilder;
         }
