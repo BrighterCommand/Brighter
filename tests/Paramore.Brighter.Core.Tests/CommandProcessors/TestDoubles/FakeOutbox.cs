@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public bool ContinueOnCapturedContext { get; set; }
 
-        public void Add(Message message, int outBoxTimeout = -1)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
         }
 
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);

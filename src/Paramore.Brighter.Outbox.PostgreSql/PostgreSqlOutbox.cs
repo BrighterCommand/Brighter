@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        public void Add(Message message, int outBoxTimeout = -1)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
             using (var connection = GetConnection())
