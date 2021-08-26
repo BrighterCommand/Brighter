@@ -23,9 +23,11 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
             return (SqlConnection)_context.Database.GetDbConnection();
         }
 
-        public async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            return GetConnection();
+            var tcs = new TaskCompletionSource<SqlConnection>();
+            tcs.SetResult(GetConnection());
+            return tcs.Task;
         }
 
         public SqlTransaction GetTransaction()

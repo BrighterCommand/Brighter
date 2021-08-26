@@ -317,13 +317,15 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             IAmAChannelFactory responseChannelFactory = null,
-            InboxConfiguration inboxConfiguration = null)
+            InboxConfiguration inboxConfiguration = null,
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
             : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
+            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             
             InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
