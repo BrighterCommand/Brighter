@@ -56,6 +56,36 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Use an external Brighter Outbox tp store messages Posted to another process (evicts based on age and size).
+        /// Advantages: By using the same Db to store both any state changes for your app, and outgoing messages you can create a transaction that spans both
+        ///  your state change and writing to an outbox [use DepositPost to store]. Then a sweeper process can look for message not flagged as sent and send them.
+        ///  For low latency just send after the transaction with ClearOutbox, for higher latency just let the sweeper run in the background.
+        ///  The outstanding messages dispatched this way can be sent from any producer that runs a sweeper process and so it not tied to the lifetime of the
+        ///  producer, offering guaranteed, at least once, delivery. 
+        /// Disadvantages: The Outbox will not survive restarts, so messages not published by shutdown will not be flagged as not posted
+        /// If not null, registers singletons with the service collection :-
+        ///  - IAmAnOutbox - what messages have we posted
+        ///  - ImAnOutboxAsync - what messages have we posted (async pipeline compatible)
+        /// </summary>
+        /// <param name="outbox">The outbox provider - if your outbox supports both sync and async options, just provide this and we will register both</param>
+        /// <param name="asyncOutbox">The async outbox provider - if your outbox supports both sync and async options, just use outbox</param>
+        /// <returns></returns>
+        public static IBrighterHandlerBuilder UseExternalOutbox(this IBrighterHandlerBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null, IAmAnOutbox<Message> asyncOutbox = null)
+        {
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => outbox, ServiceLifetime.Singleton));
+             if (outbox is IAmAnOutboxAsync<Message>)
+             {
+                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
+                 return brighterBuilder;
+             }
+
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => asyncOutbox, ServiceLifetime.Singleton));
+ 
+             return brighterBuilder;
+             
+        }
+
+        /// <summary>
         /// Use the Brighter In-Memory Outbox tp store messages Posted to another process (evicts based on age and size).
         /// Advantages: fast and no additional infrastructure required
         /// Disadvantages: The Outbox will not survive restarts, so messages not published by shutdown will not be flagged as not posted

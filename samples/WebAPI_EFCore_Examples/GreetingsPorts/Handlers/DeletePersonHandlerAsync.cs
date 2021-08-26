@@ -1,0 +1,31 @@
+﻿using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
+using GreetingsInteractors.EntityGateway;
+using GreetingsInteractors.Requests;
+using Microsoft.EntityFrameworkCore;
+using Paramore.Brighter;
+
+namespace GreetingsInteractors.Handlers
+{
+    public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
+    {
+        private readonly GreetingsEntityGateway _uow;
+
+        public DeletePersonHandlerAsync(GreetingsEntityGateway uow)
+        {
+            _uow = uow;
+        }
+        public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var person = await _uow.People
+                .Include(p => p.Greetings)
+                .Where(p => p.Name == deletePerson.Name)
+                .SingleAsync(cancellationToken);
+
+            _uow.Remove(person);
+            
+            return await base.HandleAsync(deletePerson, cancellationToken);
+        }
+    }
+}
