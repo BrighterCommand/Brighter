@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2019 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow);
             
             // assert
-            getWithoutArgs.Should().Throw<ArgumentNullException>();
+            getWithoutArgs.Should().ThrowAsync<ArgumentNullException>();
         }
 
         [Fact]
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow, args);
             
             // assert
-            getWithoutArgs.Should().Throw<ArgumentException>();
+            getWithoutArgs.Should().ThrowAsync<ArgumentException>();
         }
 
         [Fact]
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow, args);
             
             // assert
-            getWithoutArgs.Should().Throw<ArgumentException>();
+            getWithoutArgs.Should().ThrowAsync<ArgumentException>();
         }
 
         [Fact]
@@ -118,7 +118,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow, args);
             
             // assert
-            getWithoutArgs.Should().Throw<ArgumentException>();
+            getWithoutArgs.Should().ThrowAsync<ArgumentException>();
         }
     }
 }
