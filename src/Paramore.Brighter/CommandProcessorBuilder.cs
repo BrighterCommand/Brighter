@@ -255,6 +255,7 @@ namespace Paramore.Brighter
                  return new CommandProcessor(
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
+                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,

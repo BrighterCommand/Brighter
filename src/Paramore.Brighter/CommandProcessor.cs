@@ -94,7 +94,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when external us support is required and both sync and async handlers are needed
+        /// Use this constructor when external bus support is required and both sync and async handlers are needed
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -256,7 +256,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="outBox"></param>
+        /// <param name="outBox">The outbox</param>
         /// <param name="messageProducer">The messaging gateway.</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
@@ -289,6 +289,47 @@ namespace Paramore.Brighter
             _bus.ConfigurePublisherCallbackMaybe();
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// Use this constructor when sync/async handlers and rpc support is required 
+        /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
+        /// <param name="asyncHandlerFactory">The async handler factory.</param>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="outBox">The outbox</param>
+        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
+        /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmAHandlerFactoryAsync asyncHandlerFactory,
+            IAmARequestContextFactory requestContextFactory,
+            IPolicyRegistry<string> policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAnOutbox<Message> outBox,
+            IAmAMessageProducer messageProducer,
+            int outboxTimeout = 300,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            IAmAChannelFactory responseChannelFactory = null,
+            InboxConfiguration inboxConfiguration = null)
+            : this(subscriberRegistry, handlerFactory, asyncHandlerFactory, requestContextFactory, policyRegistry)
+        {
+            _mapperRegistry = mapperRegistry;
+            _featureSwitchRegistry = featureSwitchRegistry;
+            _responseChannelFactory = responseChannelFactory;
+            _inboxConfiguration = inboxConfiguration;
+            
+            InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
+
+            _bus.ConfigurePublisherCallbackMaybe();
+        }
+        
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
         /// Use this constructor when both external bus and command processor support is required
