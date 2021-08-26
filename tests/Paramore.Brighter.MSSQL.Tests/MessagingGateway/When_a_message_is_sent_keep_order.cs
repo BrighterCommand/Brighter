@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         break;
                 }
-                catch (ChannelFailureException cfx)
+                catch (ChannelFailureException)
                 {
                     //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
                     //_output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");

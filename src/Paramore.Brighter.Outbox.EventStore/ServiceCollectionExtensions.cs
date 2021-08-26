@@ -7,8 +7,8 @@ namespace Paramore.Brighter.Outbox.EventStore
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseEventStoreOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, IEventStoreConnection connection, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseEventStoreOutbox(
+            this IBrighterBuilder brighterBuilder, IEventStoreConnection connection, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<IEventStoreConnection>(connection);
 

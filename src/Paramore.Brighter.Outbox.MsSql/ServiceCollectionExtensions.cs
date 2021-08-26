@@ -8,8 +8,8 @@ namespace Paramore.Brighter.Outbox.MsSql
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseMsSqlOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, MsSqlConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseMsSqlOutbox(
+            this IBrighterBuilder brighterBuilder, MsSqlConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<MsSqlConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMsSqlConnectionProvider), connectionProvider, serviceLifetime));
@@ -20,13 +20,13 @@ namespace Paramore.Brighter.Outbox.MsSql
             return brighterBuilder;
         }
 
-        public static IBrighterHandlerBuilder UseMsSqlTransactionConnectionProvider(
-            this IBrighterHandlerBuilder brighterHandlerBuilder, Type connectionProvider,
+        public static IBrighterBuilder UseMsSqlTransactionConnectionProvider(
+            this IBrighterBuilder brighterBuilder, Type connectionProvider,
             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
-            brighterHandlerBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
 
-            return brighterHandlerBuilder;
+            return brighterBuilder;
         }
 
         private static MsSqlOutbox BuildMsSqlOutbox(IServiceProvider provider)

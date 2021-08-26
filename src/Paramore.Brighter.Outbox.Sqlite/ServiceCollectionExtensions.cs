@@ -6,8 +6,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseSqliteOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, SqliteOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseSqliteOutbox(
+            this IBrighterBuilder brighterBuilder, SqliteOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<SqliteOutboxConfiguration>(configuration);
 

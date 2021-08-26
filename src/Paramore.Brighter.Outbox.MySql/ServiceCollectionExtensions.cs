@@ -6,8 +6,8 @@ namespace Paramore.Brighter.Outbox.MySql
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseMySqlOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, MySqlOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseMySqlOutbox(
+            this IBrighterBuilder brighterBuilder, MySqlOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<MySqlOutboxConfiguration>(configuration);
 

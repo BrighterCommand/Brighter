@@ -3,10 +3,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using Paramore.Brighter;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
-namespace GreetingsAdapters.Services
+namespace Paramore.Brighter.Extensions.Hosting
 {
     public class TimedOutboxSweeper : IHostedService, IDisposable
     {

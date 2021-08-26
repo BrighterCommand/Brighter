@@ -48,7 +48,7 @@ namespace GreetingsInteractors.Handlers
                 //write new person and the associated message to the Db
                 await tx.CommitAsync(cancellationToken);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);

@@ -7,8 +7,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseDynamoDbOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, IAmazonDynamoDB connection, DynamoDbConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseDynamoDbOutbox(
+            this IBrighterBuilder brighterBuilder, IAmazonDynamoDB connection, DynamoDbConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<DynamoDbConfiguration>(configuration);
             brighterBuilder.Services.AddSingleton<IAmazonDynamoDB>(connection);

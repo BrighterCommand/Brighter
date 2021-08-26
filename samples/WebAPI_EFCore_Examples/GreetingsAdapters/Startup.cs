@@ -1,5 +1,4 @@
 using System;
-using GreetingsAdapters.Services;
 using GreetingsInteractors.EntityGateway;
 using GreetingsInteractors.Handlers;
 using Hellang.Middleware.ProblemDetails;
@@ -11,6 +10,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Darker.AspNetCore;
@@ -93,13 +93,11 @@ namespace GreetingsAdapters
                         }
                     )
                 )
-                .UseExternalOutbox(new MySqlOutbox(
-                    new MySqlOutboxConfiguration(connectionString, "Outbox"))
-                )
+                .UseMySqlOutbox(new MySqlOutboxConfiguration(connectionString, "Outbox"))
+                .UseOutboxSweeper()
                 .AutoFromAssemblies();
             
-            services.AddHostedService<TimedOutboxSweeper>();
-        }
+       }
 
         private void ConfigureDarker(IServiceCollection services, string connectionString)
         {
