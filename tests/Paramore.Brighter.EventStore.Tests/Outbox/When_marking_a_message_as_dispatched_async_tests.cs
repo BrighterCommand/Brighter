@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2019 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>

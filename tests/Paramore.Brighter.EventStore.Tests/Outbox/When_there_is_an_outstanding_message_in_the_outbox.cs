@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2019 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var messages = eventStoreOutbox.OutstandingMessages(500, 100, 1, args);
 
             // assert
-            messages.Should().BeEquivalentTo(new [] { outstandingMessage });
+            messages.First().Should().BeEquivalentTo(outstandingMessage);
         }
         
         [Fact]
