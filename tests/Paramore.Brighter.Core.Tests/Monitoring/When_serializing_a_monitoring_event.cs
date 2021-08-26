@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_have_the_original_request_as_json
             _monitorEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //_should_have_the_correct_event_time
-            _monitorEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), TimeSpan.FromMilliseconds(1000));
+            _monitorEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), TimeSpan.FromSeconds(1));
             //_should_have_the_correct_time_elapsed
             _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
         }
