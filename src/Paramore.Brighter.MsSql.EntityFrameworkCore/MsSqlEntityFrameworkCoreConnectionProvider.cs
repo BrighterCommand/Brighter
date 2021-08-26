@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Paramore.Brighter.MsSql.EntityFrameworkCore
 {
-    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : IMsSqlConnectionProvider where T : DbContext
+    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : IMsSqlTransactionConnectionProvider where T : DbContext
     {
         private readonly T _context;
         

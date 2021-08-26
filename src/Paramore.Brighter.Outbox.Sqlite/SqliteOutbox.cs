@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
 
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
 

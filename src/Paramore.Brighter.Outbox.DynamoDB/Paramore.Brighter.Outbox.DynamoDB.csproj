@@ -3,7 +3,7 @@
     <TargetFrameworks>netstandard2.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.0.50" />
+    <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.0.54" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.DynamoDb.Extensions\Paramore.Brighter.DynamoDb.Extensions.csproj" />

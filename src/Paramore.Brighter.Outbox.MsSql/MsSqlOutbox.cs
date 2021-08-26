@@ -86,19 +86,24 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
+        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-
-            var connection = _connectionProvider.GetConnection();
+            
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
+                connectionProvider = provider;
+            
+            var connection = connectionProvider.GetConnection();
             
             if(connection.State!= ConnectionState.Open) connection.Open();
             using (var command = InitAddDbCommand(connection, parameters))
             {
                 try
                 {
-                    if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction(); 
                     command.ExecuteNonQuery();
                 }
                 catch (SqlException sqlException)
@@ -116,8 +121,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 finally
                 {
-                    if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
         }
@@ -125,21 +130,27 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <summary>
         ///     Gets the specified message identifier.
         /// </summary>
-        /// <param name="messageId">The message identifier.</param>
+        /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
+        /// <param name="cancellationToken">Cancellation Token</param>
+        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
+            
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlConnectionProvider provider)
+                connectionProvider = provider;
 
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
             
             if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             using (var command = InitAddDbCommand(connection, parameters))
             {
                 try
                 {
-                    if (_connectionProvider.IsSharedConnection) command.Transaction = _connectionProvider.GetTransaction();
+                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (SqlException sqlException)
@@ -157,8 +168,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 finally
                 {
-                    if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
             
@@ -187,7 +198,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
 
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                //if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -483,7 +494,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 command.Parameters.AddRange(parameters);
 
                 if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                //if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var response =  await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 
                 if(!_connectionProvider.IsSharedConnection) connection.Dispose();
@@ -634,7 +645,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private Message MapFunction(SqlDataReader dr)
         {
-            var message = new Message();
+            Message message = null;
             if (dr.Read())
             {
                 message = MapAMessage(dr);

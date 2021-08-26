@@ -118,7 +118,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
             if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
-            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(false));
+            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
             
             return brighterBuilder;
         }
@@ -156,10 +156,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var outbox = provider.GetService<IAmAnOutbox<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
+            var overridingConnectionProvider = provider.GetService<IAmABoxTransactionConnectionProvider>();
 
             if (outbox == null) outbox = new InMemoryOutbox();
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
-            
+
             var producer = provider.GetService<IAmAMessageProducer>();
             var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
 
@@ -178,7 +179,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 externalBusBuilder = producer == null
                     ? messagingBuilder.NoExternalBus()
-                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
+                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
             }
             else
             {
@@ -193,7 +194,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         ? messagingBuilder.ExternalRPC(new MessagingConfiguration(
                             producer, messageMapperRegistry,
                             responseChannelFactory: options.ChannelFactory))
-                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox);
+                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
                 }
             }
 

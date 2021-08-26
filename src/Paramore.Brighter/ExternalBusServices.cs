@@ -62,10 +62,10 @@ namespace Paramore.Brighter
             _disposed = true;
         }
 
-        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message)
+        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
             where T : class, IRequest
         {
-            var written = await RetryAsync(async ct => { await AsyncOutbox.AddAsync(message, OutboxTimeout, ct).ConfigureAwait(continueOnCapturedContext); },
+            var written = await RetryAsync(async ct => { await AsyncOutbox.AddAsync(message, OutboxTimeout, ct, overridingTransactionConnectionProvider).ConfigureAwait(continueOnCapturedContext); },
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
             if (!written)
@@ -73,9 +73,9 @@ namespace Paramore.Brighter
         }            
             
             
-        internal void AddToOutbox<T>(T request, Message message) where T : class, IRequest
+        internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
         {
-            var written = Retry(() => { OutBox.Add(message, OutboxTimeout); });
+            var written = Retry(() => { OutBox.Add(message, OutboxTimeout, overridingTransactionConnectionProvider); });
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");

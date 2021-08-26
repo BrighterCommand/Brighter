@@ -7,7 +7,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public abstract class MsSqlAzureConnectionProviderBase
+    public abstract class MsSqlAzureConnectionProviderBase : IMsSqlConnectionProvider
     {
         private readonly bool _cacheTokens;
         private const string _azureScope = "https://database.windows.net/.default";

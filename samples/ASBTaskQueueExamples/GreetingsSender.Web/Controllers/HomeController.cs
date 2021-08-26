@@ -47,6 +47,21 @@ namespace GreetingsSender.Web.Controllers
             return View("Index");
         }
         
+        public async Task<IActionResult> DepositMessage()
+        {
+            var greetingAsync = new GreetingAsyncEvent("Deposit Hello from the web");
+            var greeting = new GreetingEvent("Deposit Hello from the web");
+
+            _context.Greetings.Add(greeting);
+            _context.GreetingsAsync.Add(greetingAsync);
+            await _context.SaveChangesAsync();
+            
+            _commandProcessor.DepositPost(greeting);
+            await _commandProcessor.DepositPostAsync(greetingAsync);
+            
+            return View("Index");
+        }
+        
         public async Task<IActionResult> SaveAndRollbackMessage()
         {
             var transaction = await _context.Database.BeginTransactionAsync();
@@ -61,8 +76,8 @@ namespace GreetingsSender.Web.Controllers
                 
                 await _context.SaveChangesAsync();
             
-                _commandProcessor.Post(greeting);
-                await _commandProcessor.PostAsync(greetingAsync);
+                _commandProcessor.DepositPost(greeting);
+                await _commandProcessor.DepositPostAsync(greetingAsync);
                 //throw new Exception("Something went wrong");
             // }
             // catch (Exception e)
@@ -81,7 +96,15 @@ namespace GreetingsSender.Web.Controllers
 
             await _context.SaveChangesAsync();
             
-            await _commandProcessor.DepositPostAsync(greetingAsync2); 
+            await _commandProcessor.DepositPostAsync(greetingAsync2);
+
+            var msgs = new List<Guid>();
+            // msgs.Add(greeting.Id);
+            // msgs.Add(greetingAsync.Id);
+            msgs.Add(greeting2.Id);
+            msgs.Add(greetingAsync2.Id);
+
+            await _commandProcessor.ClearOutboxAsync(msgs);
             
             return View("Index");
         }
