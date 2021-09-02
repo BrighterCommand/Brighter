@@ -21,7 +21,7 @@ namespace GreetingsAdapters.Controllers
             _queryProcessor = queryProcessor;
         }
 
-        [Route("{name")]
+        [Route("{name}")]
         public async Task<IActionResult> Get(string name)
         {
              var personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(name));
@@ -31,13 +31,13 @@ namespace GreetingsAdapters.Controllers
              return Ok(personsGreetings);
         }
         
-        [Route("new")]
+        [Route("{name}/new")]
         [HttpPost]
-        public async Task<ActionResult<FindPersonsGreetings>> Post(NewGreeting newGreeting)
+        public async Task<ActionResult<FindPersonsGreetings>> Post(string name, NewGreeting newGreeting)
         {
-            await _commandProcessor.SendAsync(new AddGreeting(newGreeting.Name, newGreeting.Greeting));
+            await _commandProcessor.SendAsync(new AddGreeting(name, newGreeting.Greeting));
 
-            var personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(newGreeting.Name));
+            var personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(name));
 
             if (personsGreetings == null) return new NotFoundResult();
 

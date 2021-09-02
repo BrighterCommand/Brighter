@@ -20,9 +20,7 @@ namespace GreetingsInteractors.Handlers
 
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var person = new Person(addPerson.Name);
-
-            _uow.Add(person);
+            _uow.Add(new Person(addPerson.Name));
             
             await _uow.SaveChangesAsync(cancellationToken);
             

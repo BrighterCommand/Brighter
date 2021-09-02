@@ -8,6 +8,7 @@ services:
     environment:
       - BRIGHTER_ConnectionStrings__Greetings=Server=greetings_db;Uid=root;Pwd=root;Database=Greetings
       - BRIGHTER_ConnectionStrings__GreetingsDb=Server=greetings_db;Uid=root;Pwd=root
+      - ASPNETCORE_ENVIRONMENT=Production
     links:
       - mysql:greetings_db
     depends_on:
@@ -21,3 +22,10 @@ services:
       MYSQL_ROOT_PASSWORD: "root"
     healthcheck:
       test: mysqladmin ping -h localhost -p$$MYSQL_ROOT_PASSWORD && test '0' -eq $$(ps aux | awk '{print $$11}' | grep -c -e '^mysql$$')
+  rabbitmq:
+    image: brightercommand/rabbitmq:3.8-management-delay
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-home:/var/lib/rabbitmq

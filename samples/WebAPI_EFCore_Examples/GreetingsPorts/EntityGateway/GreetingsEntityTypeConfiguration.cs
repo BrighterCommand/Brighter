@@ -8,11 +8,10 @@ namespace GreetingsInteractors.EntityGateway
     {
         public void Configure(EntityTypeBuilder<Greeting> builder)
         {
-            builder
-                .HasKey(g => g.Id);
-            builder
-                .Property(g => g.Message)
-                .IsRequired();
+            builder.HasKey("_id");
+            builder.Property("_id");
+            builder.Property(g => g.Message).IsRequired();
+            builder.HasOne(g => g.Recipient);
         }
     }
 }

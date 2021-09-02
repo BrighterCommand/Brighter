@@ -4,13 +4,18 @@ namespace GreetingsEntities
 {
     public class Greeting
     {
-        public Guid Id { get; set; }
+        private int _id;
         public string Message { get; set; }
         public Person Recipient { get; set; }
 
-        public Greeting(string message, Person recipient)
+        public Greeting(string message)
         {
-            Id = Guid.NewGuid();
+            Message = message;
+        }
+        
+        public Greeting(int id, string message, Person recipient)
+        {
+            _id = id;
             Message = message;
             Recipient = recipient;
         }

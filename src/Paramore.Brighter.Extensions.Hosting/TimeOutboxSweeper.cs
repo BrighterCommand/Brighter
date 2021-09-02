@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 using ILogger = Microsoft.Extensions.Logging.ILogger;
 
 namespace Paramore.Brighter.Extensions.Hosting
@@ -11,14 +12,13 @@ namespace Paramore.Brighter.Extensions.Hosting
     {
         private readonly IAmAnOutboxViewer<Message> _outbox;
         private readonly IAmACommandProcessor _commandProcessor;
-        private readonly ILogger s_logger;
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
 
-        public TimedOutboxSweeper (IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor, ILogger<TimedOutboxSweeper > logger)
+        public TimedOutboxSweeper (IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor)
         {
             _outbox = outbox;
             _commandProcessor = commandProcessor;
-            s_logger = logger;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)

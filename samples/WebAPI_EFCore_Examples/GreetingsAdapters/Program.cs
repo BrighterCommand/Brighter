@@ -11,10 +11,9 @@ namespace GreetingsAdapters
     {
         public static void Main(string[] args)
         {
-            CreateHostBuilder(args)
-                .Build()
-                .MigrateDatabase()
-                .Run();
+            var host = CreateHostBuilder(args).Build();
+            host.MigrateDatabase();
+            host.Run();
         }
 
         public static IHostBuilder CreateHostBuilder(string[] args) =>

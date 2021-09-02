@@ -8,19 +8,12 @@ namespace GreetingsInteractors.EntityGateway
     {
         public void Configure(EntityTypeBuilder<Person> builder)
         {
-            builder
-                .HasKey(p => p.Id);
-
-            builder
-                .HasAlternateKey(p => p.Name);
-            
-            builder
-                .Property(p => p.TimeStamp)
-                .IsRowVersion();
-
-            builder
-                .Property(p => p.Name)
-                .IsRequired();
+            builder.HasKey("_id");
+            builder.Property("_id");
+            builder.HasAlternateKey(p => p.Name);
+            builder.Property(p => p.TimeStamp).IsRowVersion();
+            builder.Property(p => p.Name).IsRequired();
+            builder.HasMany(p => p.Greetings);
         }
     }
 }

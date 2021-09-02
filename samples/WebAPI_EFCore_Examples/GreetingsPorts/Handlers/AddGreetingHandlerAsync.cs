@@ -35,9 +35,9 @@ namespace GreetingsInteractors.Handlers
                     .Where(p => p.Name == addGreeting.Name)
                     .SingleAsync(cancellationToken);
                 
-                var greeting = new Greeting(addGreeting.Greeting, person);
+                var greeting = new Greeting(addGreeting.Greeting);
                 
-                person.Greetings.Add(greeting);
+                person.AddGreeting(greeting);
                 
                 //write the changed entity to the Db
                 await _uow.SaveChangesAsync(cancellationToken);

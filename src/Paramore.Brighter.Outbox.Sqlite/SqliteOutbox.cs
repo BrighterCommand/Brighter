@@ -369,15 +369,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
         
         private void CreatePagedDispatchedCommand(SqliteCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            double fractionalSeconds = millisecondsDispatchedSince / 1000.000;
+            var sql = $"SELECT * FROM {_configuration.OutboxTableName} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),
                 CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
             };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -391,8 +390,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber",
-                _configuration.OutboxTableName);
+            var sql = $"SELECT * FROM {_configuration.OutboxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
@@ -400,15 +398,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private void CreatePagedOutstandingCommand(SqliteCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getdate()) ORDER BY Timestamp ASC limit @PageSize OFFSET @PageNumber";
+            double fractionalSeconds = milliSecondsSinceAdded / 1000.000;
+            var sql = $"SELECT * FROM {_configuration.OutboxTableName} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp ASC limit @PageSize OFFSET @PageNumber";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),
                 CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
             };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -617,7 +614,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.OutboxTableName);
+            var sql = $"SELECT * FROM {_configuration.OutboxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
