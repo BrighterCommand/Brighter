@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace GreetingsInteractors.Responses
+namespace GreetingsPorts.Responses
 {
     public class FindPersonsGreetings
     {

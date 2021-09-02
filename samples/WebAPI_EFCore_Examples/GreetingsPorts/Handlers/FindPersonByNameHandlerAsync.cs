@@ -1,13 +1,13 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using GreetingsInteractors.EntityGateway;
-using GreetingsInteractors.Requests;
-using GreetingsInteractors.Responses;
+using GreetingsPorts.EntityGateway;
+using GreetingsPorts.Requests;
+using GreetingsPorts.Responses;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Darker;
 
-namespace GreetingsInteractors.Handlers
+namespace GreetingsPorts.Handlers
 {
     public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {

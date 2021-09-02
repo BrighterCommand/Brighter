@@ -1,7 +1,7 @@
 ﻿using GreetingsEntities;
 using Microsoft.EntityFrameworkCore;
 
-namespace GreetingsInteractors.EntityGateway
+namespace GreetingsPorts.EntityGateway
 {
     public class GreetingsEntityGateway : DbContext
     {

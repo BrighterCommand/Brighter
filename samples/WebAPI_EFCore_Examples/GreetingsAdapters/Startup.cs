@@ -1,8 +1,8 @@
 using System;
 using System.Data;
 using System.Data.Common;
-using GreetingsInteractors.EntityGateway;
-using GreetingsInteractors.Handlers;
+using GreetingsPorts.EntityGateway;
+using GreetingsPorts.Handlers;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -180,11 +180,25 @@ namespace GreetingsAdapters
 
             if (_env.IsDevelopment())
             {
-                services.AddDbContext<GreetingsEntityGateway>(builder => { builder.UseSqlite(connectionString); });
+                services.AddDbContext<GreetingsEntityGateway>(
+                    builder =>
+                    {
+                        builder.UseSqlite(connectionString, 
+                            optionsBuilder =>
+                            {
+                                optionsBuilder.MigrationsAssembly("GreetingsPorts");
+                            });
+                    });
             }
             else
             {
-               services.AddDbContext<GreetingsEntityGateway>(builder => { builder.UseSqlServer(connectionString); });
+               services.AddDbContext<GreetingsEntityGateway>(builder => 
+               { builder.UseSqlServer(connectionString,
+                   optionsBuilder =>
+                   {
+                       optionsBuilder.MigrationsAssembly("GreetingsPorts");
+                   }); 
+               });
             }
         }
 
@@ -246,7 +260,7 @@ namespace GreetingsAdapters
 
         private string DbConnectionString()
         {
-            return _env.IsDevelopment() ? "Filename=Test.db" : Configuration.GetConnectionString("Greetings");
+            return _env.IsDevelopment() ? "Filename=Greetings.db" : Configuration.GetConnectionString("Greetings");
         }
     }
 }

@@ -1,7 +1,7 @@
-﻿using GreetingsInteractors.Responses;
+﻿using GreetingsPorts.Responses;
 using Paramore.Darker;
 
-namespace GreetingsInteractors.Requests
+namespace GreetingsPorts.Requests
 {
     public class FindGreetingsForPerson : IQuery<FindPersonsGreetings>
     {

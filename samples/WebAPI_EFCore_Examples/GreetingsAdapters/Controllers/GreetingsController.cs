@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
 using GreetingsAdapters.Models;
-using GreetingsInteractors.Requests;
-using GreetingsInteractors.Responses;
+using GreetingsPorts.Requests;
+using GreetingsPorts.Responses;
 using Microsoft.AspNetCore.Mvc;
 using Paramore.Brighter;
 using Paramore.Darker;

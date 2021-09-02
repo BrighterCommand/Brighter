@@ -1,11 +1,11 @@
 ﻿using System;
-using GreetingsInteractors.EntityGateway;
+using GreetingsPorts.EntityGateway;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace GreetingsAdapters.Migrations
+namespace GreetingsAdapters.Database
 {
     public static class SchemaCreation
     {

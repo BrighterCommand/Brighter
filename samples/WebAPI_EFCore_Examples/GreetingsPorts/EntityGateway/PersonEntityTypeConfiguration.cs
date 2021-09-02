@@ -2,7 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
-namespace GreetingsInteractors.EntityGateway
+namespace GreetingsPorts.EntityGateway
 {
     public class PersonEntityTypeConfiguration : IEntityTypeConfiguration<Person>
     {

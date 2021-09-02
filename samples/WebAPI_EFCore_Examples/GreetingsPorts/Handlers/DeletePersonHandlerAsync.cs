@@ -1,12 +1,12 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using GreetingsInteractors.EntityGateway;
-using GreetingsInteractors.Requests;
+using GreetingsPorts.EntityGateway;
+using GreetingsPorts.Requests;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
 
-namespace GreetingsInteractors.Handlers
+namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
@@ -24,6 +24,8 @@ namespace GreetingsInteractors.Handlers
                 .SingleAsync(cancellationToken);
 
             _uow.Remove(person);
+
+            await _uow.SaveChangesAsync(cancellationToken);
             
             return await base.HandleAsync(deletePerson, cancellationToken);
         }

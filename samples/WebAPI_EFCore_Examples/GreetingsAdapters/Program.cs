@@ -1,5 +1,5 @@
 using System.IO;
-using GreetingsAdapters.Migrations;
+using GreetingsAdapters.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;

@@ -4,12 +4,12 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GreetingsEntities;
-using GreetingsInteractors.EntityGateway;
-using GreetingsInteractors.Requests;
+using GreetingsPorts.EntityGateway;
+using GreetingsPorts.Requests;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
 
-namespace GreetingsInteractors.Handlers
+namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync: RequestHandlerAsync<AddGreeting>
     {

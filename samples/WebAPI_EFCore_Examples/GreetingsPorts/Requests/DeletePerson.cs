@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Brighter;
 
-namespace GreetingsInteractors.Requests
+namespace GreetingsPorts.Requests
 {
     public class DeletePerson : Command
     {

@@ -1,7 +1,6 @@
-using System;
 using GreetingsEntities;
 
-namespace GreetingsInteractors.Responses
+namespace GreetingsPorts.Responses
 {
     public class FindPersonResult
     {
