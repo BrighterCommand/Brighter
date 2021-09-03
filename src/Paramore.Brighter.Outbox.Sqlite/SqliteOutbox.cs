@@ -33,6 +33,7 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Sqlite;
 
 namespace Paramore.Brighter.Outbox.Sqlite
 {
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteOutboxConfiguration _configuration;
+        private readonly SqliteConfiguration _configuration;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -65,7 +66,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         ///     Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public SqliteOutbox(SqliteOutboxConfiguration configuration)
+        public SqliteOutbox(SqliteConfiguration configuration)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -181,7 +182,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var sql =
                 string.Format(
                     "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)",
-                    _configuration.OutboxTableName);
+                    _configuration.OutBoxTableName);
             return sql;
         }
 
@@ -193,7 +194,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("@MessageId", messageId.ToString())
@@ -247,7 +248,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>A Message.</returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
             var parameters = new[]
             {
                 CreateSqlParameter("@MessageId", messageId.ToString())
@@ -370,7 +371,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private void CreatePagedDispatchedCommand(SqliteCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
             double fractionalSeconds = millisecondsDispatchedSince / 1000.000;
-            var sql = $"SELECT * FROM {_configuration.OutboxTableName} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),
@@ -390,7 +391,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = $"SELECT * FROM {_configuration.OutboxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
@@ -399,7 +400,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private void CreatePagedOutstandingCommand(SqliteCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
             double fractionalSeconds = milliSecondsSinceAdded / 1000.000;
-            var sql = $"SELECT * FROM {_configuration.OutboxTableName} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp ASC limit @PageSize OFFSET @PageNumber";
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp ASC limit @PageSize OFFSET @PageNumber";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),
@@ -478,7 +479,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private SqliteCommand InitMarkDispatchedCommand(SqliteConnection connection, Guid messageId, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
             command.CommandText = sql;
             command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
             command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
@@ -614,7 +615,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 CreateSqlParameter("PageSize", pageSize)
             };
 
-            var sql = $"SELECT * FROM {_configuration.OutboxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);

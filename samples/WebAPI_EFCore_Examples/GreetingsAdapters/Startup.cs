@@ -19,6 +19,8 @@ using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.Sqlite;
+using Paramore.Brighter.Sqlite.EntityFrameworkCore;
 using Paramore.Darker.AspNetCore;
 using Polly;
 using Polly.Registry;
@@ -130,7 +132,8 @@ namespace GreetingsAdapters
                              }
                          )
                      )
-                     .UseSqliteOutbox(new SqliteOutboxConfiguration(DbConnectionString(), _outBoxTableName))
+                     .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider))
+                     .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>))
                      .UseOutboxSweeper()
                      .AutoFromAssemblies();
             }
@@ -260,7 +263,8 @@ namespace GreetingsAdapters
 
         private string DbConnectionString()
         {
-            return _env.IsDevelopment() ? "Filename=Greetings.db" : Configuration.GetConnectionString("Greetings");
+            //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
+            return _env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : Configuration.GetConnectionString("Greetings");
         }
     }
 }
