@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -10,15 +11,13 @@ namespace Paramore.Brighter.Extensions.Hosting
 {
     public class TimedOutboxSweeper : IHostedService, IDisposable
     {
-        private readonly IAmAnOutboxViewer<Message> _outbox;
-        private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IServiceScopeFactory _serviceScopeFactory;
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
 
-        public TimedOutboxSweeper (IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor)
+        public TimedOutboxSweeper (IServiceScopeFactory serviceScopeFactory)
         {
-            _outbox = outbox;
-            _commandProcessor = commandProcessor;
+            _serviceScopeFactory = serviceScopeFactory;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -34,10 +33,14 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
 
+            var scope = _serviceScopeFactory.CreateScope();
+            IAmAnOutboxViewer <Message> outbox = scope.ServiceProvider.GetService<IAmAnOutboxViewer<Message>>();
+            IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
+
             var outBoxSweeper = new OutboxSweeper(
                 milliSecondsSinceSent:5000, 
-                outbox:_outbox, 
-                commandProcessor:_commandProcessor);
+                outbox:outbox, 
+                commandProcessor:commandProcessor);
 
             outBoxSweeper.Sweep();
             

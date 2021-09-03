@@ -113,7 +113,9 @@ namespace GreetingsAdapters
             {
                  services.AddBrighter(options =>
                      {
+                         //we want to use scoped, so make sure everything understands that which needs to
                          options.HandlerLifetime = ServiceLifetime.Scoped;
+                         options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                          options.MapperLifetime = ServiceLifetime.Singleton;
                          options.PolicyRegistry = policyRegistry;
                      })
@@ -132,8 +134,8 @@ namespace GreetingsAdapters
                              }
                          )
                      )
-                     .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider))
-                     .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>))
+                     .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
+                     .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
                      .UseOutboxSweeper()
                      .AutoFromAssemblies();
             }
