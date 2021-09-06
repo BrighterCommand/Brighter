@@ -43,13 +43,25 @@ namespace GreetingsAdapters
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            ConfigureWebApi(app);
+            app.UseProblemDetails();
+
+            if (env.IsDevelopment())
+            {
+                app.UseSwagger();
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GreetingsAPI v1"));
+            }
+
+            app.UseHttpsRedirection();
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
         }
 
 
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
+            services.AddMvcCore().AddApiExplorer();
             services.AddControllers(options =>
                 {
                     options.RespectBrowserAcceptHeader = true;
@@ -207,19 +219,7 @@ namespace GreetingsAdapters
             }
         }
 
- 
-        private static void ConfigureWebApi(IApplicationBuilder app)
-        {
-            app.UseProblemDetails();
 
-            app.UseSwagger();
-            app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GreetingsAPI v1"));
-
-            app.UseRouting();
-
-            app.UseEndpoints(endpoints => { endpoints.MapControllers(); });
-        }
-        
         private void CreateOutbox()
         {
             try

@@ -22,6 +22,7 @@ namespace GreetingsAdapters.Controllers
         }
 
         [Route("{name}")]
+        [HttpGet]
         public async Task<IActionResult> Get(string name)
         {
              var personsGreetings = await _queryProcessor.ExecuteAsync(new FindGreetingsForPerson(name));
