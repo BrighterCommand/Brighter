@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using Paramore.Brighter.FeatureSwitch;
-using Polly.Fallback;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -115,6 +114,17 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
+        /// </summary>
+        /// <param name="featureSwitchRegistry">The feature switch config provider</param>
+        /// <returns>INeedPolicy</returns>
+        public INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        {
+            _featureSwitchRegistry = featureSwitchRegistry;
+            return this;
+        }
+
+        /// <summary>
         /// Supplies the specified the policy registry, so we can use policies for Task Queues or in user-defined request handlers such as ExceptionHandler
         /// that provide quality of service concerns
         /// </summary>
@@ -189,17 +199,6 @@ namespace Paramore.Brighter
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
              
-            return this;
-        }
-        
-        /// <summary>
-        /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
-        /// </summary>
-        /// <param name="featureSwitchRegistry">The feature switch config provider</param>
-        /// <returns>INeedARequestContext</returns>
-        public INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
-        {
-            _featureSwitchRegistry = featureSwitchRegistry;
             return this;
         }
 
@@ -284,6 +283,13 @@ namespace Paramore.Brighter
         /// <param name="theRegistry">The registry.</param>
         /// <returns>INeedPolicy.</returns>
         INeedPolicy Handlers(HandlerConfiguration theRegistry);
+        
+        /// <summary>
+        /// Configure Feature Switches for the Handlers
+        /// </summary>
+        /// <param name="featureSwitchRegistry"></param>
+        /// <returns></returns>
+        INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
 
     /// <summary>
@@ -343,13 +349,6 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="featureSwitchRegistry"></param>
-        /// <returns></returns>
-        INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
     
     /// <summary>
