@@ -59,8 +59,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private static SqliteOutbox BuildSqliteOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<SqliteConfiguration>();
+            var connectionProvider = provider.GetService<ISqliteConnectionProvider>();
 
-            return new SqliteOutbox(config);
+            return new SqliteOutbox(config, connectionProvider);
         }
     }
 }

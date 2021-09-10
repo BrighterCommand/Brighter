@@ -39,12 +39,13 @@ namespace GreetingsPorts.Handlers
                 
                 person.AddGreeting(greeting);
                 
-                //write the changed entity to the Db
-                await _uow.SaveChangesAsync(cancellationToken);
-                
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
                 
+                
+                //write the changed entity to the Db
+                await _uow.SaveChangesAsync(cancellationToken);
+
                 //write new person and the associated message to the Db
                 await tx.CommitAsync(cancellationToken);
             }
