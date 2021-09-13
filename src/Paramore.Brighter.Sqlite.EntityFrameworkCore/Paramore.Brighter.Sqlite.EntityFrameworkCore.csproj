@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\src\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj" />
     </ItemGroup>
 
 </Project>
