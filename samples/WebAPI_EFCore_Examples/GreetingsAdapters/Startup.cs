@@ -17,6 +17,8 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MySql;
+using Paramore.Brighter.MySql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
@@ -174,7 +176,8 @@ namespace GreetingsAdapters
                             }
                         )
                     )
-                    .UseMySqlOutbox(new MySqlOutboxConfiguration(DbConnectionString(), _outBoxTableName))
+                    .UseMySqlOutbox(new MySqlConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
+                    .UseMySqTransactionConnectionProvider(typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
                     .UseOutboxSweeper()
                     .AutoFromAssemblies();
             }

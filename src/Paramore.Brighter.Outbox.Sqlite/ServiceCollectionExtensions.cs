@@ -55,7 +55,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return brighterBuilder;
         }
 
-
         private static SqliteOutbox BuildSqliteOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<SqliteConfiguration>();

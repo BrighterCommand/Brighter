@@ -237,6 +237,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Sqlite", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Sqlite.EntityFrameworkCore", "src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj", "{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MySql", "src\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj", "{0C9D2FDC-0862-449C-BEDA-A63060513951}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MySql.EntityFrameworkCore", "src\Paramore.Brighter.MySql.EntityFrameworkCore\Paramore.Brighter.MySql.EntityFrameworkCore.csproj", "{0ED91907-896E-4101-8AA0-310736B2B71B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1243,6 +1247,30 @@ Global
 		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|x86.ActiveCfg = Release|Any CPU
 		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|x86.Build.0 = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|x86.Build.0 = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|x86.ActiveCfg = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|x86.Build.0 = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|x86.Build.0 = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|x86.ActiveCfg = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
