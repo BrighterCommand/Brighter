@@ -361,6 +361,39 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 return messages;
             }
         }
+        
+        /// <summary>
+        /// Retrieves those messages that have not been dispatched to the broker in a time period
+        /// since they were added to the outbox
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How long ago where they added to the outbox</param>
+        /// <param name="pageSize">How many messages per page</param>
+        /// <param name="pageNumber">How many pages</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of outstanding messages</returns>
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                await connection.OpenAsync();
+
+                var dbDataReader = await command.ExecuteReaderAsync();
+
+                var messages = new List<Message>();
+                while (await dbDataReader.ReadAsync())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
 
         private void AddParamtersParamArrayToCollection(SqliteParameter[] parameters, SqliteCommand command)
         {

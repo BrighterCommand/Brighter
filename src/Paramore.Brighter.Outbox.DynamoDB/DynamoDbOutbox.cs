@@ -255,6 +255,43 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
         
+        /// <summary>
+        /// Returns messages that have yet to be dispatched
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
+        /// <param name="pageSize">How many messages to return at once?</param>
+        /// <param name="pageNumber">Which page number of messages</param>
+        /// <returns>A list of messages that are outstanding for dispatch</returns>
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null)
+        {
+            if (args == null)
+            {
+                throw new ArgumentException("Missing required argument", nameof(args));
+            }
+            
+            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var topic = (string)args["Topic"];
+
+            // We get all the messages for topic, added within a time range
+            // There should be few enough of those that we can efficiently filter for those
+            // that don't have a delivery date.
+            var queryConfig = new QueryOperationConfig
+            {
+                IndexName = _configuration.OutstandingIndexName,
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
+                FilterExpression = new NoDispatchTimeExpression().Generate(),
+                ConsistentRead = false
+            };
+           
+            //block async to make this sync
+            var messages = (await PageAllMessagesAsync(queryConfig)).ToList();
+            return messages.Select(msg => msg.ConvertToMessage());
+        }
+        
         private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
             MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);

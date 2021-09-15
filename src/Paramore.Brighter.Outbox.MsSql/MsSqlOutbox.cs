@@ -402,6 +402,42 @@ namespace Paramore.Brighter.Outbox.MsSql
                 return messages;
             }
         }
+       
+       /// <summary>
+       /// Messages still outstanding in the Outbox because their timestamp
+       /// </summary>
+       /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+       /// <param name="args">Additional parameters required for search, if any</param>
+       /// <returns>Outstanding Messages</returns>
+       public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+           Dictionary<string, object> args = null)
+       {
+           var connection = await _connectionProvider.GetConnectionAsync();
+           using (var command = connection.CreateCommand())
+           {
+               CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+               if(connection.State!= ConnectionState.Open) await connection.OpenAsync();
+
+               if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+               var dbDataReader = await command.ExecuteReaderAsync();
+
+               var messages = new List<Message>();
+               while (await dbDataReader.ReadAsync())
+               {
+                   messages.Add(MapAMessage(dbDataReader));
+               }
+               dbDataReader.Close();
+                
+               if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+               else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+                
+               return messages;
+           }
+       }
         
         private void CreatePagedDispatchedCommand(SqlCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {

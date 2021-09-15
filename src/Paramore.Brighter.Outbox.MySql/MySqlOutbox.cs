@@ -347,6 +347,36 @@ namespace Paramore.Brighter.Outbox.MySql
                 return messages;
             }
         }
+        
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>Outstanding Messages</returns>
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                await connection.OpenAsync();
+
+                var dbDataReader = await command.ExecuteReaderAsync();
+
+                var messages = new List<Message>();
+                while (await dbDataReader.ReadAsync())
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
+        }
 
         private MySqlParameter CreateSqlParameter(string parameterName, object value)
         {
