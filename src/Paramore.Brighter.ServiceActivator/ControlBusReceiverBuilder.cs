@@ -158,7 +158,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .TaskQueues(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
+                .ExternalBus(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
 
@@ -190,7 +190,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private class SinkOutbox : IAmAnOutbox<Message>
         {
-            public void Add(Message message, int outBoxTimeout = -1)
+            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
             {
                 //discard message
             }

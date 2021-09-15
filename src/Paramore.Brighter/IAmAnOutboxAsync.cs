@@ -46,15 +46,16 @@ namespace Paramore.Brighter
         /// such as HTTPContext 
         /// </summary>
         bool ContinueOnCapturedContext { get; set; }
-         
+
         /// <summary>
         /// Awaitable add the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(T message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
+        Task AddAsync(T message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
 
         /// <summary>
         /// Awaitable Get the specified message identifier.

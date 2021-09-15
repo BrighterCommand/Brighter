@@ -46,7 +46,7 @@ namespace GreetingsReceiverConsole
                     };
 
                     //create the gateway
-                    var asbConfig = new AzureServiceBusConfiguration("Endpoint=sb://fim-development-bus.servicebus.windows.net/;Authentication=Managed Identity", true);
+                    var asbConfig = new AzureServiceBusConfiguration("Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity", true);
 
                     var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbConfig);
                     services.AddServiceActivator(options =>

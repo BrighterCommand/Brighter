@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly.Registry;
@@ -32,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPipelineStepsTests
+    public class CommandProcessorPipelineStepsTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -46,6 +47,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyStepsPreAndPostDecoratedHandler>();
             container.AddTransient<MyStepsValidationHandler<MyCommand>>();
             container.AddTransient<MyStepsLoggingHandler<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
@@ -65,6 +67,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             MyStepsPreAndPostDecoratedHandler.ShouldReceive(_myCommand).Should().BeTrue();
             // _should_call_the_post_validation_handler
             MyStepsLoggingHandler<MyCommand>.Shouldreceive(_myCommand).Should().BeTrue();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

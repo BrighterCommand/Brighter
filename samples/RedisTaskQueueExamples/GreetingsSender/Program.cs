@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -37,35 +38,64 @@ namespace GreetingsSender
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static int Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
                 .CreateLogger();
-
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-
-            var redisConnection = new RedisMessagingGatewayConfiguration
+            
+            try
             {
-                RedisConnectionString = "localhost:6379?connectTimeout=1&sendTimeout=1000&",
-                MaxPoolSize = 10,
-                MessageTimeToLive = TimeSpan.FromMinutes(10)
-            };
-            var producer = new RedisMessageProducer(redisConnection);
+                Log.Information("Starting host");
+                var host = CreateHostBuilder(args)
+                    .UseSerilog()
+                    .UseConsoleLifetime()
+                    .Build();
+                
+                
+                DoWork(host);
 
-            serviceCollection.AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(producer)
-                .AutoFromAssemblies();
-
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-
-            var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-
-            commandProcessor.Post(new GreetingEvent("Ian"));
+                host.WaitForShutdown();
+                
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly");
+                return 1;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
+ 
         }
+
+        private static void DoWork(IHost host)
+        {
+            var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+
+            commandProcessor?.Post(new GreetingEvent("Ian"));
+        }
+
+        private static IHostBuilder CreateHostBuilder(string[] args) =>
+            new HostBuilder()
+                .ConfigureServices((context, collection) =>
+                {
+                    var redisConnection = new RedisMessagingGatewayConfiguration
+                    {
+                        RedisConnectionString = "localhost:6379?connectTimeout=1&sendTimeout=1000&",
+                        MaxPoolSize = 10,
+                        MessageTimeToLive = TimeSpan.FromMinutes(10)
+                    };
+                    var producer = new RedisMessageProducer(redisConnection);
+                    
+                    collection.AddBrighter()
+                        .UseInMemoryOutbox()
+                        .UseExternalBus(producer)
+                        .AutoFromAssemblies();
+                });
     }
 }

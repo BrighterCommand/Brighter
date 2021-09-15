@@ -34,6 +34,7 @@ using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorWithNullFeatureSwitchConfig : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();        
@@ -51,6 +52,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedConfigHandler>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             _provider = container.BuildServiceProvider();
             _handlerFactory = new ServiceProviderHandlerFactory(_provider);
@@ -71,8 +73,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
         public void Dispose()
         {
-            _commandProcessor?.Dispose();
-            GC.SuppressFinalize(this);
+            CommandProcessor.ClearExtServiceBus();
         }
     }    
 }

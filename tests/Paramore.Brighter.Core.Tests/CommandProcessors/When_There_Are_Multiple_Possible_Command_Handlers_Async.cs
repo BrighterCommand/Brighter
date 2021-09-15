@@ -35,7 +35,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorSendWithMultipleMatchesAsyncTests
+    public class CommandProcessorSendWithMultipleMatchesAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
@@ -53,6 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyImplicitHandlerAsync>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
             container.AddSingleton(_receivedMessages);
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
@@ -71,6 +72,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //_should_have_an_error_message_that_tells_you_why = () => _exception
             _exception.Should().NotBeNull();
             _exception.Message.Should().Contain("More than one handler was found for the typeof command Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles.MyCommand - a command should only have one handler.");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

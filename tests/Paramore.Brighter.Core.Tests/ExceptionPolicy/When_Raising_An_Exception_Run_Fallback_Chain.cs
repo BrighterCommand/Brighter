@@ -48,6 +48,8 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             container.AddSingleton<MyFailsWithFallbackMultipleHandlers>();
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
             container.AddSingleton<RequestLoggingHandler<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+             
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
