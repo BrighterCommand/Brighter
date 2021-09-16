@@ -721,6 +721,7 @@ namespace Paramore.Brighter
             //create a reply queue via creating a consumer - we use random identifiers as we will destroy
             var channelName = Guid.NewGuid();
             var routingKey = channelName.ToString();
+            
             using (var responseChannel =
                 _responseChannelFactory.CreateChannel(
                     new Subscription(
