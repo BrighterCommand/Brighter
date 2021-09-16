@@ -104,6 +104,8 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
             ClearOutbox(posts.ToArray());
 
+            tcs.SetResult(Guid.Empty);
+            
             return tcs.Task;
         }
 
