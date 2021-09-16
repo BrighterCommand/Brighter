@@ -56,6 +56,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddTransient<UseInboxHandler<MyCommandToFail>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -32,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineBuilderAsyncTests
+    public class PipelineBuilderAsyncTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequestsAsync<MyCommand> _pipeline;
@@ -45,6 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var container = new ServiceCollection();
             container.AddTransient<MyImplicitHandlerAsync>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
         
@@ -61,12 +63,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             TracePipeline().ToString().Should().Contain("MyImplicitHandlerAsync");
             TracePipeline().ToString().Should().Contain("MyLoggingHandlerAsync");
         }
-
+        
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+ 
         private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();
             _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-    }
+
+   }
 }

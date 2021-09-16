@@ -72,7 +72,6 @@ namespace Paramore.Brighter.Core.Tests.Timeout
 
         public void Dispose()
         {
-            _commandProcessor?.Dispose();
         }
     }
 }

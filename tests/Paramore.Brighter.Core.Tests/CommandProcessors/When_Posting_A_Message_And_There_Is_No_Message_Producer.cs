@@ -81,10 +81,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            _commandProcessor.Dispose();
-
-           // _should_throw_an_exception
-            _exception.Should().BeOfType<InvalidOperationException>();
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

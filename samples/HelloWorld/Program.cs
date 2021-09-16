@@ -25,43 +25,62 @@ THE SOFTWARE. */
 
 using System;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Serilog;
-using Serilog.Extensions.Logging;
 
 namespace HelloWorld
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static int Main(string[] args)
         {
             Log.Logger = new LoggerConfiguration()
                 .MinimumLevel.Debug()
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
                 .CreateLogger();
-
-            var commandProcessor = 
-                CreateServices()
-                .GetService<IAmACommandProcessor>();
             
-            commandProcessor?.Send(new GreetingCommand("Ian"));
+            try
+            {
+                Log.Information("Starting host");
+                var host = CreateHostBuilder(args)
+                    .UseSerilog()
+                    .UseConsoleLifetime()
+                    .Build();
+                
+                
+                DoWork(host);
 
-            Console.ReadLine();
+                host.WaitForShutdown();
+                
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly");
+                return 1;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
+ 
         }
 
-        private static ServiceProvider CreateServices()
+        private static void DoWork(IHost host)
         {
-            var serviceCollection = new ServiceCollection();
-            serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
-            serviceCollection
-                .AddBrighter()
-                .AutoFromAssemblies();
+            var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
 
-            var serviceProvider = serviceCollection.BuildServiceProvider();
-            return serviceProvider;
+            commandProcessor?.Send(new GreetingCommand("Ian"));
         }
+
+        private static IHostBuilder CreateHostBuilder(string[] args) =>
+            new HostBuilder()
+                .ConfigureServices((context, collection) =>
+                {
+                    collection.AddBrighter().AutoFromAssemblies();
+                });
     }
 }

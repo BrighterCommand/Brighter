@@ -11,7 +11,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorDepositPostTests
+    public class CommandProcessorDepositPostTests : IDisposable
     {
         
         private readonly CommandProcessor _commandProcessor;
@@ -76,10 +76,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             outstandingMessage.Id.Should().Be(_message.Id);
         }
         
-        [Fact]
         public void Dispose()
         {
-            _commandProcessor.Dispose();
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

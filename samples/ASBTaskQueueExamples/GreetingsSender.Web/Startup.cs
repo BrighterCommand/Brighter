@@ -52,8 +52,9 @@ namespace GreetingsSender.Web
                     opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
                 })
                 .UseExternalBus(producer)
-                //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlOutboxSqlAuthConnectionFactory))
-                .UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>), ServiceLifetime.Scoped)
+                .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
+                //.UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>), ServiceLifetime.Scoped)
+                .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
                 .MapperRegistry(r =>
                 {
                     r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));

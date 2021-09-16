@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PostCommandTests
+    public class PostCommandTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry), _fakeOutbox)
+                .ExternalBus(new MessagingConfiguration((IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry), _fakeOutbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -78,6 +78,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             // should convert the command into a message
             _fakeOutbox.Get().First().Should().Be(_message);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
 
         internal class EmptyHandlerFactory : IAmAHandlerFactory

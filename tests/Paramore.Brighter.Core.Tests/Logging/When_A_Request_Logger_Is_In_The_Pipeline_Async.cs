@@ -53,8 +53,6 @@ namespace Paramore.Brighter.Core.Tests.Logging
                     .Should().Contain(x => x.MessageTemplate.Text.StartsWith("Logging handler pipeline call"))
                     .Which.Properties["1"].ToString().Should().Be($"\"{typeof(MyCommand)}\"");
 
-                commandProcessor?.Dispose();
-
             }
         }
     }

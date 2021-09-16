@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -32,40 +33,47 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineOrderingAsyncTests
+    public class PipelineOrderingAsyncTests: IDisposable
+
     {
-        private readonly PipelineBuilder<MyCommand> _pipeline_Builder;
-        private IHandleRequestsAsync<MyCommand> _pipeline;
+    private readonly PipelineBuilder<MyCommand> _pipeline_Builder;
+    private IHandleRequestsAsync<MyCommand> _pipeline;
 
-        public PipelineOrderingAsyncTests()
-        {
-            var registry = new SubscriberRegistry();
-            registry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
+    public PipelineOrderingAsyncTests()
+    {
+        var registry = new SubscriberRegistry();
+        registry.RegisterAsync<MyCommand, MyDoubleDecoratedHandlerAsync>();
 
-            var container = new ServiceCollection();
-            container.AddTransient<MyDoubleDecoratedHandlerAsync>();
-            container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
-            container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
+        var container = new ServiceCollection();
+        container.AddTransient<MyDoubleDecoratedHandlerAsync>();
+        container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
+        container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+ 
+        var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+        _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
+        PipelineBuilder<MyCommand>.ClearPipelineCache();
+    }
 
-            _pipeline_Builder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
-        }
+    [Fact]
+    public void When_Building_An_Async_Pipeline_Preserve_The_Order()
+    {
+        _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
 
-        [Fact]
-        public void When_Building_An_Async_Pipeline_Preserve_The_Order()
-        {
-            _pipeline = _pipeline_Builder.BuildAsync(new RequestContext(), false).First();
+        PipelineTracer().ToString().Should().Be("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|");
+    }
 
-            PipelineTracer().ToString().Should().Be("MyLoggingHandlerAsync`1|MyValidationHandlerAsync`1|MyDoubleDecoratedHandlerAsync|");
-        }
+    public void Dispose()
+    {
+        CommandProcessor.ClearExtServiceBus();
+    }
 
-        private PipelineTracer PipelineTracer()
-        {
-            var pipelineTracer = new PipelineTracer();
-            _pipeline.DescribePath(pipelineTracer);
-            return pipelineTracer;
-        }
+    private PipelineTracer PipelineTracer()
+    {
+        var pipelineTracer = new PipelineTracer();
+        _pipeline.DescribePath(pipelineTracer);
+        return pipelineTracer;
+    }
     }
 }
