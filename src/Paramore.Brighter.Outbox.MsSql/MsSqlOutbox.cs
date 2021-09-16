@@ -249,7 +249,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             };
 
             return await ExecuteCommandAsync(
-                async command => MapFunction(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                async command => await MapFunctionAsync(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
                 sql,
                 outBoxTimeout,
                 cancellationToken,
@@ -688,7 +688,19 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
             dr.Close();
 
-            return message;
+            return message ?? new Message();
+        }
+        
+        private async Task<Message> MapFunctionAsync(SqlDataReader dr)
+        {
+            Message message = null;
+            if (await dr.ReadAsync())
+            {
+                message = MapAMessage(dr);
+            }
+            dr.Close();
+
+            return message ?? new Message();
         }
    }
 }
