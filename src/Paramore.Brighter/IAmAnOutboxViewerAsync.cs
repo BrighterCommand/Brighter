@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -24,7 +24,7 @@ namespace Paramore.Brighter
             int pageNumber = 1, 
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken));
-         
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
@@ -32,11 +32,13 @@ namespace Paramore.Brighter
         /// <param name="pageSize"></param>
         /// <param name="pageNumber"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
         Task<IEnumerable<Message>> OutstandingMessagesAsync(
             double millSecondsSinceSent, 
             int pageSize = 100, 
             int pageNumber = 1,
-            Dictionary<string, object> args = null);
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default);
     }
 }

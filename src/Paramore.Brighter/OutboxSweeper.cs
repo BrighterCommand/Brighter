@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -41,21 +42,24 @@ namespace Paramore.Brighter
                 commandProcessor.ClearOutbox(outstandingMessages.Select(message => message.Id).ToArray());
         }
 
-        public Task SweepAsync()
+        public async Task SweepAsync(CancellationToken cancellationToken = default)
         {
             if(_outboxAsync == null)
                 throw new InvalidOperationException("No Async Outbox Viewer defined.");
-            return SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor);
+            await SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor, cancellationToken);
         }
         
-        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor)
+        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
         {
             //find all the unsent messages
-            var outstandingMessages = await outbox.OutstandingMessagesAsync(milliSecondsSinceSent);
+            var outstandingMessages = (await outbox.OutstandingMessagesAsync(milliSecondsSinceSent, cancellationToken: cancellationToken)).ToArray();
            
             //send them if we have them
             if (outstandingMessages.Any())
-                await commandProcessor.ClearOutboxAsync(outstandingMessages.Select(message => message.Id).ToArray());
+            {
+                var messages = outstandingMessages.Select(message => message.Id).ToArray();
+                await commandProcessor.ClearOutboxAsync(messages, cancellationToken: cancellationToken);
+            }
         } 
     }
 }

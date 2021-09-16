@@ -297,7 +297,8 @@ namespace Paramore.Brighter.Outbox.EventStore
             double millSecondsSinceSent,
             int pageSize = 100,
             int pageNumber = 1,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             var stream = GetStreamFromArgs(args);
             var sentBefore = DateTime.UtcNow.AddMilliseconds(millSecondsSinceSent * -1);

@@ -347,30 +347,32 @@ namespace Paramore.Brighter.Outbox.MySql
                 return messages;
             }
         }
-        
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
         public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
             double millSecondsSinceSent, 
             int pageSize = 100, 
             int pageNumber = 1,
-            Dictionary<string, object> args = null)
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
         {
             using (var connection = GetConnection())
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
-                await connection.OpenAsync();
+                await connection.OpenAsync(cancellationToken);
 
-                var dbDataReader = await command.ExecuteReaderAsync();
+                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
 
                 var messages = new List<Message>();
-                while (await dbDataReader.ReadAsync())
+                while (await dbDataReader.ReadAsync(cancellationToken))
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
