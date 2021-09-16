@@ -249,7 +249,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             };
 
             return await ExecuteCommandAsync(
-                async command => MapFunction(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
+                async command => await MapFunctionAsync(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
                 sql,
                 outBoxTimeout,
                 cancellationToken,
@@ -402,6 +402,44 @@ namespace Paramore.Brighter.Outbox.MsSql
                 return messages;
             }
         }
+
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
+        /// <returns>Outstanding Messages</returns>
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+           double millSecondsSinceSent, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+           Dictionary<string, object> args = null,
+           CancellationToken cancellationToken = default)
+       {
+           var connection = await _connectionProvider.GetConnectionAsync();
+           using (var command = connection.CreateCommand())
+           {
+               CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+               if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken);
+
+               if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+               var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
+
+               var messages = new List<Message>();
+               while (await dbDataReader.ReadAsync(cancellationToken))
+               {
+                   messages.Add(MapAMessage(dbDataReader));
+               }
+               dbDataReader.Close();
+                
+               if(!_connectionProvider.IsSharedConnection) connection.Dispose();
+               else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+                
+               return messages;
+           }
+       }
         
         private void CreatePagedDispatchedCommand(SqlCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
@@ -652,7 +690,19 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
             dr.Close();
 
-            return message;
+            return message ?? new Message();
+        }
+        
+        private async Task<Message> MapFunctionAsync(SqlDataReader dr)
+        {
+            Message message = null;
+            if (await dr.ReadAsync())
+            {
+                message = MapAMessage(dr);
+            }
+            dr.Close();
+
+            return message ?? new Message();
         }
    }
 }
