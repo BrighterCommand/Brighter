@@ -126,32 +126,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer and a consumer. The assumption is that this
-        /// is being used for inter-process communication, for example the work queue pattern for distributing work, or between microservicves
-        /// Registers singletons with the service collection :-
-        ///  - Producer - the Gateway wrapping access to Middleware
-        ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
-        /// </summary>
-        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-        /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
-        /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
-        /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false)
-        {
-            brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
-            if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
-            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
-            
-            return brighterBuilder;
-        }
-
-        /// <summary>
         /// Configure a Feature Switch registry to control handlers to be feature switched at runtime
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="featureSwitchRegistry">The registry for handler Feature Switches</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseFeatureSwitches(this IBrighterHandlerBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        public static IBrighterBuilder UseFeatureSwitches(this IBrighterBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             brighterBuilder.Services.AddSingleton(featureSwitchRegistry);
             return brighterBuilder;

@@ -366,6 +366,8 @@ namespace Paramore.Brighter.Outbox.MySql
         private void AddParamtersParamArrayToCollection(MySqlParameter[] parameters, DbCommand command)
         {
             command.Parameters.AddRange(parameters);
+        }
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
@@ -380,12 +382,12 @@ namespace Paramore.Brighter.Outbox.MySql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
-                await connection.OpenAsync(cancellationToken);
+                if (connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken);
 
                 var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
 

@@ -384,12 +384,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
-                await connection.OpenAsync(cancellationToken);
+                if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken);
 
                 var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
 
