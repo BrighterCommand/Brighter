@@ -366,6 +366,36 @@ namespace Paramore.Brighter.Outbox.MySql
         private void AddParamtersParamArrayToCollection(MySqlParameter[] parameters, DbCommand command)
         {
             command.Parameters.AddRange(parameters);
+        /// <summary>
+        /// Messages still outstanding in the Outbox because their timestamp
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">Async Cancellation Token</param>
+        /// <returns>Outstanding Messages</returns>
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
+        {
+            using (var connection = GetConnection())
+            using (var command = connection.CreateCommand())
+            {
+                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
+
+                await connection.OpenAsync(cancellationToken);
+
+                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
+
+                var messages = new List<Message>();
+                while (await dbDataReader.ReadAsync(cancellationToken))
+                {
+                    messages.Add(MapAMessage(dbDataReader));
+                }
+                return messages;
+            }
         }
 
         private MySqlParameter CreateSqlParameter(string parameterName, object value)
@@ -404,7 +434,7 @@ namespace Paramore.Brighter.Outbox.MySql
         private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp  ASC) As ROWNUMBER, Timestamp FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE ROWNUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND Timestamp < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC";
+                "SELECT * FROM (SELECT *, ROW_NUMBER() OVER(ORDER BY Timestamp  ASC) As ROWNUMBER FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE ROWNUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND Timestamp < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC";
             var seconds = TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds > 0 ? TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds : 1;
             var parameters = new[]
             {

@@ -59,7 +59,14 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Is_Off()
         {
-            _commandProcessor = new CommandProcessor(_registry, (IAmAHandlerFactory)_handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .Handlers(new HandlerConfiguration(_registry, (IAmAHandlerFactory)_handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+            
             _commandProcessor.Send(_myCommand);
 
             MyFeatureSwitchedOffHandler.DidReceive(_myCommand).Should().BeFalse();

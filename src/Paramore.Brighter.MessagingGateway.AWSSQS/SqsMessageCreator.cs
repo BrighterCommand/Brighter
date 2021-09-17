@@ -20,7 +20,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         SubscriptionId = 6
     }
     
-    internal class SqsMessageCreator
+    internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageCreator>();
 
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
 
                 if(receiptHandle.Success)
-                    message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
+                    message.Header.Bag.Add("ReceiptHandle", receiptHandle.Result);
             }
             catch (Exception e)
             {
@@ -190,26 +190,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 return new HeaderResult<string>(topic, true);
             }
             return new HeaderResult<string>(String.Empty, true);
-        }
-
-
-        private HeaderResult<string> ReadReceiptHandle(Amazon.SQS.Model.Message sqsMessage)
-        {
-            if (sqsMessage.ReceiptHandle != null)
-            {
-                return new HeaderResult<string>(sqsMessage.ReceiptHandle, true);
-            }
-            return new HeaderResult<string>(string.Empty, true);
-        }
-
-        private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
-        {
-            var header = new MessageHeader(
-                messageId.Success ? messageId.Result : Guid.Empty,
-                topic.Success ? topic.Result : string.Empty,
-                MessageType.MT_UNACCEPTABLE);
-            var message = new Message(header, new MessageBody(string.Empty));
-            return message;
         }
     }
 }
