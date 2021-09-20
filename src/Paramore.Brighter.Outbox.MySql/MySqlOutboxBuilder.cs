@@ -45,6 +45,8 @@ namespace Paramore.Brighter.Outbox.MySql
     UNIQUE(`CreatedID`),
 	PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
+        
+        const string TableExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
 
         /// <summary>
         /// Get the DDL that describes the table we will store messages in
@@ -56,6 +58,14 @@ namespace Paramore.Brighter.Outbox.MySql
             if (string.IsNullOrEmpty(tableName))
                 throw new InvalidEnumArgumentException($"You must provide a tablename for the message box table");
             return string.Format(OutboxDdl, tableName);
+        }
+
+        public static string GetExistsQuery(string tableName)
+        {
+            if (string.IsNullOrEmpty(tableName))
+                throw new InvalidEnumArgumentException($"You must provide a tablename for the message box table");
+            return string.Format(TableExistsQuery, tableName);
+             
         }
     }
 }

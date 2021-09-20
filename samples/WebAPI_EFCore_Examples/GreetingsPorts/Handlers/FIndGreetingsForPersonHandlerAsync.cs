@@ -21,12 +21,17 @@ namespace GreetingsPorts.Handlers
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
             var person = await _uow.People
+                .Include(p => p.Greetings)
                 .Where(p => p.Name == query.Name)
                 .SingleAsync(cancellationToken);
 
             if (person == null) return null;
 
-            return new FindPersonsGreetings { Greetings = person.Greetings.Select(g => new Salutation(g.Greet())) };
+            return new FindPersonsGreetings
+            {
+                Name = person.Name, 
+                Greetings = person.Greetings.Select(g => new Salutation(g.Greet()))
+            };
 
         }
         

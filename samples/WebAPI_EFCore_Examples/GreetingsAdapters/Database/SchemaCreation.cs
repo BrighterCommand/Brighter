@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using Paramore.Brighter;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
@@ -125,6 +126,12 @@ namespace GreetingsAdapters.Database
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
 
+            using var existsQuery = sqlConnection.CreateCommand();
+            existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+            bool exists = existsQuery.ExecuteScalar() != null;
+
+            if (exists) return;
+            
             using var command = sqlConnection.CreateCommand();
             command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
             command.ExecuteScalar();
@@ -133,7 +140,7 @@ namespace GreetingsAdapters.Database
         private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
+            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("Greetings");
         }
     }
 }

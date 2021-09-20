@@ -209,12 +209,15 @@ namespace GreetingsAdapters
             }
             else
             {
-               services.AddDbContext<GreetingsEntityGateway>(builder => 
-               { builder.UseSqlServer(connectionString,
-                   optionsBuilder =>
-                   {
-                       optionsBuilder.MigrationsAssembly("Greetings_MySqlMigrations");
-                   }); 
+               services.AddDbContextPool<GreetingsEntityGateway>(builder =>
+               {
+                   builder
+                       .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
+                       {
+                           optionsBuilder.MigrationsAssembly("Greetings_MySqlMigrations");
+                       })
+                       .EnableDetailedErrors()
+                       .EnableSensitiveDataLogging();
                });
             }
         }
