@@ -243,6 +243,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MySql.Ent
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_SqliteMigrations", "samples\WebAPI_EFCore_Examples\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj", "{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_MySqlMigrations", "samples\WebAPI_EFCore_Examples\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj", "{1D692C54-8063-4AE2-AB26-0BCD0EA03528}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1285,6 +1287,18 @@ Global
 		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|x86.ActiveCfg = Release|Any CPU
 		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|x86.Build.0 = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|x86.Build.0 = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|x86.ActiveCfg = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1358,6 +1372,7 @@ Global
 		{4AE1021A-753C-4C42-B5E1-D70228643AE0} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{33C6253D-C148-491E-9AA6-E9F18CB1263D} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

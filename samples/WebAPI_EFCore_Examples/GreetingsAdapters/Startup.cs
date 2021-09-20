@@ -213,7 +213,7 @@ namespace GreetingsAdapters
                { builder.UseSqlServer(connectionString,
                    optionsBuilder =>
                    {
-                       optionsBuilder.MigrationsAssembly("GreetingsPorts");
+                       optionsBuilder.MigrationsAssembly("Greetings_MySqlMigrations");
                    }); 
                });
             }
