@@ -61,10 +61,13 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         [Fact]
         public void When_a_sending_a_command_to_the_processor_when_null_feature_switch_config()
         {
-            _commandProcessor = new CommandProcessor(_registry, 
-                                                     (IAmAHandlerFactory)_handlerFactory, 
-                                                     new InMemoryRequestContextFactory(), 
-                                                     new PolicyRegistry());
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .Handlers(new HandlerConfiguration(_registry, (IAmAHandlerFactory)_handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
 
             _commandProcessor.Send(_myCommand);
 

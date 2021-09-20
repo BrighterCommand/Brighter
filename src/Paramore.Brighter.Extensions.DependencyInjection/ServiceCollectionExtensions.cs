@@ -2,6 +2,7 @@
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -83,13 +84,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
-        /// <returns></returns>
+        /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false)
         {
             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
             if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
             
+            return brighterBuilder;
+        }
+
+        /// <summary>
+        /// Configure a Feature Switch registry to control handlers to be feature switched at runtime
+        /// </summary>
+        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
+        /// <param name="featureSwitchRegistry">The registry for handler Feature Switches</param>
+        /// <returns>The Brighter builder to allow chaining of requests</returns>
+        public static IBrighterHandlerBuilder UseFeatureSwitches(this IBrighterHandlerBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        {
+            brighterBuilder.Services.AddSingleton(featureSwitchRegistry);
             return brighterBuilder;
         }
         
@@ -134,8 +147,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var producer = provider.GetService<IAmAMessageProducer>();
             var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
 
-            var policyBuilder = CommandProcessorBuilder.With()
-                .Handlers(handlerConfiguration);
+            var needHandlers = CommandProcessorBuilder.With();
+
+            var featureSwitchRegistry = provider.GetService<IAmAFeatureSwitchRegistry>();
+
+            if (featureSwitchRegistry != null)
+                needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
+            
+            var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
                 ? policyBuilder.DefaultPolicy()
