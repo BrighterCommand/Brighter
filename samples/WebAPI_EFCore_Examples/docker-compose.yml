@@ -29,3 +29,9 @@ services:
       - "15672:15672"
     volumes:
       - rabbitmq-home:/var/lib/rabbitmq
+
+volumes:
+    rabbitmq-home:
+      driver: local
+
+

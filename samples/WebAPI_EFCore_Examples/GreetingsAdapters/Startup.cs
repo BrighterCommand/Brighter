@@ -78,9 +78,6 @@ namespace GreetingsAdapters
             ConfigureEFCore(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
-            
-            CheckDbIsUp();
-            CreateOutbox();
         }
         
         private void CheckDbIsUp()
@@ -222,49 +219,6 @@ namespace GreetingsAdapters
             }
         }
 
-
-        private void CreateOutbox()
-        {
-            try
-            {
-                var connectionString = DbConnectionString();
-
-                if (_env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString);
-                else
-                    CreateOutboxProduction(connectionString);
-            }
-            catch (System.Exception e)
-            {
-                Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
-            }
-        }
-
-        private void CreateOutboxDevelopment(string connectionString)
-        {
-            using var sqlConnection = new SqliteConnection(connectionString);
-            sqlConnection.Open();
-
-            using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = SqliteOutboxBuilder.GetExists(_outBoxTableName);
-            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
-            
-            if (reader.HasRows) return;
-            
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteOutboxBuilder.GetDDL(_outBoxTableName);
-            command.ExecuteScalar();
-        }
-
-        private static void CreateOutboxProduction(string connectionString)
-        {
-            using var sqlConnection = new MySqlConnection(connectionString);
-            sqlConnection.Open();
-            
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = MySqlOutboxBuilder.GetDDL(_outBoxTableName);
-            command.ExecuteScalar();
-        }
 
         private string DbConnectionString()
         {

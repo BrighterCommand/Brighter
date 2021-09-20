@@ -12,7 +12,11 @@ namespace GreetingsAdapters
         public static void Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();
+            
+            host.CheckDbIsUp();
             host.MigrateDatabase();
+            host.CreateOutbox();
+            
             host.Run();
         }
 
