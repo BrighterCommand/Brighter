@@ -80,6 +80,8 @@ namespace GreetingsAdapters.Database
                 var services = scope.ServiceProvider;
                 var env = services.GetService<IWebHostEnvironment>();
                 var config = services.GetService<IConfiguration>();
+
+                CreateOutbox(config, env);
             }
 
             return webHost;
