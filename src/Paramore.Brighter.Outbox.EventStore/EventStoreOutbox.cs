@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
@@ -281,12 +282,30 @@ namespace Paramore.Brighter.Outbox.EventStore
             int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
+            return OutstandingMessagesAsync(millSecondsSinceSent, pageSize, pageNumber, args).Result;
+        }
+        
+        /// <summary>
+        /// Returns messages that have yet to be dispatched
+        /// </summary>
+        /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
+        /// <param name="pageSize">How many messages to return at once?</param>
+        /// <param name="pageNumber">Which page number of messages</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of messages that are outstanding for dispatch</returns>
+        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent,
+            int pageSize = 100,
+            int pageNumber = 1,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
+        {
             var stream = GetStreamFromArgs(args);
             var sentBefore = DateTime.UtcNow.AddMilliseconds(millSecondsSinceSent * -1);
 
             var fromEventNumber = pageSize * (pageNumber - 1);
 
-            var eventStreamSlice = _eventStore.ReadStreamEventsBackwardAsync(stream, fromEventNumber, pageSize, true).Result;
+            var eventStreamSlice = await _eventStore.ReadStreamEventsBackwardAsync(stream, fromEventNumber, pageSize, true);
 
             var messages = eventStreamSlice.Events
                 .Where(e => e.Event.Created <= sentBefore)

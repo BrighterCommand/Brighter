@@ -34,6 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly string _queueName;
         private readonly int _batchSize;
         private readonly bool _hasDlq;
+        private readonly bool _rawMessageDelivery;
         private readonly Message _noopMessage = new Message();
 
         /// <summary>
@@ -44,17 +45,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="routingKey">the SNS Topic we subscribe to</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
         /// <param name="hasDLQ">Do we have a DLQ attached to this queue?</param>
+        /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string queueName,
             RoutingKey routingKey,
             int batchSize = 1,
-            bool hasDLQ = false)
+            bool hasDLQ = false,
+            bool rawMessageDelivery = true)
         {
             _awsConnection = awsConnection;
             _queueName = queueName;
             _batchSize = batchSize;
             _hasDlq = hasDLQ;
+            _rawMessageDelivery = rawMessageDelivery;
         }
 
         /// <summary>
@@ -113,7 +117,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var messages = new Message[sqsMessages.Length];
             for (int i = 0; i < sqsMessages.Length; i++)
             {
-                var message = new SqsMessageCreator().CreateMessage(sqsMessages[i]);
+                var message = SqsMessageCreatorFactory.Create(_rawMessageDelivery).CreateMessage(sqsMessages[i]);
                 s_logger.LogInformation("SqsMessageConsumer: Received message from queue {ChannelName}, message: {1}{Request}",
                     _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                 messages[i] = message;

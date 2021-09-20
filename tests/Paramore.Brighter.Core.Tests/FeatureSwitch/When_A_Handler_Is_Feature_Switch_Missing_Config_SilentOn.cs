@@ -68,11 +68,15 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         {
             _featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.SilentOn;
 
-            _commandProcessor = new CommandProcessor(_registry, 
-                                                     (IAmAHandlerFactory)_handlerFactory, 
-                                                     new InMemoryRequestContextFactory(), 
-                                                     new PolicyRegistry(),
-                                                     _featureSwitchRegistry);
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .ConfigureFeatureSwitches(_featureSwitchRegistry)
+                .Handlers(new HandlerConfiguration(_registry, (IAmAHandlerFactory)_handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+            
             _commandProcessor.Send(_myCommand);
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeTrue();

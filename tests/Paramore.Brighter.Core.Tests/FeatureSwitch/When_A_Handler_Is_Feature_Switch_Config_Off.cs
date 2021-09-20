@@ -69,11 +69,15 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                                 .StatusOf<MyFeatureSwitchedConfigHandler>().Is(FeatureSwitchStatus.Off)
                                 .Build();
 
-            _commandProcessor = new CommandProcessor(_registry, 
-                                                     (IAmAHandlerFactory)_handlerFactory, 
-                                                     new InMemoryRequestContextFactory(), 
-                                                     new PolicyRegistry(),
-                                                     fluentConfig);
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .ConfigureFeatureSwitches(fluentConfig)
+                .Handlers(new HandlerConfiguration(_registry, (IAmAHandlerFactory)_handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+
             _commandProcessor.Send(_myCommand);
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeFalse();
