@@ -1,7 +1,6 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace GreetingsInteractors.Migrations
+namespace Greetings_SqliteMigrations.Migrations
 {
     public partial class Initial : Migration
     {

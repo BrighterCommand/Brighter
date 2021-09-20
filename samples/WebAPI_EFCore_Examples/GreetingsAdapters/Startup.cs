@@ -203,7 +203,7 @@ namespace GreetingsAdapters
                         builder.UseSqlite(connectionString, 
                             optionsBuilder =>
                             {
-                                optionsBuilder.MigrationsAssembly("GreetingsPorts");
+                                optionsBuilder.MigrationsAssembly("Greetings_SqliteMigrations");
                             });
                     });
             }
