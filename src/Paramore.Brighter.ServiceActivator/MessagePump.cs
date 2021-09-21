@@ -126,7 +126,9 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (DeferMessageAction)
                 {
-                    if (!RequeueMessage(message)) continue;
+                    RequeueMessage(message); 
+                    
+                    continue;
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -134,7 +136,9 @@ namespace Paramore.Brighter.ServiceActivator
 
                     if (requeue)
                     {
-                        if (!RequeueMessage(message)) continue;
+                        RequeueMessage(message);
+                        
+                        continue;
                     }
 
                     if (stop)   

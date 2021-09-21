@@ -132,7 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
         {
-            if (!message.Header.Bag.ContainsKey("ReceiptHandle") || message.Header.HandledCount > 0)
+            if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
                 return;
 
             var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
