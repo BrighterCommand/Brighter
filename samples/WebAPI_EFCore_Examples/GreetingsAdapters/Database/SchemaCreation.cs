@@ -44,35 +44,45 @@ namespace GreetingsAdapters.Database
 
         public static IHost CheckDbIsUp(this IHost webHost)
         {
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IWebHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
-                string connectionString = DbConnectionString(config, env);
+            using var scope = webHost.Services.CreateScope() ;
+            
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IWebHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
+            string connectionString = DbServerConnectionString(config, env);
 
-                var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
-                    retryAttempt => TimeSpan.FromSeconds(2),
-                    (exception, timespan) =>
-                    {
-                        Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
-                    });
+            //We don't check in development as using Sqlite
+            if (env.IsDevelopment()) return webHost;
 
-                policy.Execute(() =>
-                {
-                    //don't check this for SQlite in development
-                    if (!env.IsDevelopment())
-                    {
-                        using (var conn = new MySqlConnection(connectionString))
-                        {
-                            conn.Open();
-                        }
-                    }
-                });
-            }
+            WaitToConnect(connectionString);
+            CreateDatabaseIfNotExists(connectionString);
 
             return webHost;
         }
+
+        private static void CreateDatabaseIfNotExists(string connectionString)
+        {
+            //The migration does not create the Db, so we need to create it sot tthat it will add it
+            using var conn = new MySqlConnection(connectionString);
+            conn.Open();
+            using var command = conn.CreateCommand();
+            command.CommandText = $@"CREATE DATABASE IF NOT EXISTS Greetings";
+            command.ExecuteScalar();
+        }
+
+        private static void WaitToConnect(string connectionString)
+        {
+            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
+                retryAttempt => TimeSpan.FromSeconds(2),
+                (exception, timespan) => { Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}"); });
+
+            policy.Execute(() =>
+            {
+                using var conn = new MySqlConnection(connectionString);
+                conn.Open();
+            });
+        }
+
 
         public static IHost CreateOutbox(this IHost webHost)
         {
@@ -131,7 +141,7 @@ namespace GreetingsAdapters.Database
             bool exists = existsQuery.ExecuteScalar() != null;
 
             if (exists) return;
-            
+
             using var command = sqlConnection.CreateCommand();
             command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
             command.ExecuteScalar();
@@ -142,5 +152,10 @@ namespace GreetingsAdapters.Database
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
             return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("Greetings");
         }
+
+        private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
+        {
+            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
+         }
     }
 }
