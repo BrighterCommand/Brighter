@@ -83,9 +83,9 @@ namespace GreetingsReceiverConsole
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     })
-                        .UseInMemoryOutbox()
-                        .UseExternalBus(new RmqMessageProducer(rmqConnection))
-                        .AutoFromAssemblies();
+                    .UseInMemoryOutbox()
+                    .UseExternalBus(new RmqMessageProducer(rmqConnection))
+                    .AutoFromAssemblies();
 
                     
                     services.AddHostedService<ServiceActivatorHostedService>();

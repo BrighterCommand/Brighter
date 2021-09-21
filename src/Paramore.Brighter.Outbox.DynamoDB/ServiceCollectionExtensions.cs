@@ -7,15 +7,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseDynamoDbOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, IAmazonDynamoDB connection, DynamoDbConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseDynamoDbOutbox(
+            this IBrighterBuilder brighterBuilder, IAmazonDynamoDB connection, DynamoDbConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<DynamoDbConfiguration>(configuration);
             brighterBuilder.Services.AddSingleton<IAmazonDynamoDB>(connection);
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildDynamoDbOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildDynamoDbOutbox, serviceLifetime));
-            
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewer<Message>), BuildDynamoDbOutbox,serviceLifetime));
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewerAsync<Message>), BuildDynamoDbOutbox,serviceLifetime));
+             
             return brighterBuilder;
         }
 

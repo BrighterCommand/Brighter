@@ -33,11 +33,12 @@ using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Sqlite;
 
 namespace Paramore.Brighter.Outbox.Sqlite
 {
     /// <summary>
-    ///     Class SqliteOutbox.
+    /// Implements an outbox using Sqlite as a backing store
     /// </summary>
     public class SqliteOutbox :
         IAmAnOutbox<Message>,
@@ -49,7 +50,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteOutboxConfiguration _configuration;
+        private readonly SqliteConfiguration _configuration;
+        private readonly ISqliteConnectionProvider _connectionProvider;
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -62,13 +64,23 @@ namespace Paramore.Brighter.Outbox.Sqlite
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="SqliteOutbox" /> class.
+        /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        public SqliteOutbox(SqliteOutboxConfiguration configuration)
+        /// <param name="configuration">The configuration to connect to this data store</param>
+        /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
+        public SqliteOutbox(SqliteConfiguration configuration, ISqliteConnectionProvider connectionProvider)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
+            _connectionProvider = connectionProvider;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration to connect to this data store</param>
+         public SqliteOutbox(SqliteConfiguration configuration) : this(configuration, new SqliteConnectionProvider(configuration))
+        {
         }
 
         /// <summary>
@@ -81,63 +93,73 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             var parameters = InitAddDbParameters(message);
 
-            using (var connection = GetConnection())
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open) connection.Open();
+            var sql = GetAddSql();
+            using (var command = connection.CreateCommand())
             {
-                connection.Open();
-                var sql = GetAddSql();
-                using (var command = connection.CreateCommand())
+                command.CommandText = sql;
+                AddParamtersParamArrayToCollection(parameters.ToArray(), command);
+
+                try
                 {
-                    command.CommandText = sql;
-                    AddParamtersParamArrayToCollection(parameters.ToArray(), command);
-
-                    try
+                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+                catch (SqliteException sqlException)
+                {
+                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                     {
-                        command.ExecuteNonQuery();
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                            message.Id);
+                        return;
                     }
-                    catch (SqliteException sqlException)
-                    {
-                        if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                        {
-                            s_logger.LogWarning(
-                                "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                                message.Id);
-                            return;
-                        }
 
-                        throw;
-                    }
+                    throw;
                 }
             }
         }
 
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken),
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
 
-            using (var connection = GetConnection())
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
+
+            if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+            using (var command = connection.CreateCommand())
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                using (var command = connection.CreateCommand())
+                var sql = GetAddSql();
+                command.CommandText = sql;
+                AddParamtersParamArrayToCollection(parameters.ToArray(), command);
+
+                try
                 {
-                    var sql = GetAddSql();
-                    command.CommandText = sql;
-                    AddParamtersParamArrayToCollection(parameters.ToArray(), command);
-
-                    try
+                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+                catch (SqliteException sqlException)
+                {
+                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                     {
-                        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                        s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                            message.Id);
+                        return;
                     }
-                    catch (SqliteException sqlException)
-                    {
-                        if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
-                        {
-                            s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                                message.Id);
-                            return;
-                        }
 
-                        throw;
-                    }
+                    throw;
                 }
             }
         }
@@ -150,20 +172,20 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="pageNumber">Which page of messages to get</param>
         /// <param name="outboxTimeout"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
-         /// <returns>A list of dispatched messages</returns>
+        /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
             int pageNumber = 1,
-            int outboxTimeout = -1, 
+            int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
 
-                connection.Open();
+                if (connection.State != ConnectionState.Open) connection.Open();
 
                 var dbDataReader = command.ExecuteReader();
 
@@ -172,20 +194,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
+
                 return messages;
             }
         }
 
-        private string GetAddSql()
-        {
-            var sql =
-                string.Format(
-                    "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)",
-                    _configuration.OutboxTableName);
-            return sql;
-        }
-
-        /// <summary>
+       /// <summary>
         /// Gets the specified message
         /// </summary>
         /// <param name="messageId">The message identifier.</param>
@@ -193,50 +207,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("@MessageId", messageId.ToString())
-            };
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
+            var parameters = new[] { CreateSqlParameter("@MessageId", messageId.ToString()) };
 
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
         }
-
-        /// <summary>
-        /// Update a message to show it is dispatched
-        /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
-        {
-           using (var connection = GetConnection())
-           {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
-                {
-                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                }
-           }
-        }
-
-        /// <summary>
-        /// Update a message to show it is dispatched
-        /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
-        {
-           using (var connection = GetConnection())
-           {
-                connection.Open();
-                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
-                {
-                    command.ExecuteNonQuery();
-                }
-           }
-        }
-
 
         /// <summary>
         /// get as an asynchronous operation.
@@ -247,11 +222,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>A Message.</returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutboxTableName);
-            var parameters = new[]
-            {
-                CreateSqlParameter("@MessageId", messageId.ToString())
-            };
+            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
+            var parameters = new[] { CreateSqlParameter("@MessageId", messageId.ToString()) };
 
             return await ExecuteCommandAsync(
                     async command => MapFunction(await command.ExecuteReaderAsync(cancellationToken)
@@ -263,22 +235,21 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-
         /// <summary>
         /// Returns all messages in the outbox
         /// </summary>
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-         /// <returns>A page of messages from the outbox</returns>
-       public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+        /// <returns>A page of messages from the outbox</returns>
+        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedRead(command, pageSize, pageNumber);
 
-                connection.Open();
+                if (connection.State != ConnectionState.Open) connection.Open();
 
                 using (var dbDataReader = command.ExecuteReader())
                 {
@@ -299,20 +270,20 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of messages</returns>
         public async Task<IList<Message>> GetAsync(
-            int pageSize = 100, 
-            int pageNumber = 1, 
+            int pageSize = 100,
+            int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedRead(command, pageSize, pageNumber);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
                 using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
@@ -329,6 +300,39 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default)
+        {
+            var connection = _connectionProvider.GetConnection();
+            if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+            {
+                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+        }
+
+        /// <summary>
+        /// Update a message to show it is dispatched
+        /// </summary>
+        /// <param name="id">The id of the message to update</param>
+        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
+        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
+        {
+            var connection = _connectionProvider.GetConnection();
+            if (connection.State != ConnectionState.Open) connection.Open();
+            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+            {
+                command.ExecuteNonQuery();
+            }
+        }
+
         /// <summary>
         /// Retrieves those messages that have not been dispatched to the broker in a time period
         /// since they were added to the outbox
@@ -336,15 +340,15 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <param name="millSecondsSinceSent">How long ago where they added to the outbox</param>
         /// <param name="pageSize">How many messages per page</param>
         /// <param name="pageNumber">How many pages</param>
-         /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of outstanding messages</returns>
         public IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent, 
-            int pageSize = 100, 
+            double millSecondsSinceSent,
+            int pageSize = 100,
             int pageNumber = 1,
-             Dictionary<string, object> args = null)
+            Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
@@ -358,6 +362,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
+
                 return messages;
             }
         }
@@ -379,12 +384,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
-                await connection.OpenAsync(cancellationToken);
+                if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken);
 
                 var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
 
@@ -401,33 +406,27 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             command.Parameters.AddRange(parameters);
         }
-        
+
         private void CreatePagedDispatchedCommand(SqliteCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
+            double fractionalSeconds = millisecondsDispatchedSince / 1000.000;
+            var sql =
+                $"SELECT * FROM {_configuration.OutBoxTableName} AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
             var parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
             };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
         }
-        
+
         private void CreatePagedRead(SqliteCommand command, int pageSize, int pageNumber)
         {
-            SqliteParameter[] parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber - 1),
-                CreateSqlParameter("PageSize", pageSize)
-            };
+            SqliteParameter[] parameters = new[] { CreateSqlParameter("PageNumber", pageNumber - 1), CreateSqlParameter("PageSize", pageSize) };
 
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber",
-                _configuration.OutboxTableName);
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
@@ -435,15 +434,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private void CreatePagedOutstandingCommand(SqliteCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM {0} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getdate()) ORDER BY Timestamp ASC limit @PageSize OFFSET @PageNumber";
+            double fractionalSeconds = milliSecondsSinceAdded / 1000.000;
+            var sql =
+                $"SELECT * FROM {_configuration.OutBoxTableName} AS TBL WHERE DISPATCHED IS NULL AND TIMESTAMP < datetime('now', '-{fractionalSeconds} seconds') ORDER BY Timestamp ASC limit @PageSize OFFSET @PageNumber";
             var parameters = new[]
             {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
             };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
@@ -453,19 +451,20 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             return new SqliteParameter(parameterName, value);
         }
-
-        private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int outboxTimeout,
+        
+       private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int outboxTimeout,
             params SqliteParameter[] parameters)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
+                if (connection.State != ConnectionState.Open) connection.Open();
+                
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
                 if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
-                connection.Open();
                 var item = execute(command);
                 return item;
             }
@@ -478,22 +477,24 @@ namespace Paramore.Brighter.Outbox.Sqlite
             CancellationToken cancellationToken = default(CancellationToken),
             params SqliteParameter[] parameters)
         {
-            using (var connection = GetConnection())
+            var connection = _connectionProvider.GetConnection();
+            
             using (var command = connection.CreateCommand())
             {
+                if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
                 command.CommandText = sql;
                 AddParamtersParamArrayToCollection(parameters, command);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
         }
-
-        private SqliteConnection GetConnection()
+        private string GetAddSql()
         {
-            return new SqliteConnection(_configuration.ConnectionString);
+            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
+            return sql;
         }
 
         private SqliteParameter[] InitAddDbParameters(Message message)
@@ -501,29 +502,28 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                new SqliteParameter("@MessageId", SqliteType.Text) {Value = message.Id.ToString()},
-                new SqliteParameter("@MessageType", SqliteType.Text) {Value = message.Header.MessageType.ToString()},
-                new SqliteParameter("@Topic", SqliteType.Text) {Value = message.Header.Topic},
-                new SqliteParameter("@Timestamp", SqliteType.Text) {Value = message.Header.TimeStamp.ToString("s")},
-                new SqliteParameter("CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId},
-                new SqliteParameter("ReplyTo", message.Header.ReplyTo),
-                new SqliteParameter("ContentType", message.Header.ContentType),
-                new SqliteParameter("@HeaderBag", SqliteType.Text) {Value = bagJson},
-                new SqliteParameter("@Body", SqliteType.Text) {Value = message.Body.Value}
+                new SqliteParameter("@MessageId", SqliteType.Text) { Value = message.Id.ToString() },
+                new SqliteParameter("@MessageType", SqliteType.Text) { Value = message.Header.MessageType.ToString() },
+                new SqliteParameter("@Topic", SqliteType.Text) { Value = message.Header.Topic },
+                new SqliteParameter("@Timestamp", SqliteType.Text) { Value = message.Header.TimeStamp.ToString("s") },
+                new SqliteParameter("CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId },
+                new SqliteParameter("ReplyTo", message.Header.ReplyTo), new SqliteParameter("ContentType", message.Header.ContentType),
+                new SqliteParameter("@HeaderBag", SqliteType.Text) { Value = bagJson },
+                new SqliteParameter("@Body", SqliteType.Text) { Value = message.Body.Value }
             };
         }
 
         private SqliteCommand InitMarkDispatchedCommand(SqliteConnection connection, Guid messageId, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            command.Parameters.Add(CreateSqlParameter("@MessageId", messageId.ToString()));
+            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt.HasValue ? dispatchedAt.Value.ToString("s"): DateTime.UtcNow.ToString("s")));
             return command;
-         }
-        
- 
+        }
+
+
         private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)
         {
             return sqlException.SqliteErrorCode == SqliteDuplicateKeyError ||
@@ -544,13 +544,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
-                
+
                 header = new MessageHeader(
-                    messageId:id, 
-                    topic:topic, 
-                    messageType:messageType, 
-                    timeStamp:timeStamp, 
-                    handledCount:0, 
+                    messageId: id,
+                    topic: topic,
+                    messageType: messageType,
+                    timeStamp: timeStamp,
+                    handledCount: 0,
                     delayedMilliseconds: 0,
                     correlationId: correlationId,
                     replyTo: replyTo,
@@ -570,7 +570,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             return new Message(header, body);
         }
-        
+
         private static string GetTopic(IDataReader dr)
         {
             return dr.GetString(dr.GetOrdinal("Topic"));
@@ -578,19 +578,19 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private static MessageType GetMessageType(IDataReader dr)
         {
-            return (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
+            return (MessageType)Enum.Parse(typeof(MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
         }
 
         private static Guid GetMessageId(IDataReader dr)
         {
-           return Guid.Parse(dr.GetString(dr.GetOrdinal("MessageId")));
+            return Guid.Parse(dr.GetString(dr.GetOrdinal("MessageId")));
         }
 
         private string GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal)) return null; 
-            
+            if (dr.IsDBNull(ordinal)) return null;
+
             var replyTo = dr.GetString(ordinal);
             return replyTo;
         }
@@ -598,8 +598,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private string GetReplyTo(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ReplyTo");
-            if (dr.IsDBNull(ordinal)) return null; 
-             
+            if (dr.IsDBNull(ordinal)) return null;
+
             var replyTo = dr.GetString(ordinal);
             return replyTo;
         }
@@ -615,8 +615,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private Guid? GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null; 
-            
+            if (dr.IsDBNull(ordinal)) return null;
+
             var correlationId = dr.GetGuid(ordinal);
             return correlationId;
         }
@@ -646,16 +646,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private void SetPagingCommandFor(SqliteCommand command, int pageSize, int pageNumber)
         {
-            SqliteParameter[] parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber-1),
-                CreateSqlParameter("PageSize", pageSize)
-            };
+            SqliteParameter[] parameters = new[] { CreateSqlParameter("PageNumber", pageNumber - 1), CreateSqlParameter("PageSize", pageSize) };
 
-            var sql = string.Format("SELECT * FROM {0} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber", _configuration.OutboxTableName);
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} ORDER BY Timestamp DESC limit @PageSize OFFSET @PageNumber";
 
             command.CommandText = sql;
             AddParamtersParamArrayToCollection(parameters, command);
         }
-   }
+    }
 }

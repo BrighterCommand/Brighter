@@ -7,18 +7,20 @@ namespace Paramore.Brighter.Outbox.EventStore
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UseEventStoreOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, IEventStoreConnection connection, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UseEventStoreOutbox(
+            this IBrighterBuilder brighterBuilder, IEventStoreConnection connection, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<IEventStoreConnection>(connection);
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildEventStoreOutboxOutbox, serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildEventStoreOutboxOutbox, serviceLifetime));
-            
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildEventStoreOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildEventStoreOutbox, serviceLifetime));
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewer<Message>), BuildEventStoreOutbox,serviceLifetime));
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewerAsync<Message>), BuildEventStoreOutbox,serviceLifetime));
+             
             return brighterBuilder;
         }
 
-        private static EventStoreOutbox BuildEventStoreOutboxOutbox(IServiceProvider provider)
+        private static EventStoreOutbox BuildEventStoreOutbox(IServiceProvider provider)
         {
             var connection = provider.GetService<IEventStoreConnection>();
 

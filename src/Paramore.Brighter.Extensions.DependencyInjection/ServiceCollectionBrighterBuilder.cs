@@ -7,7 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
-    public class ServiceCollectionBrighterBuilder : IBrighterHandlerBuilder
+    public class ServiceCollectionBrighterBuilder : IBrighterBuilder
     {
         private readonly ServiceCollectionSubscriberRegistry _serviceCollectionSubscriberRegistry;
         private readonly ServiceCollectionMessageMapperRegistry _mapperRegistry;
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns></returns>
-        public IBrighterHandlerBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
+        public IBrighterBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a => !a.IsDynamic && !a.FullName.StartsWith("Microsoft.",true, CultureInfo.InvariantCulture) && !a.FullName.StartsWith("System.", true, CultureInfo.InvariantCulture));
 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="registerMappers">A callback to register mappers</param>
         /// <returns></returns>
-        public IBrighterHandlerBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
+        public IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
         {
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));
             
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterHandlerBuilder MapperRegistryFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder MapperRegistryFromAssemblies(params Assembly[] assemblies)
         {
             if (assemblies.Length == 0)
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterHandlerBuilder Handlers(Action<IAmASubscriberRegistry> registerHandlers)
+        public IBrighterBuilder Handlers(Action<IAmASubscriberRegistry> registerHandlers)
         {
             if (registerHandlers == null)
                 throw new ArgumentNullException(nameof(registerHandlers));
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterHandlerBuilder HandlersFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder HandlersFromAssemblies(params Assembly[] assemblies)
         {
             RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).GetTypeInfo().Assembly);
             return this;
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterHandlerBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers)
+        public IBrighterBuilder AsyncHandlers(Action<IAmAnAsyncSubcriberRegistry> registerHandlers)
         {
             if (registerHandlers == null)
                 throw new ArgumentNullException(nameof(registerHandlers));
@@ -138,7 +138,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>
-        public IBrighterHandlerBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
+        public IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
         {
             RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).GetTypeInfo().Assembly);
             return this;

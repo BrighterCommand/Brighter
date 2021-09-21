@@ -6,8 +6,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 {
     public static class ServiceCollectionExtensions
     {
-        public static IBrighterHandlerBuilder UsePostgreSqlOutbox(
-            this IBrighterHandlerBuilder brighterBuilder, PostgreSqlOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+        public static IBrighterBuilder UsePostgreSqlOutbox(
+            this IBrighterBuilder brighterBuilder, PostgreSqlOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<PostgreSqlOutboxConfiguration>(configuration);
 

@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="configure">A callback that defines what options to set when Brighter is built</param>
         /// <returns>A builder that can be used to populate the IoC container with handlers and mappers by inspection - used by built in factory from CommandProcessor</returns>
         /// <exception cref="ArgumentNullException">Thrown if we have no IoC provided ServiceCollection</exception>
-        public static IBrighterHandlerBuilder AddBrighter(this IServiceCollection services, Action<BrighterOptions> configure = null)
+        public static IBrighterBuilder AddBrighter(this IServiceCollection services, Action<BrighterOptions> configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="services">The IoC container to update</param>
         /// <param name="configure">A callback that defines what options to set when Brighter is built</param>
         /// <returns>A builder that can be used to populate the IoC container with handlers and mappers by inspection - used by built in factory from CommandProcessor</returns>
-        public static IBrighterHandlerBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
+        public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
             services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
@@ -56,6 +56,57 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
 
+         /// <summary>
+         /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer and a consumer. The assumption is that this
+         /// is being used for inter-process communication, for example the work queue pattern for distributing work, or between microservicves
+         /// Registers singletons with the service collection :-
+         ///  - Producer - the Gateway wrapping access to Middleware
+         ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
+         /// </summary>
+         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
+         /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
+         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
+         /// <returns></returns>
+         public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false)
+         {
+             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
+             if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
+             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
+             
+             return brighterBuilder;
+         }
+         
+         /// <summary>
+        /// Use an external Brighter Outbox tp store messages Posted to another process (evicts based on age and size).
+        /// Advantages: By using the same Db to store both any state changes for your app, and outgoing messages you can create a transaction that spans both
+        ///  your state change and writing to an outbox [use DepositPost to store]. Then a sweeper process can look for message not flagged as sent and send them.
+        ///  For low latency just send after the transaction with ClearOutbox, for higher latency just let the sweeper run in the background.
+        ///  The outstanding messages dispatched this way can be sent from any producer that runs a sweeper process and so it not tied to the lifetime of the
+        ///  producer, offering guaranteed, at least once, delivery.
+        ///  NOTE: there may be a database specific Use*OutBox available. If so, use that in preference to this generic method
+        /// Disadvantages: The Outbox will not survive restarts, so messages not published by shutdown will not be flagged as not posted
+        /// If not null, registers singletons with the service collection :-
+        ///  - IAmAnOutbox - what messages have we posted
+        ///  - ImAnOutboxAsync - what messages have we posted (async pipeline compatible)
+        /// </summary>
+        /// <param name="outbox">The outbox provider - if your outbox supports both sync and async options, just provide this and we will register both</param>
+        /// <param name="asyncOutbox">The async outbox provider - if your outbox supports both sync and async options, just use outbox</param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null, IAmAnOutbox<Message> asyncOutbox = null)
+        {
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => outbox, ServiceLifetime.Singleton));
+             if (outbox is IAmAnOutboxAsync<Message>)
+             {
+                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
+                 return brighterBuilder;
+             }
+
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => asyncOutbox, ServiceLifetime.Singleton));
+ 
+             return brighterBuilder;
+             
+        }
+
         /// <summary>
         /// Use the Brighter In-Memory Outbox tp store messages Posted to another process (evicts based on age and size).
         /// Advantages: fast and no additional infrastructure required
@@ -66,31 +117,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The builder we are adding this facility to</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseInMemoryOutbox(this IBrighterHandlerBuilder brighterBuilder)
+        public static IBrighterBuilder UseInMemoryOutbox(this IBrighterBuilder brighterBuilder)
         {
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
 
-            return brighterBuilder;
-        }
-
-        /// <summary>
-        /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer and a consumer. The assumption is that this
-        /// is being used for inter-process communication, for example the work queue pattern for distributing work, or between microservicves
-        /// Registers singletons with the service collection :-
-        ///  - Producer - the Gateway wrapping access to Middleware
-        ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
-        /// </summary>
-        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-        /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
-        /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
-        /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false)
-        {
-            brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
-            if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
-            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
-            
             return brighterBuilder;
         }
 
@@ -100,7 +131,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="featureSwitchRegistry">The registry for handler Feature Switches</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseFeatureSwitches(this IBrighterHandlerBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        public static IBrighterBuilder UseFeatureSwitches(this IBrighterBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             brighterBuilder.Services.AddSingleton(featureSwitchRegistry);
             return brighterBuilder;

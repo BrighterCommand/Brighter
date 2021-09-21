@@ -2,11 +2,11 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
-using GreetingsReceiverConsole;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Polly.CircuitBreaker;
 using Serilog;
@@ -44,12 +44,12 @@ namespace GreetingsPumper
                         services.AddBrighter()
                             .UseInMemoryOutbox()
                             .UseExternalBus(producer)
+                            .UseOutboxSweeper()
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
                         services.AddSingleton<IAmAnOutboxViewer<Message>>(outbox);
 
                         services.AddHostedService<RunCommandProcessor>();
-                        services.AddHostedService<TimedOutboxSweeper>();
                     }
                 )
                 .UseConsoleLifetime()
