@@ -11,7 +11,6 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-      <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
     </ItemGroup>
 
 </Project>

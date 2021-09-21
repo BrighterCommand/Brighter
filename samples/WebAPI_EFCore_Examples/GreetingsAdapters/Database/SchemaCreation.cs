@@ -66,7 +66,7 @@ namespace GreetingsAdapters.Database
             using var conn = new MySqlConnection(connectionString);
             conn.Open();
             using var command = conn.CreateCommand();
-            command.CommandText = $@"CREATE DATABASE IF NOT EXISTS Greetings";
+            command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
             command.ExecuteScalar();
         }
 

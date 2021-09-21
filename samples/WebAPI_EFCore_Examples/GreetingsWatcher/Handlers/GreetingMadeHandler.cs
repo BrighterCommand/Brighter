@@ -1,10 +1,10 @@
 ﻿using System;
-using GreetingsPorts.Requests;
+using GreetingsWatcher.Requests;
 using Paramore.Brighter;
 
-namespace GreetingsPorts.Handlers
+namespace GreetingsWatcher.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandler<GreetingMade>
+    public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
         public override GreetingMade Handle(GreetingMade @event)
         {

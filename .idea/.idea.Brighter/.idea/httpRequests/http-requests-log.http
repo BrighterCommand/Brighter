@@ -5,6 +5,93 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
+<> 2021-09-21T185741.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2021-09-21T185606.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+
+<> 2021-09-21T185601.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2021-09-21T180525.200.json
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+<> 2021-09-21T180520.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2021-09-21T180226.200.json
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+<> 2021-09-21T180208.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+
+###
+
+GET http://0.0.0.0:5000/Greetings/tyrion
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
 ###
 
 GET http://localhost:5000/People/Tyrion
@@ -317,86 +404,6 @@ Content-Type: application/json
 }
 
 <> 2021-09-03T185034.200.json
-
-###
-
-DELETE http://localhost:5000/People/Tyrion
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2021-09-02T200534.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2021-09-02T200526.200.json
-
-###
-
-DELETE http://localhost:5000/People/Tyrion
-
-POST http://localhost:5000/People/new HTTP/1.1
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2021-09-02T194806.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2021-09-02T194758.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2021-09-02T184108.500.json
-
-###
-
-POST http://localhost:5000/People
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2021-09-02T184033.404.json
 
 ###
 
