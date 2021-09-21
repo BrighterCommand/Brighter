@@ -5,6 +5,132 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
+<> 2021-09-21T201728.200.json
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+<> 2021-09-21T201723.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2021-09-21T201008.200.json
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+<> 2021-09-21T200947.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2021-09-21T200942.200.json
+
+###
+
+POST http://locahost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
+GET http://localhost:5000/Greetings/tyrion
+
+<> 2021-09-21T200738.500.json
+
+###
+
+POST http://locahost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2021-09-21T200648.500.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+
+<> 2021-09-21T200639.500.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+
+###
+
+POST http://locahost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
+POST http://locahost:80/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
+POST http://0.0.0.0:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
 <> 2021-09-21T185741.200.json
 
 ###
@@ -264,146 +390,6 @@ Content-Type: application/json
 }
 
 <> 2021-09-10T100844.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2021-09-10T005749.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2021-09-10T005407.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2021-09-10T005228.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2021-09-10T003741.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2021-09-10T002753.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2021-09-10T002521.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2021-09-10T001827.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2021-09-07T100302.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2021-09-03T185038.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2021-09-03T185034.200.json
 
 ###
 

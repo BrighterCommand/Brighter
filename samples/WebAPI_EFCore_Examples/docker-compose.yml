@@ -6,8 +6,8 @@ services:
     ports:
       - "5000:5000"
     environment:
-      - BRIGHTER_ConnectionStrings__Greetings=server=localhost; port=3306; uid=root; pwd=root; database=Greetings
-      - BRIGHTER_ConnectionStrings__GreetingsDb=server=localhost; port=3306; uid=root; pwd=root
+      - BRIGHTER_ConnectionStrings__Greetings=server=greetings_db; port=3306; uid=root; pwd=root; database=Greetings
+      - BRIGHTER_ConnectionStrings__GreetingsDb=server=greetings_db; port=3306; uid=root; pwd=root
       - ASPNETCORE_ENVIRONMENT=Production
     links:
       - mysql:greetings_db
@@ -18,7 +18,7 @@ services:
     build: ./GreetingsWatcher
     hostname: greetingsworker
     environment:
-      - DOTNET_ENVIRONMENT=Production
+      - ASPNETCORE_ENVIRONMENT=Production
     depends_on:
       - rabbitmq
   mysql:
@@ -26,6 +26,10 @@ services:
     image: mysql
     ports:
       - "3306:3306"
+    security_opt:
+      - seccomp:unconfined
+    volumes:
+      - my-db:/var/lib/mysql
     environment:
       MYSQL_ROOT_PASSWORD: "root"
     healthcheck:
@@ -40,6 +44,8 @@ services:
 
 volumes:
     rabbitmq-home:
+      driver: local
+    my-db:
       driver: local
 
 

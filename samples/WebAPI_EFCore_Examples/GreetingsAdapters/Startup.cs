@@ -161,7 +161,7 @@ namespace GreetingsAdapters
                     .UseExternalBus(new RmqMessageProducer(
                             new RmqMessagingGatewayConnection
                             {
-                                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
                                 Exchange = new Exchange("paramore.brighter.exchange"),
                             },
                             new RmqPublication
