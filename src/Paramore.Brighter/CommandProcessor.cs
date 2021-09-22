@@ -53,6 +53,7 @@ namespace Paramore.Brighter
         private readonly InboxConfiguration _inboxConfiguration;
         private readonly IAmABoxTransactionConnectionProvider _boxTransactionConnectionProvider;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
+        private readonly IEnumerable<Subscription> _replySubscriptions;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -301,6 +302,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="outBox">The outbox</param>
         /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -314,6 +316,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
             IAmAMessageProducer messageProducer,
+            IEnumerable<Subscription> replySubscriptions,
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             IAmAChannelFactory responseChannelFactory = null,
@@ -326,6 +329,7 @@ namespace Paramore.Brighter
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _replySubscriptions = replySubscriptions;
             
             InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
@@ -717,20 +721,22 @@ namespace Paramore.Brighter
             if (inMessageMapper == null)
                 throw new ArgumentOutOfRangeException(
                     $"No message mapper registered for messages of type: {typeof(T)}");
+            
+            var subscription = _replySubscriptions.FirstOrDefault(s => s.DataType == typeof(TResponse));
+
+            if (subscription is null)
+                throw new ArgumentOutOfRangeException($"No Subscription registered fpr replies of type {typeof(T)}");
 
             //create a reply queue via creating a consumer - we use random identifiers as we will destroy
             var channelName = Guid.NewGuid();
             var routingKey = channelName.ToString();
-            
-            using (var responseChannel =
-                _responseChannelFactory.CreateChannel(
-                    new Subscription(
-                        typeof(TResponse),
-                        channelName: new ChannelName(channelName.ToString()),
-                        routingKey: new RoutingKey(routingKey))))
-            {
 
-                s_logger.LogInformation("Create reply queue for topic {ChannelName}", routingKey);
+            subscription.ChannelName = new ChannelName(channelName.ToString());
+            subscription.RoutingKey = new RoutingKey(routingKey);
+
+            using (var responseChannel = _responseChannelFactory.CreateChannel(subscription))
+            {
+                s_logger.LogInformation("Create reply queue for topic {ChannelName}", channelName);
                 request.ReplyAddress.Topic = routingKey;
                 request.ReplyAddress.CorrelationId = channelName;
 
@@ -743,25 +749,25 @@ namespace Paramore.Brighter
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
-                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", routingKey);
+                s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
                 _bus.SendViaExternalBus<T, TResponse>(outMessage);
 
                 Message responseMessage = null;
 
                 //now we block on the receiver to try and get the message, until timeout.
-                s_logger.LogDebug("Awaiting response on {ChannelName}", routingKey);
+                s_logger.LogDebug("Awaiting response on {ChannelName}", channelName);
                 _bus.Retry(() => responseMessage = responseChannel.Receive(timeOutInMilliseconds));
 
                 TResponse response = default(TResponse);
                 if (responseMessage.Header.MessageType != MessageType.MT_NONE)
                 {
-                    s_logger.LogDebug("Reply received from {ChannelName}", routingKey);
+                    s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     response = inMessageMapper.MapToRequest(responseMessage);
                     Send(response);
                 }
 
-                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", routingKey);
+                s_logger.LogInformation("Deleting queue for routingkey: {ChannelName}", channelName);
 
                 return response;
 
