@@ -56,13 +56,18 @@ namespace GreetingsSender
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-            serviceCollection.AddBrighter(options =>
+            var replySubscriptions = new[]
             {
-                var outBox = new InMemoryOutbox();
-                options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-            })
+                new RmqSubscription(typeof(GreetingReply))
+            };
+
+            serviceCollection
+                .AddBrighter(options =>
+                {
+                    options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                })
                 .UseInMemoryOutbox()
-                .UseExternalBus(producer, true)
+                .UseExternalBus(producer, true, replySubscriptions)
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
