@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
@@ -55,26 +55,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
-
-         /// <summary>
-         /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer and a consumer. The assumption is that this
-         /// is being used for inter-process communication, for example the work queue pattern for distributing work, or between microservicves
-         /// Registers singletons with the service collection :-
-         ///  - Producer - the Gateway wrapping access to Middleware
-         ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
-         /// </summary>
-         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-         /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
-         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
-         /// <returns></returns>
-         public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false)
-         {
-             brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
-             if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
-             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
-             
-             return brighterBuilder;
-         }
          
          /// <summary>
         /// Use an external Brighter Outbox tp store messages Posted to another process (evicts based on age and size).
@@ -122,6 +102,30 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
 
+            return brighterBuilder;
+        }
+
+        /// <summary>
+        /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer and a consumer. The assumption is that this
+        /// is being used for inter-process communication, for example the work queue pattern for distributing work, or between microservicves
+        /// Registers singletons with the service collection :-
+        ///  - Producer - the Gateway wrapping access to Middleware
+        ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
+        /// </summary>
+        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
+        /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
+        /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
+        /// <param name="replyQueueSubscriptions">Reply queue subscription</param>
+        /// <returns>The Brighter builder to allow chaining of requests</returns>
+        public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
+        {
+            brighterBuilder.Services.AddSingleton(producer);
+            
+            if(producer is IAmAMessageProducerAsync async)
+                brighterBuilder.Services.AddSingleton(async);
+            
+            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
+            
             return brighterBuilder;
         }
 
@@ -211,9 +215,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 else
                 {
                     externalBusBuilder = useRequestResponse.RPC
-                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(
-                            producer, messageMapperRegistry,
-                            responseChannelFactory: options.ChannelFactory))
+                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(producer, messageMapperRegistry, responseChannelFactory: options.ChannelFactory), outbox, useRequestResponse.ReplyQueueSubscriptions)
                         : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
                 }
             }

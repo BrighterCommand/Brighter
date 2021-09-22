@@ -1,4 +1,4 @@
-﻿using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -8,11 +8,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// </summary>
     public class UseRpc : IUseRpc
     {
-        public UseRpc(bool useRPC)
+        public UseRpc(bool useRPC, IEnumerable<Subscription> replyQueueSubscriptions)
         {
             RPC = useRPC;
+            ReplyQueueSubscriptions = replyQueueSubscriptions;
         }
 
         public bool RPC { get; set; }
+        public IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
     }
 }

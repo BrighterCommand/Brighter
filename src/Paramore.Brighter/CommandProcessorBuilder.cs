@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
 
@@ -84,6 +85,7 @@ namespace Paramore.Brighter
         private int _outboxWriteTimeout;
         private bool _useExternalBus = false;
         private bool _useRequestReplyQueues = false;
+        private IEnumerable<Subscription> _replySubscriptions;
         private IAmABoxTransactionConnectionProvider _overridingBoxTransactionConnectionProvider = null;
         
         private CommandProcessorBuilder()
@@ -188,16 +190,23 @@ namespace Paramore.Brighter
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Call{T}(T)"/> using RPC between client and server 
         /// </summary>
-        /// <param name="messagingConfiguration"></param>
+        /// <param name="configuration"></param>
+        /// <param name="outbox">The outbox</param>
+        /// <param name="subscriptions">Subscriptions for creating reply queues</param>
         /// <returns></returns>
-        public INeedARequestContext ExternalRPC(MessagingConfiguration configuration)
+        public INeedARequestContext ExternalRPC(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
         {
             _useRequestReplyQueues = true;
+            _replySubscriptions = subscriptions;
             _messagingGateway = configuration.MessageProducer;
             _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
+            _outbox = outbox;
+            
+            if(outbox is IAmAnOutboxAsync<Message> asyncOutbox) 
+                _asyncOutbox = asyncOutbox;
              
             return this;
         }
@@ -258,6 +267,7 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
+                    replySubscriptions: _replySubscriptions,
                     outBox: _outbox,
                     messageProducer: _messagingGateway,
                     responseChannelFactory: _responseChannelFactory,
@@ -330,12 +340,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
         INeedARequestContext NoExternalBus();
-        
+
         /// <summary>
         ///  We want to use RPC to send messages to another process
         /// </summary>
         /// <param name="messagingConfiguration"></param>
-        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration);
+        /// <param name="outbox">The outbox</param>
+        /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
+        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

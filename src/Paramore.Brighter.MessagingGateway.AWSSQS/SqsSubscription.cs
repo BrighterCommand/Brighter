@@ -177,6 +177,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="lockTimeout">What is the visibility timeout for the queue</param>
         /// <param name="delaySeconds">The length of time, in seconds, for which the delivery of all messages in the queue is delayed.</param>
         /// <param name="messageRetentionPeriod">The length of time, in seconds, for which Amazon SQS retains a message</param>
+        /// <param name="findTopicBy">Is the Topic an Arn, should be treated as an Arn by convention, or a name</param>
         /// <param name="iAmPolicy">The queue's policy. A valid AWS policy.</param>
         /// <param name="redrivePolicy">The policy that controls when and where requeued messages are sent to the DLQ</param>
         /// <param name="snsAttributes">The attributes of the Topic, either ARN if created, or attributes for creation</param>

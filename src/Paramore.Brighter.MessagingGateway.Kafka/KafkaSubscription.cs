@@ -205,9 +205,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create) 
-            : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, sessionTimeoutMs, 
-                maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, numOfPartitions, replicationFactor, channelFactory, makeChannels)
+            : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
+                requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
+                sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, 
+                numOfPartitions, replicationFactor, channelFactory, makeChannels)
         {
         }
     }
