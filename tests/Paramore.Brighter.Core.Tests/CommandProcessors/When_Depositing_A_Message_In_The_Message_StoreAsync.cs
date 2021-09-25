@@ -49,8 +49,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
                 messageMapperRegistry,
-                (IAmAnOutboxAsync<Message>)_fakeOutbox,
-                (IAmAMessageProducerAsync)_fakeMessageProducer);
+                _fakeOutbox,
+                _fakeMessageProducer);
         }
 
 

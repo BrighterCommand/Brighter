@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         //We have to catch the final exception that bubbles out after retry

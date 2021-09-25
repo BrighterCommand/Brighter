@@ -68,8 +68,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAnOutboxAsync<Message>)_fakeOutbox,
-                (IAmAMessageProducerAsync)null);
+                _fakeOutbox,
+                null);
         }
 
         [Fact]

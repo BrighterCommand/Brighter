@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    class TestHandlerFactoryAsync<TRequest, TRequestHandler> : IAmAHandlerFactoryAsync where TRequest : class, IRequest where TRequestHandler : class, IHandleRequestsAsync<TRequest>
+    class TestHandlerFactoryAsync<TRequest, TRequestHandler> : IAmAHandlerFactory, IAmAHandlerFactoryAsync where TRequest : class, IRequest where TRequestHandler : class, IHandleRequestsAsync<TRequest>
     {
         private readonly Func<TRequestHandler> _factoryMethod;
 
@@ -48,6 +48,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 disposable.Dispose();
             }
             handler = null;
+        }
+
+        public IHandleRequests Create(Type handlerType)
+        {
+            return Create(handlerType);
+        }
+
+        public void Release(IHandleRequests handler)
+        {
+            Release(handler);
         }
     }
 }
