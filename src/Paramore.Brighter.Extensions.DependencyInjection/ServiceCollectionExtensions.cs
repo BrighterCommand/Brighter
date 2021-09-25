@@ -117,7 +117,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
         /// <param name="replyQueueSubscriptions">Reply queue subscription</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
+        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
             brighterBuilder.Services.AddSingleton(producer);
             
