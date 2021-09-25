@@ -1,0 +1,1 @@
+﻿To run the integration tests the Environemnt Variable BrighterTestsASBConnectionString must be set to the connection string i.e. Endpoint=sb://my-service-bus.servicebus.windows.net/;Authentication=Managed Identity

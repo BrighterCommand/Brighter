@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using Microsoft.Azure.ServiceBus.Management;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -88,6 +89,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             
             s_logger.LogInformation("Topic {Topic} created.", topic);
+        }
+
+        public async Task DeleteTopicAsync(string topic)
+        {
+            s_logger.LogInformation("Deleting topic {Topic}...", topic);
+            try
+            {
+                await _managementClient.DeleteTopicAsync(topic);
+                s_logger.LogInformation("Topic {Topic} successfully deleted", topic);
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e,"Failed to delete Topic {Topic}", topic);
+            }
         }
 
         public bool SubscriptionExists(string topicName, string subscriptionName)

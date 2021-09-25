@@ -110,7 +110,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _topicName, _subscriptionName, messageBody);
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var handledCount = GetHandledCount(azureServiceBusMessage);
-            var headers = new MessageHeader(Guid.NewGuid(), _topicName, messageType, DateTime.UtcNow, handledCount, 0);
+            var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow, handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType);
             if(_receiveMode.Equals(ReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
             var message = new Message(headers, new MessageBody(messageBody));
             return message;

@@ -81,6 +81,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 var azureServiceBusMessage = new Microsoft.Azure.ServiceBus.Message(message.Body.Bytes);
                 azureServiceBusMessage.UserProperties.Add("MessageType", message.Header.MessageType.ToString());
                 azureServiceBusMessage.UserProperties.Add("HandledCount", message.Header.HandledCount);
+                azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
+                azureServiceBusMessage.ContentType = message.Header.ContentType;
+                azureServiceBusMessage.MessageId = message.Header.Id.ToString();
                 if (delayMilliseconds == 0)
                 {
                     await topicClient.SendAsync(azureServiceBusMessage);

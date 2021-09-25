@@ -1,10 +1,14 @@
-﻿namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
+﻿using System.Threading.Tasks;
+
+namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
     public interface IManagementClientWrapper
     {
         bool TopicExists(string topic);
 
         void CreateTopic(string topic);
+
+        Task DeleteTopicAsync(string topic);
 
         bool SubscriptionExists(string topicName, string subscriptionName);
 
