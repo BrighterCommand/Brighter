@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -43,6 +44,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
+            var replySubs = new List<Subscription>
+            {
+                new Subscription<MyResponse>()
+            };
+
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
@@ -55,6 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 messageMapperRegistry,
                 new InMemoryOutbox(),
                 (IAmAMessageProducer)new FakeMessageProducer(),
+                replySubs,
                 responseChannelFactory: new InMemoryChannelFactory());
             
             PipelineBuilder<MyRequest>.ClearPipelineCache();

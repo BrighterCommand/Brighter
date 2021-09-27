@@ -259,6 +259,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="outBox">The outbox</param>
         /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
@@ -272,6 +273,7 @@ namespace Paramore.Brighter
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
             IAmAMessageProducer messageProducer,
+            IEnumerable<Subscription> replySubscriptions,
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             IAmAChannelFactory responseChannelFactory = null,
@@ -284,6 +286,7 @@ namespace Paramore.Brighter
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _replySubscriptions = replySubscriptions;
 
             InitExtServiceBus(policyRegistry, outBox, null, outboxTimeout, messageProducer, null);
 
