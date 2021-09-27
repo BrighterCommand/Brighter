@@ -30,21 +30,21 @@ namespace Paramore.Brighter
     internal class Interpreter<TRequest> where TRequest : class, IRequest
     {
         private readonly IAmASubscriberRegistry _registry;
-        private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly IAmAHandlerFactorySync _handlerFactorySync;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory)
-            : this(registry, handlerFactory, null)
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactorySync handlerFactorySync)
+            : this(registry, handlerFactorySync, null)
         { }
 
         internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactoryAsync asyncHandlerFactory)
             : this(registry, null, asyncHandlerFactory)
         { }
 
-        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory)
+        internal Interpreter(IAmASubscriberRegistry registry, IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory)
         {
             _registry = registry;
-            _handlerFactory = handlerFactory;
+            _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
         }
 
@@ -52,7 +52,7 @@ namespace Paramore.Brighter
         {
             return new RequestHandlers<TRequest>(
                 _registry.Get<TRequest>()
-                    .Select(handlerType => _handlerFactory.Create(handlerType))
+                    .Select(handlerType => _handlerFactorySync.Create(handlerType))
                     .Cast<IHandleRequests<TRequest>>());
         }
 

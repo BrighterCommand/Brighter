@@ -6,7 +6,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAOutboxViewerAsync{T}
-    /// Used to retrieve messages from an <see cref="IAmAnOutbox{T}"/>
+    /// Used to retrieve messages from an <see cref="IAmAnOutboxAsync{T}"/>
     /// </summary>
     /// <typeparam name="T"></typeparam>
     public interface IAmAnOutboxViewerAsync<T> where T : Message

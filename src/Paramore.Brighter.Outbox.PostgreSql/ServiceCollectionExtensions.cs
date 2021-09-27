@@ -11,17 +11,17 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             brighterBuilder.Services.AddSingleton<PostgreSqlOutboxConfiguration>(configuration);
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildDynamoDbOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildDynamoDbOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildDynamoDbOutbox, serviceLifetime));
             
             return brighterBuilder;
         }
 
-        private static PostgreSqlOutbox BuildDynamoDbOutbox(IServiceProvider provider)
+        private static PostgreSqlOutboxSync BuildDynamoDbOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<PostgreSqlOutboxConfiguration>();
 
-            return new PostgreSqlOutbox(config);
+            return new PostgreSqlOutboxSync(config);
         }
     }
 }

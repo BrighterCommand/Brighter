@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
-    public class AzureServiceBusMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+    public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;

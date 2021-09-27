@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     public class AzureServiceBusConsumer : IAmAMessageConsumer
     {
         private readonly string _topicName;
-        private readonly IAmAMessageProducer _messageProducer;
+        private readonly IAmAMessageProducerSync _messageProducerSync;
         private readonly IManagementClientWrapper _managementClientWrapper;
         private readonly IMessageReceiverProvider _messageReceiverProvider;
         private readonly int _batchSize;
@@ -24,12 +24,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private const string _lockTokenKey = "LockToken";
         
-        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducer messageProducer, IManagementClientWrapper managementClientWrapper, 
+        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducerSync messageProducerSync, IManagementClientWrapper managementClientWrapper, 
             IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, ReceiveMode receiveMode = ReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
-            _messageProducer = messageProducer;
+            _messageProducerSync = messageProducerSync;
             _managementClientWrapper = managementClientWrapper;
             _messageReceiverProvider = messageReceiverProvider;
             _batchSize = batchSize;
@@ -185,11 +185,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             if (delayMilliseconds > 0)
             {
-                _messageProducer.SendWithDelay(message, delayMilliseconds);
+                _messageProducerSync.SendWithDelay(message, delayMilliseconds);
             }
             else
             {
-                _messageProducer.Send(message);
+                _messageProducerSync.Send(message);
             }
         }
 

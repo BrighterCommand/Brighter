@@ -38,7 +38,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_Writing_Messages_To_The_Outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(

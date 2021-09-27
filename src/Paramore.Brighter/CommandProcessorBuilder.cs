@@ -72,7 +72,6 @@ namespace Paramore.Brighter
     {
         private IAmAnOutbox<Message> _outbox;
         private IAmAMessageProducer _messagingGateway;
-        private IAmAMessageProducerAsync _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
@@ -160,6 +159,7 @@ namespace Paramore.Brighter
         /// 
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
+        /// <param name="outbox">The Outbox.</param>
         /// <param name="boxTransactionConnectionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
@@ -168,7 +168,6 @@ namespace Paramore.Brighter
             _messagingGateway = configuration.MessageProducer;
             _outbox = outbox;
             _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
-            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             return this;
@@ -195,7 +194,6 @@ namespace Paramore.Brighter
             _useRequestReplyQueues = true;
             _replySubscriptions = subscriptions;
             _messagingGateway = configuration.MessageProducer;
-            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
@@ -333,9 +331,9 @@ namespace Paramore.Brighter
         ///  We want to use RPC to send messages to another process
         /// </summary>
         /// <param name="messagingConfiguration"></param>
-        /// <param name="outbox">The outbox</param>
+        /// <param name="outboxSync">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
-        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions);
+        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

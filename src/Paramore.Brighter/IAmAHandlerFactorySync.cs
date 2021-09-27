@@ -1,7 +1,6 @@
 #region Licence
-
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,20 +22,29 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAControlBusSenderFactory. Helper for creating a control bus sender, which only requires
-    /// messaging configuration because it wraps the command processor and only supports the Post method, 
-    /// not Send and Publish and as such does not have handlers to register
+    /// Interface IAmAHandlerFactory
+    /// We do not know how to create instances of <see cref="IHandleRequests"/> implemented by your application, but need to create instances to instantiate a pipeline.
+    /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAHandlerFactorySync"/> to provide 
+    /// instances of their <see cref="IHandleRequests"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequests"/> registered 
+    /// with <see cref="IAmASubscriberRegistry"/>. Typically you would use an IoC container to implement the Handler Factory.
     /// </summary>
-    public interface IAmAControlBusSenderFactory {
+    public interface IAmAHandlerFactorySync : IAmAHandlerFactory
+    {
         /// <summary>
-        /// Creates the specified configuration.
+        /// Creates the specified handler type.
         /// </summary>
-        /// <param name="gateway">The gateway to the control bus</param>
-        /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
-        /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAMessageProducer gateway);
+        /// <param name="handlerType">Type of the handler.</param>
+        /// <returns>IHandleRequests.</returns>
+        IHandleRequests Create(Type handlerType);
+        /// <summary>
+        /// Releases the specified handler.
+        /// </summary>
+        /// <param name="handler">The handler.</param>
+        void Release(IHandleRequests handler);
     }
 }

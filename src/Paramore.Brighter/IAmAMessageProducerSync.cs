@@ -1,7 +1,6 @@
 #region Licence
-
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,20 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAControlBusSenderFactory. Helper for creating a control bus sender, which only requires
-    /// messaging configuration because it wraps the command processor and only supports the Post method, 
-    /// not Send and Publish and as such does not have handlers to register
+    /// Interface IAmASendMessageGateway
+    /// Abstracts away the Application Layer used to push messages onto a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
+    /// Usually clients do not need to instantiate as access is via an <see cref="IAmAChannel"/> derived class.
+    /// We provide the following default gateway applications
+    /// <list type="bullet">
+    /// <item>AMQP</item>
+    /// <item>RESTML</item>
+    /// </list>
     /// </summary>
-    public interface IAmAControlBusSenderFactory {
+    public interface IAmAMessageProducerSync : IAmAMessageProducer
+    {
         /// <summary>
-        /// Creates the specified configuration.
+        /// Sends the specified message.
         /// </summary>
-        /// <param name="gateway">The gateway to the control bus</param>
-        /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
-        /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAMessageProducer gateway);
-    }
+        /// <param name="message">The message.</param>
+        void Send(Message message);
+        
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        void SendWithDelay(Message message, int delayMilliseconds = 0);
+     }
 }

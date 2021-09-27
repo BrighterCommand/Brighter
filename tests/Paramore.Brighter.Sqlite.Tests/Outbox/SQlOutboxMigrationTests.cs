@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     [Trait("Category", "Sqlite")]
     public class SQlOutboxMigrationTests : IDisposable
     {
-        private readonly SqliteOutbox _sqlOutbox;
+        private readonly SqliteOutboxSync _sqlOutboxSync;
         private readonly Message _message;
         private Message _storedMessage;
         private readonly SqliteTestHelper _sqliteTestHelper;
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutbox  = new SqliteOutbox(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutboxSync  = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
             _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             AddHistoricMessage(_message);
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public void When_writing_a_message_with_minimal_header_information_to_the_outbox()
         {
-            _storedMessage = _sqlOutbox.Get(_message.Id);
+            _storedMessage = _sqlOutboxSync.Get(_message.Id);
 
             //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);

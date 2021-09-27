@@ -26,13 +26,13 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class TestHandlerFactory<TRequest, TRequestHandler> : IAmAHandlerFactory
+    internal class TestHandlerFactorySync<TRequest, TRequestHandler> : IAmAHandlerFactorySync
         where TRequest : class, IRequest
         where TRequestHandler : class, IHandleRequests<TRequest>
     {
         private readonly Func<TRequestHandler> _factoryMethod;
 
-        public TestHandlerFactory(Func<TRequestHandler> factoryMethod)
+        public TestHandlerFactorySync(Func<TRequestHandler> factoryMethod)
         {
             _factoryMethod = factoryMethod;
         }

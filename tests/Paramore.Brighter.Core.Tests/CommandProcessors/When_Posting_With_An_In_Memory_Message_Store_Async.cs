@@ -39,14 +39,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly InMemoryOutbox _outbox;
+        private readonly InMemoryOutboxSync _outboxSync;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorWithInMemoryOutboxAscyncTests()
         {
             _myCommand.Value = "Hello World";
 
-            _outbox = new InMemoryOutbox();
+            _outboxSync = new InMemoryOutboxSync();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                _outbox,
+                _outboxSync,
                 _fakeMessageProducer);
         }
 
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             await _commandProcessor.PostAsync(_myCommand);
 
-            var message = await _outbox.GetAsync(_myCommand.Id);
+            var message = await _outboxSync.GetAsync(_myCommand.Id);
             //_should_store_the_message_in_the_sent_command_message_repository
             message.Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway

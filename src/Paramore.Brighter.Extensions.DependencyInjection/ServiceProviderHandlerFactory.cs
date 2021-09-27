@@ -6,7 +6,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     /// <summary>
     /// A factory for handlers using the .NET IoC container for implementation details
     /// </summary>
-    public class ServiceProviderHandlerFactory : IAmAHandlerFactory, IAmAHandlerFactoryAsync
+    public class ServiceProviderHandlerFactory : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync
     {
         private readonly IServiceProvider _serviceProvider;
         private bool _isTransient;
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="handlerType">The type of handler to request</param>
         /// <returns>An instantiated request handler</returns>
-        IHandleRequests IAmAHandlerFactory.Create(Type handlerType)
+        IHandleRequests IAmAHandlerFactorySync.Create(Type handlerType)
         {
             return (IHandleRequests)_serviceProvider.GetService(handlerType);
         }

@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     /// The <see cref="RmqMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
     /// It handles subscription establishment, request sending and error handling
     /// </summary>
-    public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation, IDisposable
+    public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
         public int MaxOutStandingMessages { get; set; } = -1;

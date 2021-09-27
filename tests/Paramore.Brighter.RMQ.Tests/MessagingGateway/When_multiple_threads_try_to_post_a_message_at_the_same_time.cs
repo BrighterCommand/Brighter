@@ -34,7 +34,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     [Trait("Category", "RMQ")]
     public class RmqMessageProducerSupportsMultipleThreadsTests : IDisposable
     {
-        private readonly IAmAMessageProducer _messageProducer;
+        private readonly IAmAMessageProducerSync _messageProducer;
         private readonly Message _message;
 
         public RmqMessageProducerSupportsMultipleThreadsTests()

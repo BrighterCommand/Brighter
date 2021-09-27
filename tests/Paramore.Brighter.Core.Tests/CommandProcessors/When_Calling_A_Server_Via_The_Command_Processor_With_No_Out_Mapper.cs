@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactory<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -56,8 +56,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                 },
                 messageMapperRegistry,
-                new InMemoryOutbox(),
-                (IAmAMessageProducer)new FakeMessageProducer(),
+                new InMemoryOutboxSync(),
+                new FakeMessageProducer(),
                 replySubs,
                 responseChannelFactory: new InMemoryChannelFactory());
             

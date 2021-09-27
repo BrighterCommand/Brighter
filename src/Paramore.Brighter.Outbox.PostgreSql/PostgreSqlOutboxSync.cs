@@ -34,9 +34,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutbox : IAmAnOutbox<Message>, IAmAnOutboxViewer<Message>
+    public class PostgreSqlOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxViewer<Message>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
         private readonly PostgreSqlOutboxConfiguration _configuration;
 
         public bool ContinueOnCapturedContext
@@ -46,10 +46,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         /// <summary>
-        /// Initialises a new instance of <see cref="PostgreSqlOutbox"> class.
+        /// Initialises a new instance of <see cref="PostgreSqlOutboxSync"> class.
         /// </summary>
         /// <param name="configuration">PostgreSql Configuration.</param>
-        public PostgreSqlOutbox(PostgreSqlOutboxConfiguration configuration)
+        public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration)
         {
             _configuration = configuration;
         }

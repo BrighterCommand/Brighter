@@ -41,13 +41,13 @@ namespace Paramore.Brighter.Outbox.EventStore
     /// <summary>
     ///     Class EventStoreOutbox.
     /// </summary>
-    public class EventStoreOutbox :
-        IAmAnOutbox<Message>,
+    public class EventStoreOutboxSync :
+        IAmAnOutboxSync<Message>,
         IAmAnOutboxAsync<Message>,
         IAmAnOutboxViewer<Message>,
         IAmAnOutboxViewerAsync<Message>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutbox>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutboxSync>();
 
         private readonly IEventStoreConnection _eventStore;
 
@@ -60,10 +60,10 @@ namespace Paramore.Brighter.Outbox.EventStore
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="EventStoreOutbox" /> class.
+        ///     Initializes a new instance of the <see cref="EventStoreOutboxSync" /> class.
         /// </summary>
         /// <param name="eventStore">The active subscription to an Event Store instance.</param>
-        public EventStoreOutbox(IEventStoreConnection eventStore)
+        public EventStoreOutboxSync(IEventStoreConnection eventStore)
         {
             _eventStore = eventStore;
         }

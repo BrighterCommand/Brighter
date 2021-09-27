@@ -152,11 +152,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             var producer = _producerFactory.Create();
 
-            var outbox = new SinkOutbox();
+            var outbox = new SinkOutboxSync();
             
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactory(_dispatcher, () => commandProcessor)))
+                .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
                 .ExternalBus(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
@@ -188,7 +188,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutbox : IAmAnOutbox<Message>
+        private class SinkOutboxSync : IAmAnOutboxSync<Message>
         {
             public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
             {

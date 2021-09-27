@@ -27,7 +27,7 @@ namespace GreetingsPumper
                 .ConfigureServices((hostContext, services) =>
 
                     {
-                        var outbox = new InMemoryOutbox();
+                        var outbox = new InMemoryOutboxSync();
                         var gatewayConnection = new RmqMessagingGatewayConnection
                         {
                             AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),

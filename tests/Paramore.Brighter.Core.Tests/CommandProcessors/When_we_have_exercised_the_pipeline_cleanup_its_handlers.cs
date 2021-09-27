@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             registry.Register<MyCommand, MyPreAndPostDecoratedHandler>();
             registry.Register<MyCommand, MyLoggingHandler<MyCommand>>();
 
-            var handlerFactory = new CheapHandlerFactory();
+            var handlerFactory = new CheapHandlerFactorySync();
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _pipelineBuilder.Build(new RequestContext()).Any();
         }
 
-        internal class CheapHandlerFactory : IAmAHandlerFactory
+        internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType)
             {

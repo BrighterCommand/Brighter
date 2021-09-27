@@ -70,7 +70,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             var container = new ServiceCollection();
 
             var commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), (IAmAHandlerFactory)new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
+                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new ServiceProviderHandlerFactory(container.BuildServiceProvider())))
                 .Policies(new PolicyRegistry
                 {
                     { CommandProcessor.RETRYPOLICY, retryPolicy },

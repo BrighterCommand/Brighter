@@ -31,7 +31,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeOutbox : IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
+    public class FakeOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
     {
         private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
 

@@ -35,20 +35,20 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-     public class ControlBusSenderPostMessageAsyneTests : IDisposable
+     public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly ControlBusSender _controlBusSender;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeOutboxSync _fakeOutboxSync;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
-        public ControlBusSenderPostMessageAsyneTests()
+        public ControlBusSenderPostMessageAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
+            _fakeOutboxSync = new FakeOutboxSync();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                _fakeOutbox,
+                _fakeOutboxSync,
                 _fakeMessageProducer);
 
             _controlBusSender = new ControlBusSender(_commandProcessor);
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             
             //_should_store_the_message_in_the_sent_command_message_repository
-            var message = _fakeOutbox
+            var message = _fakeOutboxSync
               .DispatchedMessages(1200000, 1)
               .SingleOrDefault();
               

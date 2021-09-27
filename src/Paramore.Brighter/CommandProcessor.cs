@@ -46,8 +46,8 @@ namespace Paramore.Brighter
 
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
-        private readonly IAmAHandlerFactory _handlerFactory;
-        private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
+        private readonly IAmAHandlerFactorySync _handlerFactorySync;
+        private readonly IAmAHandlerFactoryAsync _handlerFactoryAsync;
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string> _policyRegistry;
         private readonly InboxConfiguration _inboxConfiguration;
@@ -113,9 +113,10 @@ namespace Paramore.Brighter
         )
         {
             _subscriberRegistry = subscriberRegistry;
-            _handlerFactory = handlerFactory;
+            if (handlerFactory is IAmAHandlerFactorySync handlerFactorySync)
+                _handlerFactorySync = handlerFactorySync;
             if (handlerFactory is IAmAHandlerFactoryAsync handlerFactoryAsync)
-                _asyncHandlerFactory = handlerFactoryAsync;
+                _handlerFactoryAsync = handlerFactoryAsync;
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -214,7 +215,6 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="outBox">The outbox.</param>
         /// <param name="messageProducer">The messaging gateway.</param>
-        /// <param name="asyncMessageProducer">The messaging gateway supporting async/await.</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
@@ -252,14 +252,14 @@ namespace Paramore.Brighter
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
-            if (_handlerFactory == null)
+            if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.Build(requestContext);
@@ -281,14 +281,14 @@ namespace Paramore.Brighter
         public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
-            if (_asyncHandlerFactory == null)
+            if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
@@ -310,14 +310,14 @@ namespace Paramore.Brighter
         /// <param name="event">The event.</param>
         public void Publish<T>(T @event) where T : class, IRequest
         {
-            if (_handlerFactory == null)
+            if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send pipeline for event: {EventType} {Id}", @event.GetType(), @event.Id);
                 var handlerChain = builder.Build(requestContext);
@@ -361,14 +361,14 @@ namespace Paramore.Brighter
         public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
-            if (_asyncHandlerFactory == null)
+            if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
-            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _asyncHandlerFactory, _inboxConfiguration))
+            using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
                 s_logger.LogInformation("Building send async pipeline for event: {EventType} {Id}", @event.GetType(), @event.Id);
 
@@ -643,11 +643,13 @@ namespace Paramore.Brighter
                     if (_bus == null)
                     {
                         _bus = new ExternalBusServices();
+                        if(outbox is IAmAnOutboxSync<Message> syncOutbox)_bus.OutBox = syncOutbox;
                         if(outbox is IAmAnOutboxAsync<Message> asyncOutbox)_bus.AsyncOutbox = asyncOutbox;
-                        _bus.MessageProducer = messageProducer;
-                        _bus.OutBox = outbox;
+
                         _bus.OutboxTimeout = outboxTimeout;
                         _bus.PolicyRegistry = policyRegistry;
+                        if (messageProducer is IAmAMessageProducerSync syncMessageProducer)
+                            _bus.MessageProducerSync = syncMessageProducer;
                         if (messageProducer is IAmAMessageProducerAsync asyncMessageProducer)
                             _bus.AsyncMessageProducer = asyncMessageProducer;
                     }

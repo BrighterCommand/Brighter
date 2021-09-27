@@ -69,21 +69,24 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - IAmAnOutbox - what messages have we posted
         ///  - ImAnOutboxAsync - what messages have we posted (async pipeline compatible)
         /// </summary>
+        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="outbox">The outbox provider - if your outbox supports both sync and async options, just provide this and we will register both</param>
-        /// <param name="asyncOutbox">The async outbox provider - if your outbox supports both sync and async options, just use outbox</param>
         /// <returns></returns>
-        public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null, IAmAnOutbox<Message> asyncOutbox = null)
+        public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null)
         {
-             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => outbox, ServiceLifetime.Singleton));
-             if (outbox is IAmAnOutboxAsync<Message>)
-             {
-                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
-                 return brighterBuilder;
-             }
+            if (outbox is IAmAnOutboxSync<Message>)
+            {
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox,
+                    ServiceLifetime.Singleton));
+            }
 
-             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => asyncOutbox, ServiceLifetime.Singleton));
- 
-             return brighterBuilder;
+            if (outbox is IAmAnOutboxAsync<Message>)
+            {
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox,
+                    ServiceLifetime.Singleton));
+            }
+
+            return brighterBuilder;
              
         }
 
@@ -99,8 +102,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseInMemoryOutbox(this IBrighterBuilder brighterBuilder)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => new InMemoryOutboxSync(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutboxSync(), ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
@@ -121,8 +124,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             brighterBuilder.Services.AddSingleton(producer);
             
-            if(producer is IAmAMessageProducerAsync async)
-                brighterBuilder.Services.AddSingleton(async);
+            if(producer is IAmAMessageProducerSync producerSync)
+                brighterBuilder.Services.AddSingleton(producerSync);
+            if(producer is IAmAMessageProducerAsync producerAsync)
+                brighterBuilder.Services.AddSingleton(producerAsync);
             
             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
             
@@ -168,18 +173,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var useRequestResponse = provider.GetService<IUseRpc>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(provider);
-            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
+            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
 
-            var outbox = provider.GetService<IAmAnOutbox<Message>>();
+            var outbox = provider.GetService<IAmAnOutboxSync<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
             var overridingConnectionProvider = provider.GetService<IAmABoxTransactionConnectionProvider>();
 
-            if (outbox == null) outbox = new InMemoryOutbox();
-            if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
+            if (outbox == null) outbox = new InMemoryOutboxSync();
+            if (asyncOutbox == null) asyncOutbox = new InMemoryOutboxSync();
 
-            var producer = provider.GetService<IAmAMessageProducer>();
+            var producer = provider.GetService<IAmAMessageProducerSync>();
             var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
 
             var needHandlers = CommandProcessorBuilder.With();
@@ -203,7 +208,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             {
                 externalBusBuilder = producer == null
                     ? messagingBuilder.NoExternalBus()
-                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
+                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
             }
             else
             {
@@ -216,7 +221,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 {
                     externalBusBuilder = useRequestResponse.RPC
                         ? messagingBuilder.ExternalRPC(new MessagingConfiguration(producer, messageMapperRegistry, responseChannelFactory: options.ChannelFactory), outbox, useRequestResponse.ReplyQueueSubscriptions)
-                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
+                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
                 }
             }
 

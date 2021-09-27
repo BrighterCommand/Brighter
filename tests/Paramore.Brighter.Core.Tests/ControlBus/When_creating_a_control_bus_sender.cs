@@ -8,13 +8,13 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
     {
         private IAmAControlBusSender s_sender;
         private readonly IAmAControlBusSenderFactory s_senderFactory;
-        private readonly IAmAnOutbox<Message> s_fakeOutbox;
-        private readonly IAmAMessageProducer s_fakeGateway;
+        private readonly IAmAnOutboxSync<Message> _fakeOutboxSync;
+        private readonly IAmAMessageProducerSync s_fakeGateway;
 
         public ControlBusSenderFactoryTests()
         {
-            s_fakeOutbox = A.Fake<IAmAnOutbox<Message>>();
-            s_fakeGateway = A.Fake<IAmAMessageProducer>();
+            _fakeOutboxSync = A.Fake<IAmAnOutboxSync<Message>>();
+            s_fakeGateway = A.Fake<IAmAMessageProducerSync>();
  
             s_senderFactory = new ControlBusSenderFactory();
         }
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         [Fact]
         public void When_creating_a_control_bus_sender()
         {
-            s_sender = s_senderFactory.Create(s_fakeOutbox, s_fakeGateway);
+            s_sender = s_senderFactory.Create(_fakeOutboxSync, s_fakeGateway);
 
             //_should_create_a_control_bus_sender
             s_sender.Should().NotBeNull();

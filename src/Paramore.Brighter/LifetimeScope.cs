@@ -34,22 +34,22 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<LifetimeScope>();
 
-        private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly IAmAHandlerFactorySync _handlerFactorySync;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory) 
-            : this(handlerFactory, null)
+        public LifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
+            : this(handlerFactorySync, null)
         {}
 
         public LifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
             : this(null, asyncHandlerFactory)
         {}
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        public LifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
         {
-            _handlerFactory = handlerFactory;
+            _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
         }
 
@@ -57,7 +57,7 @@ namespace Paramore.Brighter
 
         public void Add(IHandleRequests instance)
         {
-            if (_handlerFactory == null)
+            if (_handlerFactorySync == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
             s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
@@ -76,7 +76,7 @@ namespace Paramore.Brighter
             _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items
-                _handlerFactory.Release(trackedItem);
+                _handlerFactorySync.Release(trackedItem);
                 s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 

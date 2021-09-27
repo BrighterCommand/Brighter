@@ -39,13 +39,13 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// <summary>
     ///     Class MsSqlOutbox.
     /// </summary>
-    public class MsSqlOutbox :
-        IAmAnOutbox<Message>, 
+    public class MsSqlOutboxSync :
+        IAmAnOutboxSync<Message>, 
         IAmAnOutboxAsync<Message>,
         IAmAnOutboxViewer<Message>,
         IAmAnOutboxViewerAsync<Message>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlOutbox>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlOutboxSync>();
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
@@ -62,11 +62,11 @@ namespace Paramore.Brighter.Outbox.MsSql
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
+        ///     Initializes a new instance of the <see cref="MsSqlOutboxSync" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
-        public MsSqlOutbox(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
+        public MsSqlOutboxSync(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -74,10 +74,10 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
+        ///     Initializes a new instance of the <see cref="MsSqlOutboxSync" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlOutbox(MsSqlConfiguration configuration) : this(configuration, new MsSqlSqlAuthConnectionProvider(configuration))
+        public MsSqlOutboxSync(MsSqlConfiguration configuration) : this(configuration, new MsSqlSqlAuthConnectionProvider(configuration))
         {
         }
 

@@ -13,7 +13,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     {
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly string _queueName = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageProducerSync _producer;
         private readonly IAmAMessageConsumer _consumer;
 
         public PurgeTest()

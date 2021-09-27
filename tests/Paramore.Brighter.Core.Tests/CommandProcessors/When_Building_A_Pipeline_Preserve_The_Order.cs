@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
-            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactory)handlerFactory);
+            _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
         }
 
         [Fact]

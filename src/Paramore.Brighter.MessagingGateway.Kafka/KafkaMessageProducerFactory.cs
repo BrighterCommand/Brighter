@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
         
 
-        public IAmAMessageProducer Create()
+        public IAmAMessageProducerSync Create()
         {
             var producer = new KafkaMessageProducer(_globalConfiguration, _publication);
             if (_configHook != null)

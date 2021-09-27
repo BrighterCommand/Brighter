@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     public class SqliteOutboxWritingMessageAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutbox _sqlOutbox;
+        private readonly SqliteOutboxSync _sqlOutboxSync;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutbox = new SqliteOutbox(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
             var messageHeader = new MessageHeader(
                 Guid.NewGuid(), 
@@ -71,9 +71,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
+            await _sqlOutboxSync.AddAsync(_messageEarliest);
 
-            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutboxSync.GetAsync(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

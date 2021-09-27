@@ -18,14 +18,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeOutboxSync _fakeOutboxSync;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorDepositPostTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
+            _fakeOutboxSync = new FakeOutboxSync();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
                 messageMapperRegistry,
-                _fakeOutbox,
+                _fakeOutboxSync,
                 _fakeMessageProducer);
         }
 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutbox
+            var depositedPost = _fakeOutboxSync
                 .OutstandingMessages(3000)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 

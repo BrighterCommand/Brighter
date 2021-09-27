@@ -37,21 +37,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private IAmAMessageProducer _fakeMessageProducer;
-        private InMemoryOutbox _outbox;
+        private InMemoryOutboxSync _outboxSync;
 
         public PostFailureLimitCommandTests()
         {
-            _outbox = new InMemoryOutbox();
-            _fakeMessageProducer = new FakeErroringMessageProducer();
+            _outboxSync = new InMemoryOutboxSync();
+            _fakeMessageProducer = new FakeErroringMessageProducerSync();
 
             var messageMapperRegistry =
                 new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
+                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new MessagingConfiguration((IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry), _outbox)
+                .ExternalBus(new MessagingConfiguration(_fakeMessageProducer, messageMapperRegistry), _outboxSync)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //should store the message in the sent outbox
             foreach (var id in sentList)
             {
-                _outbox.Get(id).Should().NotBeNull();
+                _outboxSync.Get(id).Should().NotBeNull();
             }
         }
 
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             CommandProcessor.ClearExtServiceBus();
         }
 
-        internal class EmptyHandlerFactory : IAmAHandlerFactory
+        internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType)
             {

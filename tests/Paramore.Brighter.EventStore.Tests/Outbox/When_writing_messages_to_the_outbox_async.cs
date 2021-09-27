@@ -39,7 +39,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task When_Writing_Messages_To_The_Outbox_Async()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);

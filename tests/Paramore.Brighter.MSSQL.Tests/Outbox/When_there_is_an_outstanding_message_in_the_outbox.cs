@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     public class OutstandingMessagesTests 
     {
         private readonly Message _dispatchedMessage;
-        private readonly MsSqlOutbox _sqlOutbox;
+        private readonly MsSqlOutboxSync _sqlOutboxSync;
         private readonly MsSqlTestHelper _msSqlTestHelper;
 
         public OutstandingMessagesTests()
@@ -19,9 +19,9 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
+            _sqlOutboxSync = new MsSqlOutboxSync(_msSqlTestHelper.OutboxConfiguration);
             _dispatchedMessage = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _sqlOutbox.Add(_dispatchedMessage);
+            _sqlOutboxSync.Add(_dispatchedMessage);
 
             //wait to create an oustanding period
             Task.Delay(1000).Wait();
@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public void When_there_is_an_outstanding_message_in_the_outbox()
         {
-            var outstandingMessage = _sqlOutbox.OutstandingMessages(500).SingleOrDefault();
+            var outstandingMessage = _sqlOutboxSync.OutstandingMessages(500).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public async Task When_there_is_an_outstanding_message_in_the_outbox_async()
         {
-            var outstandingMessage = (await _sqlOutbox.OutstandingMessagesAsync(500)).SingleOrDefault();
+            var outstandingMessage = (await _sqlOutboxSync.OutstandingMessagesAsync(500)).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
