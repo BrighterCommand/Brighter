@@ -14,14 +14,19 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         
         public IAmAMessageConsumer Create(Subscription subscription)
         {
-            var nameSpaceManagerWrapper = new ManagementClientWrapper(_configuration);
+            return Create(subscription, _configuration);
+        }
+
+        public static IAmAMessageConsumer Create(Subscription subscription, AzureServiceBusConfiguration configuration)
+        {
+            var nameSpaceManagerWrapper = new ManagementClientWrapper(configuration);
 
             return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
                 new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
-                    new TopicClientProvider(_configuration), subscription.MakeChannels), nameSpaceManagerWrapper,
-                new MessageReceiverProvider(_configuration),
+                    new TopicClientProvider(configuration), subscription.MakeChannels), nameSpaceManagerWrapper,
+                new MessageReceiverProvider(configuration),
                 makeChannels: subscription.MakeChannels,
-                receiveMode: _configuration.AckOnRead ? ReceiveMode.PeekLock : ReceiveMode.ReceiveAndDelete,
+                receiveMode: configuration.AckOnRead ? ReceiveMode.PeekLock : ReceiveMode.ReceiveAndDelete,
                 batchSize: subscription.BufferSize);
         }
     }

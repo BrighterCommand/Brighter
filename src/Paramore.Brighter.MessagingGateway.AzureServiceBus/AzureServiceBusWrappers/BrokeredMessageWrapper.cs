@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
@@ -16,5 +17,25 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public IDictionary<string, object> UserProperties => _brokeredMessage.UserProperties;
 
         public string LockToken => _brokeredMessage.SystemProperties.LockToken;
+
+        public Guid Id
+        {
+            get
+            {
+                return Guid.Parse(_brokeredMessage.MessageId);
+            }
+        }
+
+        public Guid CorrelationId
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_brokeredMessage.CorrelationId))
+                    return Guid.Empty;
+                return Guid.Parse(_brokeredMessage.CorrelationId);
+            }
+        }
+
+        public string ContentType{ get => _brokeredMessage.ContentType; }
     }
 }
