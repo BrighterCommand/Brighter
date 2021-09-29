@@ -18,13 +18,13 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         private readonly Mock<IManagementClientWrapper> _nameSpaceManagerWrapper;
         private readonly AzureServiceBusConsumer _azureServiceBusConsumer;
         private readonly Mock<IMessageReceiverWrapper> _messageReceiver;
-        private readonly Mock<IAmAMessageProducer> _mockMessageProducer;
+        private readonly Mock<IAmAMessageProducerSync> _mockMessageProducer;
         private readonly Mock<IMessageReceiverProvider> _mockMessageReceiver;
 
         public AzureServiceBusConsumerTests()
         {
             _nameSpaceManagerWrapper = new Mock<IManagementClientWrapper>();
-            _mockMessageProducer = new Mock<IAmAMessageProducer>();
+            _mockMessageProducer = new Mock<IAmAMessageProducerSync>();
             _mockMessageReceiver = new Mock<IMessageReceiverProvider>();
 
             _messageReceiver = new Mock<IMessageReceiverWrapper>();

@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             brighterBuilder.Services.AddSingleton<MsSqlConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMsSqlConnectionProvider), connectionProvider, serviceLifetime));
             
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildMsSqlOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMsSqlOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMsSqlOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewer<Message>), BuildMsSqlOutbox,serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewerAsync<Message>), BuildMsSqlOutbox,serviceLifetime));
@@ -56,12 +56,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             return brighterBuilder;
         }
 
-        private static MsSqlOutbox BuildMsSqlOutbox(IServiceProvider provider)
+        private static MsSqlOutboxSync BuildMsSqlOutbox(IServiceProvider provider)
         {
             var connectionProvider = provider.GetService<IMsSqlConnectionProvider>();
             var config = provider.GetService<MsSqlConfiguration>();
 
-            return new MsSqlOutbox(config, connectionProvider);
+            return new MsSqlOutboxSync(config, connectionProvider);
         }
     }
 }

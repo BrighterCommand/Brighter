@@ -33,6 +33,6 @@ namespace Paramore.Brighter
         /// Creates a message producer.
         /// </summary>
         /// <returns>IAmAMessageProducer.</returns>
-        IAmAMessageProducer Create();
+        IAmAMessageProducerSync Create();
     }
 }

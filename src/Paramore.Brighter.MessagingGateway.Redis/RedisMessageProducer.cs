@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
          
     */
 
-    public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducer
+    public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducerSync
     {
         public int MaxOutStandingMessages { get; set;  } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;

@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
-                (IAmAHandlerFactory)handlerFactory,
+                handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}},
                 inboxConfiguration: inboxConfiguration

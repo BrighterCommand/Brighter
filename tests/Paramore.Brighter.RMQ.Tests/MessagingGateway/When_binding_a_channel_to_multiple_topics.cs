@@ -9,7 +9,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     [Trait("Category", "RMQ")]
     public class RmqMessageConsumerMultipleTopicTests : IDisposable
     {        
-        private readonly IAmAMessageProducer _messageProducer;
+        private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _messageTopic1, _messageTopic2;
 

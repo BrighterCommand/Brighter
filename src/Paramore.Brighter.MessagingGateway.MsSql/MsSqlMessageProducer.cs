@@ -6,7 +6,7 @@ using Paramore.Brighter.MsSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
-    public class MsSqlMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+    public class MsSqlMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;

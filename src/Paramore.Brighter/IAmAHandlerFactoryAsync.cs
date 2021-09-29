@@ -33,7 +33,7 @@ namespace Paramore.Brighter
     /// instances of their <see cref="IHandleRequestsAsync"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequestsAsync"/> registered 
     /// with <see cref="IAmASubscriberRegistry"/>. Typically you would use an IoC container to implement the Handler Factory.
     /// </summary>
-    public interface IAmAHandlerFactoryAsync
+    public interface IAmAHandlerFactoryAsync : IAmAHandlerFactory
     {
         /// <summary>
         /// Creates the specified async handler type.

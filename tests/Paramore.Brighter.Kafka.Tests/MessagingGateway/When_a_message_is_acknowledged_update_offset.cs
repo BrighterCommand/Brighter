@@ -18,14 +18,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageProducerSync _producerSync;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
 
         public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
         {
             _output = output;
-            _producer = new KafkaMessageProducerFactory(
+            _producerSync = new KafkaMessageProducerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test", 
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         private void SendMessage(Guid messageId)
         {
-            _producer.Send(new Message(
+            _producerSync.Send(new Message(
                 new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
                 new MessageBody($"test content [{_queueName}]")));
         }
@@ -155,7 +155,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _producer?.Dispose();
+            _producerSync?.Dispose();
         }
     }
 }

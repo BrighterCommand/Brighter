@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
             _requestContext = new RequestContext();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, asyncHandlerFactory: handlerFactory);
         }
 
         [Fact]

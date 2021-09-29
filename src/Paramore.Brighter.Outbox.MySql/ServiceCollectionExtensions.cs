@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Outbox.MySql
             brighterBuilder.Services.AddSingleton<MySqlConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMySqlConnectionProvider), connectionProvider, serviceLifetime));
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewer<Message>), BuildMySqlOutboxOutbox,serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewerAsync<Message>), BuildMySqlOutboxOutbox,serviceLifetime));
@@ -55,12 +55,12 @@ namespace Paramore.Brighter.Outbox.MySql
              return brighterBuilder;
          }
        
-        private static MySqlOutbox BuildMySqlOutboxOutbox(IServiceProvider provider)
+        private static MySqlOutboxSync BuildMySqlOutboxOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<MySqlConfiguration>();
             var connectionProvider = provider.GetService<IMySqlConnectionProvider>();
 
-            return new MySqlOutbox(config, connectionProvider);
+            return new MySqlOutboxSync(config, connectionProvider);
         }
     }
 }

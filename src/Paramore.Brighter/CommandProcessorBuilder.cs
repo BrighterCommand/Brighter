@@ -71,14 +71,11 @@ namespace Paramore.Brighter
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAnOutbox<Message> _outbox;
-        private IAmAnOutboxAsync<Message> _asyncOutbox;
         private IAmAMessageProducer _messagingGateway;
-        private IAmAMessageProducerAsync _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
-        private IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private IAmAChannelFactory _responseChannelFactory;
@@ -111,7 +108,6 @@ namespace Paramore.Brighter
         {
             _registry = handlerConfiguration.SubscriberRegistry;
             _handlerFactory = handlerConfiguration.HandlerFactory;
-            _asyncHandlerFactory = handlerConfiguration.AsyncHandlerFactory;
             return this;
         }
 
@@ -163,6 +159,7 @@ namespace Paramore.Brighter
         /// 
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
+        /// <param name="outbox">The Outbox.</param>
         /// <param name="boxTransactionConnectionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
@@ -170,9 +167,7 @@ namespace Paramore.Brighter
             _useExternalBus = true;
             _messagingGateway = configuration.MessageProducer;
             _outbox = outbox;
-            if(outbox is IAmAnOutboxAsync<Message>) _asyncOutbox = (IAmAnOutboxAsync<Message>)outbox;
             _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
-            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             return this;
@@ -199,14 +194,10 @@ namespace Paramore.Brighter
             _useRequestReplyQueues = true;
             _replySubscriptions = subscriptions;
             _messagingGateway = configuration.MessageProducer;
-            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
             _outbox = outbox;
-            
-            if(outbox is IAmAnOutboxAsync<Message> asyncOutbox) 
-                _asyncOutbox = asyncOutbox;
              
             return this;
         }
@@ -235,7 +226,6 @@ namespace Paramore.Brighter
                     
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry);
@@ -245,14 +235,11 @@ namespace Paramore.Brighter
                 return new CommandProcessor(
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
                     outBox: _outbox,
-                    asyncOutbox: _asyncOutbox,
                     messageProducer: _messagingGateway,
-                    asyncMessageProducer: _asyncMessagingGateway,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
@@ -263,7 +250,6 @@ namespace Paramore.Brighter
                  return new CommandProcessor(
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
@@ -345,9 +331,9 @@ namespace Paramore.Brighter
         ///  We want to use RPC to send messages to another process
         /// </summary>
         /// <param name="messagingConfiguration"></param>
-        /// <param name="outbox">The outbox</param>
+        /// <param name="outboxSync">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
-        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions);
+        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

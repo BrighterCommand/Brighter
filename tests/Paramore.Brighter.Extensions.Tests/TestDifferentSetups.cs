@@ -30,7 +30,7 @@ namespace Tests
         public void WithProducer()
         {
             var serviceCollection = new ServiceCollection();
-            var producer = new FakeProducer();
+            var producer = new FakeProducerSync();
             
             serviceCollection
                 .AddBrighter()
@@ -94,7 +94,7 @@ namespace Tests
 
     }
 
-    internal class FakeProducer : IAmAMessageProducer, IAmAMessageProducerAsync
+    internal class FakeProducerSync : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;

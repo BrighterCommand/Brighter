@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     {
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageProducerSync _producer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
         public KafkaConfluentProducerAssumeTests ()

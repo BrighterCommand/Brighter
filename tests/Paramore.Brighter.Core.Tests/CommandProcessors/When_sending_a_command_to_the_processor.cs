@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             _myCommandHandler = new MyCommandHandler();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => _myCommandHandler);
+            var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => _myCommandHandler);
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyCommand>.ClearPipelineCache();

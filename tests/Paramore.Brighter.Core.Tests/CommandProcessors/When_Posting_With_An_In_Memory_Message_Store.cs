@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly InMemoryOutbox _outbox = new InMemoryOutbox();
+        private readonly InMemoryOutboxSync _outbox = new InMemoryOutboxSync();
         private readonly FakeMessageProducer _fakeMessageProducer = new FakeMessageProducer();
 
         public CommandProcessorWithInMemoryOutboxTests()
@@ -65,8 +65,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAnOutbox<Message>)_outbox,
-                (IAmAMessageProducer)_fakeMessageProducer);
+                _outbox,
+                _fakeMessageProducer);
         }
 
         [Fact]

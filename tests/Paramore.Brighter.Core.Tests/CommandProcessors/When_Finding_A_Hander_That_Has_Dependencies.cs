@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         var registry = new SubscriberRegistry();
         registry.Register<MyCommand, MyDependentCommandHandler>();
         var handlerFactory =
-            new TestHandlerFactory<MyCommand, MyDependentCommandHandler>(
+            new TestHandlerFactorySync<MyCommand, MyDependentCommandHandler>(
                 () => new MyDependentCommandHandler(new FakeRepository<MyAggregate>(new FakeSession())));
 
         _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);

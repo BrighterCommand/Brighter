@@ -12,7 +12,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             brighterBuilder.Services.AddSingleton<IEventStoreConnection>(connection);
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), BuildEventStoreOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildEventStoreOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildEventStoreOutbox, serviceLifetime));
              brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewer<Message>), BuildEventStoreOutbox,serviceLifetime));
              brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxViewerAsync<Message>), BuildEventStoreOutbox,serviceLifetime));
@@ -20,11 +20,11 @@ namespace Paramore.Brighter.Outbox.EventStore
             return brighterBuilder;
         }
 
-        private static EventStoreOutbox BuildEventStoreOutbox(IServiceProvider provider)
+        private static EventStoreOutboxSync BuildEventStoreOutbox(IServiceProvider provider)
         {
             var connection = provider.GetService<IEventStoreConnection>();
 
-            return new EventStoreOutbox(connection);
+            return new EventStoreOutboxSync(connection);
         }
     }
 }

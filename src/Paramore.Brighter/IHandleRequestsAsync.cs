@@ -76,7 +76,7 @@ namespace Paramore.Brighter
         HandlerName Name { get; }
 
         /// <summary>
-        /// Adds to lifetime so that the pipeline can manage destroying handlers created as part of the pipeline by calling the client provided <see cref="IAmAHandlerFactory"/> .
+        /// Adds to lifetime so that the pipeline can manage destroying handlers created as part of the pipeline by calling the client provided <see cref="IAmAHandlerFactorySync"/> .
         /// </summary>
         /// <param name="instanceScope">The instance scope.</param>
         void AddToLifetime(IAmALifetime instanceScope);

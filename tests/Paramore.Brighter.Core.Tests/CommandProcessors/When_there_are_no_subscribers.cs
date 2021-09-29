@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public CommandProcessorNoMatchingSubcribersTests()
         {
             var registry = new SubscriberRegistry();
-            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
+            var handlerFactory = new TestHandlerFactorySync<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
