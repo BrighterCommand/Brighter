@@ -37,11 +37,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private IAmAMessageProducer _fakeMessageProducer;
-        private InMemoryOutboxSync _outboxSync;
+        private InMemoryOutbox _outbox;
 
         public PostFailureLimitCommandTests()
         {
-            _outboxSync = new InMemoryOutboxSync();
+            _outbox = new InMemoryOutbox();
             _fakeMessageProducer = new FakeErroringMessageProducerSync();
 
             var messageMapperRegistry =
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new MessagingConfiguration(_fakeMessageProducer, messageMapperRegistry), _outboxSync)
+                .ExternalBus(new MessagingConfiguration(_fakeMessageProducer, messageMapperRegistry), _outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //should store the message in the sent outbox
             foreach (var id in sentList)
             {
-                _outboxSync.Get(id).Should().NotBeNull();
+                _outbox.Get(id).Should().NotBeNull();
             }
         }
 

@@ -71,7 +71,7 @@ namespace GreetingsReceiverConsole
 
                     var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
-                    var outBox = new InMemoryOutboxSync();
+                    var outBox = new InMemoryOutbox();
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;

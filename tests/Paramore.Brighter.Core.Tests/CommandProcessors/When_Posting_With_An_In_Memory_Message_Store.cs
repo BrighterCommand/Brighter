@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly InMemoryOutboxSync _outbox = new InMemoryOutboxSync();
+        private readonly InMemoryOutbox _outbox = new InMemoryOutbox();
         private readonly FakeMessageProducer _fakeMessageProducer = new FakeMessageProducer();
 
         public CommandProcessorWithInMemoryOutboxTests()

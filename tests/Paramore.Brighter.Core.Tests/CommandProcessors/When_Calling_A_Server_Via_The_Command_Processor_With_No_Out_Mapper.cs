@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                 },
                 messageMapperRegistry,
-                new InMemoryOutboxSync(),
+                new InMemoryOutbox(),
                 new FakeMessageProducer(),
                 replySubs,
                 responseChannelFactory: new InMemoryChannelFactory());

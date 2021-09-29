@@ -40,7 +40,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_reading_from_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutboxSync();
+            var outbox = new InMemoryOutbox();
             
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_marking_dispatched_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutboxSync();
+            var outbox = new InMemoryOutbox();
             
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_looking_for_undispatched_messages_in_outbox()
         {
             //Arrange
-            var outbox = new InMemoryOutboxSync();
+            var outbox = new InMemoryOutbox();
             
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_there_are_multiple_items_retrieve_by_id()
         {
             //Arrange
-            var outbox = new InMemoryOutboxSync();
+            var outbox = new InMemoryOutbox();
 
             var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
             for(int i =0; i <= 4; i++)
@@ -131,7 +131,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_there_are_multiple_items_and_some_are_dispatched()
         {
             //Arrange
-            var outbox = new InMemoryOutboxSync();
+            var outbox = new InMemoryOutbox();
 
             var messageIds = new Guid[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid(), };
             for(int i =0; i <= 4; i++)
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_paging_a_list_of_messages()
         {
            //Arrange
-           var outbox = new InMemoryOutboxSync();
+           var outbox = new InMemoryOutbox();
            
            for(int i =0; i <= 8; i++) // -- nine items
                outbox.Add(new MessageTestDataBuilder());

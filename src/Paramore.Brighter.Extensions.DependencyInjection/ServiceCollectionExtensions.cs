@@ -102,8 +102,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseInMemoryOutbox(this IBrighterBuilder brighterBuilder)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => new InMemoryOutboxSync(), ServiceLifetime.Singleton));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutboxSync(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
@@ -181,8 +181,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
             var overridingConnectionProvider = provider.GetService<IAmABoxTransactionConnectionProvider>();
 
-            if (outbox == null) outbox = new InMemoryOutboxSync();
-            if (asyncOutbox == null) asyncOutbox = new InMemoryOutboxSync();
+            if (outbox == null) outbox = new InMemoryOutbox();
+            if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
 
             var producer = provider.GetService<IAmAMessageProducerSync>();
             var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();

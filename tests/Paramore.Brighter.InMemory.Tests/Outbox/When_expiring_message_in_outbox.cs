@@ -37,7 +37,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_expiring_a_cache_entry_no_longer_there()
         {
             //Arrange
-            var outbox = new InMemoryOutboxSync()
+            var outbox = new InMemoryOutbox()
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         public void When_over_ttl_but_no_sweep_run()
         {
                //Arrange
-               var outbox = new InMemoryOutboxSync()
+               var outbox = new InMemoryOutbox()
                {
                    //set low time to live but long sweep perioc
                    EntryTimeToLive = TimeSpan.FromMilliseconds(50),
