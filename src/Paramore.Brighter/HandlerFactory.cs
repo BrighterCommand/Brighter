@@ -41,10 +41,10 @@ namespace Paramore.Brighter
             _messageType = typeof(TRequest);
         }
 
-        public IHandleRequests<TRequest> CreateRequestHandler()
+        public IHandleRequests<TRequest> CreateRequestHandler(IAmALifetime lifetime)
         {
             var handlerType = _attribute.GetHandlerType().MakeGenericType(_messageType);
-            var handler = (IHandleRequests<TRequest>)_factorySync.Create(handlerType);
+            var handler = (IHandleRequests<TRequest>)_factorySync.Create(handlerType, lifetime);
 
             if (handler is null)
                 throw new ConfigurationException($"Could not create handler {handlerType} from {_factorySync}");

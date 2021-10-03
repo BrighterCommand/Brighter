@@ -1,4 +1,6 @@
-using System;
+﻿using System;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
@@ -18,8 +20,9 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         /// Creates the specified handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
+        /// <param name="lifetimeScope"></param>
         /// <returns>IHandleRequests.</returns>
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             if (handlerType == typeof(ConfigurationCommandHandler))
                 return new ConfigurationCommandHandler(_worker);
@@ -37,5 +40,6 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         public void Release(IHandleRequests handler)
         {
         }
+        public IServiceScope CreateScope() => new NullScope();
     }
 }

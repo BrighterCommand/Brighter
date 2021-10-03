@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter
+﻿using Microsoft.Extensions.DependencyInjection;
+
+namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAHandlerFactory
@@ -6,6 +8,6 @@
     /// </summary>
     public interface IAmAHandlerFactory
     {
-        
+        IServiceScope CreateScope();
     }
 }

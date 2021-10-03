@@ -26,7 +26,9 @@ using System;
 using System.Linq;
 using System.Text.Json;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -87,12 +89,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType)
+            public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
             {
                 return null;
             }
 
             public void Release(IHandleRequests handler) {}
+            public IServiceScope CreateScope() => new NullScope();
         }
     }
 }

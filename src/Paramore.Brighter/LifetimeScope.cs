@@ -24,12 +24,14 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
+
     internal class LifetimeScope : IAmALifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<LifetimeScope>();
@@ -47,10 +49,13 @@ namespace Paramore.Brighter
             : this(null, asyncHandlerFactory)
         {}
 
-        public LifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        private LifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
+
+            var nonNullFactory = (IAmAHandlerFactory)_asyncHandlerFactory ?? _handlerFactorySync;  
+            Scope = nonNullFactory.CreateScope();
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
@@ -71,8 +76,12 @@ namespace Paramore.Brighter
             s_logger.LogDebug("Tracking async handler instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
+        public IServiceScope Scope { get; }
+
         public void Dispose()
         {
+            Scope.Dispose();
+
             _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items

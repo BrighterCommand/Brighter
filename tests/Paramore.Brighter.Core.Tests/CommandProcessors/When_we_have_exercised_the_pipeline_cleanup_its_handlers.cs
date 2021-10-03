@@ -1,7 +1,9 @@
-using System;
+﻿using System;
 using System.Linq;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -30,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType)
+            public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
             {
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
@@ -54,6 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 s_released += "|" + handler.Name;
             }
+            public IServiceScope CreateScope() => new NullScope();
         }
 
 
