@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.ServiceBus.Management;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -12,26 +11,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     {
         private readonly string _topicName;
         private readonly IAmAMessageProducerSync _messageProducerSync;
-        private readonly IManagementClientWrapper _managementClientWrapper;
-        private readonly IMessageReceiverProvider _messageReceiverProvider;
+        private readonly IAdministrationClientWrapper _administrationClientWrapper;
+        private readonly IServiceBusReceiverProvider _serviceBusReceiverProvider;
         private readonly int _batchSize;
-        private IMessageReceiverWrapper _messageReceiver;
+        private IServiceBusReceiverWrapper _serviceBusReceiver;
         private readonly string _subscriptionName;
         private bool _subscriptionCreated;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusConsumer>();
         private readonly OnMissingChannel _makeChannel;
-        private readonly ReceiveMode _receiveMode;
+        private readonly ServiceBusReceiveMode _receiveMode;
 
         private const string _lockTokenKey = "LockToken";
         
-        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducerSync messageProducerSync, IManagementClientWrapper managementClientWrapper, 
-            IMessageReceiverProvider messageReceiverProvider, int batchSize = 10, ReceiveMode receiveMode = ReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
+        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducerSync messageProducerSync, IAdministrationClientWrapper administrationClientWrapper, 
+            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10, ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
             _messageProducerSync = messageProducerSync;
-            _managementClientWrapper = managementClientWrapper;
-            _messageReceiverProvider = messageReceiverProvider;
+            _administrationClientWrapper = administrationClientWrapper;
+            _serviceBusReceiverProvider = serviceBusReceiverProvider;
             _batchSize = batchSize;
             _makeChannel = makeChannels;
             _receiveMode = receiveMode;
@@ -46,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _topicName, _subscriptionName, _receiveMode);
             try
             {
-                _messageReceiver = _messageReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode);
+                _serviceBusReceiver = _serviceBusReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode);
             }
             catch (Exception e)
             {
@@ -67,11 +66,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                messages = _messageReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds)).GetAwaiter().GetResult();
+                messages = _serviceBusReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds)).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                if (_messageReceiver.IsClosedOrClosing)
+                if (_serviceBusReceiver.IsClosedOrClosing)
                 {
                     s_logger.LogDebug("Message Receiver is closing...");
                     var message = new Message(new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_QUIT), new MessageBody(string.Empty));
@@ -110,8 +109,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _topicName, _subscriptionName, messageBody);
             MessageType messageType = GetMessageType(azureServiceBusMessage);
             var handledCount = GetHandledCount(azureServiceBusMessage);
-            var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow, handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType);
-            if(_receiveMode.Equals(ReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
+            var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow,
+                handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType);
+            if(_receiveMode.Equals(ServiceBusReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
             var message = new Message(headers, new MessageBody(messageBody));
             return message;
         }
@@ -146,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if (_managementClientWrapper.SubscriptionExists(_topicName, _subscriptionName))
+                if (_administrationClientWrapper.SubscriptionExists(_topicName, _subscriptionName))
                 {
                     _subscriptionCreated = true;
                     return;
@@ -154,24 +154,33 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 if (_makeChannel.Equals(OnMissingChannel.Validate))
                 {
-                    throw new ChannelFailureException($"Subscription {_subscriptionName} does not exist on topic {_topicName} and missing channel mode set to Validate.");
+                    throw new ChannelFailureException(
+                        $"Subscription {_subscriptionName} does not exist on topic {_topicName} and missing channel mode set to Validate.");
                 }
 
-                _managementClientWrapper.CreateSubscription(_topicName, _subscriptionName, maxDeliveryCount);
+                _administrationClientWrapper.CreateSubscription(_topicName, _subscriptionName, maxDeliveryCount);
                 _subscriptionCreated = true;
             }
-            catch (MessagingEntityAlreadyExistsException)
+            catch (ServiceBusException ex)
             {
-                s_logger.LogWarning("Message entity already exists with topic {Topic} and subscription {ChannelName}.", _topicName,
-                    _subscriptionName);
-                _subscriptionCreated = true;
+                if (ex.Reason == ServiceBusFailureReason.MessagingEntityAlreadyExists)
+                {
+                    s_logger.LogWarning(
+                        "Message entity already exists with topic {Topic} and subscription {ChannelName}.", _topicName,
+                        _subscriptionName);
+                    _subscriptionCreated = true;
+                }
+                else
+                {
+                    throw new ChannelFailureException("Failing to check or create subscription", ex);
+                }
             }
             catch (Exception e)
             {
                 s_logger.LogError(e, "Failing to check or create subscription.");
                 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
-                _managementClientWrapper.Reset();
+                _administrationClientWrapper.Reset();
                 
                 throw new ChannelFailureException("Failing to check or create subscription", e);
             }
@@ -198,7 +207,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public void Acknowledge(Message message)
         {
             //Only ACK if ReceiveMode is Peek
-            if (_receiveMode.Equals(ReceiveMode.PeekLock))
+            if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
             {
                 try
                 {
@@ -210,11 +219,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     s_logger.LogDebug("Acknowledging Message with Id {Id} Lock Token : {LockToken}", message.Id,
                         lockToken);
 
-                    _messageReceiver.Complete(lockToken).Wait();
+                    _serviceBusReceiver.Complete(lockToken).Wait();
                 }
-                catch (MessageLockLostException ex)
+                catch (ServiceBusException ex)
                 {
-                    s_logger.LogError(ex, "Error releasing completing peak lock on message with id {Id}", message.Id);
+                    if(ex.Reason == ServiceBusFailureReason.SessionLockLost)
+                        s_logger.LogError(ex, "Error releasing completing peak lock on message with id {Id}", message.Id);
+                    else
+                    {
+                        s_logger.LogError(ex,
+                            "Error completing message with id {Id} Reason {ErrorReason}",
+                            message.Id, ex.Reason);
+                    }
                 }
                 catch(Exception ex)
                 {
@@ -227,7 +243,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public void Reject(Message message)
         {
             //Only Reject if ReceiveMode is Peek
-            if (_receiveMode.Equals(ReceiveMode.PeekLock))
+            if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
             {
                 try
                 {
@@ -238,7 +254,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                         throw new Exception($"LockToken for message with id {message.Id} is null or empty");
                     s_logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
-                    _messageReceiver.DeadLetter(lockToken).Wait();
+                    _serviceBusReceiver.DeadLetter(lockToken).Wait();
                 }
                 catch (Exception ex)
                 {
@@ -264,7 +280,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public void Dispose()
         {
             s_logger.LogInformation("Disposing the consumer...");
-            _messageReceiver.Close();
+            _serviceBusReceiver.Close();
             s_logger.LogInformation("Consumer disposed.");
         }
     }

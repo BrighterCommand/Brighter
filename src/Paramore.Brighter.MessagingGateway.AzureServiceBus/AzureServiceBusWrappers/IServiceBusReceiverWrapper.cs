@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public interface IMessageReceiverWrapper
+    public interface IServiceBusReceiverWrapper
     {
         Task<IEnumerable<IBrokeredMessageWrapper>> Receive(int batchSize, TimeSpan serverWaitTime);
 

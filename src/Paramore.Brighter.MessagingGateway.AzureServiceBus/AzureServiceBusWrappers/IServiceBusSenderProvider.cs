@@ -1,7 +1,7 @@
 ﻿namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public interface ITopicClientProvider
+    public interface IServiceBusSenderProvider
     {
-        ITopicClient Get(string topic);
+        IServiceBusSenderWrapper Get(string topic);
     }
 }

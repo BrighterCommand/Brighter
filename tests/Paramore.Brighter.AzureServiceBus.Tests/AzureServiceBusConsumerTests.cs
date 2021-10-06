@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus;
-using Microsoft.Azure.ServiceBus.Management;
+using Azure.Messaging.ServiceBus;
 using Moq;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -15,21 +13,21 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 {
     public class AzureServiceBusConsumerTests
     {
-        private readonly Mock<IManagementClientWrapper> _nameSpaceManagerWrapper;
+        private readonly Mock<IAdministrationClientWrapper> _nameSpaceManagerWrapper;
         private readonly AzureServiceBusConsumer _azureServiceBusConsumer;
-        private readonly Mock<IMessageReceiverWrapper> _messageReceiver;
+        private readonly Mock<IServiceBusReceiverWrapper> _messageReceiver;
         private readonly Mock<IAmAMessageProducerSync> _mockMessageProducer;
-        private readonly Mock<IMessageReceiverProvider> _mockMessageReceiver;
+        private readonly Mock<IServiceBusReceiverProvider> _mockMessageReceiver;
 
         public AzureServiceBusConsumerTests()
         {
-            _nameSpaceManagerWrapper = new Mock<IManagementClientWrapper>();
+            _nameSpaceManagerWrapper = new Mock<IAdministrationClientWrapper>();
             _mockMessageProducer = new Mock<IAmAMessageProducerSync>();
-            _mockMessageReceiver = new Mock<IMessageReceiverProvider>();
+            _mockMessageReceiver = new Mock<IServiceBusReceiverProvider>();
 
-            _messageReceiver = new Mock<IMessageReceiverWrapper>();
+            _messageReceiver = new Mock<IServiceBusReceiverWrapper>();
 
-            _mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ReceiveMode.ReceiveAndDelete)).Returns(_messageReceiver.Object);
+            _mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.ReceiveAndDelete)).Returns(_messageReceiver.Object);
 
             _azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
                 _nameSpaceManagerWrapper.Object, _mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create);
@@ -173,7 +171,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(null as IDictionary<string, object>);
+            message1.Setup(m => m.UserProperties).Returns(null as IReadOnlyDictionary<string, object>);
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -201,7 +199,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_trying_to_create_a_subscription_which_was_already_created_by_another_thread_it_should_ignore_the_error()
         {
             _nameSpaceManagerWrapper.Setup(f => f.SubscriptionExists("topic", "subscription")).Returns(false);
-            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000)).Throws(new MessagingEntityAlreadyExistsException("whatever"));
+            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000))
+                .Throws(new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists));
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
@@ -291,7 +290,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _messageReceiver.Setup(f => f.Receive(It.IsAny<int>(), It.IsAny<TimeSpan>())).Throws(new Exception());
 
             Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
-            _mockMessageReceiver.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ReceiveMode>()), Times.Exactly(2));
+            _mockMessageReceiver.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ServiceBusReceiveMode>()), Times.Exactly(2));
         }
 
         [Theory]
@@ -323,7 +322,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_MessagingEntityAlreadyExistsException_does_not_check_if_subscription_exists()
         {
             _nameSpaceManagerWrapper.Setup(f => f.SubscriptionExists("topic", "subscription")).Returns(false);
-            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000)).Throws(new MessagingEntityAlreadyExistsException("whatever"));
+            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000))
+                .Throws(new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists));
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
@@ -389,9 +389,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
-            var mockMessageReceiver = new Mock<IMessageReceiverProvider>();
+            var mockMessageReceiver = new Mock<IServiceBusReceiverProvider>();
 
-            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
+            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
 
             var lockToken = Guid.NewGuid().ToString();
 
@@ -405,7 +405,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _messageReceiver.Setup(x => x.Complete(lockToken)).Throws(new Exception());
 
             var azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
-                _nameSpaceManagerWrapper.Object, mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create, receiveMode: ReceiveMode.PeekLock);
+                _nameSpaceManagerWrapper.Object, mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create, receiveMode: ServiceBusReceiveMode.PeekLock);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 
@@ -419,9 +419,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         {
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
-            var mockMessageReceiver = new Mock<IMessageReceiverProvider>();
+            var mockMessageReceiver = new Mock<IServiceBusReceiverProvider>();
 
-            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
+            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
 
             var lockToken = Guid.NewGuid().ToString();
 
@@ -435,7 +435,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _messageReceiver.Setup(x => x.DeadLetter(lockToken)).Throws(new Exception());
 
             var azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
-                _nameSpaceManagerWrapper.Object, mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create, receiveMode: ReceiveMode.PeekLock);
+                _nameSpaceManagerWrapper.Object, mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create, receiveMode: ServiceBusReceiveMode.PeekLock);
 
             Message[] result = azureServiceBusConsumer.Receive(400);
 

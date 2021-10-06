@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public interface IManagementClientWrapper
+    public interface IAdministrationClientWrapper
     {
         bool TopicExists(string topic);
 

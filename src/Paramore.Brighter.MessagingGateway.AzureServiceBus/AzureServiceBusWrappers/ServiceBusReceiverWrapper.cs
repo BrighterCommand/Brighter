@@ -2,25 +2,25 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus.Core;
+using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class MessageReceiverWrapper : IMessageReceiverWrapper
+    public class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     {
-        private readonly IMessageReceiver _messageReceiver;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessageReceiverWrapper>();
+        private readonly ServiceBusReceiver _messageReceiver;
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();
 
-        public MessageReceiverWrapper(IMessageReceiver messageReceiver)
+        public ServiceBusReceiverWrapper(ServiceBusReceiver messageReceiver)
         {
             _messageReceiver = messageReceiver;
         }
 
         public async Task<IEnumerable<IBrokeredMessageWrapper>> Receive(int batchSize, TimeSpan serverWaitTime)
         {
-            var messages = await _messageReceiver.ReceiveAsync(batchSize, serverWaitTime).ConfigureAwait(false);
+            var messages = await _messageReceiver.ReceiveMessagesAsync(batchSize, serverWaitTime).ConfigureAwait(false);
 
             if (messages == null)
             {
@@ -38,14 +38,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public async Task Complete(string lockToken)
         {
-            await _messageReceiver.CompleteAsync(lockToken).ConfigureAwait(false);
+            await _messageReceiver.CompleteMessageAsync(CreateMessageShiv(lockToken)).ConfigureAwait(false);
         }
 
         public async Task DeadLetter(string lockToken)
         {
-            await _messageReceiver.DeadLetterAsync(lockToken);
+            await _messageReceiver.DeadLetterMessageAsync(CreateMessageShiv(lockToken));
         }
 
-        public bool IsClosedOrClosing => _messageReceiver.IsClosedOrClosing;
+        public bool IsClosedOrClosing => _messageReceiver.IsClosed;
+
+
+        private ServiceBusReceivedMessage CreateMessageShiv(string lockToken)
+        {
+            return ServiceBusModelFactory.ServiceBusReceivedMessage(lockTokenGuid: Guid.Parse(lockToken));
+        }
     }
 }

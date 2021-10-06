@@ -11,7 +11,7 @@
         public string ConnectionString { get; }
 
         /// <summary>
-        /// When set to true this will Chanage RecieveMode from ReceiveAndDelete to PeekAndLock
+        /// When set to true this will Change ReceiveMode from ReceiveAndDelete to PeekAndLock
         /// </summary>
         public bool AckOnRead{ get; }
     }

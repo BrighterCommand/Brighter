@@ -1,20 +1,20 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus.Management;
+using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class ManagementClientWrapper : IManagementClientWrapper
+    public class AdministrationClientWrapper : IAdministrationClientWrapper
     {
-        private ManagementClient _managementClient;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ManagementClientWrapper>();
-        private readonly AzureServiceBusConfiguration _configuration;
-        
-        public ManagementClientWrapper(AzureServiceBusConfiguration configuration)
+        private readonly ClientProvider.IServiceBusClientProvider _clientProvider;
+        private ServiceBusAdministrationClient _administrationClient;
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AdministrationClientWrapper>();
+
+        public AdministrationClientWrapper(ClientProvider.IServiceBusClientProvider clientProvider)
         {
-            _configuration = configuration;
+            _clientProvider = clientProvider;
             Initialise();
         }
 
@@ -24,12 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             
             try
             {
-                if (_configuration == null)
-                {
-                    throw new ArgumentNullException(nameof(_configuration), "Configuration is null, ensure this is set in the constructor.");
-                }
-
-                _managementClient = new ManagementClient(_configuration.ConnectionString);
+                _administrationClient = _clientProvider.GetServiceBusAdministrationClient();
             }
             catch (Exception e)
             {
@@ -54,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             try
             {
-                result = _managementClient.TopicExistsAsync(topic).GetAwaiter().GetResult();
+                result = _administrationClient.TopicExistsAsync(topic).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
@@ -80,7 +75,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             try
             {
-                _managementClient.CreateTopicAsync(topic).GetAwaiter().GetResult();
+                _administrationClient.CreateTopicAsync(topic).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
@@ -96,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogInformation("Deleting topic {Topic}...", topic);
             try
             {
-                await _managementClient.DeleteTopicAsync(topic);
+                await _administrationClient.DeleteTopicAsync(topic);
                 s_logger.LogInformation("Topic {Topic} successfully deleted", topic);
             }
             catch (Exception e)
@@ -113,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             try
             {
-                result =_managementClient.SubscriptionExistsAsync(topicName, subscriptionName).Result;
+                result =_administrationClient.SubscriptionExistsAsync(topicName, subscriptionName).Result;
             }
             catch (Exception e)
             {
@@ -135,6 +130,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
         {
+            CreateSubscriptionAsync(topicName, subscriptionName, maxDeliveryCount).Wait();
+        }
+        
+        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
+        {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
             if (!TopicExists(topicName))
@@ -142,14 +142,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 CreateTopic(topicName);
             }
 
-            var subscriptionDescription = new SubscriptionDescription(topicName, subscriptionName)
+            var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
             {
                 MaxDeliveryCount = maxDeliveryCount
             };
 
             try
             {
-                _managementClient.CreateSubscriptionAsync(subscriptionDescription).Wait();
+                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions);
             }
             catch (Exception e)
             {

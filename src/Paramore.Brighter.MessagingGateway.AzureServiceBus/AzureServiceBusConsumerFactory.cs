@@ -1,32 +1,57 @@
-﻿using Microsoft.Azure.ServiceBus;
+﻿using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
+using IServiceBusClientProvider = Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider.IServiceBusClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     {
-        private readonly AzureServiceBusConfiguration _configuration;
+        private readonly IServiceBusClientProvider _clientProvider;
+        private readonly bool _ackOnRead;
 
+        /// <summary>
+        /// Factory to create an Azure Service Bus Consumer
+        /// </summary>
+        /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
         public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
+        : this (new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), configuration.AckOnRead)
+        { } 
+
+        /// <summary>
+        /// Factory to create an Azure Service Bus Consumer
+        /// </summary>
+        /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
+        /// <param name="ackOnRead">Acknowledge Message on read (if set to false this will use a Peak Lock)</param>
+        public AzureServiceBusConsumerFactory(IServiceBusClientProvider clientProvider, bool ackOnRead = false)
         {
-            _configuration = configuration;
+            _ackOnRead = ackOnRead;
+            _clientProvider = clientProvider;
         }
         
         public IAmAMessageConsumer Create(Subscription subscription)
         {
-            return Create(subscription, _configuration);
+            return Create(_clientProvider, subscription, _ackOnRead);
         }
 
-        public static IAmAMessageConsumer Create(Subscription subscription, AzureServiceBusConfiguration configuration)
+        /// <summary>
+        /// Factory to create an Azure Service Bus Consumer
+        /// </summary>
+        /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
+        /// <param name="subscription">The name of the Subscription on the Topic</param>
+        /// <param name="ackOnRead">Acknowledge Message on read (if set to false this will use a Peak Lock)</param>
+        /// <returns></returns>
+        public static IAmAMessageConsumer Create(IServiceBusClientProvider clientProvider, Subscription subscription,
+            bool ackOnRead)
         {
-            var nameSpaceManagerWrapper = new ManagementClientWrapper(configuration);
+            var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);
 
             return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
                 new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
-                    new TopicClientProvider(configuration), subscription.MakeChannels), nameSpaceManagerWrapper,
-                new MessageReceiverProvider(configuration),
+                    new ServiceBusSenderProvider(clientProvider), subscription.MakeChannels), nameSpaceManagerWrapper,
+                new ServiceBusReceiverProvider(clientProvider),
                 makeChannels: subscription.MakeChannels,
-                receiveMode: configuration.AckOnRead ? ReceiveMode.PeekLock : ReceiveMode.ReceiveAndDelete,
+                receiveMode: ackOnRead ? ServiceBusReceiveMode.PeekLock : ServiceBusReceiveMode.ReceiveAndDelete,
                 batchSize: subscription.BufferSize);
         }
     }
