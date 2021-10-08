@@ -16,7 +16,9 @@ using Xunit;
 
 namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 {
-    public class SnsReDrivePolicySDlqTests
+    [Trait("Category", "AWS")]
+    [Trait("Fragile", "CI")]
+     public class SnsReDrivePolicySDlqTests
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly Message _message;
