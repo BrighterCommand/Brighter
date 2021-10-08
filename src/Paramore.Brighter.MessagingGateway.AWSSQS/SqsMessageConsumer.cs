@@ -226,20 +226,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Requeue(Message message)
-        {
-            Requeue(message, 0);
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>True if the message was requeued successfully</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
             if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
-                return;
+                return false;
 
             var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
 
@@ -254,11 +246,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
 
                 s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);
+
+                return true;
             }
             catch (Exception exception)
             {
                 s_logger.LogError(exception, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
-                throw;
+                return false;
             }
         }
 

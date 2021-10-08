@@ -177,7 +177,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
         }
 
-        public void Requeue(Message message, int delayMilliseconds)
+        public bool Requeue(Message message, int delayMilliseconds)
         {
             var topic = message.Header.Topic;
 
@@ -191,6 +191,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 _messageProducerSync.Send(message);
             }
+
+            return true;
         }
 
         public void Acknowledge(Message message)

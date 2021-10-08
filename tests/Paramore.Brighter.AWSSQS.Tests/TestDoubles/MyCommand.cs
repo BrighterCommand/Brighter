@@ -28,13 +28,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.TestDoubles
 {
     internal class MyCommand : Command
     {
-        public MyCommand()
-            :base(Guid.NewGuid()) 
-            
-        {}
-
         public string Value { get; set; }
-        public bool WasCancelled { get; set; }
-        public bool TaskCompleted { get; set; }
+        public MyCommand() :base(Guid.NewGuid()) {}
     }
 }

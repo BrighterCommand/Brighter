@@ -168,19 +168,15 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             }
         }
 
-        public void Requeue(Message message)
-        {
-        }
-
         /// <summary>
         /// Requeues the specified message. Not implemented
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>No requeue implemented</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
-            Task.Delay(delayMilliseconds);
-            Requeue(message);
+            return false;
         }
  
 

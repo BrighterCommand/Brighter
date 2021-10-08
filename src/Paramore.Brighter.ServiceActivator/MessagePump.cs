@@ -126,7 +126,7 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (DeferMessageAction)
                 {
-                    if (!RequeueMessage(message)) continue;
+                    if (RequeueMessage(message)) continue;
                 }
                 catch (AggregateException aggregateException)
                 {
@@ -134,7 +134,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     if (requeue)
                     {
-                        if (!RequeueMessage(message)) continue;
+                        if (RequeueMessage(message)) continue;
                     }
 
                     if (stop)   
@@ -169,7 +169,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         }
 
-        protected void AcknowledgeMessage(Message message)
+        private void AcknowledgeMessage(Message message)
         {
             s_logger.LogDebug(
                 "MessagePump: Acknowledge message {Id} read from {ChannelName} on thread # {ManagementThreadId}",
@@ -187,7 +187,7 @@ namespace Paramore.Brighter.ServiceActivator
         // i..e an async pipeline uses SendAsync/PublishAsync and a blocking pipeline uses Send/Publish
         protected abstract void DispatchRequest(MessageHeader messageHeader, TRequest request);
 
-        protected (bool, bool) HandleProcessingException(AggregateException aggregateException)
+        private (bool, bool) HandleProcessingException(AggregateException aggregateException)
         {
             var stop = false;
             var requeue = false;
@@ -217,12 +217,12 @@ namespace Paramore.Brighter.ServiceActivator
             return (stop, requeue);
         }
 
-        protected void IncrementUnacceptableMessageLimit()
+        private void IncrementUnacceptableMessageLimit()
         {
             _unacceptableMessageCount++;
         }
 
-        protected void RejectMessage(Message message)
+        private void RejectMessage(Message message)
         {
             s_logger.LogDebug("MessagePump: Rejecting message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
             IncrementUnacceptableMessageLimit();
@@ -234,8 +234,8 @@ namespace Paramore.Brighter.ServiceActivator
         /// Requeue Message
         /// </summary>
         /// <param name="message">Message to be Requeued</param>
-        /// <returns>Returns True if Message was Requeued, False if it was Rejected</returns>
-        protected bool RequeueMessage(Message message)
+        /// <returns>Returns True if the message should be acked, false if the channel has handled it</returns>
+        private bool RequeueMessage(Message message)
         {
             message.UpdateHandledCount();
 
@@ -266,11 +266,10 @@ namespace Paramore.Brighter.ServiceActivator
                 "MessagePump: Re-queueing message {Id} from {ManagementThreadId} on thread # {ChannelName}", message.Id,
                 Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
-            Channel.Requeue(message, RequeueDelayInMilliseconds);
-            return true;
+            return Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
 
-        protected TRequest TranslateMessage(Message message)
+        private TRequest TranslateMessage(Message message)
         {
             if (_messageMapper == null)
             {
@@ -293,7 +292,7 @@ namespace Paramore.Brighter.ServiceActivator
             return request;
         }
 
-        protected bool UnacceptableMessageLimitReached()
+        private bool UnacceptableMessageLimitReached()
         {
             if (UnacceptableMessageLimit == 0) return false;
 

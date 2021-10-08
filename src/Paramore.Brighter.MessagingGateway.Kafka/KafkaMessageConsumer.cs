@@ -307,19 +307,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Requeues the specified message. A no-op on Kafka as the stream is immutable
         /// </summary>
         /// <param name="message"></param>
-        public void Requeue(Message message)
-        {
-        }
-
-        /// <summary>
-        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
-        /// </summary>
-        /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>False as no requeue support on Kafka</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
-            Task.Delay(delayMilliseconds).Wait();
-            Requeue(message);
+            return false;
         }
         
         private bool CheckHasPartitions()

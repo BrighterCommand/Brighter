@@ -185,7 +185,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>True if message deleted, false otherwise</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
             try
             {
@@ -205,11 +206,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 //Delete it if we have re-queued it - note this will forward the deleted message to a DLQ if there is one as we choose to republish a requeue not just
                 //make it available for a new consumer
                 Channel.BasicNack(message.DeliveryTag, false, false);
+
+                return true;
             }
             catch (Exception exception)
             {
                 s_logger.LogError(exception, "RmqMessageConsumer: Error re-queueing message {Id}", message.Id);
-                throw;
+                return false;
             }
         }
 
