@@ -200,6 +200,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             {
                 _messageProducerSync.Send(message);
             }
+            Acknowledge(message);
 
             return true;
         }
