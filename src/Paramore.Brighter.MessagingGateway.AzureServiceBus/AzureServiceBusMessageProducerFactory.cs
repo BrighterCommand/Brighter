@@ -1,8 +1,11 @@
 ﻿using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
+    /// <summary>
+    /// Factory class for creating instances of <see cref="AzureServiceBusMessageProducer"/>
+    /// </summary>
     public static class AzureServiceBusMessageProducerFactory
     {
         /// <summary>

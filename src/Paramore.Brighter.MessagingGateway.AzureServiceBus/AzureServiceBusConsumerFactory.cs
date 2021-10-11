@@ -1,10 +1,13 @@
 ﻿using Azure.Messaging.ServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
-using IServiceBusClientProvider = Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider.IServiceBusClientProvider;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
+using IServiceBusClientProvider = Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider.IServiceBusClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
+    /// <summary>
+    /// Factory class for creating instances of <see cref="AzureServiceBusConsumer"/>
+    /// </summary>
     public class AzureServiceBusConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly IServiceBusClientProvider _clientProvider;
@@ -29,6 +32,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _clientProvider = clientProvider;
         }
         
+        /// <summary>
+        /// Creates a consumer for the specified queue.
+        /// </summary>
+        /// <param name="subscription">The queue to connect to</param>
+        /// <returns>IAmAMessageConsumer</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
             return Create(_clientProvider, subscription, _ackOnRead);
@@ -41,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="subscription">The name of the Subscription on the Topic</param>
         /// <param name="ackOnRead">Acknowledge Message on read (if set to false this will use a Peak Lock)</param>
         /// <returns></returns>
-        public static IAmAMessageConsumer Create(IServiceBusClientProvider clientProvider, Subscription subscription,
+        private static IAmAMessageConsumer Create(IServiceBusClientProvider clientProvider, Subscription subscription,
             bool ackOnRead)
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);

@@ -8,7 +8,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 

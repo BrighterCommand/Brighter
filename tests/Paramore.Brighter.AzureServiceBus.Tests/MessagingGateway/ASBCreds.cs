@@ -1,5 +1,5 @@
 ﻿using System;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {

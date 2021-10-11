@@ -8,7 +8,7 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
+    internal class ServiceBusReceiverWrapper : IServiceBusReceiverWrapper
     {
         private readonly ServiceBusReceiver _messageReceiver;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ServiceBusReceiverWrapper>();

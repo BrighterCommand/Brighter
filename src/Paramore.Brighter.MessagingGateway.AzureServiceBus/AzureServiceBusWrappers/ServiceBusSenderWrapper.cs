@@ -6,11 +6,11 @@ using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class ServiceBusSenderWrapper : IServiceBusSenderWrapper
+    internal class ServiceBusSenderWrapper : IServiceBusSenderWrapper
     {
         private readonly ServiceBusSender _serviceBusSender;
 
-        public ServiceBusSenderWrapper(ServiceBusSender serviceBusSender)
+        internal ServiceBusSenderWrapper(ServiceBusSender serviceBusSender)
         {
             _serviceBusSender = serviceBusSender;
         }

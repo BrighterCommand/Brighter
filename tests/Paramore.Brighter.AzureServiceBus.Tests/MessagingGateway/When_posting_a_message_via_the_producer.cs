@@ -5,7 +5,6 @@ using FluentAssertions;
 using Paramore.Brighter.AzureServiceBus.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
-using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
 using Xunit;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway

@@ -1,12 +1,13 @@
 ﻿using Azure.Messaging.ServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class ServiceBusReceiverProvider : IServiceBusReceiverProvider
+    internal class ServiceBusReceiverProvider : IServiceBusReceiverProvider
     {
         private readonly ServiceBusClient _client;
 
-        public ServiceBusReceiverProvider(ClientProvider.IServiceBusClientProvider clientProvider)
+        public ServiceBusReceiverProvider(IServiceBusClientProvider clientProvider)
         {
             _client = clientProvider.GetServiceBusClient();
         }

@@ -42,11 +42,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             var message2 = new Mock<IBrokeredMessageWrapper>();
 
             message2.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody2"));
-            message2.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_DOCUMENT" } });
+            message2.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_DOCUMENT" } });
             brokeredMessageList.Add(message1.Object);
             brokeredMessageList.Add(message2.Object);
 
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_COMMAND" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_COMMAND" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -111,7 +111,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "Mt_COmmAND" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "Mt_COmmAND" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "wrong_message_type" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "wrong_message_type" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -150,7 +150,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>());
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>());
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -171,7 +171,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(null as IReadOnlyDictionary<string, object>);
+            message1.Setup(m => m.ApplicationProperties).Returns(null as IReadOnlyDictionary<string, object>);
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -206,7 +206,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -302,7 +302,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = new Mock<IBrokeredMessageWrapper>();
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -329,7 +329,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(m => m.MessageBodyValue).Returns(Encoding.UTF8.GetBytes("somebody"));
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             brokeredMessageList.Add(message1.Object);
 
             _messageReceiver.Setup(x => x.Receive(10, TimeSpan.FromMilliseconds(400))).Returns(Task.FromResult<IEnumerable<IBrokeredMessageWrapper>>(brokeredMessageList));
@@ -350,7 +350,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
 
             message1.Setup(x => x.MessageBodyValue).Returns((byte[])null);
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
 
             brokeredMessageList.Add(message1.Object);
 
@@ -396,7 +396,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var lockToken = Guid.NewGuid().ToString();
 
             message1.Setup(x => x.MessageBodyValue).Returns((byte[])null);
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             message1.Setup(m => m.LockToken).Returns(lockToken);
 
             brokeredMessageList.Add(message1.Object);
@@ -426,7 +426,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var lockToken = Guid.NewGuid().ToString();
 
             message1.Setup(x => x.MessageBodyValue).Returns((byte[])null);
-            message1.Setup(m => m.UserProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
+            message1.Setup(m => m.ApplicationProperties).Returns(new Dictionary<string, object>() { { "MessageType", "MT_EVENT" } });
             message1.Setup(m => m.LockToken).Returns(lockToken);
 
             brokeredMessageList.Add(message1.Object);

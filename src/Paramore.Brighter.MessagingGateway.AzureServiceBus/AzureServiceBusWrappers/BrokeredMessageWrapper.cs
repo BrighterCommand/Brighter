@@ -4,7 +4,7 @@ using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class BrokeredMessageWrapper : IBrokeredMessageWrapper
+    internal class BrokeredMessageWrapper : IBrokeredMessageWrapper
     {
         private readonly ServiceBusReceivedMessage _brokeredMessage;
 
@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public byte[] MessageBodyValue => _brokeredMessage.Body.ToArray();
 
-        public IReadOnlyDictionary<string, object> UserProperties => _brokeredMessage.ApplicationProperties;
+        public IReadOnlyDictionary<string, object> ApplicationProperties => _brokeredMessage.ApplicationProperties;
 
         public string LockToken => _brokeredMessage.LockToken;
 

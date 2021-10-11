@@ -10,6 +10,9 @@ using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
+    /// <summary>
+    /// A Sync and Async Message Producer for Azure Service Bus.
+    /// </summary>
     public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
@@ -30,21 +33,39 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _serviceBusSenderProvider = serviceBusSenderProvider;
             _makeChannel = makeChannel;
         }
-
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Send(Message message)
         {
             SendWithDelay(message);
         }
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public async Task SendAsync(Message message)
         {
             await SendWithDelayAsync(message);
         }
 
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             SendWithDelayAsync(message, delayMilliseconds).Wait();
         }
 
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public async Task SendWithDelayAsync(Message message, int delayMilliseconds = 0)
         {
             s_logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
@@ -109,6 +130,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
         }
 
+        public void Dispose()
+        {
+        }
+
         private void EnsureTopicExists(string topic)
         {
             if (_topicCreated || _makeChannel.Equals(OnMissingChannel.Assume))
@@ -137,10 +162,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 s_logger.LogError(e, "Failing to check or create topic.");
                 throw;
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }
