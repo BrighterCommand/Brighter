@@ -1,15 +1,22 @@
 ﻿using System;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers.ClientProvider;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
     internal static class ASBCreds
     {
-        public static string ASBConnectionString { get
+        public static IServiceBusClientProvider ASBClientProvider
+        {
+            get
             {
                 var connString = Environment.GetEnvironmentVariable("BrighterTestsASBConnectionString");
-                if (string.IsNullOrEmpty(connString))
-                    throw new Exception("ASB ConnectionString not set");
-                return connString;
+                var asbNamespace = Environment.GetEnvironmentVariable("BrighterTestsASBNameSpace");
+                if (!string.IsNullOrEmpty(connString)) return new ServiceBusConnectionStringClientProvider(connString);
+                else if(!string.IsNullOrEmpty(asbNamespace))
+                {
+                    return new ServiceBusVisualStudioCredentialClientProvider(asbNamespace);
+                }
+                throw new Exception("ASB ConnectionString or Namespace not set not set");
             }
         }
     }
