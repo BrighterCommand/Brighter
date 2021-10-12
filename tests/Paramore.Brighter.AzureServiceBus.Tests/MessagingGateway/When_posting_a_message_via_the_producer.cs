@@ -10,17 +10,17 @@ using Xunit;
 namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 {
     [Trait("Category", "ASB")]
+    [Trait("Fragile", "CI")]
     public class ASBProducerTests : IDisposable
     {
         private readonly Message _message;
         private readonly IAmAChannel _channel;
         private readonly AzureServiceBusMessageProducer _messageProducer;
-        private readonly AzureServiceBusChannelFactory _channelFactory;
         private readonly ASBTestCommand _command;
         private readonly Guid _correlationId;
         private readonly string _contentType;
         private readonly string _topicName;
-        private readonly IManagementClientWrapper _managementClient;
+        private readonly IAdministrationClientWrapper _administrationClient;
 
         public ASBProducerTests()
         {
@@ -48,15 +48,16 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize(_command, JsonSerialisationOptions.Options))
             );
 
-            var config = new AzureServiceBusConfiguration(ASBCreds.ASBConnectionString, false);
+            var clientProvider = ASBCreds.ASBClientProvider;
+            _administrationClient = new AdministrationClientWrapper(clientProvider);
+            _administrationClient.CreateSubscription(_topicName, channelName, 5);
+
+            var channelFactory =
+                new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
+            _channel = channelFactory.CreateChannel(subscription);
+
             
-            _managementClient = new ManagementClientWrapper(config);
-            _managementClient.CreateSubscription(_topicName, channelName, 5);
-
-            _channelFactory = new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(config));
-            _channel = _channelFactory.CreateChannel(subscription);
-
-            _messageProducer = AzureServiceBusMessageProducerFactory.Get(config);
+            _messageProducer = AzureServiceBusMessageProducerFactory.Get(clientProvider);
         }
 
         [Fact]
@@ -88,7 +89,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _managementClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
+            _administrationClient.DeleteTopicAsync(_topicName).GetAwaiter().GetResult();
         }
 
         private DateTime RoundToSeconds(DateTime dateTime)

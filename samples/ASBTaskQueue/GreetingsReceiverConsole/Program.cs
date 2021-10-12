@@ -8,6 +8,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
@@ -44,15 +45,16 @@ namespace GreetingsReceiverConsole
                     };
 
                     //create the gateway
-                    var asbConfig = new AzureServiceBusConfiguration("Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity", true);
-
-                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbConfig);
+                    var endpoint = ".servicebus.windows.net/;Authentication=Managed Identity";
+                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(endpoint);
+                    
+                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
                     }).UseInMemoryOutbox()
-                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(asbConfig))
+                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))
                         .AutoFromAssemblies();
 
 
