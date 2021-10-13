@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Text;
+using System.Threading;
+using Azure.Messaging.ServiceBus;
 using Moq;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
@@ -9,16 +11,16 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 {
     public class AzureServiceBusMessageProducerTests
     {
-        private readonly Mock<IManagementClientWrapper> _nameSpaceManagerWrapper;
-        private readonly Mock<ITopicClientProvider> _topicClientProvider;
-        private readonly Mock<ITopicClient> _topicClient;
+        private readonly Mock<IAdministrationClientWrapper> _nameSpaceManagerWrapper;
+        private readonly Mock<IServiceBusSenderProvider> _topicClientProvider;
+        private readonly Mock<IServiceBusSenderWrapper> _topicClient;
         private readonly AzureServiceBusMessageProducer _producer;
 
         public AzureServiceBusMessageProducerTests()
         {
-            _nameSpaceManagerWrapper = new Mock<IManagementClientWrapper>();
-            _topicClientProvider = new Mock<ITopicClientProvider>();
-            _topicClient = new Mock<ITopicClient>();
+            _nameSpaceManagerWrapper = new Mock<IAdministrationClientWrapper>();
+            _topicClientProvider = new Mock<IServiceBusSenderProvider>();
+            _topicClient = new Mock<IServiceBusSenderWrapper>();
 
             _producer = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper.Object, _topicClientProvider.Object, OnMissingChannel.Create);
         }
@@ -26,51 +28,53 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_topic_exists_and_sending_a_message_with_no_delay_it_should_send_the_message_to_the_correct_topicclient()
         {
-            Microsoft.Azure.ServiceBus.Message sentMessage = null;
+            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(true);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.SendAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>())).Callback((Microsoft.Azure.ServiceBus.Message g) => sentMessage = g);
+            _topicClient.Setup(f => f.SendAsync(It.IsAny<ServiceBusMessage>(), CancellationToken.None))
+                .Callback((ServiceBusMessage g, CancellationToken ct) => sentMessage = g);
 
             _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT), new MessageBody(messageBody, "JSON")));
 
-            Assert.Equal(messageBody, sentMessage.Body);
-            Assert.Equal("MT_EVENT", sentMessage.UserProperties["MessageType"]);
+            Assert.Equal(messageBody, sentMessage.Body.ToArray());
+            Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
             _topicClient.Verify(x => x.CloseAsync(), Times.Once);
         }
 
         [Fact]
         public void When_sending_a_command_message_type_message_with_no_delay_it_should_set_the_correct_messagetype_property()
         {
-            Microsoft.Azure.ServiceBus.Message sentMessage = null;
+            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(true);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.SendAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>())).Callback((Microsoft.Azure.ServiceBus.Message g) => sentMessage = g);
+            _topicClient.Setup(f => f.SendAsync(It.IsAny<ServiceBusMessage>(), CancellationToken.None))
+                .Callback((ServiceBusMessage g, CancellationToken ct) => sentMessage = g);
 
             _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_COMMAND), new MessageBody(messageBody, "JSON")));
 
-            Assert.Equal(messageBody, sentMessage.Body);
-            Assert.Equal("MT_COMMAND", sentMessage.UserProperties["MessageType"]);
+            Assert.Equal(messageBody, sentMessage.Body.ToArray());
+            Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
             _topicClient.Verify(x => x.CloseAsync(), Times.Once);
         }
 
         [Fact]
         public void When_the_topic_does_not_exist_it_should_be_created_and_the_message_is_sent_to_the_correct_topicclient()
         {
-            Microsoft.Azure.ServiceBus.Message sentMessage = null;
+            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(false);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.SendAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>())).Callback((Microsoft.Azure.ServiceBus.Message g) => sentMessage = g);
+            _topicClient.Setup(f => f.SendAsync(It.IsAny<ServiceBusMessage>(), CancellationToken.None)).Callback((ServiceBusMessage g, CancellationToken ct) => sentMessage = g);
 
             _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")));
 
             _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic"), Times.Once);
-            Assert.Equal(messageBody, sentMessage.Body);
+            Assert.Equal(messageBody, sentMessage.Body.ToArray());
         }
 
         [Fact]
@@ -79,7 +83,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(true);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
 
-            _topicClient.Setup(x => x.SendAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>())).Throws(new Exception("Failed"));
+            _topicClient.Setup(x => x.SendAsync(It.IsAny<ServiceBusMessage>(), CancellationToken.None)).Throws(new Exception("Failed"));
 
             try
             {
@@ -96,51 +100,60 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         [Fact]
         public void When_the_topic_exists_and_sending_a_message_with_a_delay_it_should_send_the_message_to_the_correct_topicclient()
         {
-            Microsoft.Azure.ServiceBus.Message sentMessage = null;
+            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(true);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.ScheduleMessageAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>(), It.IsAny<DateTimeOffset>())).Callback((Microsoft.Azure.ServiceBus.Message g, DateTimeOffset d) => sentMessage = g);
+            _topicClient
+                .Setup(f => f.ScheduleMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<DateTimeOffset>(),
+                    CancellationToken.None)).Callback((ServiceBusMessage g, DateTimeOffset d, CancellationToken ct) =>
+                    sentMessage = g);
 
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT), new MessageBody(messageBody, "JSON")), 1);
 
-            Assert.Equal(messageBody, sentMessage.Body);
-            Assert.Equal("MT_EVENT", sentMessage.UserProperties["MessageType"]);
+            Assert.Equal(messageBody, sentMessage.Body.ToArray());
+            Assert.Equal("MT_EVENT", sentMessage.ApplicationProperties["MessageType"]);
             _topicClient.Verify(x => x.CloseAsync(), Times.Once);
         }
 
         [Fact]
         public void When_sending_a_command_message_type_message_with_delay_it_should_set_the_correct_messagetype_property()
         {
-            Microsoft.Azure.ServiceBus.Message sentMessage = null;
+            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(true);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.ScheduleMessageAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>(), It.IsAny<DateTimeOffset>())).Callback((Microsoft.Azure.ServiceBus.Message g, DateTimeOffset d) => sentMessage = g);
+            _topicClient
+                .Setup(f => f.ScheduleMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<DateTimeOffset>(),
+                    CancellationToken.None)).Callback((ServiceBusMessage g, DateTimeOffset d, CancellationToken ct) =>
+                    sentMessage = g);
 
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_COMMAND), new MessageBody(messageBody, "JSON")), 1);
 
-            Assert.Equal(messageBody, sentMessage.Body);
-            Assert.Equal("MT_COMMAND", sentMessage.UserProperties["MessageType"]);
+            Assert.Equal(messageBody, sentMessage.Body.ToArray());
+            Assert.Equal("MT_COMMAND", sentMessage.ApplicationProperties["MessageType"]);
             _topicClient.Verify(x => x.CloseAsync(), Times.Once);
         }
 
         [Fact]
         public void When_the_topic_does_not_exist_and_sending_a_message_with_a_delay_it_should_send_the_message_to_the_correct_topicclient()
         {
-            Microsoft.Azure.ServiceBus.Message sentMessage = null;
+            ServiceBusMessage sentMessage = null;
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(false);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.ScheduleMessageAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>(), It.IsAny<DateTimeOffset>())).Callback((Microsoft.Azure.ServiceBus.Message g, DateTimeOffset d) => sentMessage = g);
+            _topicClient
+                .Setup(f => f.ScheduleMessageAsync(It.IsAny<ServiceBusMessage>(), It.IsAny<DateTimeOffset>(),
+                    CancellationToken.None)).Callback((ServiceBusMessage g, DateTimeOffset d, CancellationToken ct) =>
+                    sentMessage = g);
 
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
 
             _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic"), Times.Once);
-            Assert.Equal(messageBody, sentMessage.Body);
+            Assert.Equal(messageBody, sentMessage.Body.ToArray());
             _topicClient.Verify(x => x.CloseAsync(), Times.Once);
         }
 
@@ -153,7 +166,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _nameSpaceManagerWrapper.Setup(t => t.TopicExists("topic")).Returns(topicExists);
             _topicClientProvider.Setup(f => f.Get("topic")).Returns(_topicClient.Object);
-            _topicClient.Setup(f => f.ScheduleMessage(It.IsAny<Microsoft.Azure.ServiceBus.Message>(), It.IsAny<DateTimeOffset>())).Callback((Microsoft.Azure.ServiceBus.Message g, DateTimeOffset d) => { });
+            _topicClient.Setup(f => f.ScheduleMessage(It.IsAny<ServiceBusMessage>(), It.IsAny<DateTimeOffset>())).Callback((ServiceBusMessage g, DateTimeOffset d) => { });
 
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
@@ -191,7 +204,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")));
 
-            _topicClient.Verify(topicClient => topicClient.SendAsync(It.IsAny<Microsoft.Azure.ServiceBus.Message>()), Times.Once);
+            _topicClient.Verify(topicClient => topicClient.SendAsync(It.IsAny<ServiceBusMessage>(), CancellationToken.None), Times.Once);
         }
 
         [Fact]

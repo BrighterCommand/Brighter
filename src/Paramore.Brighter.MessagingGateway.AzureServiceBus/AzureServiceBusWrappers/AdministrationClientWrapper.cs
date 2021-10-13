@@ -1,51 +1,45 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Microsoft.Azure.ServiceBus.Management;
+using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class ManagementClientWrapper : IManagementClientWrapper
+    /// <summary>
+    /// A wrapper for the Azure Service Bus Administration Client
+    /// </summary>
+    public class AdministrationClientWrapper : IAdministrationClientWrapper
     {
-        private ManagementClient _managementClient;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<ManagementClientWrapper>();
-        private readonly AzureServiceBusConfiguration _configuration;
-        
-        public ManagementClientWrapper(AzureServiceBusConfiguration configuration)
+        private readonly IServiceBusClientProvider _clientProvider;
+        private ServiceBusAdministrationClient _administrationClient;
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AdministrationClientWrapper>();
+
+        /// <summary>
+        /// Initializes an Instance of <see cref="AdministrationClientWrapper"/>
+        /// </summary>
+        /// <param name="clientProvider"></param>
+        public AdministrationClientWrapper(IServiceBusClientProvider clientProvider)
         {
-            _configuration = configuration;
+            _clientProvider = clientProvider;
             Initialise();
         }
 
-        private void Initialise()
-        {
-            s_logger.LogDebug("Initialising new management client wrapper...");
-            
-            try
-            {
-                if (_configuration == null)
-                {
-                    throw new ArgumentNullException(nameof(_configuration), "Configuration is null, ensure this is set in the constructor.");
-                }
-
-                _managementClient = new ManagementClient(_configuration.ConnectionString);
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e,"Failed to initialise new management client wrapper.");
-                throw;
-            }
-
-            s_logger.LogDebug("New management client wrapper initialised.");
-        }
-
+        /// <summary>
+        /// Reset the Connection.
+        /// </summary>
         public void Reset()
         {
             s_logger.LogWarning("Resetting management client wrapper...");
             Initialise();
         }
 
+        /// <summary>
+        /// Check if a Topic exists
+        /// </summary>
+        /// <param name="topic">The name of the Topic.</param>
+        /// <returns>True if the Topic exists.</returns>
         public bool TopicExists(string topic)
         {
             s_logger.LogDebug("Checking if topic {Topic} exists...", topic);
@@ -54,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             try
             {
-                result = _managementClient.TopicExistsAsync(topic).GetAwaiter().GetResult();
+                result = _administrationClient.TopicExistsAsync(topic).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
@@ -74,13 +68,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             return result;
         }
 
+        /// <summary>
+        /// Create a Topic
+        /// </summary>
+        /// <param name="topic">The name of the Topic</param>
         public void CreateTopic(string topic)
         {
             s_logger.LogInformation("Creating topic {Topic}...", topic);
 
             try
             {
-                _managementClient.CreateTopicAsync(topic).GetAwaiter().GetResult();
+                _administrationClient.CreateTopicAsync(topic).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
@@ -91,12 +89,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogInformation("Topic {Topic} created.", topic);
         }
 
+        /// <summary>
+        /// Delete a Topic.
+        /// </summary>
+        /// <param name="topic">The name of the Topic.</param>
         public async Task DeleteTopicAsync(string topic)
         {
             s_logger.LogInformation("Deleting topic {Topic}...", topic);
             try
             {
-                await _managementClient.DeleteTopicAsync(topic);
+                await _administrationClient.DeleteTopicAsync(topic);
                 s_logger.LogInformation("Topic {Topic} successfully deleted", topic);
             }
             catch (Exception e)
@@ -105,6 +107,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
         }
 
+        /// <summary>
+        /// Check if a Subscription Exists for a Topic.
+        /// </summary>
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <param name="subscriptionName">The name of the Subscription</param>
+        /// <returns>True if the subscription exists on the specified Topic.</returns>
         public bool SubscriptionExists(string topicName, string subscriptionName)
         {
             s_logger.LogDebug("Checking if subscription {ChannelName} for topic {Topic} exists...", subscriptionName, topicName);
@@ -113,7 +121,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             try
             {
-                result =_managementClient.SubscriptionExistsAsync(topicName, subscriptionName).Result;
+                result =_administrationClient.SubscriptionExistsAsync(topicName, subscriptionName).Result;
             }
             catch (Exception e)
             {
@@ -133,7 +141,35 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             return result;
         }
 
+        /// <summary>
+        /// Create a Subscription.
+        /// </summary>
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <param name="subscriptionName">The name of the Subscription.</param>
+        /// <param name="maxDeliveryCount">Maximum message delivery count.</param>
         public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
+        {
+            CreateSubscriptionAsync(topicName, subscriptionName, maxDeliveryCount).Wait();
+        }
+        
+        private void Initialise()
+        {
+            s_logger.LogDebug("Initialising new management client wrapper...");
+            
+            try
+            {
+                _administrationClient = _clientProvider.GetServiceBusAdministrationClient();
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e,"Failed to initialise new management client wrapper.");
+                throw;
+            }
+
+            s_logger.LogDebug("New management client wrapper initialised.");
+        }
+        
+        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
         {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
@@ -142,14 +178,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 CreateTopic(topicName);
             }
 
-            var subscriptionDescription = new SubscriptionDescription(topicName, subscriptionName)
+            var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
             {
                 MaxDeliveryCount = maxDeliveryCount
             };
 
             try
             {
-                _managementClient.CreateSubscriptionAsync(subscriptionDescription).Wait();
+                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions);
             }
             catch (Exception e)
             {

@@ -2,8 +2,27 @@
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
+    /// <summary>
+    /// A <see cref="Subscription"/> with Specific option for Azure Service Bus.
+    /// </summary>
     public class AzureServiceBusSubscription : Subscription
     {
+        /// <summary>
+        /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
+        /// </summary>
+        /// <param name="dataType">The type for this Subscription.</param>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="bufferSize">The number of messages to buffer on the channel</param>
+        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isAsync"></param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public AzureServiceBusSubscription(
             Type dataType,
             SubscriptionName name = null,
@@ -25,8 +44,27 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         }
     }
 
+    /// <summary>
+    /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
+    /// </summary>
+    /// <typeparam name="T">The type of Subscription.</typeparam>
     public class AzureServiceBusSubscription<T> : AzureServiceBusSubscription where T : IRequest
     {
+        /// <summary>
+        /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
+        /// </summary>
+        /// <param name="name">The name. Defaults to the data type's full name.</param>
+        /// <param name="channelName">The channel name. Defaults to the data type's full name.</param>
+        /// <param name="routingKey">The routing key. Defaults to the data type's full name.</param>
+        /// <param name="bufferSize">The number of messages to buffer on the channel</param>
+        /// <param name="noOfPerformers">The no of performers.</param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
+        /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
+        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
+        /// <param name="isAsync"></param>
+        /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public AzureServiceBusSubscription(
             SubscriptionName name = null,
             ChannelName channelName = null,

@@ -6,16 +6,20 @@ using Polly;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers;
 using Polly.Retry;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
+    /// <summary>
+    /// A Sync and Async Message Producer for Azure Service Bus.
+    /// </summary>
     public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
 
-        private readonly IManagementClientWrapper _managementClientWrapper;
-        private readonly ITopicClientProvider _topicClientProvider;
+        private readonly IAdministrationClientWrapper _administrationClientWrapper;
+        private readonly IServiceBusSenderProvider _serviceBusSenderProvider;
         private bool _topicCreated;
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusMessageProducer>();
@@ -23,34 +27,52 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private const int TopicConnectionRetryCount = 5;
         private readonly OnMissingChannel _makeChannel;
 
-        public AzureServiceBusMessageProducer(IManagementClientWrapper managementClientWrapper, ITopicClientProvider topicClientProvider, OnMissingChannel makeChannel = OnMissingChannel.Create)
+        public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, OnMissingChannel makeChannel = OnMissingChannel.Create)
         {
-            _managementClientWrapper = managementClientWrapper;
-            _topicClientProvider = topicClientProvider;
+            _administrationClientWrapper = administrationClientWrapper;
+            _serviceBusSenderProvider = serviceBusSenderProvider;
             _makeChannel = makeChannel;
         }
-
+        
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Send(Message message)
         {
             SendWithDelay(message);
         }
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public async Task SendAsync(Message message)
         {
             await SendWithDelayAsync(message);
         }
 
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             SendWithDelayAsync(message, delayMilliseconds).Wait();
         }
 
+        /// <summary>
+        /// Send the specified message with specified delay
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public async Task SendWithDelayAsync(Message message, int delayMilliseconds = 0)
         {
             s_logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
 
             EnsureTopicExists(message.Header.Topic);
 
-            ITopicClient topicClient;
+            IServiceBusSenderWrapper serviceBusSenderWrapper;
 
             try
             {
@@ -64,7 +86,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     }
                     );
 
-                topicClient = policy.Execute(() => _topicClientProvider.Get(message.Header.Topic));
+                serviceBusSenderWrapper = policy.Execute(() => _serviceBusSenderProvider.Get(message.Header.Topic));
             }
             catch (Exception e)
             {
@@ -78,20 +100,20 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}.",
                     message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
 
-                var azureServiceBusMessage = new Microsoft.Azure.ServiceBus.Message(message.Body.Bytes);
-                azureServiceBusMessage.UserProperties.Add("MessageType", message.Header.MessageType.ToString());
-                azureServiceBusMessage.UserProperties.Add("HandledCount", message.Header.HandledCount);
+                var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
+                azureServiceBusMessage.ApplicationProperties.Add("MessageType", message.Header.MessageType.ToString());
+                azureServiceBusMessage.ApplicationProperties.Add("HandledCount", message.Header.HandledCount);
                 azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
                 azureServiceBusMessage.ContentType = message.Header.ContentType;
                 azureServiceBusMessage.MessageId = message.Header.Id.ToString();
                 if (delayMilliseconds == 0)
                 {
-                    await topicClient.SendAsync(azureServiceBusMessage);
+                    await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage);
                 }
                 else
                 {
                     var dateTimeOffset = new DateTimeOffset(DateTime.UtcNow.AddMilliseconds(delayMilliseconds));
-                    await topicClient.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset);
+                    await serviceBusSenderWrapper.ScheduleMessageAsync(azureServiceBusMessage, dateTimeOffset);
                 }
 
                 s_logger.LogDebug(
@@ -104,8 +126,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             finally
             {
-                await topicClient.CloseAsync();
+                await serviceBusSenderWrapper.CloseAsync();
             }
+        }
+
+        public void Dispose()
+        {
         }
 
         private void EnsureTopicExists(string topic)
@@ -115,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if (_managementClientWrapper.TopicExists(topic))
+                if (_administrationClientWrapper.TopicExists(topic))
                 {
                     _topicCreated = true;
                     return;
@@ -126,20 +152,16 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw new ChannelFailureException($"Topic {topic} does not exist and missing channel mode set to Validate.");
                 }
 
-                _managementClientWrapper.CreateTopic(topic);
+                _administrationClientWrapper.CreateTopic(topic);
                 _topicCreated = true;
             }
             catch (Exception e)
             {
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
-                _managementClientWrapper.Reset();
+                _administrationClientWrapper.Reset();
                 s_logger.LogError(e, "Failing to check or create topic.");
                 throw;
             }
-        }
-
-        public void Dispose()
-        {
         }
     }
 }
