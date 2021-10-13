@@ -20,7 +20,7 @@ namespace Paramore.Brighter.ServiceActivator
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
-        protected IAmACommandProcessor _commandProcessor;
+        protected readonly IAmACommandProcessor CommandProcessor;
 
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageMapper<TRequest> messageMapper
             )
         {
-            _commandProcessor = commandProcessor; 
+            CommandProcessor = commandProcessor; 
             _messageMapper = messageMapper;
         }
 

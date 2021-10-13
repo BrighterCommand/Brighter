@@ -74,12 +74,12 @@ namespace Paramore.Brighter.ServiceActivator
         
         private async void PublishAsync(TRequest request)
         {
-            await _commandProcessor.PublishAsync(request, continueOnCapturedContext: true);
+            await CommandProcessor.PublishAsync(request, continueOnCapturedContext: true);
         }
 
         private async void SendAsync(TRequest request)
         {
-            await _commandProcessor.SendAsync(request, continueOnCapturedContext: true);
+            await CommandProcessor.SendAsync(request, continueOnCapturedContext: true);
         }
 
     }
