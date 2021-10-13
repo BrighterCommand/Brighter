@@ -94,7 +94,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             
             //assert this is our message
             dlqMessage.Id.Should().Be(_message.Id);
-            message.Body.Value.Should().Be(message.Body.Value);
+            message.Body.Value.Should().Be(dlqMessage.Body.Value);
         }
 
         public void Dispose()
