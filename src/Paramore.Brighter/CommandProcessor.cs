@@ -404,13 +404,15 @@ namespace Paramore.Brighter
         /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
         /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
         /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
+        /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
+        /// and then after you have committed your transaction use ClearOutbox
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="request">The request.</param>
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            ClearOutbox(DepositPost(request));
+            ClearOutbox(DepositPost(request, null));
         }
 
         /// <summary>
@@ -420,6 +422,8 @@ namespace Paramore.Brighter
         /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
         /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
         /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
+        /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use DepositAsync,
+        /// and then after you have committed your transaction use ClearOutboxAsync
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="request">The request.</param>
@@ -430,7 +434,7 @@ namespace Paramore.Brighter
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
             where T : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
+            var messageId = await DepositPostAsync(request, null, continueOnCapturedContext, cancellationToken);
             await ClearOutboxAsync(new Guid[] {messageId}, continueOnCapturedContext, cancellationToken);
         }
 
@@ -443,8 +447,13 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
-        /// <returns></returns>
+        /// <returns>The Id of the Message that has been deposited.</returns>
         public Guid DepositPost<T>(T request) where T : class, IRequest
+        {
+            return DepositPost(request, _boxTransactionConnectionProvider);
+        }
+        
+        private Guid DepositPost<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
@@ -457,7 +466,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            _bus.AddToOutbox(request, message, _boxTransactionConnectionProvider);
+            _bus.AddToOutbox(request, message, connectionProvider);
 
             return message.Id;
         }
@@ -470,9 +479,17 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            return await DepositPostAsync(request, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
+        }
+        
+        private async Task<Guid> DepositPostAsync<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);

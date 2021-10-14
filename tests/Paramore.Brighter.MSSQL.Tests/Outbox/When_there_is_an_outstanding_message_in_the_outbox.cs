@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public void When_there_is_an_outstanding_message_in_the_outbox()
         {
-            var outstandingMessage = _sqlOutboxSync.OutstandingMessages(500).SingleOrDefault();
+            var outstandingMessage = _sqlOutboxSync.OutstandingMessages(100).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public async Task When_there_is_an_outstanding_message_in_the_outbox_async()
         {
-            var outstandingMessage = (await _sqlOutboxSync.OutstandingMessagesAsync(500)).SingleOrDefault();
+            var outstandingMessage = (await _sqlOutboxSync.OutstandingMessagesAsync(100)).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
