@@ -5,10 +5,12 @@ namespace Paramore.Brighter.Extensions.Hosting
 {
     public static class HostedServiceCollectionExtensions
     {
-        public static IBrighterBuilder UseOutboxSweeper(this IBrighterBuilder brighterBuilder)
+        public static IBrighterBuilder UseOutboxSweeper(this IBrighterBuilder brighterBuilder,
+            TimedOutboxSweeperOptions options = default)
         {
-           brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
-           return brighterBuilder;
+            brighterBuilder.Services.AddSingleton<TimedOutboxSweeperOptions>(options);
+            brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
+            return brighterBuilder;
         }
-}
+    }
 }
