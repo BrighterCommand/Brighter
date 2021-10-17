@@ -12,19 +12,21 @@ namespace Paramore.Brighter.Extensions.Hosting
     public class TimedOutboxSweeper : IHostedService, IDisposable
     {
         private readonly IServiceScopeFactory _serviceScopeFactory;
+        private readonly TimedOutboxSweeperOptions _options;
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
-
-        public TimedOutboxSweeper (IServiceScopeFactory serviceScopeFactory)
+        
+        public TimedOutboxSweeper (IServiceScopeFactory serviceScopeFactory, TimedOutboxSweeperOptions options)
         {
             _serviceScopeFactory = serviceScopeFactory;
+            _options = options;
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
             s_logger.LogInformation("Outbox Sweeper Service is starting.");
 
-            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(5));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
         }
@@ -38,7 +40,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
 
             var outBoxSweeper = new OutboxSweeper(
-                milliSecondsSinceSent:5000, 
+                milliSecondsSinceSent:_options.MinimumMessageAge, 
                 outbox:outbox, 
                 commandProcessor:commandProcessor);
 
