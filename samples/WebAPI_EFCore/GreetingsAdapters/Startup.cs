@@ -147,7 +147,11 @@ namespace GreetingsAdapters
                      )
                      .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
                      .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
-                     .UseOutboxSweeper()
+                     .UseOutboxSweeper(options =>
+                     {
+                         options.TimerInterval = 5;
+                         options.MinimumMessageAge = 5000;
+                     })
                      .AutoFromAssemblies();
             }
             else
