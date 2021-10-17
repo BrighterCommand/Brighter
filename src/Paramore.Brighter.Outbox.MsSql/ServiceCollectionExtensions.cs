@@ -56,12 +56,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             return brighterBuilder;
         }
 
-        private static MsSqlOutboxSync BuildMsSqlOutbox(IServiceProvider provider)
+        private static MsSqlOutbox BuildMsSqlOutbox(IServiceProvider provider)
         {
             var connectionProvider = provider.GetService<IMsSqlConnectionProvider>();
             var config = provider.GetService<MsSqlConfiguration>();
 
-            return new MsSqlOutboxSync(config, connectionProvider);
+            return new MsSqlOutbox(config, connectionProvider);
         }
     }
 }

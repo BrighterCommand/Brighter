@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly string _key4 = "name4";
         private readonly string _key5 = "name5";
         private readonly Message _message;
-        private readonly MsSqlOutboxSync _sqlOutboxSync;
+        private readonly MsSqlOutbox _sqlOutbox;
         private Message _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new MsSqlOutboxSync(_msSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(),
                 topic: "test_topic", 
@@ -71,15 +71,15 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _message = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutboxSync.Add(_message);
+            _sqlOutbox.Add(_message);
         }
 
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _sqlOutboxSync.AddAsync(_message);
+            await _sqlOutbox.AddAsync(_message);
 
-            _storedMessage = await _sqlOutboxSync.GetAsync(_message.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_message.Id);
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);
             //should read the header from the sql outbox
