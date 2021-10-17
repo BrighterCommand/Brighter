@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly Message _messageEarliest;
-        private readonly MsSqlOutboxSync _sqlOutboxSync;
+        private readonly MsSqlOutbox _sqlOutbox;
         private Message _storedMessage;
 
         public MsSqlOutboxEmptyStoreTests()
@@ -43,14 +43,14 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new MsSqlOutboxSync(_msSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
             //should return an empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
