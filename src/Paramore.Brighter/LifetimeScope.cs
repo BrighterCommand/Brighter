@@ -24,10 +24,10 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter
 {
@@ -76,7 +76,7 @@ namespace Paramore.Brighter
             s_logger.LogDebug("Tracking async handler instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
-        public IServiceScope Scope { get; }
+        public IBrighterScope Scope { get; }
 
         public void Dispose()
         {

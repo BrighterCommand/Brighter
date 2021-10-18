@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
@@ -14,13 +15,15 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
         public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
         {
-            var handleRequests = (IHandleRequests)lifetimeScope.Scope.ServiceProvider.GetService(handlerType);
+            var serviceScope = GetServiceProviderFromScope(lifetimeScope);
+            var handleRequests = (IHandleRequests)serviceScope.GetService(handlerType);
             return handleRequests;
         }
 
         IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetimeScope)
         {
-            var handleRequests = (IHandleRequestsAsync)lifetimeScope.Scope.ServiceProvider.GetService(handlerType);
+            var serviceScope = GetServiceProviderFromScope(lifetimeScope);
+            var handleRequests = (IHandleRequestsAsync)serviceScope.GetService(handlerType);
             return handleRequests;
         }
 
@@ -36,9 +39,32 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             disposal?.Dispose();
         }
 
-        public IServiceScope CreateScope()
+        public IBrighterScope CreateScope()
         {
-            return _serviceProvider.CreateScope();
+            return new ServiceProviderScope(_serviceProvider.CreateScope());
+        }
+        private static IServiceProvider GetServiceProviderFromScope(IAmALifetime lifetimeScope)
+        {
+            var serviceScope = (ServiceProviderScope)lifetimeScope.Scope;
+            return serviceScope.ServiceProvider;
+        }
+    }
+
+    public class ServiceProviderScope : IBrighterScope
+    {
+        private readonly IServiceScope _scope;
+
+        public ServiceProviderScope(IServiceScope scope)
+        {
+            _scope = scope;
+        }
+
+        public IServiceProvider ServiceProvider => _scope.ServiceProvider;
+
+        public void Dispose()
+        {
+            _scope?.Dispose();
         }
     }
 }
+;

@@ -23,8 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -62,9 +61,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             Release(handler);
         }
 
-        public IServiceScope CreateScope()
+        public IBrighterScope CreateScope()
         {
-            return new NullScope();
+            return new Unscoped();
         }
     }
 }

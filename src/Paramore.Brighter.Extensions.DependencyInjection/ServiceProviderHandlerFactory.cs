@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -66,6 +67,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             disposal?.Dispose();
         }
 
-        public IServiceScope CreateScope() => new NullScope();
+        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
-using Microsoft.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
@@ -40,6 +39,6 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         public void Release(IHandleRequests handler)
         {
         }
-        public IServiceScope CreateScope() => new NullScope();
+        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

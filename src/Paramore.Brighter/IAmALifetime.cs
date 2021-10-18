@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter
 {
@@ -46,6 +46,6 @@ namespace Paramore.Brighter
         /// <param name="instance">The instance.</param>
         void Add(IHandleRequestsAsync instance);
 
-        IServiceScope Scope { get; }
+        IBrighterScope Scope { get; }
     }
 }

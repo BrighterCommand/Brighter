@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Linq;
 using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -56,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 s_released += "|" + handler.Name;
             }
-            public IServiceScope CreateScope() => new NullScope();
+            public IBrighterScope CreateScope() => new Unscoped();
         }
 
 
