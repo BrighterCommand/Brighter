@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             _factoryMethod = factoryMethod;
         }
 
-        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
+        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             return _factoryMethod();
         }
@@ -50,14 +51,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             handler = null;
         }
 
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
         {
-            return Create(handlerType);
+            return Create(handlerType, lifetimeScope);
         }
 
         public void Release(IHandleRequests handler)
         {
             Release(handler);
+        }
+
+        public IBrighterScope CreateScope()
+        {
+            return new Unscoped();
         }
     }
 }

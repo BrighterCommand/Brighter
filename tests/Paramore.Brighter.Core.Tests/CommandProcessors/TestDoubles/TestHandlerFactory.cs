@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             _factoryMethod = factoryMethod;
         }
 
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             return _factoryMethod();
         }
@@ -48,5 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             disposable?.Dispose();
             handler = null;
         }
+
+        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

@@ -79,7 +79,7 @@ namespace Paramore.Brighter
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = _interpreter.GetHandlers();
+            var handlers = _interpreter.GetHandlers(_instanceScope);
 
             var pipelines = new Pipelines<TRequest>();
 
@@ -150,7 +150,7 @@ namespace Paramore.Brighter
 
         public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
         {
-            var handlers = _interpreter.GetAsyncHandlers();
+            var handlers = _interpreter.GetAsyncHandlers(_instanceScope);
 
             var pipelines = new AsyncPipelines<TRequest>();
             handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext, continueOnCapturedContext)));
@@ -181,9 +181,7 @@ namespace Paramore.Brighter
                 AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
 
                 _preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
-
             }
-
 
             AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
             
@@ -251,7 +249,7 @@ namespace Paramore.Brighter
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync, requestContext).CreateRequestHandler();
+                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync, requestContext).CreateRequestHandler(_instanceScope);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -271,7 +269,7 @@ namespace Paramore.Brighter
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
-                    var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext);
+                    var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext, _instanceScope);
                     lastInPipeline.SetSuccessor(decorator);
                     lastInPipeline = decorator;
                 }
@@ -306,7 +304,7 @@ namespace Paramore.Brighter
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
-                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync, requestContext).CreateRequestHandler();
+                        new HandlerFactory<TRequest>(attribute, _handlerFactorySync, requestContext).CreateRequestHandler(_instanceScope);
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
                 }
@@ -326,7 +324,7 @@ namespace Paramore.Brighter
                 var handlerType = attribute.GetHandlerType();
                 if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
-                    var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext);
+                    var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext, _instanceScope);
                     decorator.ContinueOnCapturedContext = continueOnCapturedContext;
                     decorator.SetSuccessor(lastInPipeline);
                     lastInPipeline = decorator;
