@@ -74,6 +74,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     {
                         var matchingTopic = matchingTopics[0];
                         if (matchingTopic.Error == null) return true;
+                        // TODO : Still trying to work out how to test this
+                        if (matchingTopic.Error.Code == ErrorCode.NoError) return true;
                         if (matchingTopic.Error.Code == ErrorCode.UnknownTopicOrPart)
                             return false;
                         else
