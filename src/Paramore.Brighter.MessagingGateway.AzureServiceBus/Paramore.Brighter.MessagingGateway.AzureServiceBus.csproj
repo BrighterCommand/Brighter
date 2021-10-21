@@ -6,7 +6,7 @@
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.4.1" />
+    <PackageReference Include="Azure.Identity" Version="1.5.0" />
     <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.4.0" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
     <PackageReference Include="AMQPNetLite" Version="2.4.3" />
