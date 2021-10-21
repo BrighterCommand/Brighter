@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 namespace GreetingsSender
 {
@@ -15,9 +16,10 @@ namespace GreetingsSender
 
             serviceCollection.AddLogging();
 
-            var asbConfig = new AzureServiceBusConfiguration("Endpoint=sb://./;Authentication=Managed Identity", true);
+            //TODO: add your ASB qualified name here
+            var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
-            var producer = AzureServiceBusMessageProducerFactory.Get(asbConfig);
+            var producer = AzureServiceBusMessageProducerFactory.Get(asbClientProvider);
             serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
                 .UseExternalBus(producer, false)
