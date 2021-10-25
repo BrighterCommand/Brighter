@@ -690,7 +690,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
             dr.Close();
 
-            return message;
+            return message ?? new Message();
         }
         
         private async Task<Message> MapFunctionAsync(SqlDataReader dr)
@@ -702,7 +702,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
             dr.Close();
 
-            return message;
+            return message ?? new Message();
         }
    }
 }
