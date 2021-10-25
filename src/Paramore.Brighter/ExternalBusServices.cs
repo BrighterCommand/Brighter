@@ -137,7 +137,7 @@ namespace Paramore.Brighter
             foreach (var messageId in posts)
             {
                 var message = OutBox.Get(messageId);
-                if (message == null)
+                if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
@@ -173,7 +173,7 @@ namespace Paramore.Brighter
             foreach (var messageId in posts)
             {
                 var message = await AsyncOutbox.GetAsync(messageId, OutboxTimeout, cancellationToken);
-                if (message == null)
+                if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
