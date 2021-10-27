@@ -19,18 +19,23 @@ namespace Paramore.Brighter.ServiceActivator
     public abstract class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
+        
 
-        protected readonly IAmACommandProcessor CommandProcessor;
-
+        protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
 
+        /// <summary>
+        /// Message Pump abstract class
+        /// </summary>
+        /// <param name="commandProcessorProvider"></param>
+        /// <param name="messageMapper"></param>
         public MessagePump(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessorProvider commandProcessorProvider, 
             IAmAMessageMapper<TRequest> messageMapper
-            )
+        )
         {
-            CommandProcessor = commandProcessor; 
+            CommandProcessorProvider = commandProcessorProvider;
             _messageMapper = messageMapper;
         }
 
@@ -114,11 +119,14 @@ namespace Paramore.Brighter.ServiceActivator
                 try
                 {
                     var request = TranslateMessage(message);
+                    CommandProcessorProvider.CreateScope();
                     DispatchRequest(message.Header, request);
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    s_logger.LogDebug(configurationException, "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    s_logger.LogDebug(configurationException,
+                        "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
+                        Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     RejectMessage(message);
                     Channel.Dispose();
@@ -137,7 +145,7 @@ namespace Paramore.Brighter.ServiceActivator
                         if (RequeueMessage(message)) continue;
                     }
 
-                    if (stop)   
+                    if (stop)
                     {
                         RejectMessage(message);
                         Channel.Dispose();
@@ -157,6 +165,10 @@ namespace Paramore.Brighter.ServiceActivator
                     s_logger.LogError(e,
                         "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                }
+                finally
+                {
+                    CommandProcessorProvider.ReleaseScope();
                 }
 
                 AcknowledgeMessage(message);
