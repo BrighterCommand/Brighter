@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (Exception e)
             {
-                s_logger.LogWarning(e, "Failed to create message from amqp message");
+                s_logger.LogWarning(e, "Failed to create message from Kafka offset");
                 message = FailureMessage(topic, messageId);
             }
 

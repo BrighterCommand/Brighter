@@ -25,12 +25,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <inheritdoc />
     /// <summary>
-    /// Class KafkaMessageConsumerFactory.
+    /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>> 
     /// </summary>
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _configuration;
 
+        /// <summary>
+        /// Initializes a factory with the <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to a Kafka Broker
+        /// </summary>
+        /// <param name="configuration">The <see cref="KafkaMessagingGatewayConfiguration"/> used to connect to the Broker</param>
         public KafkaMessageConsumerFactory(
             KafkaMessagingGatewayConfiguration configuration
             )
@@ -39,10 +43,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Creates a consumer for the specified queue.
+        /// Creates a consumer from the <see cref="Subscription{T}"/>
         /// </summary>
-        /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer</returns>
+        /// <param name="subscription">The <see cref="KafkaSubscription"/> to read</param>
+        /// <returns>A consumer that can be used to read from the stream</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
             KafkaSubscription kafkaSubscription = subscription as KafkaSubscription;  
