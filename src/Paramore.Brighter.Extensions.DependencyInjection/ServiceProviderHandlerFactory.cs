@@ -1,5 +1,6 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -9,7 +10,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceProviderHandlerFactory : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync
     {
         private readonly IServiceProvider _serviceProvider;
-        private bool _isTransient;
+        private readonly bool _isTransient;
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
@@ -27,8 +28,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Lifetime is set during registration
         /// </summary>
         /// <param name="handlerType">The type of handler to request</param>
+        /// <param name="lifetimeScope"></param>
         /// <returns>An instantiated request handler</returns>
-        IHandleRequests IAmAHandlerFactorySync.Create(Type handlerType)
+        IHandleRequests IAmAHandlerFactorySync.Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             return (IHandleRequests)_serviceProvider.GetService(handlerType);
         }
@@ -38,8 +40,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Lifetime is set during registration
         /// </summary>
         /// <param name="handlerType">The type of handler to request</param>
+        /// <param name="lifetimeScope"></param>
         /// <returns>An instantiated request handler</returns>
-        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType)
+        IHandleRequestsAsync IAmAHandlerFactoryAsync.Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             return (IHandleRequestsAsync)_serviceProvider.GetService(handlerType);
         }
@@ -63,5 +66,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var disposal = handler as IDisposable;
             disposal?.Dispose();
         }
+
+        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

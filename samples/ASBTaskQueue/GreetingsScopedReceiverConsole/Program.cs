@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Events;
@@ -13,11 +14,13 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
-namespace GreetingsReceiverConsole
+namespace GreetingsScopedReceiverConsole
 {
     class Program
     {
-        public async static Task Main(string[] args)
+        // If you run this receiver with the other receiver, and send you'll see different behaviours. 
+        // This scoped receiver will refresh the scoped dependency for each pipeline (Event/Command dispatch)
+        public static async Task Main(string[] args)
         {
             var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
@@ -39,7 +42,6 @@ namespace GreetingsReceiverConsole
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: true),
-
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName(GreetingEventMessageMapper.Topic),
                             new ChannelName("paramore.example.greeting"),
@@ -51,15 +53,17 @@ namespace GreetingsReceiverConsole
                     };
 
                     //TODO: add your ASB qualified name here
-                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
-
-                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
-                    services.AddServiceActivator(options =>
-                    {
-                        options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-                    }).UseInMemoryOutbox()
-                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))
+                    var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
+                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(asbClientProvider);
+                    services
+                        .AddServiceActivator(options =>
+                        {
+                            options.Subscriptions = subscriptions;
+                            options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+                            options.UseScoped = true;
+                        })
+                        .UseInMemoryOutbox()
+                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(asbClientProvider))
                         .AutoFromAssemblies();
 
                     services.AddHostedService<ServiceActivatorHostedService>();
