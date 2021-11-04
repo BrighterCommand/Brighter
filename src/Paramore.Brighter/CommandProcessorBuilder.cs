@@ -22,8 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
-using Polly.Fallback;
 using Polly.Registry;
 
 namespace Paramore.Brighter
@@ -56,7 +56,7 @@ namespace Paramore.Brighter
     ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
     ///             provide a <see cref="IAmAMessageMapperFactory"/> so that we can create instances of your  <see cref="IAmAMessageMapper"/>. You need to provide a <see cref="IAmAMessageMapperFactory"/>
     ///             when using <see cref="MessageMapperRegistry"/> so that we can create instances of your mapper. 
-    ///             If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <see cref="NoTaskQueues"/> method to indicate your intent
+    ///             If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <see cref="NoExternalBus"/> method to indicate your intent
     ///         </description>
     ///     </item>
     ///     <item>
@@ -71,22 +71,20 @@ namespace Paramore.Brighter
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAnOutbox<Message> _outbox;
-        private IAmAnOutboxAsync<Message> _asyncOutbox;
         private IAmAMessageProducer _messagingGateway;
-        private IAmAMessageProducerAsync _asyncMessagingGateway;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
-        private IAmAHandlerFactoryAsync _asyncHandlerFactory;
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private IAmAChannelFactory _responseChannelFactory;
         private int _outboxWriteTimeout;
-        private int _messagingGatewaySendTimeout;
-        private bool _useTaskQueues = false;
+        private bool _useExternalBus = false;
         private bool _useRequestReplyQueues = false;
-
+        private IEnumerable<Subscription> _replySubscriptions;
+        private IAmABoxTransactionConnectionProvider _overridingBoxTransactionConnectionProvider = null;
+        
         private CommandProcessorBuilder()
         {
             DefaultPolicy();
@@ -110,7 +108,17 @@ namespace Paramore.Brighter
         {
             _registry = handlerConfiguration.SubscriberRegistry;
             _handlerFactory = handlerConfiguration.HandlerFactory;
-            _asyncHandlerFactory = handlerConfiguration.AsyncHandlerFactory;
+            return this;
+        }
+
+        /// <summary>
+        /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
+        /// </summary>
+        /// <param name="featureSwitchRegistry">The feature switch config provider</param>
+        /// <returns>INeedPolicy</returns>
+        public INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        {
+            _featureSwitchRegistry = featureSwitchRegistry;
             return this;
         }
 
@@ -145,23 +153,23 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using Task Queues.
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
         /// 
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
+        /// <param name="outbox">The Outbox.</param>
+        /// <param name="boxTransactionConnectionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext TaskQueues(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox)
+        public INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
         {
-            _useTaskQueues = true;
+            _useExternalBus = true;
             _messagingGateway = configuration.MessageProducer;
             _outbox = outbox;
-            if(outbox is IAmAnOutboxAsync<Message>) _asyncOutbox = (IAmAnOutboxAsync<Message>)outbox;
-            _asyncMessagingGateway = configuration.MessageProducerAsync;
+            _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
-            _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             return this;
         }
 
@@ -169,7 +177,7 @@ namespace Paramore.Brighter
         /// Use to indicate that you are not using Task Queues.
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext NoTaskQueues()
+        public INeedARequestContext NoExternalBus()
         {
             return this;
         }
@@ -177,29 +185,20 @@ namespace Paramore.Brighter
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Call{T}(T)"/> using RPC between client and server 
         /// </summary>
-        /// <param name="messagingConfiguration"></param>
+        /// <param name="configuration"></param>
+        /// <param name="outbox">The outbox</param>
+        /// <param name="subscriptions">Subscriptions for creating reply queues</param>
         /// <returns></returns>
-        public INeedARequestContext RequestReplyQueues(MessagingConfiguration configuration)
+        public INeedARequestContext ExternalRPC(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
         {
             _useRequestReplyQueues = true;
+            _replySubscriptions = subscriptions;
             _messagingGateway = configuration.MessageProducer;
-            _asyncMessagingGateway = configuration.MessageProducerAsync;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
-            _messagingGatewaySendTimeout = configuration.MessagingGatewaySendTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
+            _outbox = outbox;
              
-            return this;
-        }
-        
-        /// <summary>
-        /// Supplies the specified feature switching configuration, so we can use feature switches on user-defined request handlers
-        /// </summary>
-        /// <param name="featureSwitchRegistry">The feature switch config provider</param>
-        /// <returns>INeedARequestContext</returns>
-        public INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry)
-        {
-            _featureSwitchRegistry = featureSwitchRegistry;
             return this;
         }
 
@@ -221,32 +220,29 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
-            if (!(_useTaskQueues || _useRequestReplyQueues))
+            if (!(_useExternalBus || _useRequestReplyQueues))
             {
                 return new CommandProcessor(
                     
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry);
             }
-            else if (_useTaskQueues)
+            else if (_useExternalBus)
             {
                 return new CommandProcessor(
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
-                    asyncHandlerFactory: _asyncHandlerFactory,
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
                     outBox: _outbox,
-                    asyncOutbox: _asyncOutbox,
                     messageProducer: _messagingGateway,
-                    asyncMessageProducer: _asyncMessagingGateway,
                     outboxTimeout: _outboxWriteTimeout,
-                    featureSwitchRegistry: _featureSwitchRegistry
+                    featureSwitchRegistry: _featureSwitchRegistry,
+                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
                 );
             }
             else if (_useRequestReplyQueues)
@@ -257,8 +253,11 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
+                    replySubscriptions: _replySubscriptions,
+                    outBox: _outbox,
                     messageProducer: _messagingGateway,
-                    responseChannelFactory: _responseChannelFactory 
+                    responseChannelFactory: _responseChannelFactory,
+                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
                     );
             }
             else
@@ -280,6 +279,13 @@ namespace Paramore.Brighter
         /// <param name="theRegistry">The registry.</param>
         /// <returns>INeedPolicy.</returns>
         INeedPolicy Handlers(HandlerConfiguration theRegistry);
+        
+        /// <summary>
+        /// Configure Feature Switches for the Handlers
+        /// </summary>
+        /// <param name="featureSwitchRegistry"></param>
+        /// <returns></returns>
+        INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
 
     /// <summary>
@@ -312,18 +318,22 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="outbox">The outbox.</param>
+        /// <param name="boxTransactionConnectionProvider">The connection provider to use when adding messages to the bus</param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext TaskQueues(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox);
+        INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null);
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext NoTaskQueues();
+        INeedARequestContext NoExternalBus();
+
         /// <summary>
-        ///  We want to use RPC to send messages to another processs
+        ///  We want to use RPC to send messages to another process
         /// </summary>
         /// <param name="messagingConfiguration"></param>
-        INeedARequestContext RequestReplyQueues(MessagingConfiguration messagingConfiguration);
+        /// <param name="outboxSync">The outbox</param>
+        /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
+        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>
@@ -337,13 +347,6 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
-
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="featureSwitchRegistry"></param>
-        /// <returns></returns>
-        INeedARequestContext ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
     
     /// <summary>

@@ -12,20 +12,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     
     [Collection("CommandProcessor")]
-    public class CommandProcessorDepositPostTestsAsync
+    public class CommandProcessorDepositPostTestsAsync: IDisposable
     {
         
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeOutboxSync _fakeOutboxSync;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorDepositPostTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutbox();
+            _fakeOutboxSync = new FakeOutboxSync();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -49,8 +49,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
                 messageMapperRegistry,
-                (IAmAnOutboxAsync<Message>)_fakeOutbox,
-                (IAmAMessageProducerAsync)_fakeMessageProducer);
+                _fakeOutboxSync,
+                _fakeMessageProducer);
         }
 
 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutbox
+            var depositedPost = _fakeOutboxSync
                 .OutstandingMessages(3000)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
@@ -78,10 +78,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
         }
         
-        [Fact]
         public void Dispose()
         {
-            _commandProcessor.Dispose();
+            CommandProcessor.ClearExtServiceBus();
         }
      }
 }

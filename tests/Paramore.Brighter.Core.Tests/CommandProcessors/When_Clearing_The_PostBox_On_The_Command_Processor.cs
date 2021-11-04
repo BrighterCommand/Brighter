@@ -38,14 +38,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
-        private readonly FakeOutbox _fakeOutbox;
+        private readonly FakeOutboxSync _fakeOutbox;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorPostBoxClearTests()
         {
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _fakeOutbox = new FakeOutbox();
+            _fakeOutbox = new FakeOutboxSync();
             _fakeMessageProducer = new FakeMessageProducer();
 
             _message = new Message(
@@ -68,8 +68,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAnOutbox<Message>)_fakeOutbox,
-                (IAmAMessageProducer)_fakeMessageProducer);
+                _fakeOutbox,
+                _fakeMessageProducer);
         }
 
         [Fact]
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-            _commandProcessor.Dispose();
-       }
+            CommandProcessor.ClearExtServiceBus();
+        }
     }
 }

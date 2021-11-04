@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxRangeRequestAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutbox _mySqlOutbox;
+        private readonly MySqlOutboxSync _mySqlOutboxSync;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private IEnumerable<Message> _messages;
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
@@ -58,13 +58,13 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched_Async()
         {
-            await _mySqlOutbox.AddAsync(_messageEarliest);
+            await _mySqlOutboxSync.AddAsync(_messageEarliest);
             await Task.Delay(100);
-            await _mySqlOutbox.AddAsync(_message1);
+            await _mySqlOutboxSync.AddAsync(_message1);
             await Task.Delay(100);
-            await _mySqlOutbox.AddAsync(_message2);
+            await _mySqlOutboxSync.AddAsync(_message2);
 
-            _messages = await _mySqlOutbox.GetAsync(1, 3);
+            _messages = await _mySqlOutboxSync.GetAsync(1, 3);
 
             //should fetch 1 message
             _messages.Should().HaveCount(1);

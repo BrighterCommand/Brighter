@@ -13,7 +13,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     {
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly string _queueName = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageProducerSync _producer;
         private readonly IAmAMessageConsumer _consumer;
 
         public PurgeTest()
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         break;
                 }
-                catch (ChannelFailureException cfx)
+                catch (ChannelFailureException)
                 {
                     //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
                     //_output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");

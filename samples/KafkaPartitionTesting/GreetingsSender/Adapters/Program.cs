@@ -115,7 +115,7 @@ namespace GreetingsSender.Adapters
                             })
                         .Create();
 
-                    services.AddSingleton<IAmAMessageProducer>(producer);
+                    services.AddSingleton<IAmAMessageProducerSync>(producer);
 
                     services.AddBrighter(options =>
                     {

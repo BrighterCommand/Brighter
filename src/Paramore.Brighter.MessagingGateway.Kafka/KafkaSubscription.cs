@@ -1,5 +1,4 @@
 ﻿#region Licence
-
 /* The MIT License (MIT)
 Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 

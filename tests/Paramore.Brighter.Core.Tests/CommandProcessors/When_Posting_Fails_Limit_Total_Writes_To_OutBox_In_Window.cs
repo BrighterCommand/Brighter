@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,12 +28,13 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Scope;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PostFailureLimitCommandTests
+    public class PostFailureLimitCommandTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private IAmAMessageProducer _fakeMessageProducer;
@@ -42,16 +43,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PostFailureLimitCommandTests()
         {
             _outbox = new InMemoryOutbox();
-            _fakeMessageProducer = new FakeErroringMessageProducer();
+            _fakeMessageProducer = new FakeErroringMessageProducerSync();
 
             var messageMapperRegistry =
                 new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _commandProcessor = CommandProcessorBuilder.With()
-                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactory()))
+                .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .TaskQueues(new MessagingConfiguration((IAmAMessageProducer) _fakeMessageProducer, messageMapperRegistry), _outbox)
+                .ExternalBus(new MessagingConfiguration(_fakeMessageProducer, messageMapperRegistry), _outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -93,14 +94,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             }
         }
 
-        internal class EmptyHandlerFactory : IAmAHandlerFactory
+        public void Dispose()
         {
-            public IHandleRequests Create(Type handlerType)
+            CommandProcessor.ClearExtServiceBus();
+        }
+
+        internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync
+        {
+            public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
             {
                 return null;
             }
 
             public void Release(IHandleRequests handler) {}
+            public IBrighterScope CreateScope() => new Unscoped();
         }
     }
 }

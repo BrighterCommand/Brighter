@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorSendAsyncTests
+    public class CommandProcessorSendAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
@@ -58,6 +58,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
            // _should_send_the_command_to_the_command_handler
             _receivedMessages.Should().Contain(nameof(MyCommandHandlerAsync), _myCommand.Id);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

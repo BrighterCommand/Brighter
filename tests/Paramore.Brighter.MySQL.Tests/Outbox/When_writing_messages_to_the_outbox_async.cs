@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxWritingMessagesAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutbox _mySqlOutbox;
+        private readonly MySqlOutboxSync _mySqlOutboxSync;
         private Message _message2;
         private Message _messageEarliest;
         private Message _messageLatest;
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
         }
 
         [Fact]
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             await SetUpMessagesAsync();
 
-            _retrievedMessages = await _mySqlOutbox.GetAsync();
+            _retrievedMessages = await _mySqlOutboxSync.GetAsync();
 
             //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
@@ -68,13 +68,13 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private async Task SetUpMessagesAsync()
         {
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            await _mySqlOutbox.AddAsync(_messageEarliest);
+            await _mySqlOutboxSync.AddAsync(_messageEarliest);
 
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            await _mySqlOutbox.AddAsync(_message2);
+            await _mySqlOutboxSync.AddAsync(_message2);
 
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            await _mySqlOutbox.AddAsync(_messageLatest);
+            await _mySqlOutboxSync.AddAsync(_messageLatest);
         }
         
         public void Dispose()

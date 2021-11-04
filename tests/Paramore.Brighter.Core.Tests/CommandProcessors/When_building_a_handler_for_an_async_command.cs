@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class  PipelineForCommandAsyncTests
+    public class  PipelineForCommandAsyncTests : IDisposable
     {
         private static PipelineBuilder<MyCommand> _chainBuilder;
         private static IHandleRequestsAsync<MyCommand> _chainOfResponsibility;
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var handlerFactory = new TestHandlerFactoryAsync<MyCommand, MyCommandHandlerAsync>(() => new MyCommandHandlerAsync(_receivedMessages));
             _requestContext = new RequestContext();
 
-            _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
+            _chainBuilder = new PipelineBuilder<MyCommand>(registry, asyncHandlerFactory: handlerFactory);
         }
 
         [Fact]
@@ -56,6 +56,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _chainOfResponsibility.Context.Should().NotBeNull();
             _chainOfResponsibility.Context.Should().BeSameAs(_requestContext);
+        }
+
+        public void Dispose()
+        {
+           CommandProcessor.ClearExtServiceBus(); 
         }
     }
 }

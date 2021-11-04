@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -9,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorNoInMapperTests
+    public class CommandProcessorNoInMapperTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyRequest _myRequest = new MyRequest();
@@ -30,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactory<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -39,6 +40,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+
+            var replySubscriptions = new List<Subscription>();
 
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
@@ -50,7 +53,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy}
                 },
                 messageMapperRegistry,
-                (IAmAMessageProducer)new FakeMessageProducer(),
+                new InMemoryOutbox(),
+                new FakeMessageProducer(),
+                replySubscriptions,
                 responseChannelFactory: new InMemoryChannelFactory());
             
             PipelineBuilder<MyResponse>.ClearPipelineCache();
@@ -64,5 +69,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //should throw an exception as we require a mapper for the outgoing request 
             exception.Should().BeOfType<ArgumentOutOfRangeException>();
         }
-}
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+    }
 }

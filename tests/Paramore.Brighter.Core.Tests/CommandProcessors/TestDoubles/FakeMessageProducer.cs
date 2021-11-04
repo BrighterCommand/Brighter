@@ -28,7 +28,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public class FakeMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
         public int MaxOutStandingMessages { get; set; } = -1;

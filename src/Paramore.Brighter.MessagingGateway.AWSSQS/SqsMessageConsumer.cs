@@ -34,6 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         private readonly string _queueName;
         private readonly int _batchSize;
         private readonly bool _hasDlq;
+        private readonly bool _rawMessageDelivery;
         private readonly Message _noopMessage = new Message();
 
         /// <summary>
@@ -44,17 +45,20 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <param name="routingKey">the SNS Topic we subscribe to</param>
         /// <param name="batchSize">The maximum number of messages to consume per call to SQS</param>
         /// <param name="hasDLQ">Do we have a DLQ attached to this queue?</param>
+        /// <param name="rawMessageDelivery">Do we have Raw Message Delivery enabled?</param>
         public SqsMessageConsumer(
             AWSMessagingGatewayConnection awsConnection,
             string queueName,
             RoutingKey routingKey,
             int batchSize = 1,
-            bool hasDLQ = false)
+            bool hasDLQ = false,
+            bool rawMessageDelivery = true)
         {
             _awsConnection = awsConnection;
             _queueName = queueName;
             _batchSize = batchSize;
             _hasDlq = hasDLQ;
+            _rawMessageDelivery = rawMessageDelivery;
         }
 
         /// <summary>
@@ -113,7 +117,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var messages = new Message[sqsMessages.Length];
             for (int i = 0; i < sqsMessages.Length; i++)
             {
-                var message = new SqsMessageCreator().CreateMessage(sqsMessages[i]);
+                var message = SqsMessageCreatorFactory.Create(_rawMessageDelivery).CreateMessage(sqsMessages[i]);
                 s_logger.LogInformation("SqsMessageConsumer: Received message from queue {ChannelName}, message: {1}{Request}",
                     _queueName, Environment.NewLine, JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                 messages[i] = message;
@@ -222,20 +226,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Requeues the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
-        public void Requeue(Message message)
-        {
-            Requeue(message, 0);
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>True if the message was requeued successfully</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
             if (!message.Header.Bag.ContainsKey("ReceiptHandle"))
-                return;
+                return false;
 
             var receiptHandle = message.Header.Bag["ReceiptHandle"].ToString();
 
@@ -250,11 +246,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
 
                 s_logger.LogInformation("SqsMessageConsumer: re-queued the message {Id}", message.Id);
+
+                return true;
             }
             catch (Exception exception)
             {
                 s_logger.LogError(exception, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
-                throw;
+                return false;
             }
         }
 

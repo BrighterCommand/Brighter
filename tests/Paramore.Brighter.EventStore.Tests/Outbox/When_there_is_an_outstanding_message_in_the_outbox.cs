@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2019 Jonny Olliff-Lee <jonny.ollifflee@gmail.com>
@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.EventStore;
@@ -40,7 +41,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_there_is_an_outstanding_message_in_the_outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             
             var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
 
@@ -75,14 +76,14 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             var messages = eventStoreOutbox.OutstandingMessages(500, 100, 1, args);
 
             // assert
-            messages.Should().BeEquivalentTo(outstandingMessage);
+            messages.First().Should().BeEquivalentTo(outstandingMessage);
         }
         
         [Fact]
         public void When_null_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             
             // act
             Action getWithoutArgs = () => eventStoreOutbox.OutstandingMessages(500, 100, 1);
@@ -95,7 +96,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_stream_arg_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
@@ -109,7 +110,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_empty_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object>();
             
             // act
@@ -123,7 +124,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_wrong_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
             
             // act

@@ -27,37 +27,42 @@ using System.Collections.Generic;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter
 {
+
     internal class LifetimeScope : IAmALifetime
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<LifetimeScope>();
 
-        private readonly IAmAHandlerFactory _handlerFactory;
+        private readonly IAmAHandlerFactorySync _handlerFactorySync;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory) 
-            : this(handlerFactory, null)
+        public LifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
+            : this(handlerFactorySync, null)
         {}
 
         public LifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
             : this(null, asyncHandlerFactory)
         {}
 
-        public LifetimeScope(IAmAHandlerFactory handlerFactory, IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        private LifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
         {
-            _handlerFactory = handlerFactory;
+            _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;
+
+            var nonNullFactory = (IAmAHandlerFactory)_asyncHandlerFactory ?? _handlerFactorySync;  
+            Scope = nonNullFactory.CreateScope();
         }
 
         public int TrackedItemCount => _trackedObjects.Count + _trackedAsyncObjects.Count;
 
         public void Add(IHandleRequests instance)
         {
-            if (_handlerFactory == null)
+            if (_handlerFactorySync == null)
                 throw new ArgumentException("An instance of a handler can not be added without a HandlerFactory.");
             _trackedObjects.Add(instance);
             s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
@@ -71,12 +76,16 @@ namespace Paramore.Brighter
             s_logger.LogDebug("Tracking async handler instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
         }
 
+        public IBrighterScope Scope { get; }
+
         public void Dispose()
         {
+            Scope.Dispose();
+
             _trackedObjects.Each((trackedItem) =>
             {
                 //free disposable items
-                _handlerFactory.Release(trackedItem);
+                _handlerFactorySync.Release(trackedItem);
                 s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());
             });
 

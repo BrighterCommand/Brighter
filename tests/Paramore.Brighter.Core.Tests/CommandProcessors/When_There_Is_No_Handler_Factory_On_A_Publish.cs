@@ -31,7 +31,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMissingHandlerFactoryTests
+    public class CommandProcessorPublishMissingHandlerFactoryTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyEvent _myEvent = new MyEvent();
@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorPublishMissingHandlerFactoryTests()
         {
-            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory) null, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), null, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
@@ -50,6 +50,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
            //_should_throw_an_invalid_operation_exception
             _exception.Should().BeOfType<InvalidOperationException>();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

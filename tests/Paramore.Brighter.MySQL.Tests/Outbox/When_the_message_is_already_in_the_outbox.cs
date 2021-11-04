@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     {
         private Exception _exception;
         private readonly Message _messageEarliest;
-        private readonly MySqlOutbox _mySqlOutbox;
+        private readonly MySqlOutboxSync _mySqlOutboxSync;
         private readonly MySqlTestHelper _mySqlTestHelper;
 
         public MySqlOutboxMessageAlreadyExistsTests()
@@ -43,15 +43,15 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
 
-            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _mySqlOutbox.Add(_messageEarliest);
+            _mySqlOutboxSync.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_The_Message_Is_Already_In_The_Outbox()
         {
-            _exception = Catch.Exception(() => _mySqlOutbox.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _mySqlOutboxSync.Add(_messageEarliest));
             _exception.Should().BeNull();
         }
 

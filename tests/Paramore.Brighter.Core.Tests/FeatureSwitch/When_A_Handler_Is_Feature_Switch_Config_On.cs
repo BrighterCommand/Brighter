@@ -36,6 +36,7 @@ using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
+    [Collection("CommandProcessor")]
     public class CommandProcessorWithFeatureSwitchOnByConfigInPipelineTests : IDisposable
     {
         private readonly MyCommand _myCommand = new MyCommand();
@@ -53,6 +54,8 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedConfigHandler>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+
 
             _provider = container.BuildServiceProvider();
             _handlerFactory = new ServiceProviderHandlerFactory(_provider);
@@ -65,12 +68,16 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                                     .With()                
                                     .StatusOf<MyFeatureSwitchedConfigHandler>().Is(FeatureSwitchStatus.On)
                                     .Build();
-
-            _commandProcessor = new CommandProcessor(_registry, 
-                                                     (IAmAHandlerFactory)_handlerFactory, 
-                                                     new InMemoryRequestContextFactory(), 
-                                                     new PolicyRegistry(),
-                                                     fluentConfig);
+            
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .ConfigureFeatureSwitches(fluentConfig)
+                .Handlers(new HandlerConfiguration(_registry, _handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
+            
             _commandProcessor.Send(_myCommand);
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeTrue();
@@ -78,8 +85,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
         public void Dispose()
         {
-            _commandProcessor?.Dispose();
-            GC.SuppressFinalize(this);
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

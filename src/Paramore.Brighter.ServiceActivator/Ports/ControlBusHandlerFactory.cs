@@ -1,14 +1,15 @@
-using System;
+﻿using System;
+using Paramore.Brighter.Scope;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
 
 namespace Paramore.Brighter.ServiceActivator.Ports
 {
-    internal class ControlBusHandlerFactory : IAmAHandlerFactory
+    internal class ControlBusHandlerFactorySync : IAmAHandlerFactorySync
     {
         private readonly Func<IAmACommandProcessor> _commandProcessorFactory;
         private readonly IDispatcher _worker;
 
-        public ControlBusHandlerFactory(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory) 
+        public ControlBusHandlerFactorySync(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory) 
         {
             _worker = worker;
             _commandProcessorFactory = commandProcessorFactory;
@@ -18,8 +19,9 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         /// Creates the specified handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
+        /// <param name="lifetimeScope"></param>
         /// <returns>IHandleRequests.</returns>
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             if (handlerType == typeof(ConfigurationCommandHandler))
                 return new ConfigurationCommandHandler(_worker);
@@ -37,5 +39,6 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         public void Release(IHandleRequests handler)
         {
         }
+        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     /// <summary>
     /// Class SqsMessageProducer.
     /// </summary>
-    public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducer
+    public class SqsMessageProducer : AWSMessagingGateway, IAmAMessageProducerSync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;

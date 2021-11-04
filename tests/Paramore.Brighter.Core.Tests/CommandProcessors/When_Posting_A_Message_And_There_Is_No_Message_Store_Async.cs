@@ -62,21 +62,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 null,
-                (IAmAMessageProducer)_fakeMessageProducer);
+                _fakeMessageProducer);
         }
 
         [Fact]
         public async Task When_Posting_A_Message_And_There_Is_No_Outbox_Async()
         {
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
-        }
+            
+            //_should_throw_an_exception
+            _exception.Should().BeOfType<InvalidOperationException>();
+         }
 
         public void Dispose()
         {
-            _commandProcessor.Dispose();
-
-            //_should_throw_an_exception
-            _exception.Should().BeOfType<InvalidOperationException>();
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

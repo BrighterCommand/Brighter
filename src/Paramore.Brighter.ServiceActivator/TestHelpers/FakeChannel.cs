@@ -81,10 +81,11 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
             RejectCount++;
         }
 
-        public virtual void Requeue(Message message, int delayMilliseconds = 0)
+        public virtual bool Requeue(Message message, int delayMilliseconds = 0)
         {
             RequeueCount++;
             _messageQueue.Enqueue(message);
+            return true;
         }
 
         public virtual void Stop()

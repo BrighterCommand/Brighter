@@ -86,8 +86,6 @@ namespace Paramore.Brighter
             if (_disposed)
                 return;
 
-            _commandProcessor.Dispose();
-
             _disposed = true;
         }
     }

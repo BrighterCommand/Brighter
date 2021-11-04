@@ -158,11 +158,16 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
         /// <summary>
-        /// Push the Id back onto the queue, to re-order
+        /// Requeues the specified message.
         /// </summary>
         /// <param name="message"></param>
-        public void Requeue(Message message)
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
+        /// <returns>True if the message was requeued</returns>
+         public bool Requeue(Message message, int delayMilliseconds)
         {
+            Task.Delay(delayMilliseconds).Wait();
+            message.Header.DelayedMilliseconds = delayMilliseconds;
+            
             message.Header.HandledCount++;
             using (var client = Pool.Value.GetClient())
             {
@@ -173,24 +178,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     var redisMsg = CreateRedisMessage(message);
                     StoreMessage(client, redisMsg, long.Parse(msgId));
                     _inflight.Remove(message.Id);
+                    return true;
                 }
                 else
                 {
-                    throw new ChannelFailureException(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
+                    s_logger.LogError(string.Format("Expected to find message id {0} in-flight but was not", message.Id.ToString()));
+                    return false;
                 }
             }
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
-        {
-            Task.Delay(delayMilliseconds).Wait();
-            message.Header.DelayedMilliseconds = delayMilliseconds;
-            Requeue(message);
         }
         
         /*Virtual to allow testing to simulate client failure*/

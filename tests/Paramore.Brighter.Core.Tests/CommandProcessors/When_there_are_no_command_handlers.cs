@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorNoHandlersMatchTests
+    public class CommandProcessorNoHandlersMatchTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -41,7 +41,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public CommandProcessorNoHandlersMatchTests()
         {
-            _commandProcessor = new CommandProcessor(new SubscriberRegistry(), (IAmAHandlerFactory)new ServiceProviderHandlerFactory(new ServiceCollection().BuildServiceProvider()), new InMemoryRequestContextFactory(), new PolicyRegistry());
+            var container = new ServiceCollection();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            
+            _commandProcessor = new CommandProcessor(
+                new SubscriberRegistry(), 
+                new ServiceProviderHandlerFactory(container.BuildServiceProvider()), 
+                new InMemoryRequestContextFactory(), 
+                new PolicyRegistry());
         }
 
         [Fact]
@@ -54,6 +61,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //_should_have_an_error_message_that_tells_you_why
             _exception.Should().NotBeNull();
             _exception.Message.Should().Contain("No command handler was found");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

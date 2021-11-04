@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
     /// <summary>
     /// Class RestMsMessageProducer.
     /// </summary>
-    public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducer
+    public class RestMsMessageProducer : RestMSMessageGateway, IAmAMessageProducerSync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;

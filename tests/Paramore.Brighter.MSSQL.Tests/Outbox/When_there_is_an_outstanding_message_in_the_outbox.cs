@@ -31,7 +31,16 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public void When_there_is_an_outstanding_message_in_the_outbox()
         {
-            var outstandingMessage = _sqlOutbox.OutstandingMessages(500).SingleOrDefault();
+            var outstandingMessage = _sqlOutbox.OutstandingMessages(100).SingleOrDefault();
+
+            outstandingMessage.Should().NotBeNull();
+            outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
+        }
+        
+        [Fact]
+        public async Task When_there_is_an_outstanding_message_in_the_outbox_async()
+        {
+            var outstandingMessage = (await _sqlOutbox.OutstandingMessagesAsync(100)).SingleOrDefault();
 
             outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);

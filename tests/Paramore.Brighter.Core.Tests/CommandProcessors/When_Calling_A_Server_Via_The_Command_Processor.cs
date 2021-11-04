@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactory<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -62,13 +63,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //we need to seed the response as the fake producer does not actually send across the wire
             inMemoryChannelFactory.SeedChannel(new[] {_message});
             
+            var replySubs = new List<Subscription>
+            {
+                new Subscription<MyResponse>()
+            };
+
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
-                (IAmAMessageProducer)_fakeMessageProducer,
+                new InMemoryOutbox(),
+                _fakeMessageProducer,
+                replySubs,
                 responseChannelFactory: inMemoryChannelFactory);
             
             PipelineBuilder<MyRequest>.ClearPipelineCache();
@@ -92,11 +100,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         }
         
-        
-        
         public void Dispose()
         {
-            _commandProcessor.Dispose();
+            CommandProcessor.ClearExtServiceBus();
         }
 
    }

@@ -185,12 +185,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>True if message deleted, false otherwise</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
             try
             {
                 s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds", message.Id, delayMilliseconds);
                 EnsureBroker(_queueName);
+                
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 if (DelaySupported)
                 {
@@ -202,14 +204,17 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     rmqMessagePublisher.RequeueMessage(message, _queueName, 0);
                 }
 
-                //Delete it if we have re-queued it - note this will forward the deleted message to a DLQ if there is one as we choose to republish a requeue not just
-                //make it available for a new consumer
-                Channel.BasicNack(message.DeliveryTag, false, false);
+                //ack the original message to remove it from the queue
+                var deliveryTag = message.DeliveryTag;
+                s_logger.LogInformation("RmqMessageConsumer: Deleting message {Id} with delivery tag {DeliveryTag} as re-queued", message.Id, deliveryTag);
+                Channel.BasicAck(deliveryTag, false);
+
+                return true;
             }
             catch (Exception exception)
             {
                 s_logger.LogError(exception, "RmqMessageConsumer: Error re-queueing message {Id}", message.Id);
-                throw;
+                return false;
             }
         }
 
@@ -223,6 +228,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 EnsureBroker(_queueName);
                 s_logger.LogInformation("RmqMessageConsumer: NoAck message {Id} with delivery tag {DeliveryTag}", message.Id, message.DeliveryTag);
+                //if we have a DLQ, this will force over to the DLQ
                 Channel.BasicReject(message.DeliveryTag, false);
             }
             catch (Exception exception)

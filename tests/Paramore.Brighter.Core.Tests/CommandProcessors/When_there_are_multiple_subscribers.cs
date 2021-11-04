@@ -34,7 +34,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorPublishMultipleMatchesTests
+    public class CommandProcessorPublishMultipleMatchesTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
@@ -51,10 +51,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyEventHandler>();
             container.AddTransient<MyOtherEventHandler>();
             container.AddSingleton(_receivedMessages);
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactory)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
         }
 
@@ -69,6 +71,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _receivedMessages.Should().Contain(nameof(MyEventHandler), _myEvent.Id);
             //_should_publish_the_command_to_the_second_event_handler
             _receivedMessages.Should().Contain(nameof(MyOtherEventHandler), _myEvent.Id);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

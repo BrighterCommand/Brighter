@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             _publication = publication ?? new Publication() {MakeChannels = OnMissingChannel.Create};
         }
 
-        public IAmAMessageProducer Create()
+        public IAmAMessageProducerSync Create()
         {
             s_logger.LogDebug("MsSqlMessageProducerFactory: create producer");
             return new MsSqlMessageProducer(_msSqlConfiguration, _publication);

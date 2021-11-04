@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorNoMatchingSubcribersTests
+    public class CommandProcessorNoMatchingSubcribersTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly IDictionary<string, Guid> _receivedMessages = new Dictionary<string, Guid>();
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public CommandProcessorNoMatchingSubcribersTests()
         {
             var registry = new SubscriberRegistry();
-            var handlerFactory = new TestHandlerFactory<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
+            var handlerFactory = new TestHandlerFactorySync<MyEvent, MyEventHandler>(() => new MyEventHandler(_receivedMessages));
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
             PipelineBuilder<MyEvent>.ClearPipelineCache();
@@ -55,6 +55,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             //_should_not_throw_an_exception
             _exception.Should().BeNull();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

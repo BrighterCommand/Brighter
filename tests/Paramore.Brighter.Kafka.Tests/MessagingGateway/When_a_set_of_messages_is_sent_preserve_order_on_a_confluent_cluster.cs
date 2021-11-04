@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageProducerSync _producer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
         private readonly string _bootStrapServer;

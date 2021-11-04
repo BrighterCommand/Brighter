@@ -35,7 +35,7 @@ namespace Paramore.Brighter.RESTMS.Tests.MessagingGateway
     public class RestMsMessageProducerSendTests : IDisposable
     {
         private const string Topic = "test";
-        private readonly IAmAMessageProducer _messageProducer;
+        private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _message;
         private Message _sentMessage;

@@ -61,10 +61,11 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             container.AddTransient<MonitorHandlerAsync<MyCommand>>();
             container.AddSingleton<IAmAControlBusSenderAsync>(_controlBusSender);
             container.AddSingleton(new MonitorConfiguration { IsMonitoringEnabled = true, InstanceName = "UnitTests" });
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
 
             _command = new MyCommand();
 
@@ -91,7 +92,7 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_include_the_underlying_request_details_before
             _beforeEvent.RequestBody.Should().Be(_originalRequestAsJson);
             //should_post_the_time_of_the_request_before
-            _beforeEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), 1000);
+            _beforeEvent.EventTime.AsUtc().Should().BeCloseTo(_at.AsUtc(), TimeSpan.FromSeconds(1));
             //_should_have_an_instance_name_after
             _afterEvent.InstanceName.Should().Be("UnitTests");
             //_should_post_the_event_type_to_the_control_bus_after

@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -30,7 +31,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
     [Collection("CommandProcessor")]
-    public class PipelineBuildForCommandTests
+    public class PipelineBuildForCommandTests : IDisposable
     {
         private readonly PipelineBuilder<MyCommand> _pipelineBuilder;
         private IHandleRequests<MyCommand> _pipeline;
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
-            var handlerFactory = new TestHandlerFactory<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
+            var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => new MyCommandHandler());
 
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
@@ -54,6 +55,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _pipeline.Should().BeOfType<MyCommandHandler>();
             //_should_be_the_only_element_in_the_chain
             TracePipeline().ToString().Should().Be("MyCommandHandler|");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
 
         private PipelineTracer TracePipeline()

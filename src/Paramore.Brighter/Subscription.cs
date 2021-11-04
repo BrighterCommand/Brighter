@@ -66,7 +66,7 @@ namespace Paramore.Brighter
         /// Note that this is not the logical endpoint that the channel consumes from, that is the RoutingKey
         /// </summary>
         /// <value>The name.</value>
-        public ChannelName ChannelName { get; }
+        public ChannelName ChannelName { get; set; }
 
         /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
@@ -131,7 +131,7 @@ namespace Paramore.Brighter
         /// Gets or sets the routing key or topic that this channel subscribes to on the broker.
         /// </summary>
         /// <value>The name.</value>
-        public RoutingKey RoutingKey { get; }
+        public RoutingKey RoutingKey { get; set; }
 
         /// <summary>
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty

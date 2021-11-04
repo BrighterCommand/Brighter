@@ -10,6 +10,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
+     
+    [Collection("CommandProcessor")]
     public class MessageDispatcherRoutingAsyncTests  : IDisposable
     {
         private readonly Dispatcher _dispatcher;

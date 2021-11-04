@@ -31,12 +31,14 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddTransient<MyStoredCommandHandlerAsync>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _command = new MyCommand {Value = "My Test String"};
 
-            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
   
         }
 

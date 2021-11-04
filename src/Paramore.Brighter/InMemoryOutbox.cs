@@ -80,7 +80,7 @@ namespace Paramore.Brighter
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well
     /// </summary>
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutbox<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>, IAmAnOutboxViewer<Message>, IAmAnOutboxViewerAsync<Message>
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -91,12 +91,13 @@ namespace Paramore.Brighter
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
 
-       /// <summary>
+        /// <summary>
         /// Adds the specified message
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
-        public void Add(Message message, int outBoxTimeout = -1)
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -117,8 +118,9 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -262,5 +264,22 @@ namespace Paramore.Brighter
                 .Select(oe => oe.Message).ToArray();
         }
 
- }
+        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        {
+            var tcs = new TaskCompletionSource<IList<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(Get(pageSize, pageNumber, args));
+
+            return tcs.Task;
+        }
+
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        {
+            var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            tcs.SetResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
+
+            return tcs.Task;
+        }
+    }
 }
