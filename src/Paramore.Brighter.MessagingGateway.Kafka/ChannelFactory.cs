@@ -23,6 +23,9 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    /// <summary>
+    /// Abstracts a Kafka channel. A channel is a logically addressable pipe.
+    /// </summary>
     public class ChannelFactory : IAmAChannelFactory
     {
         private readonly KafkaMessageConsumerFactory _kafkaMessageConsumerFactory;
