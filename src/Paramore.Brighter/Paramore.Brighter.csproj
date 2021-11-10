@@ -10,6 +10,6 @@
     <PackageReference Include="Microsoft.Extensions.Logging" Version="5.0.0" />
     <PackageReference Include="Polly" Version="7.2.2" />
     <PackageReference Include="System.Memory" Version="4.5.4" />
-    <PackageReference Include="System.Text.Json" Version="5.0.2" />
+    <PackageReference Include="System.Text.Json" Version="6.0.0" />
   </ItemGroup>
 </Project>
