@@ -48,7 +48,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 //don't block the redrive policy from owning retry management
                 requeueCount: -1,
                 //delay before requeuing
-                requeueDelayInMilliseconds: 50,
+                requeueDelayInMs: 50,
                 //we want our SNS subscription to manage requeue limits using the DLQ for 'too many requeues'
                 redrivePolicy: new RedrivePolicy
                 (

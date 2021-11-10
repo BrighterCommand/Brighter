@@ -30,15 +30,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
+            int timeoutInMs = 300,
+            int pollDelayInMs = -1,
+            int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
             int requeueCount = -1,
-            int requeueDelayInMilliseconds = 0,
+            int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds,
-                requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory,
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
                 makeChannels)
         {
         }
@@ -71,16 +73,19 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
+            int timeoutInMs = 300,
+            int pollDelayInMs = -1,
+            int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
             int requeueCount = -1,
-            int requeueDelayInMilliseconds = 0,
+            int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds,
-                requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory,
-                makeChannels)
+            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs,
+                pollDelayInMs, noWorkPauseInMs, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
+                isAsync, channelFactory, makeChannels)
         {
         }
     }
