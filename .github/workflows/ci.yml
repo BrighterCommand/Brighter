@@ -60,6 +60,7 @@ jobs:
           name: nuget packages
           path: "**/*.nupkg"
       - name: Push to GitHub Feed
+        if: ${{ github.event_name != 'pull_request' }}
         run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
