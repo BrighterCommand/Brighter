@@ -9,10 +9,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Adaptors" />
-  </ItemGroup>
-
-  <ItemGroup>
     <EmbeddedResource Include="Adaptors\Migrations\Scripts\CreateBrighterOutbox.sql" />
   </ItemGroup>
 

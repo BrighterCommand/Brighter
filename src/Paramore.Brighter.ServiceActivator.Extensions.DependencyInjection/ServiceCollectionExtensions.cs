@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
@@ -33,20 +33,16 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             services.AddSingleton<IDispatcher>(BuildDispatcher);
 
-            Func<IServiceProvider, IAmAHandlerFactory> aHandlerFactory;
             if (options.UseScoped)
             {
                 services.AddTransient<IAmACommandProcessorProvider, ScopedCommandProcessorProvider>();
-                //aHandlerFactory = sp => new ScopedServiceProviderHandlerFactory(sp);
             }
             else
             {
                 services.AddTransient<IAmACommandProcessorProvider, CommandProcessorProvider>();
-                //aHandlerFactory = sp => new ServiceProviderHandlerFactory(sp);
             }
-            aHandlerFactory = sp => new ServiceProviderHandlerFactory(sp);
 
-            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options, aHandlerFactory);
+            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)

@@ -44,7 +44,7 @@ namespace GreetingsSender.Web
             });
             
             //Brighter
-            string asbFQDN = "fim-development-bus.servicebus.windows.net";
+            string asbFQDN = ".servicebus.windows.net";
 
             var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(asbFQDN);
             var producer = AzureServiceBusMessageProducerFactory.Get(asbClientProvider);

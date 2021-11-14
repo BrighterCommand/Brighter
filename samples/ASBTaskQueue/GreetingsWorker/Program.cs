@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Greetings.Adaptors.Data;
+using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
@@ -32,6 +33,7 @@ namespace GreetingsWorker
                     services.AddLogging();
 
                     services.AddScoped<InstanceCount>();
+                    services.AddScoped<IUnitOfWork, UnitOfWork>();
                     services.AddTransient(typeof(MonitoringAsyncHandler<>));
                     services.AddTransient(typeof(MonitoringAttribute));
 
@@ -46,7 +48,8 @@ namespace GreetingsWorker
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: true),
+                            isAsync: true,
+                            noOfPerformers: 2),
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName(GreetingEventMessageMapper.Topic),
                             new ChannelName(subscriptionName),
@@ -54,7 +57,8 @@ namespace GreetingsWorker
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: false),
+                            isAsync: false,
+                            noOfPerformers: 2),
                         new AzureServiceBusSubscription<AddGreetingCommand>(
                             new SubscriptionName(AddGreetingMessageMapper.Topic),
                             new ChannelName(subscriptionName),
@@ -62,10 +66,11 @@ namespace GreetingsWorker
                             timeoutInMilliseconds: 400,
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
-                            isAsync: true)
+                            isAsync: true,
+                            noOfPerformers: 2)
                     };
                     
-                    string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests";
+                    string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
             
                     //EF
                     services.AddDbContext<GreetingsDataContext>(o =>
@@ -76,14 +81,14 @@ namespace GreetingsWorker
                     var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
                     
                     //TODO: add your ASB qualified name here
-                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
+                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
                     var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
                     services.AddServiceActivator(options =>
                         {
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-                            options.UseScoped = false;
+                            options.UseScoped = true;
                         }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
                         .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
                         .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))

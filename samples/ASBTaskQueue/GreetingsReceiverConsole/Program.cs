@@ -51,13 +51,14 @@ namespace GreetingsReceiverConsole
                     };
 
                     //TODO: add your ASB qualified name here
-                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
+                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
                     var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+                        options.UseScoped = false;
                     }).UseInMemoryOutbox()
                         .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))
                         .AutoFromAssemblies();

@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Greetings.Adaptors.Data;
+using Greetings.Adaptors.Services;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Entities;
 using Greetings.Ports.Events;
@@ -13,17 +14,19 @@ namespace Greetings.Ports.CommandHandlers
     {
         private readonly GreetingsDataContext _dataContext;
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public AddGreetingCommandHandler(GreetingsDataContext dataContext, IAmACommandProcessor commandProcessor)
+        public AddGreetingCommandHandler(GreetingsDataContext dataContext, IAmACommandProcessor commandProcessor, IUnitOfWork unitOfWork)
         {
             _dataContext = dataContext;
             _commandProcessor = commandProcessor;
+            _unitOfWork = unitOfWork;
         }
         
         public async override Task<AddGreetingCommand> HandleAsync(AddGreetingCommand command,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var txn = await _dataContext.Database.BeginTransactionAsync();
+            await _unitOfWork.BeginTransactionAsync(cancellationToken);
 
             try
             {
@@ -34,10 +37,17 @@ namespace Greetings.Ports.CommandHandlers
                 //Create an Event for externals
                 var newGreetingAddedEvent = new GreetingAsyncEvent() {Greeting = command.GreetingMessage};
                 var eventId = await _commandProcessor.DepositPostAsync(newGreetingAddedEvent, cancellationToken: cancellationToken);
-                
-                if (command.ThrowError) throw new Exception("something broke error");
 
-                await txn.CommitAsync(cancellationToken);
+                await _dataContext.SaveChangesAsync(cancellationToken);
+
+                if (command.ThrowError) throw new Exception("something broke error");
+                else
+                {
+                    //Ensure for Testing to Ensure that Contexts are not shared
+                    Thread.Sleep(5000);
+                }
+
+                await _unitOfWork.CommitAsync(cancellationToken);
                 
                 //In Case there is no outbox Sweeper
                 await _commandProcessor.ClearOutboxAsync(new[] {eventId}, cancellationToken: cancellationToken);
@@ -48,7 +58,7 @@ namespace Greetings.Ports.CommandHandlers
             {
                 Console.WriteLine(e);
 
-                await txn.RollbackAsync(cancellationToken);
+                await _unitOfWork.RollbackAsync(cancellationToken);
                 
                 Console.WriteLine($"Message {command.GreetingMessage} not Saved.");
             }

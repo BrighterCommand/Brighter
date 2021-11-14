@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -48,19 +48,19 @@ namespace Paramore.Brighter
             _asyncHandlerFactory = asyncHandlerFactory;
         }
 
-        internal IEnumerable<RequestHandler<TRequest>> GetHandlers(IAmALifetime lifetimeScope)
+        internal IEnumerable<RequestHandler<TRequest>> GetHandlers()
         {
             return new RequestHandlers<TRequest>(
                 _registry.Get<TRequest>()
-                    .Select(handlerType => _handlerFactorySync.Create(handlerType, lifetimeScope))
+                    .Select(handlerType => _handlerFactorySync.Create(handlerType))
                     .Cast<IHandleRequests<TRequest>>());
         }
 
-        internal IEnumerable<RequestHandlerAsync<TRequest>> GetAsyncHandlers(IAmALifetime lifetimeScope)
+        internal IEnumerable<RequestHandlerAsync<TRequest>> GetAsyncHandlers()
         {
             return new AsyncRequestHandlers<TRequest>(
                 _registry.Get<TRequest>()
-                    .Select(handlerType => _asyncHandlerFactory.Create(handlerType, lifetimeScope))
+                    .Select(handlerType => _asyncHandlerFactory.Create(handlerType))
                     .Cast<IHandleRequestsAsync<TRequest>>());
         }
     }
