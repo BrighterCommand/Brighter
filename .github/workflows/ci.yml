@@ -40,6 +40,9 @@ jobs:
       - uses: actions/setup-dotnet@v1
         with:
           dotnet-version: "5.0.*"
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "6.0.*"
       - run: dotnet --info
       - uses: actions/checkout@v2
         with:
