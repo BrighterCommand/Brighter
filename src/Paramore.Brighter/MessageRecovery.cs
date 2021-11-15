@@ -30,16 +30,16 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class MessageRecoverer.
-    /// Used to support reposting a message from a <see cref="IAmAnOutbox{T}"/> to a broker via <see cref="IAmAMessageProducer"/>
+    /// Used to support reposting a message from a <see cref="IAmAnOutboxSync{T}"/> to a broker via <see cref="IAmAMessageProducerSync"/>
     /// </summary>
     public class MessageRecoverer : IAmAMessageRecoverer
     {
-        public void Repost(List<string> messageIds, IAmAnOutbox<Message> outBox, IAmAMessageProducer messageProducer)
+        public void Repost(List<string> messageIds, IAmAnOutboxSync<Message> outBox, IAmAMessageProducerSync messageProducerSync)
         {
             var foundMessages = GetMessagesFromOutBox(outBox, messageIds);
             foreach (var foundMessage in foundMessages)
             {
-                messageProducer.Send(foundMessage);
+                messageProducerSync.Send(foundMessage);
             }
         }
 
@@ -49,7 +49,7 @@ namespace Paramore.Brighter
         /// <param name="outBox">The store to retrieve from</param>
         /// <param name="messageIds">The messages to retrieve</param>
         /// <returns></returns>
-        private static IEnumerable<Message> GetMessagesFromOutBox(IAmAnOutbox<Message> outBox, IReadOnlyCollection<string> messageIds)
+        private static IEnumerable<Message> GetMessagesFromOutBox(IAmAnOutboxSync<Message> outBox, IReadOnlyCollection<string> messageIds)
         {
             IEnumerable<Message> foundMessages = messageIds 
                 .Select(messageId => outBox.Get(Guid.Parse(messageId)))

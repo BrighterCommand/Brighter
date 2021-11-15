@@ -9,6 +9,11 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    /// <summary>
+    /// Base class for communicating with a Kafka broker. Derived types are <see cref="KafkaMessageProducer"/> and <see cref="KafkaMessageConsumer"/>
+    /// This base class mainly handles how we confirm required infrastructure - topics - and depending on the MakeChannels field, will either
+    /// create missing infrastructure, validate infrastructure exists, or just assume that infrastructure exists.
+    /// </summary>
     public class KafkaMessagingGateway
     {
         protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageProducer>();
@@ -74,6 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     {
                         var matchingTopic = matchingTopics[0];
                         if (matchingTopic.Error == null) return true;
+                        if (matchingTopic.Error.Code == ErrorCode.NoError) return true;
                         if (matchingTopic.Error.Code == ErrorCode.UnknownTopicOrPart)
                             return false;
                         else

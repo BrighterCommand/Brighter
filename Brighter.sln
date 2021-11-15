@@ -62,56 +62,56 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "redis-sentinel", "redis-sen
 		samples\containers\redis-sentinel\sentinel.conf = samples\containers\redis-sentinel\sentinel.conf
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQTaskQueueExamples", "RMQTaskQueueExamples", "{E9748DC0-6E72-4634-AF49-428F806E03B0}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQTaskQueue", "RMQTaskQueue", "{E9748DC0-6E72-4634-AF49-428F806E03B0}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQTaskQueueSamples\Greetings\Greetings.csproj", "{7692F3A6-90E4-45D5-9ED3-22F70483F19E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQTaskQueue\Greetings\Greetings.csproj", "{7692F3A6-90E4-45D5-9ED3-22F70483F19E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQTaskQueueSamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{D25F61D6-704B-45C9-A185-82BBCE510F76}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{D25F61D6-704B-45C9-A185-82BBCE510F76}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RMQTaskQueueSamples\GreetingsSender\GreetingsSender.csproj", "{EA1D509F-42E6-4616-B11C-6D3A83AC5DFE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RMQTaskQueue\GreetingsSender\GreetingsSender.csproj", "{EA1D509F-42E6-4616-B11C-6D3A83AC5DFE}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KafkaTaskQueueExamples", "KafkaTaskQueueExamples", "{8B12EDDE-31DB-4137-A55C-05A3DB77B861}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KafkaTaskQueue", "KafkaTaskQueue", "{8B12EDDE-31DB-4137-A55C-05A3DB77B861}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\KafkaTaskQueueSamples\Greetings\Greetings.csproj", "{D24448C8-EC14-41C8-944B-9C1656101B28}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\KafkaTaskQueue\Greetings\Greetings.csproj", "{D24448C8-EC14-41C8-944B-9C1656101B28}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\KafkaTaskQueueSamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{E2B392E1-3FCC-4996-88E4-07FB279E1B60}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\KafkaTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{E2B392E1-3FCC-4996-88E4-07FB279E1B60}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\KafkaTaskQueueSamples\GreetingsSender\GreetingsSender.csproj", "{28CC027F-FE08-4A25-99C0-52A9DFD0D5CB}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\KafkaTaskQueue\GreetingsSender\GreetingsSender.csproj", "{28CC027F-FE08-4A25-99C0-52A9DFD0D5CB}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MessagingGateway.MsSql", "src\Paramore.Brighter.MessagingGateway.MsSql\Paramore.Brighter.MessagingGateway.MsSql.csproj", "{5355758F-D94B-43EA-A897-CFAF52A8D099}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MsSqlMessagingGatewayExamples", "MsSqlMessagingGatewayExamples", "{3A159082-7CC7-4629-A12E-A954AD46366D}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "MsSqlMessagingGateway", "MsSqlMessagingGateway", "{3A159082-7CC7-4629-A12E-A954AD46366D}"
 	ProjectSection(SolutionItems) = preProject
-		samples\MsSqlMessagingGatewaySamples\BrighterSqlQueue.sql = samples\MsSqlMessagingGatewaySamples\BrighterSqlQueue.sql
+		samples\MsSqlMessagingGateway\BrighterSqlQueue.sql = samples\MsSqlMessagingGateway\BrighterSqlQueue.sql
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\MsSqlMessagingGatewaySamples\GreetingsSender\GreetingsSender.csproj", "{294AF245-AA36-45B1-AEC4-20B71D731DF9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\MsSqlMessagingGateway\GreetingsSender\GreetingsSender.csproj", "{294AF245-AA36-45B1-AEC4-20B71D731DF9}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\MsSqlMessagingGatewaySamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{E55A9744-BC49-42E1-8476-57520BD1C4B5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\MsSqlMessagingGateway\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{E55A9744-BC49-42E1-8476-57520BD1C4B5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Events", "samples\MsSqlMessagingGatewaySamples\Events\Events.csproj", "{098DCFE2-9E54-4740-AC06-50DBDF748AF5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Events", "samples\MsSqlMessagingGateway\Events\Events.csproj", "{098DCFE2-9E54-4740-AC06-50DBDF748AF5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingSender", "samples\MsSqlMessagingGatewaySamples\CompetingSender\CompetingSender.csproj", "{72CF2980-05C5-4FEC-A265-BA07B7536E25}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingSender", "samples\MsSqlMessagingGateway\CompetingSender\CompetingSender.csproj", "{72CF2980-05C5-4FEC-A265-BA07B7536E25}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingReceiverConsole", "samples\MsSqlMessagingGatewaySamples\CompetingReceiverConsole\CompetingReceiverConsole.csproj", "{0083CCEB-EFB3-492F-8E58-5F64FF677A45}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "CompetingReceiverConsole", "samples\MsSqlMessagingGateway\CompetingReceiverConsole\CompetingReceiverConsole.csproj", "{0083CCEB-EFB3-492F-8E58-5F64FF677A45}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RedisTaskQueueExamples", "RedisTaskQueueExamples", "{1DFC9C79-BA26-41A7-8AE5-89C3FC93134E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RedisTaskQueue", "RedisTaskQueue", "{1DFC9C79-BA26-41A7-8AE5-89C3FC93134E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiver", "samples\RedisTaskQueueExamples\GreetingsReceiver\GreetingsReceiver.csproj", "{9456A24E-4CA1-4FC5-A850-B88FE9815B9B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiver", "samples\RedisTaskQueue\GreetingsReceiver\GreetingsReceiver.csproj", "{9456A24E-4CA1-4FC5-A850-B88FE9815B9B}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RedisTaskQueueExamples\GreetingsSender\GreetingsSender.csproj", "{DCCED182-1CFE-4184-BA56-EAB98DEF2939}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\RedisTaskQueue\GreetingsSender\GreetingsSender.csproj", "{DCCED182-1CFE-4184-BA56-EAB98DEF2939}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RedisTaskQueueExamples\Greetings\Greetings.csproj", "{CDD80D0B-D420-4AB9-B031-44A19819B71F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RedisTaskQueue\Greetings\Greetings.csproj", "{CDD80D0B-D420-4AB9-B031-44A19819B71F}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQPartitionTesting", "RMQPartitionTesting", "{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQPartition", "RMQPartition", "{AA661ADC-4B0E-4C68-BD2D-BB3871E4C03E}"
 	ProjectSection(SolutionItems) = preProject
-		samples\RMQPartitionTesting\docker-compose.yaml = samples\RMQPartitionTesting\docker-compose.yaml
-		samples\RMQPartitionTesting\Handling RMQ Failure.md = samples\RMQPartitionTesting\Handling RMQ Failure.md
+		samples\RMQPartition\docker-compose.yaml = samples\RMQPartition\docker-compose.yaml
+		samples\RMQPartition\Handling RMQ Failure.md = samples\RMQPartition\Handling RMQ Failure.md
 	EndProjectSection
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\RMQPartitionTesting\GreetingsPumper\GreetingsPumper.csproj", "{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\RMQPartition\GreetingsPumper\GreetingsPumper.csproj", "{50E71B7C-B874-4A9F-8CE3-E8224A49F6C5}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQPartitionTesting\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{51F5EB35-071A-417B-A4E8-2527A62EDA52}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\RMQPartition\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{51F5EB35-071A-417B-A4E8-2527A62EDA52}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{D8F63587-D29B-4839-BE9D-C05CFDED10A4}"
 	ProjectSection(SolutionItems) = preProject
@@ -136,23 +136,23 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Outbox.Dy
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Inbox.DynamoDB", "src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj", "{B796D6F5-AE94-4CA2-8651-B1F36E589451}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQRequestReplyExample", "RMQRequestReplyExample", "{ECE4A3A3-98D0-40E1-90DE-206F72C08853}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "RMQRequestReply", "RMQRequestReply", "{ECE4A3A3-98D0-40E1-90DE-206F72C08853}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQRequestReplyExamples\Greetings\Greetings.csproj", "{9343C89B-098C-4F4D-83CB-40A34686665E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQRequestReply\Greetings\Greetings.csproj", "{9343C89B-098C-4F4D-83CB-40A34686665E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsClient", "samples\RMQRequestReplyExamples\GreetingsClient\GreetingsClient.csproj", "{EB9AA0E5-B021-4E23-8874-A0BAA9076870}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsClient", "samples\RMQRequestReply\GreetingsClient\GreetingsClient.csproj", "{EB9AA0E5-B021-4E23-8874-A0BAA9076870}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsServer", "samples\RMQRequestReplyExamples\GreetingsServer\GreetingsServer.csproj", "{48163472-04AE-4123-8D0E-BABB21433966}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsServer", "samples\RMQRequestReply\GreetingsServer\GreetingsServer.csproj", "{48163472-04AE-4123-8D0E-BABB21433966}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AWSTaskQueueExamples", "AWSTaskQueueExamples", "{033A8626-4BD0-40B7-9A04-5E278BEB9FD6}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AWSTaskQueue", "AWSTaskQueue", "{033A8626-4BD0-40B7-9A04-5E278BEB9FD6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\AWSTaskQueueSamples\Greetings\Greetings.csproj", "{6E9F8C61-7F0E-4CA1-9602-EA8B85E3CF03}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\AWSTaskQueue\Greetings\Greetings.csproj", "{6E9F8C61-7F0E-4CA1-9602-EA8B85E3CF03}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\AWSTaskQueueSamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{DE96C916-44F8-4634-BC6D-67678C224931}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\AWSTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{DE96C916-44F8-4634-BC6D-67678C224931}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\AWSTaskQueueSamples\GreetingsSender\GreetingsSender.csproj", "{9F0A56E6-292E-4613-AD0C-92495C50BEDD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\AWSTaskQueue\GreetingsSender\GreetingsSender.csproj", "{9F0A56E6-292E-4613-AD0C-92495C50BEDD}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\AWSTaskQueueSamples\GreetingsPumper\GreetingsPumper.csproj", "{396D88BA-4BF3-4521-8017-D6EEF3D96337}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPumper", "samples\AWSTaskQueue\GreetingsPumper\GreetingsPumper.csproj", "{396D88BA-4BF3-4521-8017-D6EEF3D96337}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.DynamoDb.Extensions", "src\Paramore.Brighter.DynamoDb.Extensions\Paramore.Brighter.DynamoDb.Extensions.csproj", "{7F0CDB19-93C6-4C97-A77E-CEFAEB842BB1}"
 EndProject
@@ -190,7 +190,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Extension
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Inbox.Postgres", "src\Paramore.Brighter.Inbox.Postgres\Paramore.Brighter.Inbox.Postgres.csproj", "{DE191819-35B1-40C8-9118-E169633C5041}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQPartitionTesting\Greetings\Greetings.csproj", "{11CAC3F5-2737-479A-95F7-43E8535F5647}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\RMQPartition\Greetings\Greetings.csproj", "{11CAC3F5-2737-479A-95F7-43E8535F5647}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "KafkaPartitionTesting", "KafkaPartitionTesting", "{ACED4F91-08E1-4097-B919-895B6B403833}"
 	ProjectSection(SolutionItems) = preProject
@@ -205,21 +205,47 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AzureServ
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\KafkaPartitionTesting\GreetingsSender\GreetingsSender.csproj", "{A980A6CC-3FF6-4D64-A0DC-2CA44E2F43F7}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ASBTaskQueueExamples", "ASBTaskQueueExamples", "{48D0EECA-B928-4B80-BE46-2C08CF3A946B}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ASBTaskQueue", "ASBTaskQueue", "{48D0EECA-B928-4B80-BE46-2C08CF3A946B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings", "samples\ASBTaskQueueExamples\Greetings\Greetings.csproj", "{A6137A5E-A0DA-42D2-AF67-6340542B120B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings", "samples\ASBTaskQueue\Greetings\Greetings.csproj", "{A6137A5E-A0DA-42D2-AF67-6340542B120B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender", "samples\ASBTaskQueueExamples\GreetingsSender\GreetingsSender.csproj", "{8D8952DE-38FE-4A68-9026-7B2280C4ED0B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender", "samples\ASBTaskQueue\GreetingsSender\GreetingsSender.csproj", "{8D8952DE-38FE-4A68-9026-7B2280C4ED0B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsReceiverConsole", "samples\ASBTaskQueueExamples\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{EC5A3E68-F59F-4631-A7AF-D23F02F7F2C8}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsReceiverConsole", "samples\ASBTaskQueue\GreetingsReceiverConsole\GreetingsReceiverConsole.csproj", "{EC5A3E68-F59F-4631-A7AF-D23F02F7F2C8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsSender.Web", "samples\ASBTaskQueueExamples\GreetingsSender.Web\GreetingsSender.Web.csproj", "{5916BB3F-BBBC-40E4-A597-866B1E38C040}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsSender.Web", "samples\ASBTaskQueue\GreetingsSender.Web\GreetingsSender.Web.csproj", "{5916BB3F-BBBC-40E4-A597-866B1E38C040}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MsSql", "src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj", "{36CADB1E-3777-4A7E-86E3-BF650A951AC9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql", "src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj", "{36CADB1E-3777-4A7E-86E3-BF650A951AC9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MsSql.Azure", "src\Paramore.Brighter.MsSql.Azure\Paramore.Brighter.MsSql.Azure.csproj", "{BDB469BC-FC29-4127-AE75-02FCD8C8238B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql.Azure", "src\Paramore.Brighter.MsSql.Azure\Paramore.Brighter.MsSql.Azure.csproj", "{BDB469BC-FC29-4127-AE75-02FCD8C8238B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MsSql.EntityFrameworkCore", "src\Paramore.Brighter.MsSql.EntityFrameworkCore\Paramore.Brighter.MsSql.EntityFrameworkCore.csproj", "{B1814E3B-E980-4797-BFFD-9C7347653C1B}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MsSql.EntityFrameworkCore", "src\Paramore.Brighter.MsSql.EntityFrameworkCore\Paramore.Brighter.MsSql.EntityFrameworkCore.csproj", "{B1814E3B-E980-4797-BFFD-9C7347653C1B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "WebAPI_EFCore", "WebAPI_EFCore", "{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsPorts", "samples\WebAPI_EFCore\GreetingsPorts\GreetingsPorts.csproj", "{0D762A47-65BB-4D0A-A854-BA10F87DDA95}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsEntities", "samples\WebAPI_EFCore\GreetingsEntities\GreetingsEntities.csproj", "{12DFB0C5-AD17-407C-84B5-418C94EBEA18}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWatcher", "samples\WebAPI_EFCore\GreetingsWatcher\GreetingsWatcher.csproj", "{4AE1021A-753C-4C42-B5E1-D70228643AE0}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsAdapters", "samples\WebAPI_EFCore\GreetingsAdapters\GreetingsAdapters.csproj", "{33C6253D-C148-491E-9AA6-E9F18CB1263D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Extensions.Hosting", "src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj", "{722B348B-846B-4338-B7F5-DB9C865C3F64}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Sqlite", "src\Paramore.Brighter.Sqlite\Paramore.Brighter.Sqlite.csproj", "{2CFEA876-7ABB-466A-AABA-AA461414B676}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Sqlite.EntityFrameworkCore", "src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj", "{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MySql", "src\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj", "{0C9D2FDC-0862-449C-BEDA-A63060513951}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.MySql.EntityFrameworkCore", "src\Paramore.Brighter.MySql.EntityFrameworkCore\Paramore.Brighter.MySql.EntityFrameworkCore.csproj", "{0ED91907-896E-4101-8AA0-310736B2B71B}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_SqliteMigrations", "samples\WebAPI_EFCore\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj", "{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_MySqlMigrations", "samples\WebAPI_EFCore\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj", "{1D692C54-8063-4AE2-AB26-0BCD0EA03528}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsScopedReceiverConsole", "samples\ASBTaskQueue\GreetingsScopedReceiverConsole\GreetingsScopedReceiverConsole.csproj", "{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1143,6 +1169,150 @@ Global
 		{B1814E3B-E980-4797-BFFD-9C7347653C1B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B1814E3B-E980-4797-BFFD-9C7347653C1B}.Release|x86.ActiveCfg = Release|Any CPU
 		{B1814E3B-E980-4797-BFFD-9C7347653C1B}.Release|x86.Build.0 = Release|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Debug|x86.Build.0 = Debug|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|x86.ActiveCfg = Release|Any CPU
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95}.Release|x86.Build.0 = Release|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Debug|x86.Build.0 = Debug|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|x86.ActiveCfg = Release|Any CPU
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18}.Release|x86.Build.0 = Release|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Debug|x86.Build.0 = Debug|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Release|x86.ActiveCfg = Release|Any CPU
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0}.Release|x86.Build.0 = Release|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Debug|x86.Build.0 = Debug|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Release|x86.ActiveCfg = Release|Any CPU
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D}.Release|x86.Build.0 = Release|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Debug|x86.Build.0 = Debug|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Release|x86.ActiveCfg = Release|Any CPU
+		{722B348B-846B-4338-B7F5-DB9C865C3F64}.Release|x86.Build.0 = Release|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Debug|x86.Build.0 = Debug|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Release|x86.ActiveCfg = Release|Any CPU
+		{2CFEA876-7ABB-466A-AABA-AA461414B676}.Release|x86.Build.0 = Release|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Debug|x86.Build.0 = Debug|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|x86.ActiveCfg = Release|Any CPU
+		{9070FB95-4D2D-4D0F-B2A8-6309FDEB6C3D}.Release|x86.Build.0 = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Debug|x86.Build.0 = Debug|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|x86.ActiveCfg = Release|Any CPU
+		{0C9D2FDC-0862-449C-BEDA-A63060513951}.Release|x86.Build.0 = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Debug|x86.Build.0 = Debug|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|x86.ActiveCfg = Release|Any CPU
+		{0ED91907-896E-4101-8AA0-310736B2B71B}.Release|x86.Build.0 = Release|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Debug|x86.Build.0 = Debug|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|x86.ActiveCfg = Release|Any CPU
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3}.Release|x86.Build.0 = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Debug|x86.Build.0 = Debug|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|x86.ActiveCfg = Release|Any CPU
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528}.Release|x86.Build.0 = Release|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Debug|x86.Build.0 = Debug|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1210,6 +1380,14 @@ Global
 		{8D8952DE-38FE-4A68-9026-7B2280C4ED0B} = {48D0EECA-B928-4B80-BE46-2C08CF3A946B}
 		{EC5A3E68-F59F-4631-A7AF-D23F02F7F2C8} = {48D0EECA-B928-4B80-BE46-2C08CF3A946B}
 		{5916BB3F-BBBC-40E4-A597-866B1E38C040} = {48D0EECA-B928-4B80-BE46-2C08CF3A946B}
+		{C6B17EFD-4F05-4D45-AF3E-C4F3F790B994} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
+		{0D762A47-65BB-4D0A-A854-BA10F87DDA95} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{12DFB0C5-AD17-407C-84B5-418C94EBEA18} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{4AE1021A-753C-4C42-B5E1-D70228643AE0} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{33C6253D-C148-491E-9AA6-E9F18CB1263D} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{BD3DBF9F-7984-4A1D-8D5B-39671F916CA3} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{1D692C54-8063-4AE2-AB26-0BCD0EA03528} = {C6B17EFD-4F05-4D45-AF3E-C4F3F790B994}
+		{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2} = {48D0EECA-B928-4B80-BE46-2C08CF3A946B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

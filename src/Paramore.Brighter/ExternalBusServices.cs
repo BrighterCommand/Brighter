@@ -19,11 +19,11 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
         internal IPolicyRegistry<string> PolicyRegistry { get; set; }
-        internal IAmAnOutbox<Message> OutBox { get; set; }
+        internal IAmAnOutboxSync<Message> OutBox { get; set; }
         internal IAmAnOutboxAsync<Message> AsyncOutbox { get; set; }
 
         internal int OutboxTimeout { get; set; } = 300;
-        internal IAmAMessageProducer MessageProducer { get; set; }
+        internal IAmAMessageProducerSync MessageProducerSync { get; set; }
         internal IAmAMessageProducerAsync AsyncMessageProducer { get; set; }
         
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
@@ -52,11 +52,11 @@ namespace Paramore.Brighter
 
             if (disposing)
             {
-                MessageProducer?.Dispose();
+                MessageProducerSync?.Dispose();
                 AsyncMessageProducer?.Dispose();
             }
 
-            MessageProducer = null;
+            MessageProducerSync = null;
             AsyncMessageProducer = null;
 
             _disposed = true;
@@ -88,8 +88,8 @@ namespace Paramore.Brighter
                 return;
 
             int maxOutStandingMessages = -1;
-            if (MessageProducer != null)
-                maxOutStandingMessages = MessageProducer.MaxOutStandingMessages;
+            if (MessageProducerSync != null)
+                maxOutStandingMessages = MessageProducerSync.MaxOutStandingMessages;
 
             if (AsyncMessageProducer != null)
                 maxOutStandingMessages = AsyncMessageProducer.MaxOutStandingMessages;
@@ -104,11 +104,11 @@ namespace Paramore.Brighter
 
         internal void CheckOutstandingMessages()
         {
-            if (MessageProducer == null)
+            if (MessageProducerSync == null)
                 return;
 
             var now = DateTime.UtcNow;
-            var checkInterval = TimeSpan.FromMilliseconds(MessageProducer.MaxOutStandingCheckIntervalMilliSeconds);
+            var checkInterval = TimeSpan.FromMilliseconds(MessageProducerSync.MaxOutStandingCheckIntervalMilliSeconds);
 
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
@@ -129,7 +129,7 @@ namespace Paramore.Brighter
         {
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
-            if (MessageProducer == null)
+            if (MessageProducerSync == null)
                 throw new InvalidOperationException("No message producer defined.");
 
             CheckOutboxOutstandingLimit();
@@ -137,19 +137,19 @@ namespace Paramore.Brighter
             foreach (var messageId in posts)
             {
                 var message = OutBox.Get(messageId);
-                if (message == null)
+                if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
-                if (MessageProducer is ISupportPublishConfirmation producer)
+                if (MessageProducerSync is ISupportPublishConfirmation producer)
                 {
                     //mark dispatch handled by a callback - set in constructor
-                    Retry(() => { MessageProducer.Send(message); });
+                    Retry(() => { MessageProducerSync.Send(message); });
                 }
                 else
                 {
-                    var sent = Retry(() => { MessageProducer.Send(message); });
+                    var sent = Retry(() => { MessageProducerSync.Send(message); });
                     if (sent)
                         Retry(() => OutBox.MarkDispatched(messageId, DateTime.UtcNow));
                 }
@@ -173,12 +173,12 @@ namespace Paramore.Brighter
             foreach (var messageId in posts)
             {
                 var message = await AsyncOutbox.GetAsync(messageId, OutboxTimeout, cancellationToken);
-                if (message == null)
+                if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
-                if (MessageProducer is ISupportPublishConfirmation producer)
+                if (MessageProducerSync is ISupportPublishConfirmation producer)
                 {
                     //mark dispatch handled by a callback - set in constructor
                     await RetryAsync(
@@ -231,7 +231,7 @@ namespace Paramore.Brighter
 
         internal bool ConfigurePublisherCallbackMaybe()
         {
-            if (MessageProducer is ISupportPublishConfirmation producer)
+            if (MessageProducerSync is ISupportPublishConfirmation producer)
             {
                 producer.OnMessagePublished += delegate(bool success, Guid id)
                 {
@@ -269,7 +269,7 @@ namespace Paramore.Brighter
                     if ((OutBox != null) && (OutBox is IAmAnOutboxViewer<Message> outboxViewer))
                     {
                         _outStandingCount = outboxViewer
-                            .OutstandingMessages(MessageProducer.MaxOutStandingCheckIntervalMilliSeconds)
+                            .OutstandingMessages(MessageProducerSync.MaxOutStandingCheckIntervalMilliSeconds)
                             .Count();
                         return;
                     }
@@ -278,7 +278,7 @@ namespace Paramore.Brighter
                     if ((AsyncOutbox != null) && (AsyncOutbox is IAmAnOutboxViewer<Message> asyncOutboxViewer))
                     {
                         _outStandingCount = asyncOutboxViewer
-                            .OutstandingMessages(MessageProducer.MaxOutStandingCheckIntervalMilliSeconds)
+                            .OutstandingMessages(MessageProducerSync.MaxOutStandingCheckIntervalMilliSeconds)
                             .Count();
                         return;
                     }
@@ -343,7 +343,7 @@ namespace Paramore.Brighter
 
         internal void SendViaExternalBus<T, TResponse>(Message outMessage) where T : class, ICall where TResponse : class, IResponse
         {
-            Retry(() => MessageProducer.Send(outMessage));
+            Retry(() => MessageProducerSync.Send(outMessage));
         }
         
     }

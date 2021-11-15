@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     ///     Class MsSqlOutbox.
     /// </summary>
     public class MsSqlOutbox :
-        IAmAnOutbox<Message>, 
+        IAmAnOutboxSync<Message>, 
         IAmAnOutboxAsync<Message>,
         IAmAnOutboxViewer<Message>,
         IAmAnOutboxViewerAsync<Message>
@@ -339,7 +339,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
            
-            if(connection.State!= ConnectionState.Open)await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
             {
                 if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();

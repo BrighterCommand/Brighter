@@ -26,18 +26,35 @@ using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
+    /// <summary>
+    /// Creates a <see cref="KafkaMessageProducer"/> from a <see cref="Publication"/>
+    /// Note that we only return the interface and <see cref="KafkaMessageProducer"/> is internal as the underlying type is not needed
+    /// </summary>
     public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
         private readonly KafkaPublication _publication;
         private Action<ProducerConfig> _configHook;
 
+        /// <summary>
+        /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a <see cref="KafkaMessageProducer"/>.
+        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, but defaults its
+        /// <see cref="KafkaPublication"/> with the MakeChannels equal to OnMissingChannel.Create
+        /// </summary>
+        /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         public KafkaMessageProducerFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration
             ) : this(globalConfiguration, new KafkaPublication{MakeChannels = OnMissingChannel.Create})
         {
         }
 
+        /// <summary>
+        /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a <see cref="KafkaMessageProducer"/>.
+        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a <see cref="KafkaPublication"/>
+        /// that determines how we publish to Kafka and the parameters of any topic if required.
+        /// </summary>
+        /// <param name="globalConfiguration">Configures how we connect to the broker</param>
+        /// <param name="publication">How do we publish, both producer parameters and topic configuration</param>
         public KafkaMessageProducerFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
             KafkaPublication publication)
@@ -47,8 +64,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _configHook = null;
         }
         
-
-        public IAmAMessageProducer Create()
+        /// <summary>
+        /// Create a message producer from tne <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> supplied
+        /// to the constructor
+        /// </summary>
+        /// <returns>An <see cref="IAmAMessageProducerSync"/> that represents a Kafka Message Producer</returns>
+        public IAmAMessageProducerSync Create()
         {
             var producer = new KafkaMessageProducer(_globalConfiguration, _publication);
             if (_configHook != null)

@@ -13,7 +13,7 @@
             _publication = publication ?? new RmqPublication{MakeChannels = OnMissingChannel.Create};
         }
         
-        public IAmAMessageProducer Create()
+        public IAmAMessageProducerSync Create()
         {
             return new RmqMessageProducer(_connection, _publication);
         }

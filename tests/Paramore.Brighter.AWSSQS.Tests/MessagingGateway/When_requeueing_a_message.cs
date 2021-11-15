@@ -13,7 +13,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
     [Trait("Category", "AWS")]
     public class SqsMessageProducerRequeueTests : IDisposable
     {
-        private readonly IAmAMessageProducer _sender;
+        private readonly IAmAMessageProducerSync _sender;
         private Message _requeuedMessage;
         private Message _receivedMessage;
         private readonly IAmAChannel _channel;

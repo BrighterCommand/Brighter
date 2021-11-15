@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter
 {
@@ -44,5 +45,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="instance">The instance.</param>
         void Add(IHandleRequestsAsync instance);
+
+        IBrighterScope Scope { get; }
     }
 }

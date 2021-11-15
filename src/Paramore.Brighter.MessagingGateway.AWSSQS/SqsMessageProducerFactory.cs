@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _sqsPublication = sqsPublication;
         }
 
-        public IAmAMessageProducer Create()
+        public IAmAMessageProducerSync Create()
         {
             return new SqsMessageProducer(_connection, _sqsPublication);
         }

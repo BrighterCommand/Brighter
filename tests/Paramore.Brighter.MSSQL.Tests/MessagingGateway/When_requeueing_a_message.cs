@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     public class MsSqlMessageConsumerRequeueTests
     {
         private readonly Message _message;
-        private readonly IAmAMessageProducer _producer;
+        private readonly IAmAMessageProducerSync _producer;
         private readonly IAmAChannelFactory _channelFactory;
         private readonly MsSqlSubscription<MyCommand> _subscription;
 

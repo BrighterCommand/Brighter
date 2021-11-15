@@ -31,13 +31,13 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    _commandProcessor.Send(request);
+                    CommandProcessor.Send(request);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    _commandProcessor.Publish(request);
+                    CommandProcessor.Publish(request);
                     break;
                 }
             }

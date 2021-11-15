@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.MySql;
+using Paramore.Brighter.MySql;
 using Paramore.Brighter.Outbox.MySql;
 
 namespace Paramore.Brighter.MySQL.Tests
@@ -49,7 +50,7 @@ namespace Paramore.Brighter.MySQL.Tests
 
         public MySqlInboxConfiguration InboxConfiguration => new MySqlInboxConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
 
-        public MySqlOutboxConfiguration OutboxConfiguration => new MySqlOutboxConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
+        public MySqlConfiguration OutboxConfiguration => new MySqlConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
 
         public void CleanUpDb()
         {

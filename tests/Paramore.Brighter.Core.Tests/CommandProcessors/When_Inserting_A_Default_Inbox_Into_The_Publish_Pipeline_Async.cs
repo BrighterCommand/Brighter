@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
            _commandProcessor = new CommandProcessor(
                 subscriberRegistry, 
-                (IAmAHandlerFactoryAsync)handlerFactory, 
+                handlerFactory, 
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry
                 {

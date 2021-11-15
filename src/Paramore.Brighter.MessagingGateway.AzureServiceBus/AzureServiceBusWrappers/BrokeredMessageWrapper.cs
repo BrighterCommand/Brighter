@@ -1,20 +1,42 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Azure.Messaging.ServiceBus;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
-    public class BrokeredMessageWrapper : IBrokeredMessageWrapper
+    internal class BrokeredMessageWrapper : IBrokeredMessageWrapper
     {
-        private readonly Microsoft.Azure.ServiceBus.Message _brokeredMessage;
+        private readonly ServiceBusReceivedMessage _brokeredMessage;
 
-        public BrokeredMessageWrapper(Microsoft.Azure.ServiceBus.Message brokeredMessage)
+        public BrokeredMessageWrapper(ServiceBusReceivedMessage brokeredMessage)
         {
             _brokeredMessage = brokeredMessage;
         }
 
-        public byte[] MessageBodyValue => _brokeredMessage.Body;
-        
-        public IDictionary<string, object> UserProperties => _brokeredMessage.UserProperties;
+        public byte[] MessageBodyValue => _brokeredMessage.Body.ToArray();
 
-        public string LockToken => _brokeredMessage.SystemProperties.LockToken;
+        public IReadOnlyDictionary<string, object> ApplicationProperties => _brokeredMessage.ApplicationProperties;
+
+        public string LockToken => _brokeredMessage.LockToken;
+
+        public Guid Id
+        {
+            get
+            {
+                return Guid.Parse(_brokeredMessage.MessageId);
+            }
+        }
+
+        public Guid CorrelationId
+        {
+            get
+            {
+                return string.IsNullOrEmpty(_brokeredMessage.CorrelationId)
+                    ? Guid.Empty
+                    : Guid.Parse(_brokeredMessage.CorrelationId);
+            }
+        }
+
+        public string ContentType { get => _brokeredMessage.ContentType; }
     }
 }

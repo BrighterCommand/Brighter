@@ -75,25 +75,17 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message)
+        /// <returns>True when message is requeued</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
+            Task.Delay(delayMilliseconds).Wait();
             var topic = message.Header.Topic;
 
             s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
                 message.Id.ToString());
 
-            _sqlQ.Send(message, topic);
-        }
-
-        /// <summary>
-        /// Requeues the specified message.
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
-        {
-            Task.Delay(delayMilliseconds).Wait();
-            Requeue(message);
+            _sqlQ.Send(message, topic); 
+            return true;
         }
         
         public void Dispose()

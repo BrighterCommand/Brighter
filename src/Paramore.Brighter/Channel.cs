@@ -141,9 +141,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">How long should we delay before requeueing</param>
-        public void Requeue(Message message, int delayMilliseconds = 0)
+        /// <returns>True if the message was re-queued false otherwise </returns>
+        public bool Requeue(Message message, int delayMilliseconds = 0)
         {
-            _messageConsumer.Requeue(message, delayMilliseconds);
+            return _messageConsumer.Requeue(message, delayMilliseconds);
         }
 
         /// <summary>

@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             _commandProcessor = CommandProcessorBuilder
                 .With()
                 .ConfigureFeatureSwitches(_featureSwitchRegistry)
-                .Handlers(new HandlerConfiguration(_registry, (IAmAHandlerFactory)_handlerFactory))
+                .Handlers(new HandlerConfiguration(_registry, _handlerFactory))
                 .DefaultPolicy()
                 .NoExternalBus()
                 .RequestContextFactory(new InMemoryRequestContextFactory())

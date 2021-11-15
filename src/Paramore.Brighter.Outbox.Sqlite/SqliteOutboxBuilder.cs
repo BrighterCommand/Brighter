@@ -44,5 +44,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             return string.Format(OutboxDdl, tableName);
         }
+        
+        public static string GetExists(string tableName)
+        {
+            return string.Format($"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';");
+        }
     }
 }

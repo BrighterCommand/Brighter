@@ -33,7 +33,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
     [Trait("Category", "RMQ")]
     public class RmqMessageProducerDLQTests : IDisposable
     {
-        private readonly IAmAMessageProducer _messageProducer;
+        private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _message;
         private readonly IAmAMessageConsumer _deadLetterConsumer;
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             
             //assert this is our message
             dlqMessage.Id.Should().Be(_message.Id);
-            message.Body.Value.Should().Be(message.Body.Value);
+            message.Body.Value.Should().Be(dlqMessage.Body.Value);
         }
 
         public void Dispose()

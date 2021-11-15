@@ -40,7 +40,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task When_marking_a_message_as_dispatched_async_tests()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header.Bag.Add("impersonatorId", 123);
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow);
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_null_stream_arg_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
             
             // act
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_empty_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object>();
             
             // act
@@ -110,7 +110,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public void When_wrong_args_are_supplied()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
             
             // act

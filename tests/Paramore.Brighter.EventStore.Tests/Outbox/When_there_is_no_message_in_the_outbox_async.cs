@@ -37,7 +37,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         public async Task When_There_Is_No_Message_In_The_Outbox()
         {
             // arrange
-            var eventStoreOutbox = new EventStoreOutbox(Connection);
+            var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             
             // act
             var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);

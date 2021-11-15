@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.Extensions.DependencyInjection
+﻿using System.Collections.Generic;
+
+namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     /// <summary>
     /// Flags support is required for RPC over messaging
@@ -8,5 +10,6 @@
     public interface IUseRpc
     {
         bool RPC { get; set; }
+        IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
     }
 }

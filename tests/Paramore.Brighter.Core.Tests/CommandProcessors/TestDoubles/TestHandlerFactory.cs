@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -23,21 +23,22 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class TestHandlerFactory<TRequest, TRequestHandler> : IAmAHandlerFactory
+    internal class TestHandlerFactorySync<TRequest, TRequestHandler> : IAmAHandlerFactorySync
         where TRequest : class, IRequest
         where TRequestHandler : class, IHandleRequests<TRequest>
     {
         private readonly Func<TRequestHandler> _factoryMethod;
 
-        public TestHandlerFactory(Func<TRequestHandler> factoryMethod)
+        public TestHandlerFactorySync(Func<TRequestHandler> factoryMethod)
         {
             _factoryMethod = factoryMethod;
         }
 
-        public IHandleRequests Create(Type handlerType)
+        public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
         {
             return _factoryMethod();
         }
@@ -48,5 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             disposable?.Dispose();
             handler = null;
         }
+
+        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

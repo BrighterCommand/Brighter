@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -30,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
-            var handlerFactory = new TestHandlerFactory<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
+            var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -39,6 +40,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+
+            var replySubscriptions = new List<Subscription>();
 
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
@@ -51,7 +54,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 },
                 messageMapperRegistry,
                 new InMemoryOutbox(),
-                (IAmAMessageProducer)new FakeMessageProducer(),
+                new FakeMessageProducer(),
+                replySubscriptions,
                 responseChannelFactory: new InMemoryChannelFactory());
             
             PipelineBuilder<MyResponse>.ClearPipelineCache();

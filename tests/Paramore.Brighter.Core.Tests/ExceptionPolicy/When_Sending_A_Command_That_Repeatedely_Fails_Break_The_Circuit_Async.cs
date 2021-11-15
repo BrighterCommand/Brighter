@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             MyFailsWithDivideByZeroHandlerAsync.ReceivedCommand = false;
 
-            _commandProcessor = new CommandProcessor(registry, (IAmAHandlerFactoryAsync)handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         }
 
         //We have to catch the final exception that bubbles out after retry

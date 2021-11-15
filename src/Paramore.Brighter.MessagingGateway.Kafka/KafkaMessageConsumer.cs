@@ -38,6 +38,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// Class KafkaMessageConsumer is an implementation of <see cref="IAmAMessageConsumer"/>
     /// and provides the facilities to consume messages from a Kafka broker for a topic
     /// in a consumer group.
+    /// A Kafka Message Consumer can create topics, depending on the options chosen.
+    /// We store an offset when a message is acknowledged, the message pump does this after successfully invoking a handler.
+    /// We commit offsets when the batch size is reached, or the sweeper decides it is too long between commits.
+    /// This dual strategy prevents low traffic topics having batches that are 'pending' for long periods, causing a risk that the consumer
+    /// will end before committing its offsets.
     /// </summary>
     public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumer
     {
@@ -53,6 +58,34 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly object _flushLock = new object();
         private bool _disposedValue;
 
+        /// <summary>
+        /// Constructs a KafkaMessageConsumer using Confluent's Consumer Biulder. We set up callbacks to handle assigned, revoked or lost partitions as
+        /// well as errors. We handle storing and committing offsets, using a batch strategy to commit, with a sweeper thread to prevent partially complete
+        /// batches lingering beyond a timeout threshold.
+        /// </summary>
+        /// <param name="configuration">The configuration tells us how to connect to the Broker. Required.</param>
+        /// <param name="routingKey">The routing key is a the Kafka Topic to consume. Required.</param>
+        /// <param name="groupId">The id of the consumer group we belong to. Required.</param>
+        /// <param name="offsetDefault">When connecting to a stream, and we have not offset stored, where do we begin reading?
+        /// Earliest - beginning of the stream; latest - anything after we connect. Defaults to Earliest</param>
+        /// <param name="sessionTimeoutMs">If we don't send a heartbeat within this interval, the broker terminates our session. Defaults to 1000ms</param>
+        /// <param name="maxPollIntervalMs">Maximum interval between consumer polls, Failing to poll at this interval marks the client as failed triggering a
+        /// re-balance of the group. Defaults to 1000ms.  Note that we set the Confluent clients auto store offsets and auto commit to false and handle this
+        /// within Brighter. We store an offset following an Ack, and we commit offsets at a batch or sweeper interval, whichever is first.</param>
+        /// <param name="isolationLevel">Affects reading of transactionally written messages. Committed only reads those committed to all nodes,
+        /// uncommitted reads messages that have been written to *some* node. Defaults to ReadCommitted</param>
+        /// <param name="commitBatchSize">What size does a batch grow before we write commits that we have stored. Defaults to 10. If a consumer crashes,
+        /// uncommitted offsets will not have been written and will be processed by the consumer group again. Conversely a low batch size increases writes
+        /// and lowers performance.</param>
+        /// <param name="sweepUncommittedOffsetsIntervalMs">The sweeper ensures that partially complete batches, particularly on low throughput queues
+        /// will be written. It runs after the interval and commits anything currently in the store and not committed. Defaults to 30000</param>
+        /// <param name="readCommittedOffsetsTimeoutMs">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
+        /// Defaults to 5000</param>
+        /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
+        /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
+        /// <param name="topicFindTimeoutMs">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
+        /// <param name="makeChannels">Should we create infrastructure (topics) where it does not existk or check. Defaults to Create</param>
+        /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
             RoutingKey routingKey,
@@ -170,11 +203,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         /// <summary>
         /// Acknowledges the specified message.
-        /// If we have autocommit on, this is essentially a no-op as the offset will be auto-committed via the client
-        /// If we do not have autocommit on (the default) then this commits the message that has just been processed.
-        /// If you do use autocommit, be aware that you will need to cope with duplicates, perhaps via an Inbox
-        /// When we read a message, we store the offset of the message on the partition in the header. This enables us
-        /// to commit the message successfully after processing
+        /// We do not have autocommit on and this stores the message that has just been processed.
+        /// We use the header bag to store the partition offset of the message when  reading it from Kafka. This enables us to get hold of it when
+        /// we acknowledge the message via Brighter. We store the offset via the consumer, and keep an in-memory list of offsets. If we have hit the
+        /// batch size we commit the offsets. if not, we trigger the sweeper, which will commit the offset once the specified time interval has passed if
+        /// a batch has not done so.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Acknowledge(Message message)
@@ -211,7 +244,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
        /// <summary>
-        /// Rejects the specified message.
+        /// There is no 'queue' to purge in Kafka, so we treat this as moving past to the offset to tne end of any assigned partitions,
+        /// thus skipping over anything that exists at that point.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
@@ -227,12 +261,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         }
 
         /// <summary>
-        /// Receives the specified queue name.
-        /// An abstraction over a third-party messaging library. Used to read messages from the broker and to acknowledge the processing of those messages or requeue them.
-        /// Used by a <see cref="Channel"/> to provide access to a third-party message queue.
+        /// Receives from the specified topic. Used by a <see cref="Channel"/> to provide access to the stream.
+        /// We consume the next offset from the stream, and turn it into a Brighter message; we store the offset in the partition into the Brighter message
+        /// headers for use in storing and committing offsets. If the stream is EOF or we are not allocated partitions, returns an empty message. 
         /// </summary>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
-        /// <returns>Message.</returns>
+        /// <returns>A Brighter message wrapping the payload from the Kafka stream</returns>
+        // <exception cref="ChannelFailureException">We catch Kafka consumer errors and rethrow as a ChannelFailureException </exception>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             try
@@ -294,7 +329,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         /// <summary>
         /// Rejects the specified message. This is just a commit of the offset to move past the record without processing it
-        /// on Kafka, as we can't requeue or delete from the queue
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="requeue">if set to <c>true</c> [requeue].</param>
@@ -307,19 +341,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Requeues the specified message. A no-op on Kafka as the stream is immutable
         /// </summary>
         /// <param name="message"></param>
-        public void Requeue(Message message)
-        {
-        }
-
-        /// <summary>
-        /// Requeues the specified message. A no-op on Kafka as the stream is immutable
-        /// </summary>
-        /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
-        public void Requeue(Message message, int delayMilliseconds)
+        /// <returns>False as no requeue support on Kafka</returns>
+        public bool Requeue(Message message, int delayMilliseconds)
         {
-            Task.Delay(delayMilliseconds).Wait();
-            Requeue(message);
+            return false;
         }
         
         private bool CheckHasPartitions()

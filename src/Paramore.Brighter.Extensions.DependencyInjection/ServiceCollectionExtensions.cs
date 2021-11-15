@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Linq;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="configure">A callback that defines what options to set when Brighter is built</param>
         /// <returns>A builder that can be used to populate the IoC container with handlers and mappers by inspection - used by built in factory from CommandProcessor</returns>
         /// <exception cref="ArgumentNullException">Thrown if we have no IoC provided ServiceCollection</exception>
-        public static IBrighterHandlerBuilder AddBrighter(this IServiceCollection services, Action<BrighterOptions> configure = null)
+        public static IBrighterBuilder AddBrighter(this IServiceCollection services, Action<BrighterOptions> configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));
@@ -31,29 +31,63 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             configure?.Invoke(options);
             services.AddSingleton<IBrighterOptions>(options);
 
-            return BrighterHandlerBuilder(services, options);
+            return BrighterHandlerBuilder(services, options, sp => new ServiceProviderHandlerFactory(sp));
         }
         
         /// <summary>
         /// Normally you want to call AddBrighter from client code, and not this method. Public only to support Service Activator extensions
         /// Registers singletons with the service collection :-
         ///  - SubscriberRegistry - what handlers subscribe to what requests
-        ///  - MapperRegistry - what mapppers translate what messages
+        ///  - MapperRegistry - what mappers translate what messages
         /// </summary>
         /// <param name="services">The IoC container to update</param>
         /// <param name="configure">A callback that defines what options to set when Brighter is built</param>
         /// <returns>A builder that can be used to populate the IoC container with handlers and mappers by inspection - used by built in factory from CommandProcessor</returns>
-        public static IBrighterHandlerBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
+        public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options, Func<IServiceProvider, IAmAHandlerFactory> aHandlerFactory)
         {
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
-            services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
+            services.AddSingleton(subscriberRegistry);
 
-            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
+            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), sp => BuildCommandProcessor(sp, aHandlerFactory.Invoke(sp)), options.CommandProcessorLifetime));
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
-            services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
+            services.AddSingleton(mapperRegistry);
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
+        }
+         
+         /// <summary>
+        /// Use an external Brighter Outbox tp store messages Posted to another process (evicts based on age and size).
+        /// Advantages: By using the same Db to store both any state changes for your app, and outgoing messages you can create a transaction that spans both
+        ///  your state change and writing to an outbox [use DepositPost to store]. Then a sweeper process can look for message not flagged as sent and send them.
+        ///  For low latency just send after the transaction with ClearOutbox, for higher latency just let the sweeper run in the background.
+        ///  The outstanding messages dispatched this way can be sent from any producer that runs a sweeper process and so it not tied to the lifetime of the
+        ///  producer, offering guaranteed, at least once, delivery.
+        ///  NOTE: there may be a database specific Use*OutBox available. If so, use that in preference to this generic method
+        /// Disadvantages: The Outbox will not survive restarts, so messages not published by shutdown will not be flagged as not posted
+        /// If not null, registers singletons with the service collection :-
+        ///  - IAmAnOutbox - what messages have we posted
+        ///  - ImAnOutboxAsync - what messages have we posted (async pipeline compatible)
+        /// </summary>
+        /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
+        /// <param name="outbox">The outbox provider - if your outbox supports both sync and async options, just provide this and we will register both</param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null)
+        {
+            if (outbox is IAmAnOutboxSync<Message>)
+            {
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox,
+                    ServiceLifetime.Singleton));
+            }
+
+            if (outbox is IAmAnOutboxAsync<Message>)
+            {
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox,
+                    ServiceLifetime.Singleton));
+            }
+
+            return brighterBuilder;
+             
         }
 
         /// <summary>
@@ -66,9 +100,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The builder we are adding this facility to</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseInMemoryOutbox(this IBrighterHandlerBuilder brighterBuilder)
+        public static IBrighterBuilder UseInMemoryOutbox(this IBrighterBuilder brighterBuilder)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutbox<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
 
             return brighterBuilder;
@@ -84,12 +118,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
+        /// <param name="replyQueueSubscriptions">Reply queue subscription</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseExternalBus(this IBrighterHandlerBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false)
+        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
-            brighterBuilder.Services.AddSingleton<IAmAMessageProducer>(producer);
-            if(producer is IAmAMessageProducerAsync @async) brighterBuilder.Services.AddSingleton<IAmAMessageProducerAsync>(@async);
-            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues));
+            brighterBuilder.Services.AddSingleton(producer);
+            
+            if(producer is IAmAMessageProducerSync producerSync)
+                brighterBuilder.Services.AddSingleton(producerSync);
+            if(producer is IAmAMessageProducerAsync producerAsync)
+                brighterBuilder.Services.AddSingleton(producerAsync);
+            
+            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
             
             return brighterBuilder;
         }
@@ -100,7 +140,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="featureSwitchRegistry">The registry for handler Feature Switches</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterHandlerBuilder UseFeatureSwitches(this IBrighterHandlerBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
+        public static IBrighterBuilder UseFeatureSwitches(this IBrighterBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             brighterBuilder.Services.AddSingleton(featureSwitchRegistry);
             return brighterBuilder;
@@ -126,25 +166,24 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return messageMapperRegistry;
         }
 
-        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
+        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider, IAmAHandlerFactory handlerFactory)
         {
             var options = provider.GetService<IBrighterOptions>();
             var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
             var useRequestResponse = provider.GetService<IUseRpc>();
 
-            var handlerFactory = new ServiceProviderHandlerFactory(provider);
-            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory, handlerFactory);
+            var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
 
-            var outbox = provider.GetService<IAmAnOutbox<Message>>();
+            var outbox = provider.GetService<IAmAnOutboxSync<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
             var overridingConnectionProvider = provider.GetService<IAmABoxTransactionConnectionProvider>();
 
             if (outbox == null) outbox = new InMemoryOutbox();
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
 
-            var producer = provider.GetService<IAmAMessageProducer>();
+            var producer = provider.GetService<IAmAMessageProducerSync>();
             var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
 
             var needHandlers = CommandProcessorBuilder.With();
@@ -153,7 +192,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
-            
+
             var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
@@ -162,13 +201,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var loggerFactory = provider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
-            
+
             INeedARequestContext externalBusBuilder;
             if (options.ChannelFactory is null)
             {
                 externalBusBuilder = producer == null
                     ? messagingBuilder.NoExternalBus()
-                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
+                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox,
+                        overridingConnectionProvider);
             }
             else
             {
@@ -180,10 +220,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 else
                 {
                     externalBusBuilder = useRequestResponse.RPC
-                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(
-                            producer, messageMapperRegistry,
-                            responseChannelFactory: options.ChannelFactory))
-                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, asyncProducer, messageMapperRegistry), outbox, overridingConnectionProvider);
+                        ? messagingBuilder.ExternalRPC(
+                            new MessagingConfiguration(producer, messageMapperRegistry,
+                                responseChannelFactory: options.ChannelFactory), outbox,
+                            useRequestResponse.ReplyQueueSubscriptions)
+                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry),
+                            outbox, overridingConnectionProvider);
                 }
             }
 

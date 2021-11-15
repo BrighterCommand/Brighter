@@ -37,7 +37,7 @@ namespace Paramore.Brighter
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public interface IAmAnOutboxAsync<in T> where T : Message
+    public interface IAmAnOutboxAsync<in T> : IAmAnOutbox<T> where T : Message
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.

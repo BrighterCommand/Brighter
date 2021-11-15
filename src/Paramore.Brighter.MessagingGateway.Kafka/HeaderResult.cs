@@ -27,7 +27,8 @@ using System;
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <summary>
-    /// Class HeaderResult.
+    /// A 'Maybe" type used to capture the result of reading values from a message; used to provide 'tolerant rweading'
+    /// whart do we need to know to process a message
     /// </summary>
     /// <typeparam name="TResult">The type of the t result.</typeparam>
     internal class HeaderResult<TResult>

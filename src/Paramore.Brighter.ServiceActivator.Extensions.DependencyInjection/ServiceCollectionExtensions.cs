@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
        /// <param name="configure">The configuration of the subscriptions</param>
        /// <returns>A brighter handler builder, used for chaining</returns>
        /// <exception cref="ArgumentNullException">Throws if no .NET IoC container provided</exception>
-        public static IBrighterHandlerBuilder AddServiceActivator(
+        public static IBrighterBuilder AddServiceActivator(
             this IServiceCollection services,
             Action<ServiceActivatorOptions> configure = null)
         {
@@ -33,7 +33,17 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             services.AddSingleton<IDispatcher>(BuildDispatcher);
 
-            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
+            Func<IServiceProvider, IAmAHandlerFactory> aHandlerFactory;
+            if (options.UseScoped)
+            {
+                aHandlerFactory = sp => new ScopedServiceProviderHandlerFactory(sp);
+            }
+            else
+            {                   
+                aHandlerFactory = sp => new ServiceProviderHandlerFactory(sp);
+            }
+
+            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options, aHandlerFactory);
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
