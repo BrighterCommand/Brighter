@@ -1,4 +1,4 @@
-﻿using GreetingsSender.Web.Data;
+﻿using Greetings.Adaptors.Data;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
