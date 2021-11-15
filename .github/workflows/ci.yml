@@ -97,6 +97,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -128,6 +132,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -160,6 +168,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
@@ -217,6 +229,10 @@ jobs:
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: 5.0.x
+    - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -249,6 +265,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -285,6 +305,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: EventStore Tests
@@ -313,6 +337,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -343,6 +371,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -376,6 +408,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -401,6 +437,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -429,6 +469,10 @@ jobs:
         uses: actions/setup-dotnet@v1
         with:
           dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
