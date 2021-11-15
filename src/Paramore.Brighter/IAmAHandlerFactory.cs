@@ -1,6 +1,4 @@
-﻿using Paramore.Brighter.Scope;
-
-namespace Paramore.Brighter
+﻿namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAHandlerFactory
@@ -8,6 +6,6 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IAmAHandlerFactory
     {
-        IBrighterScope CreateScope();
+        
     }
 }

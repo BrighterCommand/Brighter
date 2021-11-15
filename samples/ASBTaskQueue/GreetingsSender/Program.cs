@@ -17,7 +17,7 @@ namespace GreetingsSender
             serviceCollection.AddLogging();
 
             //TODO: add your ASB qualified name here
-            var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
+            var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
 
             var producer = AzureServiceBusMessageProducerFactory.Get(asbClientProvider);
             serviceCollection.AddBrighter()

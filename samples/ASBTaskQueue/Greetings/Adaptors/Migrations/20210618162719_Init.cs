@@ -1,7 +1,7 @@
 ﻿using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace GreetingsSender.Web.Migrations
+namespace Greetings.Adaptors.Migrations
 {
     public partial class Init : Migration
     {

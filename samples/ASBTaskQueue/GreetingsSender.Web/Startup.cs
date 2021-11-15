@@ -1,3 +1,5 @@
+﻿using Greetings.Adaptors.Data;
+using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
 using GreetingsSender.Web.Data;
@@ -10,6 +12,7 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MsSql;
@@ -29,19 +32,22 @@ namespace GreetingsSender.Web
         public void ConfigureServices(IServiceCollection services)
         {
             //string dbConnString = "server=(localdb)\\mssqllocaldb;database=BrighterTests;trusted_connection=yes;MultipleActiveResultSets=True";
-            string dbConnString = "server=(localdb)\\mssqllocaldb;database=BrighterTests;trusted_connection=yes";
+            string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests";
             
             //EF
             services.AddDbContext<GreetingsDataContext>(o =>
             {
-                o.UseSqlServer(dbConnString);
+                o.UseSqlServer(dbConnString, b =>
+                {
+                    b.MigrationsAssembly("Greetings");
+                });
             });
             
             //Brighter
-            string asbConnectionString = "Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity";
-            
-            var asbConnection = new AzureServiceBusConfiguration(asbConnectionString, true);
-            var producer = AzureServiceBusMessageProducerFactory.Get(asbConnection);
+            string asbFQDN = ".servicebus.windows.net";
+
+            var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider(asbFQDN);
+            var producer = AzureServiceBusMessageProducerFactory.Get(asbClientProvider);
 
             var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
             
@@ -59,6 +65,7 @@ namespace GreetingsSender.Web
                 {
                     r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));
                     r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
+                    r.Add(typeof(AddGreetingCommand), typeof(AddGreetingMessageMapper));
                 });
 
 
@@ -76,7 +83,7 @@ namespace GreetingsSender.Web
                 var services = serviceScope.ServiceProvider;
                 var dbContext = services.GetService<GreetingsDataContext>();
 
-                dbContext.Database.EnsureCreated();
+                dbContext.Database.Migrate();
             }
             else
             {
