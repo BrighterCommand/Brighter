@@ -10,15 +10,14 @@
     <SignAssembly>true</SignAssembly>
     <AssemblyOriginatorKeyFile>..\..\Brighter.snk</AssemblyOriginatorKeyFile>
 
-    <!-- Optional: Declare that the Repository URL can be published to NuSpec -->
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- Optional: Publish the repository URL in the built .nupkg (in the NuSpec <Repository> element) -->
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <!-- Optional: Embed source files that are not tracked by the source control manager to the PDB -->
     <!-- This is useful if you generate files during the build -->
     <EmbedUntrackedSources>true</EmbedUntrackedSources>
-    <!-- including PDB files in NuGet for source link because symbolsource.org does not support portable PDBs -->
-    <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
-
-    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <!-- Recommended: Embed symbols containing Source Link in the main file (exe/dll) -->
+    <DebugType>embedded</DebugType>
 
     <!-- Version numbers have to be included at the same level as source link otherwise versions are reset to 1.0.0 -->
     <AssemblyVersion>9.0.0.0</AssemblyVersion>
@@ -27,12 +26,18 @@
     <Version>9.0.0</Version>
   </PropertyGroup>
 
+  <!-- Deterministic builds ensure that the same binary is produced regardless of the machine building it -->
+  <!-- This setting is set on the build server to normalize stored file paths, should not be set for local dev -->
+  <PropertyGroup Condition="'$(GITHUB_ACTIONS)' == 'true'">
+    <ContinuousIntegrationBuild>true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
   <ItemGroup Label="Package References">
     <PackageReference Include="MinVer" PrivateAssets="All" Version="2.5.0" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0">
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
