@@ -229,10 +229,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             int pageSize, int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < (CURRENT_TIMESTAMP + (@OutStandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize),
+                CreateNpgsqlParameter("PageNumber", pageNumber),
+                CreateNpgsqlParameter("PageSize", pageSize),
                 CreateNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
             };
 
@@ -249,7 +250,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize)
+                CreateNpgsqlParameter("PageNumber", pageNumber),
+                CreateNpgsqlParameter("PageSize", pageSize)
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
@@ -262,10 +264,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < (CURRENT_TIMESTAMP + (@OutStandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize),
+                CreateNpgsqlParameter("PageNumber", pageNumber),
+                CreateNpgsqlParameter("PageSize", pageSize),
                 CreateNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
             };
 
