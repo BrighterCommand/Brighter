@@ -16,11 +16,15 @@ namespace Paramore.Brighter.ServiceActivator
     public class MessagePumpAsync<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         public MessagePumpAsync(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessorProvider commandProcessorProvider, 
             IAmAMessageMapper<TRequest> messageMapper) 
-            : base(commandProcessor, messageMapper)
+            : base(commandProcessorProvider, messageMapper)
         {
         }
+
+        public MessagePumpAsync(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper) :
+            this(new CommandProcessorProvider(commandProcessor), messageMapper)
+        {}
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
@@ -74,12 +78,12 @@ namespace Paramore.Brighter.ServiceActivator
         
         private async void PublishAsync(TRequest request)
         {
-            await CommandProcessor.PublishAsync(request, continueOnCapturedContext: true);
+            await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true);
         }
 
         private async void SendAsync(TRequest request)
         {
-            await CommandProcessor.SendAsync(request, continueOnCapturedContext: true);
+            await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true);
         }
 
     }

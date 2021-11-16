@@ -1,8 +1,7 @@
-﻿using System;
+using System;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Scope;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -31,7 +30,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
+            public IHandleRequests Create(Type handlerType)
             {
                 if (handlerType == typeof(MyPreAndPostDecoratedHandler))
                 {
@@ -55,7 +54,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 s_released += "|" + handler.Name;
             }
-            public IBrighterScope CreateScope() => new Unscoped();
         }
 
 

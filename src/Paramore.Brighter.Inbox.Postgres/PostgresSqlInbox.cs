@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId AND ContextKey = @contextKey";
+            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @CommandId AND ContextKey = @ContextKey";
             var parameters = new[]
             {
                 CreateNpgsqlParameter("CommandId", id),
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey FETCH FIRST 1 ROWS ONLY";
+            var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
             {
                 CreateNpgsqlParameter("CommandId", id),
@@ -139,7 +139,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId AND ContextKey = @contextKey";
+            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @CommandId AND ContextKey = @ContextKey";
 
             var parameters = new[]
             {
@@ -158,7 +158,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey FETCH FIRST 1 ROWS ONLY";
+            var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
             {
                 CreateNpgsqlParameter("CommandId", id),
