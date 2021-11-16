@@ -149,18 +149,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 }
                 catch (ServiceBusException ex)
                 {
-                    if(ex.Reason == ServiceBusFailureReason.SessionLockLost)
-                        s_logger.LogError(ex, "Error releasing completing peak lock on message with id {Id}", message.Id);
+                    if(ex.Reason == ServiceBusFailureReason.MessageLockLost)
+                        s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
                     else
                     {
                         s_logger.LogError(ex,
-                            "Error completing message with id {Id} Reason {ErrorReason}",
+                            "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
                             message.Id, ex.Reason);
                     }
                 }
                 catch(Exception ex)
                 {
-                    s_logger.LogError(ex, "Error completing message with id {Id}", message.Id);
+                    s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
                     throw;
                 }
             }
