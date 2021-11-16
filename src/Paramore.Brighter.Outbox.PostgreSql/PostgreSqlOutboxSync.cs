@@ -330,7 +330,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             var command = connection.CreateCommand();
             var sql =
-                $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+                $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
             command.CommandText = sql;
             command.Parameters.Add(CreateNpgsqlParameter("MessageId", messageId));
             command.Parameters.Add(CreateNpgsqlParameter("DispatchedAt", dispatchedAt));
