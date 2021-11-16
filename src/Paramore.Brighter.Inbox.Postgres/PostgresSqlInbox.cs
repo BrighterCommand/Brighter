@@ -49,19 +49,19 @@ namespace Paramore.Brighter.Inbox.Postgres
         ///     thread specific storage
         ///     such as HTTPContext
         /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }   
-        
+        public bool ContinueOnCapturedContext { get; set; }
+
          public PostgresSqlInbox(PostgresSqlInboxConfiguration postgresSqlInboxConfiguration)
          {
              _configuration = postgresSqlInboxConfiguration;
              ContinueOnCapturedContext = false;
          }
- 
-        
+
+
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
               var parameters = InitAddDbParameters(command, contextKey);
-  
+
               using (var connection = GetConnection())
               {
                   connection.Open();
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                               command.Id);
                           return;
                       }
-  
+
                       throw;
                   }
               }
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @CommandId AND ContextKey = @ContextKey";
+            var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
             var parameters = new[]
             {
                 CreateNpgsqlParameter("CommandId", id),
@@ -139,7 +139,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @CommandId AND ContextKey = @ContextKey";
+            var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
 
             var parameters = new[]
             {
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 CreateNpgsqlParameter("CommandId", id),
                 CreateNpgsqlParameter("ContextKey", contextKey)
             };
-            
+
             return await ExecuteCommandAsync<bool>(
                     async command =>
                     {
@@ -177,12 +177,12 @@ namespace Paramore.Brighter.Inbox.Postgres
                     parameters)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
-        
+
         private NpgsqlConnection GetConnection()
         {
             return new NpgsqlConnection(_configuration.ConnectionString);
         }
-        
+
         private NpgsqlParameter CreateNpgsqlParameter(string parametername, object value)
         {
             if (value != null)
@@ -251,7 +251,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                 return item;
             }
         }
-        
+
         private TResult ReadCommand<TResult>(IDataReader dr, Guid commandId) where TResult : class, IRequest
         {
             if (dr.Read())
