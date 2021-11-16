@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -147,16 +148,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                     _serviceBusReceiver.Complete(lockToken).Wait();
                 }
-                catch (ServiceBusException ex)
+                catch (AggregateException ex)
                 {
-                    if(ex.Reason == ServiceBusFailureReason.MessageLockLost)
-                        s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                    if (ex.InnerException is ServiceBusException asbException) HandleASBException(asbException, message.Id);
                     else
                     {
-                        s_logger.LogError(ex,
-                            "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
-                            message.Id, ex.Reason);
+                        s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                        throw;
                     }
+                }
+                catch (ServiceBusException ex)
+                {
+                    HandleASBException(ex, message.Id);
                 }
                 catch(Exception ex)
                 {
@@ -324,6 +327,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _administrationClientWrapper.Reset();
                 
                 throw new ChannelFailureException("Failing to check or create subscription", e);
+            }
+        }
+
+        private void HandleASBException(ServiceBusException ex, Guid messageId)
+        {
+            if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
+                s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId;
+            else
+            {
+                s_logger.LogError(ex,
+                    "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
+                    messageId, ex.Reason);
             }
         }
     }
