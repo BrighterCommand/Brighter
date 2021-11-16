@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,9 +39,8 @@ namespace Paramore.Brighter
         /// Creates the specified handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
-        /// <param name="lifetimeScope"></param>
         /// <returns>IHandleRequests.</returns>
-        IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope);
+        IHandleRequests Create(Type handlerType);
         /// <summary>
         /// Releases the specified handler.
         /// </summary>

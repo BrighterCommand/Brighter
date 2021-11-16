@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Greetings.Adaptors.Data;
+using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using GreetingsSender.Web.Data;
 using Microsoft.AspNetCore.Mvc;
@@ -105,6 +107,16 @@ namespace GreetingsSender.Web.Controllers
             msgs.Add(greetingAsync2.Id);
 
             await _commandProcessor.ClearOutboxAsync(msgs);
+            
+            return View("Index");
+        }
+
+        public async Task<IActionResult> AddGreeting()
+        {
+            var command = new AddGreetingCommand() {GreetingMessage = "Welcome to the Example.", ThrowError = false};
+            var failingCommand = new AddGreetingCommand() { GreetingMessage = "This should never reach the DB or outbox.", ThrowError = true };
+            await _commandProcessor.PostAsync(command);
+            await _commandProcessor.PostAsync(failingCommand);
             
             return View("Index");
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using Paramore.Brighter.Scope;
 
 namespace Paramore.Brighter.RMQ.Tests.TestDoubles
 {
@@ -11,13 +10,11 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
         {
             _handlerAction = handlerAction;
         }
-        public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
+        public IHandleRequests Create(Type handlerType)
         {
             return _handlerAction();
         }
 
         public void Release(IHandleRequests handler) { }
-
-        public IBrighterScope CreateScope() => new Unscoped();
     }
 }

@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -28,7 +28,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
-using Paramore.Brighter.Scope;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -101,13 +100,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         internal class EmptyHandlerFactorySync : IAmAHandlerFactorySync
         {
-            public IHandleRequests Create(Type handlerType, IAmALifetime lifetimeScope)
+            public IHandleRequests Create(Type handlerType)
             {
                 return null;
             }
 
             public void Release(IHandleRequests handler) {}
-            public IBrighterScope CreateScope() => new Unscoped();
         }
     }
 }

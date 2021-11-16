@@ -13,11 +13,15 @@ namespace Paramore.Brighter.ServiceActivator
     public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         public MessagePumpBlocking(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessorProvider commandProcessorProvider, 
             IAmAMessageMapper<TRequest> messageMapper) 
-            : base(commandProcessor, messageMapper)
+            : base(commandProcessorProvider, messageMapper)
         {
         }
+        
+        public MessagePumpBlocking(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper) :
+            this(new CommandProcessorProvider(commandProcessor), messageMapper)
+        {}
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
@@ -31,13 +35,13 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 case MessageType.MT_COMMAND:
                 {
-                    CommandProcessor.Send(request);
+                    CommandProcessorProvider.Get().Send(request);
                     break;
                 }
                 case MessageType.MT_DOCUMENT:
                 case MessageType.MT_EVENT:
                 {
-                    CommandProcessor.Publish(request);
+                    CommandProcessorProvider.Get().Publish(request);
                     break;
                 }
             }

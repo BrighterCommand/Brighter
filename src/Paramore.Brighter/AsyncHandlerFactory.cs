@@ -38,15 +38,12 @@ namespace Paramore.Brighter
         /// <param name="factory">The async handler factory.</param>
         /// <param name="attribute">The attribute.</param>
         /// <param name="requestContext">The request context.</param>
-        /// <param name="amALifetime"></param>
         /// <returns><see cref="IHandleRequestsAsync{TRequest}"/>.</returns>
-        public static IHandleRequestsAsync<TRequest> CreateAsyncRequestHandler<TRequest>(
-            this IAmAHandlerFactoryAsync factory, RequestHandlerAttribute attribute, IRequestContext requestContext,
-            IAmALifetime amALifetime)
+        public static IHandleRequestsAsync<TRequest> CreateAsyncRequestHandler<TRequest>(this IAmAHandlerFactoryAsync factory, RequestHandlerAttribute attribute, IRequestContext requestContext)
              where TRequest : class, IRequest
         {
             var handlerType = attribute.GetHandlerType().MakeGenericType(typeof(TRequest));
-            var handler = (IHandleRequestsAsync<TRequest>)factory.Create(handlerType, amALifetime);
+            var handler = (IHandleRequestsAsync<TRequest>)factory.Create(handlerType);
 
             if (handler is null)
                 throw new ConfigurationException($"Could not create handler {handlerType} from {factory}"); 
