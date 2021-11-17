@@ -333,7 +333,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private void HandleASBException(ServiceBusException ex, Guid messageId)
         {
             if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
-                s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId;
+                s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
             else
             {
                 s_logger.LogError(ex,
@@ -341,5 +341,5 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     messageId, ex.Reason);
             }
         }
-    }
+    })
 }
