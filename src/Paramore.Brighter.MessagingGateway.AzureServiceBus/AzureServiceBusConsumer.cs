@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -25,7 +26,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly ServiceBusReceiveMode _receiveMode;
 
         private const string _lockTokenKey = "LockToken";
-        
+
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/>
         /// </summary>
@@ -37,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="batchSize">How many messages to receive at a time.</param>
         /// <param name="receiveMode">The mode in which to Receive.</param>
         /// <param name="makeChannels">The mode in which to make Channels.</param>
-        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducerSync messageProducerSync, IAdministrationClientWrapper administrationClientWrapper, 
+        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducerSync messageProducerSync, IAdministrationClientWrapper administrationClientWrapper,
             IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10, ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
         {
             _subscriptionName = subscriptionName;
@@ -48,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _batchSize = batchSize;
             _makeChannel = makeChannels;
             _receiveMode = receiveMode;
-            
+
             GetMessageReceiverProvider();
         }
 
@@ -88,10 +89,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 GetMessageReceiverProvider();
-                
+
                 throw new ChannelFailureException("Failing to receive messages.", e);
             }
-            
+
             foreach (IBrokeredMessageWrapper azureServiceBusMessage in messages)
             {
                 Message message = MapToBrighterMessage(azureServiceBusMessage);
@@ -147,18 +148,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                     _serviceBusReceiver.Complete(lockToken).Wait();
                 }
-                catch (ServiceBusException ex)
+                catch (AggregateException ex)
                 {
-                    if(ex.Reason == ServiceBusFailureReason.MessageLockLost)
-                        s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                    if (ex.InnerException is ServiceBusException asbException)
+                        HandleASBException(asbException, message.Id);
                     else
                     {
-                        s_logger.LogError(ex,
-                            "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
-                            message.Id, ex.Reason);
+                        s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
+                        throw;
                     }
                 }
-                catch(Exception ex)
+                catch (ServiceBusException ex)
+                {
+                    HandleASBException(ex, message.Id);
+                }
+                catch (Exception ex)
                 {
                     s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", message.Id);
                     throw;
@@ -220,7 +224,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _serviceBusReceiver.Close();
             s_logger.LogInformation("Consumer disposed.");
         }
-        
+
         private void GetMessageReceiverProvider()
         {
             s_logger.LogInformation(
@@ -235,7 +239,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 s_logger.LogError(e, "Failed to get message receiver provider for topic {Topic} and subscription {ChannelName}.", _topicName, _subscriptionName);
             }
         }
-        
+
         private Message MapToBrighterMessage(IBrokeredMessageWrapper azureServiceBusMessage)
         {
             if (azureServiceBusMessage.MessageBodyValue == null)
@@ -252,14 +256,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var handledCount = GetHandledCount(azureServiceBusMessage);
             var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow,
                 handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType);
-            if(_receiveMode.Equals(ServiceBusReceiveMode.PeekLock)) headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
+            if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
+                headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
             var message = new Message(headers, new MessageBody(messageBody));
             return message;
         }
 
         private static MessageType GetMessageType(IBrokeredMessageWrapper azureServiceBusMessage)
         {
-            if (azureServiceBusMessage.ApplicationProperties == null ||!azureServiceBusMessage.ApplicationProperties.ContainsKey("MessageType")) 
+            if (azureServiceBusMessage.ApplicationProperties == null || !azureServiceBusMessage.ApplicationProperties.ContainsKey("MessageType"))
                 return MessageType.MT_EVENT;
 
             if (Enum.TryParse(azureServiceBusMessage.ApplicationProperties["MessageType"].ToString(), true, out MessageType messageType))
@@ -319,11 +324,23 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             catch (Exception e)
             {
                 s_logger.LogError(e, "Failing to check or create subscription.");
-                
+
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
                 _administrationClientWrapper.Reset();
-                
+
                 throw new ChannelFailureException("Failing to check or create subscription", e);
+            }
+        }
+
+        private void HandleASBException(ServiceBusException ex, Guid messageId)
+        {
+            if (ex.Reason == ServiceBusFailureReason.MessageLockLost)
+                s_logger.LogError(ex, "Error completing peak lock on message with id {Id}", messageId);
+            else
+            {
+                s_logger.LogError(ex,
+                    "Error completing peak lock on message with id {Id} Reason {ErrorReason}",
+                    messageId, ex.Reason);
             }
         }
     }
