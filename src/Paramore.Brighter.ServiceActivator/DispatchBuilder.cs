@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -33,9 +34,9 @@ namespace Paramore.Brighter.ServiceActivator
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
-    public class DispatchBuilder : INeedACommandProcessorProvider, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
+    public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
-        private IAmACommandProcessorProvider _commandProcessorProvider;
+        private Func<IAmACommandProcessorProvider> _commandProcessorFactory;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmAChannelFactory _defaultChannelFactory;
         private IEnumerable<Subscription> _connections;
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Begins the fluent interface 
         /// </summary>
         /// <returns>INeedALogger.</returns>
-        public static INeedACommandProcessorProvider With()
+        public static INeedACommandProcessorFactory With()
         {
             return new DispatchBuilder();
         }
@@ -54,11 +55,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
-        /// <param name="theCommandProcessorProvider">The command processor provider.</param>
+        /// <param name="commandProcessorFactory">The command processor Factory.</param>
         /// <returns>INeedAMessageMapper.</returns>
-        public INeedAMessageMapper CommandProcessorProvider(IAmACommandProcessorProvider theCommandProcessorProvider)
+        public INeedAMessageMapper CommandProcessorFactory(Func<IAmACommandProcessorProvider> commandProcessorFactory)
         {
-            _commandProcessorProvider = theCommandProcessorProvider;
+            _commandProcessorFactory = commandProcessorFactory;
             return this;
         }
 
@@ -109,7 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorProvider, _messageMapperRegistry, _connections);
+            return new Dispatcher(_commandProcessorFactory.Invoke(), _messageMapperRegistry, _connections);
         }
     }
 
@@ -118,14 +119,14 @@ namespace Paramore.Brighter.ServiceActivator
     /// <summary>
     /// Interface INeedACommandProcessor
     /// </summary>
-    public interface INeedACommandProcessorProvider
+    public interface INeedACommandProcessorFactory
     {
         /// <summary>
         /// The command processor used to send and publish messages to handlers by the service activator.
         /// </summary>
-        /// <param name="commandProcessorProvider">The command processor provider.</param>
+        /// <param name="commandProcessorFactory">The command processor provider Factory.</param>
         /// <returns>INeedAMessageMapper.</returns>
-        INeedAMessageMapper CommandProcessorProvider(IAmACommandProcessorProvider commandProcessorProvider);
+        INeedAMessageMapper CommandProcessorFactory(Func<IAmACommandProcessorProvider> commandProcessorFactory);
     }
 
     /// <summary>

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
@@ -33,24 +33,26 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             services.AddSingleton<IDispatcher>(BuildDispatcher);
 
-            if (options.UseScoped)
-            {
-                services.AddTransient<IAmACommandProcessorProvider, ScopedCommandProcessorProvider>();
-            }
-            else
-            {
-                services.AddTransient<IAmACommandProcessorProvider, CommandProcessorProvider>();
-            }
-
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
-            var commandProcessorProvider = serviceProvider.GetService<IAmACommandProcessorProvider>();
             var options = serviceProvider.GetService<ServiceActivatorOptions>();
 
-            var dispatcherBuilder = DispatchBuilder.With().CommandProcessorProvider(commandProcessorProvider);
+            Func<IAmACommandProcessorProvider> providerFactory;
+
+            if (options.UseScoped)
+            {
+                providerFactory = () =>  new ScopedCommandProcessorProvider(serviceProvider);
+            }
+            else
+            {
+                var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
+                providerFactory = () => new CommandProcessorProvider(commandProcessor);
+            }
+
+            var dispatcherBuilder = DispatchBuilder.With().CommandProcessorFactory(providerFactory);
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             
