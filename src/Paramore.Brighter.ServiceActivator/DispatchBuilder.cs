@@ -110,7 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorFactory.Invoke(), _messageMapperRegistry, _connections);
+            return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _connections);
         }
     }
 
