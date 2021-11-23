@@ -76,7 +76,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
                 .Build();
 
             _builder = DispatchBuilder.With()
-                .CommandProcessorProvider(new CommandProcessorProvider(commandProcessor))
+                .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
                 .MessageMappers(messageMapperRegistry)
                 .DefaultChannelFactory(new ChannelFactory(rmqMessageConsumerFactory))
                 .Connections(new []
