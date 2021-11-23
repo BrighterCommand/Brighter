@@ -58,6 +58,7 @@ namespace GreetingsReceiverConsole
                     {
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+                        options.UseScoped = false;
                     }).UseInMemoryOutbox()
                         .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))
                         .AutoFromAssemblies();

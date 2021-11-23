@@ -31,27 +31,27 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             configure?.Invoke(options);
             services.AddSingleton<IBrighterOptions>(options);
 
-            return BrighterHandlerBuilder(services, options, sp => new ServiceProviderHandlerFactory(sp));
+            return BrighterHandlerBuilder(services, options);
         }
         
         /// <summary>
         /// Normally you want to call AddBrighter from client code, and not this method. Public only to support Service Activator extensions
         /// Registers singletons with the service collection :-
         ///  - SubscriberRegistry - what handlers subscribe to what requests
-        ///  - MapperRegistry - what mappers translate what messages
+        ///  - MapperRegistry - what mapppers translate what messages
         /// </summary>
         /// <param name="services">The IoC container to update</param>
         /// <param name="configure">A callback that defines what options to set when Brighter is built</param>
         /// <returns>A builder that can be used to populate the IoC container with handlers and mappers by inspection - used by built in factory from CommandProcessor</returns>
-        public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options, Func<IServiceProvider, IAmAHandlerFactory> aHandlerFactory)
+        public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
-            services.AddSingleton(subscriberRegistry);
+            services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
-            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), sp => BuildCommandProcessor(sp, aHandlerFactory.Invoke(sp)), options.CommandProcessorLifetime));
+            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
-            services.AddSingleton(mapperRegistry);
+            services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
@@ -166,12 +166,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return messageMapperRegistry;
         }
 
-        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider, IAmAHandlerFactory handlerFactory)
+        private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
             var options = provider.GetService<IBrighterOptions>();
             var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
             var useRequestResponse = provider.GetService<IUseRpc>();
 
+            var handlerFactory = new ServiceProviderHandlerFactory(provider);
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
@@ -192,7 +193,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
-
+            
             var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null
@@ -201,14 +202,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var loggerFactory = provider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
-
+            
             INeedARequestContext externalBusBuilder;
             if (options.ChannelFactory is null)
             {
                 externalBusBuilder = producer == null
                     ? messagingBuilder.NoExternalBus()
-                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox,
-                        overridingConnectionProvider);
+                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
             }
             else
             {
@@ -220,12 +220,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 else
                 {
                     externalBusBuilder = useRequestResponse.RPC
-                        ? messagingBuilder.ExternalRPC(
-                            new MessagingConfiguration(producer, messageMapperRegistry,
-                                responseChannelFactory: options.ChannelFactory), outbox,
-                            useRequestResponse.ReplyQueueSubscriptions)
-                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry),
-                            outbox, overridingConnectionProvider);
+                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(producer, messageMapperRegistry, responseChannelFactory: options.ChannelFactory), outbox, useRequestResponse.ReplyQueueSubscriptions)
+                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
                 }
             }
 

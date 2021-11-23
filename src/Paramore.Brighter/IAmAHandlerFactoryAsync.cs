@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -39,9 +39,8 @@ namespace Paramore.Brighter
         /// Creates the specified async handler type.
         /// </summary>
         /// <param name="handlerType">Type of the handler.</param>
-        /// <param name="lifetimeScope">Scope context the handler is created from (created for each pipeline)</param>
         /// <returns>IHandleRequestsAsync.</returns>
-        IHandleRequestsAsync Create(Type handlerType, IAmALifetime lifetimeScope);
+        IHandleRequestsAsync Create(Type handlerType);
         /// <summary>
         /// Releases the specified async handler.
         /// </summary>

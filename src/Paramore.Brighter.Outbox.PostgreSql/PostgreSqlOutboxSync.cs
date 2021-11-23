@@ -25,12 +25,12 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using Npgsql;
 using System.Data;
-using NpgsqlTypes;
-using Paramore.Brighter.Logging;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
+using Npgsql;
+using NpgsqlTypes;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
@@ -97,10 +97,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
             int pageNumber = 1,
-            int outboxTimeout = -1, 
+            int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
             using (var connection = GetConnection())
@@ -193,8 +193,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
           /// <param name="args">Additional parameters required for search, if any</param>
        /// <returns>A list of messages that are outstanding for dispatch</returns>
        public IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent, 
-            int pageSize = 100, 
+            double millSecondsSinceSent,
+            int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
@@ -229,10 +229,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             int pageSize, int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize),
+                CreateNpgsqlParameter("PageNumber", pageNumber),
+                CreateNpgsqlParameter("PageSize", pageSize),
                 CreateNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
             };
 
@@ -249,7 +250,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize)
+                CreateNpgsqlParameter("PageNumber", pageNumber),
+                CreateNpgsqlParameter("PageSize", pageSize)
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
@@ -262,10 +264,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("PageNumber", pageNumber), CreateNpgsqlParameter("PageSize", pageSize),
+                CreateNpgsqlParameter("PageNumber", pageNumber),
+                CreateNpgsqlParameter("PageSize", pageSize),
                 CreateNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
             };
 
@@ -319,7 +322,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 CreateNpgsqlParameter("CorrelationId", message.Header.CorrelationId),
                 CreateNpgsqlParameter("ReplyTo", message.Header.ReplyTo),
                 CreateNpgsqlParameter("ContentType", message.Header.ContentType),
-                CreateNpgsqlParameter("HeaderBag", bagjson), 
+                CreateNpgsqlParameter("HeaderBag", bagjson),
                 CreateNpgsqlParameter("Body", message.Body.Value)
             };
             return parameters;
@@ -330,7 +333,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             var command = connection.CreateCommand();
             var sql =
-                $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @mMessageId";
+                $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
             command.CommandText = sql;
             command.Parameters.Add(CreateNpgsqlParameter("MessageId", messageId));
             command.Parameters.Add(CreateNpgsqlParameter("DispatchedAt", dispatchedAt));
@@ -358,13 +361,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var correlationId = GetCorrelationId(dr);
             var replyTo = GetReplyTo(dr);
             var contentType = GetContentType(dr);
-                
+
             var header = new MessageHeader(
-                messageId:id, 
-                topic:topic, 
-                messageType:messageType, 
-                timeStamp:timeStamp, 
-                handledCount:0, 
+                messageId:id,
+                topic:topic,
+                messageType:messageType,
+                timeStamp:timeStamp,
+                handledCount:0,
                 delayedMilliseconds: 0,
                 correlationId: correlationId,
                 replyTo: replyTo,
@@ -402,8 +405,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private string GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal)) return null; 
-            
+            if (dr.IsDBNull(ordinal)) return null;
+
             var replyTo = dr.GetString(ordinal);
             return replyTo;
         }
@@ -411,8 +414,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private string GetReplyTo(IDataReader dr)
         {
              var ordinal = dr.GetOrdinal("ReplyTo");
-             if (dr.IsDBNull(ordinal)) return null; 
-             
+             if (dr.IsDBNull(ordinal)) return null;
+
              var replyTo = dr.GetString(ordinal);
              return replyTo;
         }
@@ -428,8 +431,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private Guid? GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null; 
-            
+            if (dr.IsDBNull(ordinal)) return null;
+
             var correlationId = dr.GetGuid(ordinal);
             return correlationId;
         }
@@ -444,7 +447,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
     }
-    
-    
+
+
 }
 

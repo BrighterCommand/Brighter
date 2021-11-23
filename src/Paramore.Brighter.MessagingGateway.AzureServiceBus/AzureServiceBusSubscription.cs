@@ -30,7 +30,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int timeoutInMs = 300,
             int pollDelayInMs = -1,
             int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
@@ -40,7 +39,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
                 makeChannels)
         {
         }
@@ -73,7 +72,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int timeoutInMs = 300,
             int pollDelayInMs = -1,
             int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
@@ -83,7 +81,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs,
+            : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
                 pollDelayInMs, noWorkPauseInMs, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
                 isAsync, channelFactory, makeChannels)
         {

@@ -52,8 +52,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// Gets the command processor.
         /// </summary>
         /// <value>The command processor.</value>
-        public IAmACommandProcessor CommandProcessor { get; }
-
+        public IAmACommandProcessor CommandProcessor { get => CommandProcessorProvider.Get(); }
+        
+        /// <summary>
+        /// 
+        /// </summary>
+        public IAmACommandProcessorProvider CommandProcessorProvider { get; }
+        
         /// <summary>
         /// Gets the connections.
         /// </summary>
@@ -82,15 +87,16 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// Initializes a new instance of the <see cref="Dispatcher"/> class.
         /// </summary>
-        /// <param name="commandProcessor">The command processor.</param>
+        /// <param name="commandProcessorProvider">The command processor Provider.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="connections">The connections.</param>
         public Dispatcher(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessorProvider commandProcessorProvider, 
             IAmAMessageMapperRegistry messageMapperRegistry,
             IEnumerable<Subscription> connections)
         {
-            CommandProcessor = commandProcessor;
+            CommandProcessorProvider = commandProcessorProvider;
+            
             Connections = connections;
             _messageMapperRegistry = messageMapperRegistry;
 
@@ -100,6 +106,12 @@ namespace Paramore.Brighter.ServiceActivator
             _consumers = new ConcurrentDictionary<string, IAmAConsumer>();
 
             State = DispatcherState.DS_AWAITING;
+        }
+
+        public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry,
+            IEnumerable<Subscription> connection) : this(new CommandProcessorProvider(commandProcessor),
+            messageMapperRegistry, connection)
+        {
         }
 
         /// <summary>
@@ -275,7 +287,7 @@ namespace Paramore.Brighter.ServiceActivator
                     int performer = i;
                     s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", performer + 1, connection.Name);
                     var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
-                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessor, _messageMapperRegistry, connection);
+                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessorProvider, _messageMapperRegistry, connection);
 
                     list.Add(consumerFactory.Create());
                 }

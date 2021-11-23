@@ -1,7 +1,7 @@
 ﻿using GreetingsSender.Web.Data;
 using Microsoft.EntityFrameworkCore.Migrations;
 
-namespace GreetingsSender.Web.Migrations
+namespace Greetings.Adaptors.Migrations
 {
     public partial class BrighterOutbox : Migration
     {
