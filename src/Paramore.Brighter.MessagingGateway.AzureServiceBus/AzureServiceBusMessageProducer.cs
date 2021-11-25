@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -103,6 +104,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
                 azureServiceBusMessage.ApplicationProperties.Add("MessageType", message.Header.MessageType.ToString());
                 azureServiceBusMessage.ApplicationProperties.Add("HandledCount", message.Header.HandledCount);
+                foreach (var header in message.Header.Bag.Where(h => h.Key != AzureServiceBusConsumer.LockTokenKey))
+                {
+                    azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
+                }
                 azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
                 azureServiceBusMessage.ContentType = message.Header.ContentType;
                 azureServiceBusMessage.MessageId = message.Header.Id.ToString();

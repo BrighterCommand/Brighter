@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -25,7 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private readonly OnMissingChannel _makeChannel;
         private readonly ServiceBusReceiveMode _receiveMode;
 
-        private const string _lockTokenKey = "LockToken";
+        public const string LockTokenKey = "LockToken";
 
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusConsumer"/>
@@ -139,7 +138,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 try
                 {
                     EnsureSubscription();
-                    var lockToken = message.Header.Bag[_lockTokenKey].ToString();
+                    var lockToken = message.Header.Bag[LockTokenKey].ToString();
 
                     if (string.IsNullOrEmpty(lockToken))
                         throw new Exception($"LockToken for message with id {message.Id} is null or empty");
@@ -186,7 +185,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 try
                 {
                     EnsureSubscription();
-                    var lockToken = message.Header.Bag[_lockTokenKey].ToString();
+                    var lockToken = message.Header.Bag[LockTokenKey].ToString();
 
                     if (string.IsNullOrEmpty(lockToken))
                         throw new Exception($"LockToken for message with id {message.Id} is null or empty");
@@ -256,7 +255,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow,
                 handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType);
             if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
-                headers.Bag.Add(_lockTokenKey, azureServiceBusMessage.LockToken);
+                headers.Bag.Add(LockTokenKey, azureServiceBusMessage.LockToken);
+            foreach (var property in azureServiceBusMessage.ApplicationProperties)
+            {
+                headers.Bag.Add(property.Key, property.Value);
+            }
             var message = new Message(headers, new MessageBody(messageBody));
             return message;
         }
