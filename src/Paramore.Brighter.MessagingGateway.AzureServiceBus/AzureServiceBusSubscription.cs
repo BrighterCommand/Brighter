@@ -7,6 +7,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// </summary>
     public class AzureServiceBusSubscription : Subscription
     {
+        public string SqlFilter { get; }
+        
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
         /// </summary>
@@ -36,10 +38,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            string sqlFilter = "")
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
                 makeChannels)
         {
+            SqlFilter = sqlFilter;
         }
     }
 
@@ -76,10 +80,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            string sqlFilter = "")
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
                 timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
-                isAsync, channelFactory, makeChannels)
+                isAsync, channelFactory, makeChannels, sqlFilter)
         {
         }
     }

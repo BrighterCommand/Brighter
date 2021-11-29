@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
         /// <param name="maxDeliveryCount">Maximum message delivery count.</param>
-        void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount);
+        void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount, string sqlFilter = "");
 
         /// <summary>
         /// Reset the Connection.

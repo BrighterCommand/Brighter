@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus.Administration;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
@@ -49,7 +50,8 @@ namespace GreetingsWorker
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: true,
-                            noOfPerformers: 2),
+                            noOfPerformers: 2,
+                            sqlFilter: ""),
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName(GreetingEventMessageMapper.Topic),
                             new ChannelName(subscriptionName),

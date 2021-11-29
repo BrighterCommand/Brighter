@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
@@ -147,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
         /// <param name="maxDeliveryCount">Maximum message delivery count.</param>
-        public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
+        public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000, string sqlFilter = "")
         {
             CreateSubscriptionAsync(topicName, subscriptionName, maxDeliveryCount).Wait();
         }
@@ -169,7 +170,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogDebug("New management client wrapper initialised.");
         }
         
-        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
+        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, int maxDeliveryCount = 2000, string sqlFilter = "")
         {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
@@ -183,9 +184,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 MaxDeliveryCount = maxDeliveryCount
             };
 
+            var ruleOptions = string.IsNullOrEmpty(sqlFilter)
+                ? new CreateRuleOptions() : new CreateRuleOptions("sqlFilter",new SqlRuleFilter(sqlFilter));
+
             try
             {
-                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions);
+                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions, ruleOptions);
             }
             catch (Exception e)
             {

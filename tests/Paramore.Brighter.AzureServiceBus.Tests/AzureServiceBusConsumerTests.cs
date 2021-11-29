@@ -78,7 +78,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
-            _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000));
+            _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000, ""));
             Assert.Equal("somebody", result[0].Body.Value);
         }
 
@@ -199,7 +199,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_trying_to_create_a_subscription_which_was_already_created_by_another_thread_it_should_ignore_the_error()
         {
             _nameSpaceManagerWrapper.Setup(f => f.SubscriptionExists("topic", "subscription")).Returns(false);
-            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000))
+            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000, ""))
                 .Throws(new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists));
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
@@ -213,7 +213,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
-            _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000));
+            _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000, ""));
             Assert.Equal("somebody", result[0].Body.Value);
         }
 
@@ -264,7 +264,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_there_is_an_error_talking_to_servicebus_when_creating_the_subscription_then_a_ChannelFailureException_is_raised_and_ManagementClientWrapper_is_reinitilised()
         {
             _nameSpaceManagerWrapper.Setup(f => f.SubscriptionExists("topic", "subscription")).Returns(false);
-            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000)).Throws(new Exception());
+            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000, "")).Throws(new Exception());
 
             Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
             _nameSpaceManagerWrapper.Verify(managementClientWrapper => managementClientWrapper.Reset(), Times.Once);
@@ -300,7 +300,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             if (subscriptionExists == false)
             {
-                _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000), Times.Once);
+                _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000, ""), Times.Once);
             }
 
             _nameSpaceManagerWrapper.Verify(f => f.SubscriptionExists("topic", "subscription"), Times.Once);
@@ -310,7 +310,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_MessagingEntityAlreadyExistsException_does_not_check_if_subscription_exists()
         {
             _nameSpaceManagerWrapper.Setup(f => f.SubscriptionExists("topic", "subscription")).Returns(false);
-            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000))
+            _nameSpaceManagerWrapper.Setup(f => f.CreateSubscription("topic", "subscription", 2000, ""))
                 .Throws(new ServiceBusException("whatever", ServiceBusFailureReason.MessagingEntityAlreadyExists));
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
@@ -325,7 +325,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             Message[] result = _azureServiceBusConsumer.Receive(400);
             _azureServiceBusConsumer.Receive(400);
 
-            _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000));
+            _nameSpaceManagerWrapper.Verify(f => f.CreateSubscription("topic", "subscription", 2000, ""));
             Assert.Equal("somebody", result[0].Body.Value);
 
             _nameSpaceManagerWrapper.Verify(f => f.SubscriptionExists("topic", "subscription"), Times.Once);
