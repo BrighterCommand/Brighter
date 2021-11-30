@@ -89,6 +89,7 @@ namespace GreetingsWorker
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
                             options.UseScoped = true;
+                            
                         }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
                         .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
                         .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))

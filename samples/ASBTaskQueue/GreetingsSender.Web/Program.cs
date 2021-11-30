@@ -1,4 +1,7 @@
 ﻿using Greetings.Adaptors.Data;
+using Greetings.Adaptors.Services;
+using Greetings.Ports.CommandHandlers;
+using Greetings.Ports.Commands;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -11,10 +14,11 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
+using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 var builder = WebApplication.CreateBuilder(args);
 
-string dbConnString = "server=(localdb)\\mssqllocaldb;database=BrighterTests;trusted_connection=yes";
+string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
 
 //EF
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
@@ -22,10 +26,14 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
     o.UseSqlServer(dbConnString);
 });
 
-//Brighter
-string asbConnectionString = "Endpoint=sb://.servicebus.windows.net/;Authentication=Managed Identity";
+//Services
 
-var asbConnection = new AzureServiceBusConfiguration(asbConnectionString, true);
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+
+//Brighter
+string asbEndpoint = ".servicebus.windows.net";
+
+var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoint);
 var producer = AzureServiceBusMessageProducerFactory.Get(asbConnection);
 
 var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
@@ -43,6 +51,7 @@ builder.Services
     {
         r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));
         r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
+        r.Add(typeof(AddGreetingCommand), typeof(AddGreetingMessageMapper));
     });
 
 

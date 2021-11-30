@@ -161,9 +161,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .ExternalBus(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
-
-            var commandProcessorProvider = new CommandProcessorProvider(commandProcessor);
-
+            
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
             // a base naming scheme to allow centralized management.
             var connectionsConfiguration = new Subscription[]
@@ -179,7 +177,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             };
 
             return DispatchBuilder.With()
-                .CommandProcessorProvider(commandProcessorProvider)
+                .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
                 .MessageMappers(incomingMessageMapperRegistry)
                 .DefaultChannelFactory(_channelFactory)
                 .Connections(connectionsConfiguration)
