@@ -102,9 +102,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
 
                 var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
-                azureServiceBusMessage.ApplicationProperties.Add("MessageType", message.Header.MessageType.ToString());
-                azureServiceBusMessage.ApplicationProperties.Add("HandledCount", message.Header.HandledCount);
-                foreach (var header in message.Header.Bag.Where(h => h.Key != AzureServiceBusConsumer.LockTokenKey))
+                azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
+                azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
+                foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
                 {
                     azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
                 }
