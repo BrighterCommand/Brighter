@@ -216,7 +216,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, pollDelayInMs,
                 noWorkPauseInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, runAsync, channelFactory, 
                 lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, iAmPolicy,redrivePolicy,
-                snsAttributes, tags, makeChannels)
+                snsAttributes, tags, makeChannels, rawMessageDelivery)
         {
         }
     }
