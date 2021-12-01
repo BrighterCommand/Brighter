@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -30,8 +30,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int pollDelayInMs = -1,
-            int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
             int requeueCount = -1,
             int requeueDelayInMs = 0,
@@ -61,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
@@ -72,8 +70,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int pollDelayInMs = -1,
-            int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
             int requeueCount = -1,
             int requeueDelayInMs = 0,
@@ -82,7 +78,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
-                pollDelayInMs, noWorkPauseInMs, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
+                timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
                 isAsync, channelFactory, makeChannels)
         {
         }

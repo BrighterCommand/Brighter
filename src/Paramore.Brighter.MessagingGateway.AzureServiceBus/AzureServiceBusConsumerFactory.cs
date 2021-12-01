@@ -39,27 +39,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <returns>IAmAMessageConsumer</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
-            return Create(_clientProvider, subscription, _ackOnRead);
-        }
-
-        /// <summary>
-        /// Factory to create an Azure Service Bus Consumer
-        /// </summary>
-        /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
-        /// <param name="subscription">The name of the Subscription on the Topic</param>
-        /// <param name="ackOnRead">Acknowledge Message on read (if set to false this will use a Peak Lock)</param>
-        /// <returns></returns>
-        private static IAmAMessageConsumer Create(IServiceBusClientProvider clientProvider, Subscription subscription,
-            bool ackOnRead)
-        {
-            var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);
+            var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
 
             return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
                 new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
-                    new ServiceBusSenderProvider(clientProvider), subscription.MakeChannels), nameSpaceManagerWrapper,
-                new ServiceBusReceiverProvider(clientProvider),
+                    new ServiceBusSenderProvider(_clientProvider), subscription.MakeChannels), nameSpaceManagerWrapper,
+                new ServiceBusReceiverProvider(_clientProvider),
                 makeChannels: subscription.MakeChannels,
-                receiveMode: ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock,
+                receiveMode: _ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock,
                 batchSize: subscription.BufferSize);
         }
     }
