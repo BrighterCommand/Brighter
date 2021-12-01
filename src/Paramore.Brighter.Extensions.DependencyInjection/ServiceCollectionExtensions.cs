@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (outbox is IAmAnOutboxSync<Message>)
             {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox,
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => outbox,
                     ServiceLifetime.Singleton));
             }
 
