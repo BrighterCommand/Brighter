@@ -218,18 +218,6 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         }
 
         [Fact]
-        public void When_reject_is_called_with_requeue_the_message_requeued()
-        {
-            var messageHeader = new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_EVENT);
-
-            var message = new Message(messageHeader, new MessageBody("body"));
-
-            _azureServiceBusConsumer.Reject(message, true);
-
-            _mockMessageProducer.Verify(x => x.Send(message), Times.Once);
-        }
-
-        [Fact]
         public void When_dispose_is_called_the_close_method_is_called()
         {
             _azureServiceBusConsumer.Dispose();

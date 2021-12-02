@@ -168,6 +168,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw;
                 }
             }
+            else
+            {
+                s_logger.LogDebug("Completing with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}", message.Id, _receiveMode);
+            }
         }
 
         /// <summary>
@@ -196,17 +200,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     throw;
                 }
             }
-        }
-
-        [Obsolete]
-        public void Reject(Message message, bool requeue)
-        {
-            if (requeue)
+            else
             {
-                Requeue(message, 0);
+                s_logger.LogWarning("Dead Lettering Message with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}", message.Id, _receiveMode);
             }
         }
-
+        
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
