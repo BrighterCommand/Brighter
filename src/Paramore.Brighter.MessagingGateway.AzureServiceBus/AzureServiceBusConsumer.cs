@@ -22,6 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private bool _subscriptionCreated;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AzureServiceBusConsumer>();
         private readonly OnMissingChannel _makeChannel;
+        private readonly AzureServiceBusSubscriptionConfiguration _subscriptionConfiguration;
         private readonly ServiceBusReceiveMode _receiveMode;
 
         /// <summary>
@@ -35,8 +36,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="batchSize">How many messages to receive at a time.</param>
         /// <param name="receiveMode">The mode in which to Receive.</param>
         /// <param name="makeChannels">The mode in which to make Channels.</param>
-        public AzureServiceBusConsumer(string topicName, string subscriptionName, IAmAMessageProducerSync messageProducerSync, IAdministrationClientWrapper administrationClientWrapper,
-            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10, ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete, OnMissingChannel makeChannels = OnMissingChannel.Create)
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        public AzureServiceBusConsumer(string topicName, string subscriptionName,
+            IAmAMessageProducerSync messageProducerSync, IAdministrationClientWrapper administrationClientWrapper,
+            IServiceBusReceiverProvider serviceBusReceiverProvider, int batchSize = 10,
+            ServiceBusReceiveMode receiveMode = ServiceBusReceiveMode.ReceiveAndDelete,
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = default)
         {
             _subscriptionName = subscriptionName;
             _topicName = topicName;
@@ -45,6 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _serviceBusReceiverProvider = serviceBusReceiverProvider;
             _batchSize = batchSize;
             _makeChannel = makeChannels;
+            _subscriptionConfiguration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
             _receiveMode = receiveMode;
 
             GetMessageReceiverProvider();
@@ -285,8 +292,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         private void EnsureSubscription()
         {
-            const int maxDeliveryCount = 2000;
-
             if (_subscriptionCreated || _makeChannel.Equals(OnMissingChannel.Assume))
                 return;
 
@@ -304,7 +309,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                         $"Subscription {_subscriptionName} does not exist on topic {_topicName} and missing channel mode set to Validate.");
                 }
 
-                _administrationClientWrapper.CreateSubscription(_topicName, _subscriptionName, maxDeliveryCount);
+                _administrationClientWrapper.CreateSubscription(_topicName, _subscriptionName, _subscriptionConfiguration);
                 _subscriptionCreated = true;
             }
             catch (ServiceBusException ex)

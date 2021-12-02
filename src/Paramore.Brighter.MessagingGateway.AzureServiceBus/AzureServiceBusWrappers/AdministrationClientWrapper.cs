@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
 using Microsoft.Extensions.Logging;
@@ -146,12 +148,24 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
-        /// <param name="maxDeliveryCount">Maximum message delivery count.</param>
-        public void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        public void CreateSubscription(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
         {
-            CreateSubscriptionAsync(topicName, subscriptionName, maxDeliveryCount).Wait();
+            CreateSubscriptionAsync(topicName, subscriptionName, subscriptionConfiguration).Wait();
         }
-        
+
+        /// <summary>
+        /// Get a Subscription.
+        /// </summary>
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <param name="subscriptionName">The name of the Subscription.</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        public async Task<SubscriptionProperties> GetSubscriptionAsync(string topicName, string subscriptionName,
+            CancellationToken cancellationToken = default)
+        {
+            return await _administrationClient.GetSubscriptionAsync(topicName, subscriptionName, cancellationToken);
+        }
+
         private void Initialise()
         {
             s_logger.LogDebug("Initialising new management client wrapper...");
@@ -169,7 +183,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             s_logger.LogDebug("New management client wrapper initialised.");
         }
         
-        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, int maxDeliveryCount = 2000)
+        private async Task CreateSubscriptionAsync(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration)
         {
             s_logger.LogInformation("Creating subscription {ChannelName} for topic {Topic}...", subscriptionName, topicName);
 
@@ -180,12 +194,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
             {
-                MaxDeliveryCount = maxDeliveryCount
+                MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
+                DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
+                LockDuration = subscriptionConfiguration.LockDuration,
+                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive
             };
+
+            var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)
+                ? new CreateRuleOptions() : new CreateRuleOptions("sqlFilter",new SqlRuleFilter(subscriptionConfiguration.SqlFilter));
 
             try
             {
-                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions);
+                await _administrationClient.CreateSubscriptionAsync(subscriptionOptions, ruleOptions);
             }
             catch (Exception e)
             {
