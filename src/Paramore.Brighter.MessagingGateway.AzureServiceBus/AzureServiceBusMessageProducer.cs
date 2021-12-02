@@ -128,6 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             catch (Exception e)
             {
                 s_logger.LogError(e, "Failed to publish message to topic {Topic} with id {Id}, message will not be retried.", message.Header.Topic, message.Id);
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
             }
             finally
             {
