@@ -50,7 +50,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
-            _administrationClient.CreateSubscription(_topicName, channelName, 5);
+            _administrationClient.CreateSubscription(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration());
 
             var channelFactory =
                 new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));

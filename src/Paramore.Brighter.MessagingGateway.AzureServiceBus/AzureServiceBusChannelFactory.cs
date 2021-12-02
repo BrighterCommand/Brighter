@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
 
             IAmAMessageConsumer messageConsumer =
-                _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription, azureServiceBusSubscription.SqlFilter);
+                _azureServiceBusConsumerFactory.Create(azureServiceBusSubscription);
 
             return new Channel(
                 channelName: subscription.ChannelName,

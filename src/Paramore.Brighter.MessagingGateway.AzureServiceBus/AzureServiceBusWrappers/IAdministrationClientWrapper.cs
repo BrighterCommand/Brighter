@@ -1,4 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
+using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrappers
 {
@@ -39,12 +41,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription.</param>
-        /// <param name="maxDeliveryCount">Maximum message delivery count.</param>
-        void CreateSubscription(string topicName, string subscriptionName, int maxDeliveryCount, string sqlFilter = "");
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        void CreateSubscription(string topicName, string subscriptionName, AzureServiceBusSubscriptionConfiguration subscriptionConfiguration);
 
         /// <summary>
         /// Reset the Connection.
         /// </summary>
         void Reset();
+
+        /// <summary>
+        /// Get a Subscription.
+        /// </summary>
+        /// <param name="topicName">The name of the Topic.</param>
+        /// <param name="subscriptionName">The name of the Subscription.</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        Task<SubscriptionProperties> GetSubscriptionAsync(string topicName, string subscriptionName,
+            CancellationToken cancellationToken = default);
     }
 }

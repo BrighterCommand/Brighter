@@ -50,8 +50,7 @@ namespace GreetingsWorker
                             makeChannels: OnMissingChannel.Create,
                             requeueCount: 3,
                             isAsync: true,
-                            noOfPerformers: 2,
-                            sqlFilter: ""),
+                            noOfPerformers: 2),
                         new AzureServiceBusSubscription<GreetingEvent>(
                             new SubscriptionName(GreetingEventMessageMapper.Topic),
                             new ChannelName(subscriptionName),

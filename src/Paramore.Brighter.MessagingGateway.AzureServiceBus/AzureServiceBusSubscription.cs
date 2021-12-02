@@ -7,8 +7,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// </summary>
     public class AzureServiceBusSubscription : Subscription
     {
-        public string SqlFilter { get; }
-        
+        public AzureServiceBusSubscriptionConfiguration Configuration { get; }
+
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
         /// </summary>
@@ -25,6 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public AzureServiceBusSubscription(
             Type dataType,
             SubscriptionName name = null,
@@ -39,11 +40,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            string sqlFilter = "")
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
                 makeChannels)
         {
-            SqlFilter = sqlFilter;
+            Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
         }
     }
 
@@ -68,6 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public AzureServiceBusSubscription(
             SubscriptionName name = null,
             ChannelName channelName = null,
@@ -81,10 +83,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            string sqlFilter = "")
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
                 timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
-                isAsync, channelFactory, makeChannels, sqlFilter)
+                isAsync, channelFactory, makeChannels, subscriptionConfiguration)
         {
         }
     }

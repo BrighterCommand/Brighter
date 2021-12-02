@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
 using FluentAssertions;
@@ -23,6 +24,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         private readonly string _channelName;
         private readonly ServiceBusClient _serviceBusClient;
         private readonly IAdministrationClientWrapper _administrationClient;
+        private readonly AzureServiceBusSubscriptionConfiguration _subscriptionConfiguration;
 
         public ASBConsumerTests()
         {
@@ -50,9 +52,18 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
 
+            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration()
+            {
+                DeadLetteringOnMessageExpiration = true,
+                DefaultMessageTimeToLive = TimeSpan.FromDays(4),
+                LockDuration = TimeSpan.FromMinutes(3),
+                MaxDeliveryCount = 7,
+                SqlFilter = "1=1"
+            };
+
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
-            _administrationClient.CreateSubscription(_topicName, _channelName, 5);
+            _administrationClient.CreateSubscription(_topicName, _channelName, _subscriptionConfiguration);
 
             _serviceBusClient = clientProvider.GetServiceBusClient();
 
@@ -112,6 +123,20 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             requeuedMessage.Header.DelayedMilliseconds.Should().Be(0);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             requeuedMessage.Body.Value.Should().Be(message.Body.Value);
+        }
+
+        [Fact]
+        public async Task When_A_Subscription_is_created_the_properties_are_set_as_Expected()
+        {
+            var sub = await _administrationClient.GetSubscriptionAsync(_topicName, _channelName, CancellationToken.None);
+
+            sub.DeadLetteringOnMessageExpiration.Should()
+                .Be(_subscriptionConfiguration.DeadLetteringOnMessageExpiration);
+            sub.DefaultMessageTimeToLive.Should().Be(_subscriptionConfiguration.DefaultMessageTimeToLive);
+            sub.LockDuration.Should().Be(_subscriptionConfiguration.LockDuration);
+            sub.MaxDeliveryCount.Should().Be(_subscriptionConfiguration.MaxDeliveryCount);
+
+            //ToDo: Need to Add Test for Filter
         }
 
         public void Dispose()

@@ -41,6 +41,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(_clientProvider);
 
+            AzureServiceBusSubscriptionConfiguration config = new AzureServiceBusSubscriptionConfiguration();
+            if (subscription is AzureServiceBusSubscription sub) config = sub.Configuration;
+
             return new AzureServiceBusConsumer(subscription.RoutingKey, subscription.ChannelName,
                 new AzureServiceBusMessageProducer(nameSpaceManagerWrapper,
                     new ServiceBusSenderProvider(_clientProvider), subscription.MakeChannels), nameSpaceManagerWrapper,
@@ -48,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 makeChannels: subscription.MakeChannels,
                 receiveMode: _ackOnRead ? ServiceBusReceiveMode.ReceiveAndDelete : ServiceBusReceiveMode.PeekLock,
                 batchSize: subscription.BufferSize,
-                sqlFilter: sqlFilter);
+                subscriptionConfiguration: config);
         }
     }
 }
