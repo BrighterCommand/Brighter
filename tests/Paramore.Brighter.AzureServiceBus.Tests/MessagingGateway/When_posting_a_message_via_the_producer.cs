@@ -50,7 +50,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
             var clientProvider = ASBCreds.ASBClientProvider;
             _administrationClient = new AdministrationClientWrapper(clientProvider);
-            _administrationClient.CreateSubscription(_topicName, channelName, 5);
+            _administrationClient.CreateSubscription(_topicName, channelName, new AzureServiceBusSubscriptionConfiguration());
 
             var channelFactory =
                 new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
@@ -64,6 +64,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         public async Task When_posting_a_message_via_the_producer()
         {
             //arrange
+            string testHeader = "TestHeader";
+            string testHeaderValue = "Blah!!!";
+            _message.Header.Bag.Add(testHeader, testHeaderValue);
             await _messageProducer.SendAsync(_message);
 
             var message = _channel.Receive(5000);
@@ -85,6 +88,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             message.Header.DelayedMilliseconds.Should().Be(0);
             //{"Id":"cd581ced-c066-4322-aeaf-d40944de8edd","Value":"Test","WasCancelled":false,"TaskCompleted":false}
             message.Body.Value.Should().Be(_message.Body.Value);
+            message.Header.Bag.Should().Contain(testHeader, testHeaderValue);
         }
 
         public void Dispose()

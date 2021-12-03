@@ -435,12 +435,13 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
+            var offset = (pageNumber - 1) * pageSize;
             var pagingSqlFormat =
-                "SELECT * FROM (SELECT *, ROW_NUMBER() OVER(ORDER BY Timestamp  ASC) As ROWNUMBER FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE ROWNUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND Timestamp < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC";
+                "SELECT * FROM {0} WHERE DISPATCHED IS NULL AND Timestamp < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @OffsetValue";
             var seconds = TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds > 0 ? TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds : 1;
             var parameters = new[]
             {
-                CreateSqlParameter("@PageNumber", pageNumber), CreateSqlParameter("@PageSize", pageSize), CreateSqlParameter("@OutstandingSince", seconds)
+                CreateSqlParameter("@OffsetValue", offset), CreateSqlParameter("@PageSize", pageSize), CreateSqlParameter("@OutstandingSince", seconds)
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);

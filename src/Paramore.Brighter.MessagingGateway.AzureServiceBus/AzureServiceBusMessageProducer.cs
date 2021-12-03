@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -101,8 +102,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
 
                 var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
-                azureServiceBusMessage.ApplicationProperties.Add("MessageType", message.Header.MessageType.ToString());
-                azureServiceBusMessage.ApplicationProperties.Add("HandledCount", message.Header.HandledCount);
+                azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
+                azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
+                foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
+                {
+                    azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
+                }
                 azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
                 azureServiceBusMessage.ContentType = message.Header.ContentType;
                 azureServiceBusMessage.MessageId = message.Header.Id.ToString();
@@ -123,6 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             catch (Exception e)
             {
                 s_logger.LogError(e, "Failed to publish message to topic {Topic} with id {Id}, message will not be retried.", message.Header.Topic, message.Id);
+                throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
             }
             finally
             {

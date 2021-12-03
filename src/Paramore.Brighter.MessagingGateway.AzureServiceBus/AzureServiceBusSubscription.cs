@@ -7,6 +7,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// </summary>
     public class AzureServiceBusSubscription : Subscription
     {
+        public AzureServiceBusSubscriptionConfiguration Configuration { get; }
+
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusSubscription"/>
         /// </summary>
@@ -18,11 +20,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public AzureServiceBusSubscription(
             Type dataType,
             SubscriptionName name = null,
@@ -30,18 +33,18 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int pollDelayInMs = -1,
-            int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
             int requeueCount = -1,
             int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
                 makeChannels)
         {
+            Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
         }
     }
 
@@ -61,29 +64,29 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="noOfPerformers">The no of performers.</param>
         /// <param name="timeoutInMilliseconds">The timeout in milliseconds.</param>
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
-        /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
+        /// <param name="requeueDelayInMs">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
         /// <param name="isAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
         public AzureServiceBusSubscription(
             SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int bufferSize = 1,
             int noOfPerformers = 1,
-            int pollDelayInMs = -1,
-            int noWorkPauseInMs = 500,
             int timeoutInMilliseconds = 400,
             int requeueCount = -1,
             int requeueDelayInMs = 0,
             int unacceptableMessageLimit = 0,
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
-                pollDelayInMs, noWorkPauseInMs, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
-                isAsync, channelFactory, makeChannels)
+                timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
+                isAsync, channelFactory, makeChannels, subscriptionConfiguration)
         {
         }
     }
