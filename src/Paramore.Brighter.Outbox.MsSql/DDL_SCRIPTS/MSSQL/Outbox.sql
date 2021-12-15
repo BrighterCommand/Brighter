@@ -31,4 +31,16 @@ IF ( NOT EXISTS ( SELECT    *
         ON Messages(MessageId);
     END;
 GO
+IF ( NOT EXISTS
+(
+       SELECT *
+       FROM   sys.indexes
+       WHERE  name = 'IQ_Messages__Dispatched'
+       AND    object_id = Object_id('Messages') ) )
+BEGIN
+  PRINT 'Creating a non-unique index on the Dispatched column of the Messages table...';
+  CREATE NONCLUSTERED INDEX IQ_Messages__Dispatched
+  ON Messages(Dispatched ASC);
+END;
+GO
 PRINT 'Done';
