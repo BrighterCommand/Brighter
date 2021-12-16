@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
-            _producer = new KafkaMessageProducerFactory(
+            _producer = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test",

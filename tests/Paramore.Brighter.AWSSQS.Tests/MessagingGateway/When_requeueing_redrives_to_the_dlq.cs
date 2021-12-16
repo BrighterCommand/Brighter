@@ -53,7 +53,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
-            _sender = new SqsMessageProducer(_awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
+            _sender = new SqsMessageProducer(_awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
             
             _sender.ConfirmTopicExists(topicName);
             

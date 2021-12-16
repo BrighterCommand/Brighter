@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             const string groupId = "Kafka Message Producer Sweep Test";
             _output = output;
-            _producer = new KafkaMessageProducerFactory(
+            _producer = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test", 

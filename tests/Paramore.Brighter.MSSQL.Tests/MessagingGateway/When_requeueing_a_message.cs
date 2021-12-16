@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             _subscription = new MsSqlSubscription<MyCommand>(new SubscriptionName(channelName),
                 new ChannelName(topicName), new RoutingKey(topicName));
-            _producer = new MsSqlMessageProducerFactory(testHelper.QueueConfiguration).Create();
+            _producer = new MsSqlProducerRegistryFactory(testHelper.QueueConfiguration).Create();
             _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
         }
 

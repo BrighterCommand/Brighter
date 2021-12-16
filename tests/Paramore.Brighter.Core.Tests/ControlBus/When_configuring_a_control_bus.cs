@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ControlBusBuilderTests()
         {
             var dispatcher = A.Fake<IDispatcher>();
-            var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
+            var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
 
             A.CallTo(() => messageProducerFactory.Create()).Returns(new FakeMessageProducer());
 

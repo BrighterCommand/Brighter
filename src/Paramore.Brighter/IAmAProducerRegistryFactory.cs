@@ -29,12 +29,13 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmAMessageProducerFactory
     /// </summary>
-    public interface IAmAMessageProducerFactory
+    public interface IAmAProducerRegistryFactory
     {
         /// <summary>
         /// Creates message producers.
         /// </summary>
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
-        Dictionary<string, IAmAMessageProducer> Create();
+        IAmAProducerRegistry Create();
+        
     }
 }

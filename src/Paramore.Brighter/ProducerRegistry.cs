@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Paramore.Brighter
 {
-    internal class ProducerRegistry : IAmAProducerRegistry
+    public class ProducerRegistry : IAmAProducerRegistry
     {
 
         private Dictionary<string, IAmAMessageProducer> _messageProducers;

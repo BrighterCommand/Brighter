@@ -96,7 +96,7 @@ namespace GreetingsSender.Adapters
                         {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
                     };
 
-                    var producer = new KafkaMessageProducerFactory(
+                    var producer = new KafkaProducerRegistryFactory(
                             new KafkaMessagingGatewayConfiguration()
                             {
                                 Name = "paramore.brighter.greetingsender", 

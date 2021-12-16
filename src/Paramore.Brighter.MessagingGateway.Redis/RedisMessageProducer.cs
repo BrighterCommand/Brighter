@@ -65,11 +65,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
          public RedisMessageProducer(
              RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-             RedisMessagePublication publication = null)
+             RedisMessagePublication publication)
          
             : base(redisMessagingGatewayConfiguration)
          {
-             _publication = publication ?? new RedisMessagePublication{MakeChannels = OnMissingChannel.Create};
              MaxOutStandingMessages = _publication.MaxOutStandingMessages;
              MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
          }

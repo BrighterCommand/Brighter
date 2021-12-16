@@ -116,18 +116,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-        /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
+        /// <param name="producerRegistry">The collection of producers - clients that connect to a specific transport</param>
         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
         /// <param name="replyQueueSubscriptions">Reply queue subscription</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
+        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAProducerRegistry producerRegistry, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
-            brighterBuilder.Services.AddSingleton(producer);
             
-            if(producer is IAmAMessageProducerSync producerSync)
-                brighterBuilder.Services.AddSingleton(producerSync);
-            if(producer is IAmAMessageProducerAsync producerAsync)
-                brighterBuilder.Services.AddSingleton(producerAsync);
+            brighterBuilder.Services.AddSingleton<IAmAProducerRegistry>(producerRegistry);
             
             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
             

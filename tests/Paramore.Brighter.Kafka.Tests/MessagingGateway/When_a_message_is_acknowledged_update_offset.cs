@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
         {
             _output = output;
-            _producerSync = new KafkaMessageProducerFactory(
+            _producerSync = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test", 

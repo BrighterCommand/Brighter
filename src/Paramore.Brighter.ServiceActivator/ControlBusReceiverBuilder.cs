@@ -50,7 +50,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
         private IAmAChannelFactory _channelFactory;
         private IDispatcher _dispatcher;
-        private IAmAMessageProducerFactory _producerFactory;
+        private IAmAProducerRegistryFactory _producerRegistryFactory;
 
         /// <summary>
         /// We need a dispatcher to pull messages off the control bus and dispatch them out to control bus handlers.
@@ -71,11 +71,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// Message. To enable us to reply we need to have an <see cref="IAmAMessageProducer"/> instance that lets us respond to
         /// the sender (over the control bus).
         /// </summary>
-        /// <param name="producerFactory"></param>
+        /// <param name="producerRegistryFactory"></param>
         /// <returns></returns>
-        public INeedAChannelFactory ProducerFactory(IAmAMessageProducerFactory producerFactory)
+        public INeedAChannelFactory ProducerFactory(IAmAProducerRegistryFactory producerRegistryFactory)
         {
-            _producerFactory = producerFactory;
+            _producerRegistryFactory = producerRegistryFactory;
             return this;
         }
 
@@ -145,12 +145,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var outgoingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
             outgoingMessageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
 
-            //TODO: It doesn't feel quite right that we have to pass this in for both dispatcher channel factory and task queue configuration
-            //as we should be over same broker. But, so far, refactoring either ends up exposing properties of the channel factory, which we don't want
-            //or stalling on the need for channel factory to be broker defined. It is possible the fix is to drop channel factory in favour of passing
-            //in producer and sender. But that's a breaking change to the builder, so contemplating for now. 
-
-            var producer = _producerFactory.Create();
+            var producerRegistry = _producerRegistryFactory.Create();
 
             var outbox = new SinkOutboxSync();
             
@@ -158,7 +153,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .ExternalBus(new MessagingConfiguration(producer, outgoingMessageMapperRegistry), outbox)
+                .ExternalBus(new MessagingConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             
@@ -228,7 +223,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
     public interface INeedAMessageProducerFactory
     {
-        INeedAChannelFactory ProducerFactory(IAmAMessageProducerFactory producerFactory);
+        INeedAChannelFactory ProducerFactory(IAmAProducerRegistryFactory producerRegistryFactory);
     }
 
     /// <summary>
