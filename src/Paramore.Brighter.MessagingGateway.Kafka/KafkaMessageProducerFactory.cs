@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -33,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
-        private readonly KafkaPublication _publication;
+        private readonly IEnumerable<KafkaPublication> _publications;
         private Action<ProducerConfig> _configHook;
 
         /// <summary>
@@ -44,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         public KafkaMessageProducerFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration
-            ) : this(globalConfiguration, new KafkaPublication{MakeChannels = OnMissingChannel.Create})
+            ) : this(globalConfiguration, new KafkaPublication[] {new KafkaPublication{MakeChannels = OnMissingChannel.Create}})
         {
         }
 
@@ -57,10 +58,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="publication">How do we publish, both producer parameters and topic configuration</param>
         public KafkaMessageProducerFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaPublication publication)
+            IEnumerable<KafkaPublication> publications)
         {
             _globalConfiguration = globalConfiguration;
-            _publication = publication;
+            _publications = publications;
             _configHook = null;
         }
         
@@ -69,13 +70,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// to the constructor
         /// </summary>
         /// <returns>An <see cref="IAmAMessageProducerSync"/> that represents a Kafka Message Producer</returns>
-        public IAmAMessageProducerSync Create()
+        public Dictionary<string, IAmAMessageProducer> Create()
         {
-            var producer = new KafkaMessageProducer(_globalConfiguration, _publication);
-            if (_configHook != null)
-                producer.ConfigHook(_configHook);
-            producer.Init();
-            return producer;
+            var publicationsByTopic = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var publication in _publications)
+            {
+
+                var producer = new KafkaMessageProducer(_globalConfiguration, publication);
+                if (_configHook != null)
+                    producer.ConfigHook(_configHook);
+                producer.Init();
+                publicationsByTopic[publication.Topic] = producer;
+            }
+
+            return publicationsByTopic;
         }
 
         /// <summary>

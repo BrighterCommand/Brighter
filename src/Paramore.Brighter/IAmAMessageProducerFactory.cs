@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -30,9 +32,9 @@ namespace Paramore.Brighter
     public interface IAmAMessageProducerFactory
     {
         /// <summary>
-        /// Creates a message producer.
+        /// Creates message producers.
         /// </summary>
-        /// <returns>IAmAMessageProducer.</returns>
-        IAmAMessageProducerSync Create();
+        /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
+        Dictionary<string, IAmAMessageProducer> Create();
     }
 }

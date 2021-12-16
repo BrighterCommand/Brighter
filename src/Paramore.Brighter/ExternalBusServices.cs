@@ -23,9 +23,9 @@ namespace Paramore.Brighter
         internal IAmAnOutboxAsync<Message> AsyncOutbox { get; set; }
 
         internal int OutboxTimeout { get; set; } = 300;
-        internal IAmAMessageProducerSync MessageProducerSync { get; set; }
-        internal IAmAMessageProducerAsync AsyncMessageProducer { get; set; }
-        
+
+        internal IAmAProducerRegistry ProducerRegistry { get; set; }
+
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
@@ -51,15 +51,9 @@ namespace Paramore.Brighter
 
 
             if (disposing)
-            {
-                MessageProducerSync?.Dispose();
-                AsyncMessageProducer?.Dispose();
-            }
-
-            MessageProducerSync = null;
-            AsyncMessageProducer = null;
-
+                ProducerRegistry.CloseAll();
             _disposed = true;
+            
         }
 
         internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
@@ -81,18 +75,13 @@ namespace Paramore.Brighter
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
         }
 
-        internal void CheckOutboxOutstandingLimit()
+        private void CheckOutboxOutstandingLimit()
         {
             bool hasOutBox = (OutBox != null || AsyncOutbox != null);
             if (!hasOutBox)
                 return;
 
-            int maxOutStandingMessages = -1;
-            if (MessageProducerSync != null)
-                maxOutStandingMessages = MessageProducerSync.MaxOutStandingMessages;
-
-            if (AsyncMessageProducer != null)
-                maxOutStandingMessages = AsyncMessageProducer.MaxOutStandingMessages;
+            int maxOutStandingMessages = ProducerRegistry.GetDefaultProducer().MaxOutStandingMessages;
 
             s_logger.LogDebug("Outbox outstanding message count is: {OutstandingMessageCount}", _outStandingCount);
             // Because a thread recalculates this, we may always be in a delay, so we check on entry for the next outstanding item
@@ -102,13 +91,10 @@ namespace Paramore.Brighter
                 throw new OutboxLimitReachedException($"The outbox limit of {maxOutStandingMessages} has been exceeded");
         }
 
-        internal void CheckOutstandingMessages()
+        private void CheckOutstandingMessages()
         {
-            if (MessageProducerSync == null)
-                return;
-
             var now = DateTime.UtcNow;
-            var checkInterval = TimeSpan.FromMilliseconds(MessageProducerSync.MaxOutStandingCheckIntervalMilliSeconds);
+            var checkInterval = TimeSpan.FromMilliseconds(ProducerRegistry.GetDefaultProducer().MaxOutStandingCheckIntervalMilliSeconds);
 
 
             var timeSinceLastCheck = now - _lastOutStandingMessageCheckAt;
@@ -129,8 +115,6 @@ namespace Paramore.Brighter
         {
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
-            if (MessageProducerSync == null)
-                throw new InvalidOperationException("No message producer defined.");
 
             CheckOutboxOutstandingLimit();
 
@@ -142,17 +126,25 @@ namespace Paramore.Brighter
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
-                if (MessageProducerSync is ISupportPublishConfirmation producer)
+                var producer = ProducerRegistry.LookupBy(message.Header.Topic);
+
+                if (producer is IAmAMessageProducerSync producerSync)
                 {
-                    //mark dispatch handled by a callback - set in constructor
-                    Retry(() => { MessageProducerSync.Send(message); });
+                    if (producer is ISupportPublishConfirmation)
+                    {
+                        //mark dispatch handled by a callback - set in constructor
+                        Retry(() => { producerSync.Send(message); });
+                    }
+                    else
+                    {
+                        var sent = Retry(() => { producerSync.Send(message); });
+                        if (sent)
+                            Retry(() => OutBox.MarkDispatched(messageId, DateTime.UtcNow));
+                    }
                 }
                 else
-                {
-                    var sent = Retry(() => { MessageProducerSync.Send(message); });
-                    if (sent)
-                        Retry(() => OutBox.MarkDispatched(messageId, DateTime.UtcNow));
-                }
+                    throw new InvalidOperationException("No sync message producer defined.");
+                   
             }
             
             CheckOutstandingMessages();
@@ -165,8 +157,6 @@ namespace Paramore.Brighter
 
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
-            if (AsyncMessageProducer == null)
-                throw new InvalidOperationException("No async message producer defined.");
 
             CheckOutboxOutstandingLimit();
 
@@ -177,44 +167,49 @@ namespace Paramore.Brighter
                     throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
+                
+                var producer = ProducerRegistry.LookupBy(message.Header.Topic);
 
-                if (MessageProducerSync is ISupportPublishConfirmation producer)
+                if (producer is IAmAMessageProducerAsync producerAsync)
                 {
-                    //mark dispatch handled by a callback - set in constructor
-                    await RetryAsync(
-                            async ct =>
-                                await AsyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                            continueOnCapturedContext,
-                            cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
+                    if (producer is ISupportPublishConfirmation)
+                    {
+                        //mark dispatch handled by a callback - set in constructor
+                        await RetryAsync(
+                                async ct =>
+                                    await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                continueOnCapturedContext,
+                                cancellationToken)
+                            .ConfigureAwait(continueOnCapturedContext);
+                    }
+                    else
+                    {
+
+                        var sent = await RetryAsync(
+                                async ct =>
+                                    await producerAsync.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
+                                continueOnCapturedContext,
+                                cancellationToken)
+                            .ConfigureAwait(continueOnCapturedContext);
+
+                        if (sent)
+                            await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow), 
+                                cancellationToken: cancellationToken);
+                    }
                 }
                 else
-                {
-
-                    var sent = await RetryAsync(
-                            async ct =>
-                                await AsyncMessageProducer.SendAsync(message).ConfigureAwait(continueOnCapturedContext),
-                            continueOnCapturedContext,
-                            cancellationToken)
-                        .ConfigureAwait(continueOnCapturedContext);
-
-                    if (sent)
-                        await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow));
-                }
+                    throw new InvalidOperationException("No async message producer defined.");
             }
             
             CheckOutstandingMessages();
 
         }
 
-        internal bool ConfigureAsyncPublisherCallbackMaybe()
+        internal bool ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer)
         {
-            if (AsyncMessageProducer == null)
-                return false;
-
-            if (AsyncMessageProducer is ISupportPublishConfirmation producer)
+            if (producer is ISupportPublishConfirmation producerSync)
             {
-                producer.OnMessagePublished += async delegate(bool success, Guid id)
+                producerSync.OnMessagePublished += async delegate(bool success, Guid id)
                 {
                     if (success)
                     {
@@ -229,11 +224,11 @@ namespace Paramore.Brighter
             return false;
         }
 
-        internal bool ConfigurePublisherCallbackMaybe()
+        internal bool ConfigurePublisherCallbackMaybe(IAmAMessageProducer producer)
         {
-            if (MessageProducerSync is ISupportPublishConfirmation producer)
+            if (producer is ISupportPublishConfirmation producerSync)
             {
-                producer.OnMessagePublished += delegate(bool success, Guid id)
+                producerSync.OnMessagePublished += delegate(bool success, Guid id)
                 {
                     if (success)
                     {
@@ -269,7 +264,7 @@ namespace Paramore.Brighter
                     if ((OutBox != null) && (OutBox is IAmAnOutboxViewer<Message> outboxViewer))
                     {
                         _outStandingCount = outboxViewer
-                            .OutstandingMessages(MessageProducerSync.MaxOutStandingCheckIntervalMilliSeconds)
+                            .OutstandingMessages(ProducerRegistry.GetDefaultProducer().MaxOutStandingCheckIntervalMilliSeconds)
                             .Count();
                         return;
                     }
@@ -278,7 +273,7 @@ namespace Paramore.Brighter
                     if ((AsyncOutbox != null) && (AsyncOutbox is IAmAnOutboxViewer<Message> asyncOutboxViewer))
                     {
                         _outStandingCount = asyncOutboxViewer
-                            .OutstandingMessages(MessageProducerSync.MaxOutStandingCheckIntervalMilliSeconds)
+                            .OutstandingMessages(ProducerRegistry.GetDefaultProducer().MaxOutStandingCheckIntervalMilliSeconds)
                             .Count();
                         return;
                     }
@@ -341,9 +336,12 @@ namespace Paramore.Brighter
             return true;
         }
 
-        internal void SendViaExternalBus<T, TResponse>(Message outMessage) where T : class, ICall where TResponse : class, IResponse
+        internal void CallViaExternalBus<T, TResponse>(Message outMessage) where T : class, ICall where TResponse : class, IResponse
         {
-            Retry(() => MessageProducerSync.Send(outMessage));
+            //We assume that this only occurs over a blocking producer
+            var producer = ProducerRegistry.LookupBy(outMessage.Header.Topic);
+        if (producer is IAmAMessageProducerSync producerSync)
+                Retry(() => producerSync.Send(outMessage));
         }
         
     }

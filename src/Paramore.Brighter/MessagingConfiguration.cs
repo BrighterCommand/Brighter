@@ -22,6 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+using System.Linq;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -34,16 +37,19 @@ namespace Paramore.Brighter
         /// Gets the message producer.
         /// </summary>
         /// <value>The message producer.</value>
-        public IAmAMessageProducer MessageProducer { get; }
+        public IAmAProducerRegistry ProducerRegistry { get; }
+
         /// <summary>
         /// Gets the message mapper registry.
         /// </summary>
         /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; }
+        
         /// <summary>
         /// When do we timeout writing to the outbox
         /// </summary>
         public int OutboxWriteTimeout { get; }
+        
         /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
         /// this tends to he handled by a Dispatcher not a Command Processor. 
@@ -59,20 +65,20 @@ namespace Paramore.Brighter
         /// <summary>
         /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
         /// </summary>
-        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="producerRegistry">Clients for the external bus by topic they send to. The client details are specialised by transport</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipelie</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
         public MessagingConfiguration(
-            IAmAMessageProducer messageProducer,
+            IAmAProducerRegistry producerRegistry,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,
             IAmAChannelFactory responseChannelFactory = null,
             InboxConfiguration useInbox = null
             )
         {
-            MessageProducer = messageProducer;
+            ProducerRegistry = producerRegistry;
             MessageMapperRegistry = messageMapperRegistry;
             OutboxWriteTimeout = outboxWriteTimeout;
             ResponseChannelFactory = responseChannelFactory;
