@@ -44,9 +44,8 @@ namespace CompetingReceiverConsole
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
                     })
-                        .UseInMemoryOutbox()
-                        .UseExternalBus(new MsSqlMessageProducer(messagingConfiguration))
-                        .AutoFromAssemblies();
+                    .UseInMemoryOutbox()
+                    .AutoFromAssemblies();
 
 
                     services.AddHostedService<ServiceActivatorHostedService>();

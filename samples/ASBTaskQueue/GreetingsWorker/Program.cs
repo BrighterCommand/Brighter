@@ -93,7 +93,6 @@ namespace GreetingsWorker
                             
                         }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
                         .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
-                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(clientProvider))
                         .AutoFromAssemblies();
 
                     services.AddHostedService<ServiceActivatorHostedService>();

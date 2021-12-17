@@ -1,6 +1,5 @@
 ﻿using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
-using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +17,8 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 
 var builder = WebApplication.CreateBuilder(args);
 
-string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
+string dbConnString =
+    "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
 
 //EF
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
@@ -34,7 +34,6 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 string asbEndpoint = ".servicebus.windows.net";
 
 var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoint);
-var producer = AzureServiceBusMessageProducerFactory.Get(asbConnection);
 
 var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
 
@@ -44,7 +43,18 @@ builder.Services
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus(producer)
+    .UseExternalBus(
+        new AzureServiceBusProducerRegistryFactory(
+                asbConnection,
+                new AzureServiceBusPublication[]
+                {
+                    new() { Topic = new RoutingKey("greeting.event") },
+                    new() { Topic = new RoutingKey("greeting.addGreetingCommand") },
+                    new() { Topic = new RoutingKey("greeting.Asyncevent") }
+                }
+            )
+            .Create()
+    )
     .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
     .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
     .MapperRegistry(r =>
