@@ -10,7 +10,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
     {
         private readonly MsSqlConfiguration _msSqlConfiguration;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlProducerRegistryFactory>();
-        private IEnumerable<Publication> _publications; //-- placeholder for future use
+        private readonly IEnumerable<Publication> _publications; //-- placeholder for future use
 
         public MsSqlProducerRegistryFactory(
             MsSqlConfiguration msSqlConfiguration,

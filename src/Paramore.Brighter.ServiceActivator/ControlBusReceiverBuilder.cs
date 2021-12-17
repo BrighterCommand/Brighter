@@ -37,7 +37,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
     /// <summary>
     /// Class ControlBusBuilder.
     /// </summary>
-    public class ControlBusReceiverBuilder : INeedADispatcher, INeedAMessageProducerFactory, INeedAChannelFactory, IAmADispatchBuilder
+    public class ControlBusReceiverBuilder : INeedADispatcher, INeedAProducerRegistryFactory, INeedAChannelFactory, IAmADispatchBuilder
     {
         /// <summary>
         /// The configuration
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         /// <param name="dispatcher">The dispatcher.</param>
         /// <returns>paramore.brighter.serviceactivator.controlbus.INeedAChannelFactory .</returns>
-        public INeedAMessageProducerFactory Dispatcher(IDispatcher dispatcher)
+        public INeedAProducerRegistryFactory Dispatcher(IDispatcher dispatcher)
         {
             _dispatcher = dispatcher;
             return this;
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         /// <param name="producerRegistryFactory"></param>
         /// <returns></returns>
-        public INeedAChannelFactory ProducerFactory(IAmAProducerRegistryFactory producerRegistryFactory)
+        public INeedAChannelFactory ProducerRegistryFactory(IAmAProducerRegistryFactory producerRegistryFactory)
         {
             _producerRegistryFactory = producerRegistryFactory;
             return this;
@@ -218,12 +218,12 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         /// <param name="dispatcher">The dispatcher.</param>
         /// <returns>INeedAChannelFactory.</returns>
-        INeedAMessageProducerFactory Dispatcher(IDispatcher dispatcher);
+        INeedAProducerRegistryFactory Dispatcher(IDispatcher dispatcher);
     }
 
-    public interface INeedAMessageProducerFactory
+    public interface INeedAProducerRegistryFactory
     {
-        INeedAChannelFactory ProducerFactory(IAmAProducerRegistryFactory producerRegistryFactory);
+        INeedAChannelFactory ProducerRegistryFactory(IAmAProducerRegistryFactory producerRegistryFactory);
     }
 
     /// <summary>

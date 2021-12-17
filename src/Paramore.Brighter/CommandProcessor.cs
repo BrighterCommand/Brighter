@@ -153,7 +153,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
-
+            
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
 
             ConfigureCallbacks(producerRegistry);
@@ -199,7 +199,9 @@ namespace Paramore.Brighter
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _replySubscriptions = replySubscriptions;
 
-             ConfigureCallbacks(producerRegistry);
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
+              
+            ConfigureCallbacks(producerRegistry);
         }
 
         /// <summary>
@@ -666,6 +668,8 @@ namespace Paramore.Brighter
                 {
                     if (_bus == null)
                     {
+                        if (producerRegistry == null) throw new ConfigurationException("A producer registry is required to create an external bus");
+                        
                         _bus = new ExternalBusServices();
                         if(outbox is IAmAnOutboxSync<Message> syncOutbox)_bus.OutBox = syncOutbox;
                         if(outbox is IAmAnOutboxAsync<Message> asyncOutbox)_bus.AsyncOutbox = asyncOutbox;

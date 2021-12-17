@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(_dispatcher)
-                .ProducerFactory(messageProducerFactory)
+                .ProducerRegistryFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory());
 
             _controlBus = _busReceiverBuilder.Build("tests");

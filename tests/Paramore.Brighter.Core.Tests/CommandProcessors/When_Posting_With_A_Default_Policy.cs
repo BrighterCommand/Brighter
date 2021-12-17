@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using FluentAssertions;
@@ -47,8 +48,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeOutboxSync = new FakeOutboxSync();
             _fakeMessageProducer = new FakeMessageProducer();
 
+            const string topic = "MyCommand";
             _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -59,7 +61,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new MessagingConfiguration(_fakeMessageProducer, messageMapperRegistry), _fakeOutboxSync)
+                .ExternalBus(new MessagingConfiguration(
+                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}), 
+                    messageMapperRegistry), 
+                    _fakeOutboxSync)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

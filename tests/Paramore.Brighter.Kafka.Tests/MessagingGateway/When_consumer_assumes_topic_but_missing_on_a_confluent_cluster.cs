@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     {
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducerSync _producer;
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
         public KafkaConfluentProducerAssumeTests ()
@@ -65,19 +65,19 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
-            _producer = new KafkaProducerRegistryFactory(
+            _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = SecurityProtocol.SaslSsl,
-                    SaslMechanisms = SaslMechanism.Plain,
+                    SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
+                    SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
                     SaslUsername = userName,
                     SaslPassword = password,
                     SslCaLocation = SupplyCertificateLocation()
                     
                 },
-                new KafkaPublication
+                new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -86,8 +86,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
-                    MakeChannels = OnMissingChannel.Assume //This will not make the topic
-               }).Create(); 
+                    MakeChannels = OnMissingChannel.Create //This will not make the topic
+                }
+                }).Create(); 
   
         }
 
@@ -102,13 +103,16 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 new MessageBody($"test content [{_queueName}]"));
 
             bool messagePublished = false;
-            var producerConfirm = _producer as ISupportPublishConfirmation;
+            
+            
+            var producer = _producerRegistry.LookupBy(_topic);
+            var producerConfirm = producer as ISupportPublishConfirmation;
             producerConfirm.OnMessagePublished += delegate(bool success, Guid id)
             {
                 if (success) messagePublished = true;
             };
             
-            _producer.Send(message);
+            ((IAmAMessageProducerSync)producer).Send(message);
 
             //Give this a chance to succeed - will fail
             Task.Delay(5000);
@@ -118,7 +122,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _producer?.Dispose();
+            _producerRegistry?.Dispose();
         }
     }
 }

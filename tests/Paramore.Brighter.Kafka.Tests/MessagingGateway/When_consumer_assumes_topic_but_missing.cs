@@ -44,29 +44,29 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducerSync _producer;
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
         public KafkaProducerAssumeTests(ITestOutputHelper output)
         {
             _output = output;
-            _producer = new KafkaProducerRegistryFactory(
+            _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Producer Send Test",
+                    Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication
+                new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
-                    ReplicationFactor = 3,
+                    ReplicationFactor = 1,
                     //These timeouts support running on a container using the same host as the tests, 
                     //your production values ought to be lower
-                    MessageTimeoutMs = 10000,
-                    RequestTimeoutMs = 10000,
-                    MakeChannels = OnMissingChannel.Assume //This will not make the topic
-               }).Create(); 
+                    MessageTimeoutMs = 2000,
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }}).Create(); 
             
         }
 
@@ -82,13 +82,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 new MessageBody($"test content [{_queueName}]"));
             
             bool messagePublished = false;
-            var producerConfirm = _producer as ISupportPublishConfirmation;
+            var producer = _producerRegistry.LookupBy(_topic);
+            var producerConfirm = producer as ISupportPublishConfirmation;
             producerConfirm.OnMessagePublished += delegate(bool success, Guid id)
             {
                 if (success) messagePublished = true;
             };
             
-            _producer.Send(message);
+            ((IAmAMessageProducerSync)producer).Send(message);
 
             //Give this a chance to succeed - will fail
             Task.Delay(5000);
@@ -98,7 +99,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _producer?.Dispose();
+            _producerRegistry?.Dispose();
         }
     }
 }

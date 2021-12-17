@@ -50,7 +50,7 @@ namespace Paramore.Brighter
                 return;
 
 
-            if (disposing)
+            if (disposing && ProducerRegistry != null)
                 ProducerRegistry.CloseAll();
             _disposed = true;
             

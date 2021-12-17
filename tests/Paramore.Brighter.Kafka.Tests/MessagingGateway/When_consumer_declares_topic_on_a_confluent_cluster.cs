@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducerSync _producer;
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
 
@@ -68,19 +68,19 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
             
             _output = output;
-            _producer = new KafkaProducerRegistryFactory(
+            _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {bootStrapServer},
-                    SecurityProtocol = SecurityProtocol.SaslSsl,
-                    SaslMechanisms = SaslMechanism.Plain,
+                    SecurityProtocol = Paramore.Brighter.MessagingGateway.Kafka.SecurityProtocol.SaslSsl,
+                    SaslMechanisms = Paramore.Brighter.MessagingGateway.Kafka.SaslMechanism.Plain,
                     SaslUsername = userName,
                     SaslPassword = password,
                     SslCaLocation = SupplyCertificateLocation()
                     
                 },
-                new KafkaPublication
+                new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -89,8 +89,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
-                    MakeChannels = OnMissingChannel.Assume //This will not make the topic
-               }).Create(); 
+                    MakeChannels = OnMissingChannel.Create //This will not make the topic
+                }
+                }).Create(); 
             
             //This should force creation of the topic - will fail if no topic creation code
             _consumer = new KafkaMessageConsumerFactory(
@@ -127,7 +128,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 new MessageBody($"test content [{_queueName}]"));
             
             //This should fail, if consumer can't create the topic as set to Assume
-            _producer.Send(message);
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
 
             Message[] messages = new Message[0];
             int maxTries = 0;
@@ -160,7 +161,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _producer?.Dispose();
+            _producerRegistry?.Dispose();
             _consumer?.Dispose();
         }
     }

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducerSync _producer;
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly KafkaMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
@@ -26,13 +26,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             const string groupId = "Kafka Message Producer Sweep Test";
             _output = output;
-            _producer = new KafkaProducerRegistryFactory(
+            _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication()
+                new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -40,8 +40,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     //These timeouts support running on a container using the same host as the tests, 
                     //your production values ought to be lower
                     MessageTimeoutMs = 2000,
-                    RequestTimeoutMs = 2000
-                }).Create();
+                    RequestTimeoutMs = 2000,
+                    MakeChannels = OnMissingChannel.Create
+                }}).Create();
             
             _consumer = (KafkaMessageConsumer)new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration
@@ -131,7 +132,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         private void SendMessage(Guid messageId)
         {
-            _producer.Send(new Message(
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
                 new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
                 new MessageBody($"test content [{_queueName}]")));
         }
@@ -142,7 +143,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _producer?.Dispose();
+            _producerRegistry?.Dispose();
         }
     }
 }
