@@ -99,7 +99,5 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _consumer.Dispose();
             _messageProducer.Dispose();
         }
-        
-    
    }
 }

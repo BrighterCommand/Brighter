@@ -59,19 +59,15 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
-        public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
-            : this(redisMessagingGatewayConfiguration, new RedisMessagePublication {MakeChannels = OnMissingChannel.Create})
-        {}
-        
          public RedisMessageProducer(
              RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
              RedisMessagePublication publication)
          
             : base(redisMessagingGatewayConfiguration)
          {
+             _publication = publication;
              MaxOutStandingMessages = _publication.MaxOutStandingMessages;
              MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
-             _publication = publication;
          }
 
         public void Dispose()
