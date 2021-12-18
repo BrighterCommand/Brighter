@@ -139,6 +139,7 @@ namespace GreetingsAdapters
                              new RmqPublication[]{
                                  new RmqPublication
                                 {
+                                    Topic = new RoutingKey("GreetingMade"),
                                     MaxOutStandingMessages = 5,
                                     MaxOutStandingCheckIntervalMilliSeconds = 500,
                                     WaitForConfirmsTimeOutInMilliseconds = 1000,
@@ -172,6 +173,7 @@ namespace GreetingsAdapters
                             new RmqPublication[] {
                                 new RmqPublication
                                 {
+                                    Topic = new RoutingKey("GreetingMade"),
                                     MaxOutStandingMessages = 5,
                                     MaxOutStandingCheckIntervalMilliSeconds = 500,
                                     WaitForConfirmsTimeOutInMilliseconds = 1000,
