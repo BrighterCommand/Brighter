@@ -31,7 +31,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var producers = new Dictionary<string, IAmAMessageProducer>();
             foreach (var p in _snsPublications)
             {
-                producers[p.Topic] = new SqsMessageProducer(_connection, p);
+                var producer = new SqsMessageProducer(_connection, p);
+                if (producer.ConfirmTopicExists())
+                    producers[p.Topic] = producer;
+                else
+                    throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
+
             }
 
             return new ProducerRegistry(producers);

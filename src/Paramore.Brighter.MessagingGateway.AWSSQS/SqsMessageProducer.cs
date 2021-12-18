@@ -29,7 +29,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private readonly AWSMessagingGatewayConnection _connection;
         private readonly SnsPublication _publication;
-        private string _topicArn;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqsMessageProducer"/> class.
@@ -42,21 +41,26 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _connection = connection;
             _publication = publication;
 
+            if (publication.TopicArn != null)
+                ChannelTopicArn = publication.TopicArn;
+
             MaxOutStandingMessages = publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingMessages;
         }
         
-       public void ConfirmTopicExists(string topic)
+       public bool ConfirmTopicExists(string topic = null)
        {
            //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
-           if (!string.IsNullOrEmpty(_topicArn))
+           if (string.IsNullOrEmpty(ChannelTopicArn))
            {
-               _topicArn = EnsureTopic(
-                   new RoutingKey(topic),
+               EnsureTopic(
+                   topic != null ? new RoutingKey(topic) : _publication.Topic,
                    _publication.SnsAttributes,
                    _publication.FindTopicBy,
                    _publication.MakeChannels);
            }
+
+           return string.IsNullOrEmpty(ChannelTopicArn);
        }
 
        /// <summary>
@@ -72,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
             {
-                var publisher = new SqsMessagePublisher(_topicArn, client);
+                var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
                 publisher.Publish(message);
             }
         }

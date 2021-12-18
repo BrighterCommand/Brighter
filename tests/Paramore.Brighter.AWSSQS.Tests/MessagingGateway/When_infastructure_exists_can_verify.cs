@@ -66,7 +66,8 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 new SnsPublication
                 {
                     FindTopicBy = TopicFindBy.Name,
-                    MakeChannels = OnMissingChannel.Validate
+                    MakeChannels = OnMissingChannel.Validate,
+                    Topic = new RoutingKey(topicName)
                 }
                 );
 

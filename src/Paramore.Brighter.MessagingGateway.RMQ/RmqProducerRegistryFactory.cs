@@ -16,6 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             IEnumerable<RmqPublication> publications)
         {
             _connection = connection;
+            _publications = publications;
         }
         
         /// <summary>

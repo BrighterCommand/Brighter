@@ -64,7 +64,23 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }}).Create();
-  
+ 
+                _consumer = new KafkaMessageConsumerFactory(
+                     new KafkaMessagingGatewayConfiguration
+                     {
+                         Name = "Kafka Consumer Test",
+                         BootStrapServers = new[] { "localhost:9092" }
+                     })
+                    .Create(new KafkaSubscription<MyCommand>(
+                         channelName: new ChannelName(_queueName), 
+                         routingKey: new RoutingKey(_topic),
+                         groupId: groupId,
+                         numOfPartitions: 1,
+                         replicationFactor: 1,
+                         makeChannels: OnMissingChannel.Create
+                         )
+                 );
+             
         }
 
         [Fact]

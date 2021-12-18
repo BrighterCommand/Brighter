@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
     
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
-        private readonly Publication _publication; //not used for now, but passed in for future use
+        private readonly Publication _publication; 
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
@@ -71,6 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
          {
              MaxOutStandingMessages = _publication.MaxOutStandingMessages;
              MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
+             _publication = publication;
          }
 
         public void Dispose()
