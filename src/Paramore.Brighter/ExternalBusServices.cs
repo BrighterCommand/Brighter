@@ -193,7 +193,7 @@ namespace Paramore.Brighter
                             .ConfigureAwait(continueOnCapturedContext);
 
                         if (sent)
-                            await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow), 
+                            await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(messageId, DateTime.UtcNow, cancellationToken: cancellationToken), 
                                 cancellationToken: cancellationToken);
                     }
                 }
