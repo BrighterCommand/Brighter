@@ -29,6 +29,8 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// <returns>The Sqlite Connection that is in use</returns>
         public MySqlConnection GetConnection()
         {
+            //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
+            _context.Database.CanConnect();
             return (MySqlConnection) _context.Database.GetDbConnection();
         }
 
@@ -37,11 +39,11 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns></returns>
-        public Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<MySqlConnection>();
-            tcs.SetResult((MySqlConnection)_context.Database.GetDbConnection());
-            return tcs.Task;
+            //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
+            await _context.Database.CanConnectAsync(cancellationToken);
+            return (MySqlConnection)_context.Database.GetDbConnection();
         }
 
         /// <summary>

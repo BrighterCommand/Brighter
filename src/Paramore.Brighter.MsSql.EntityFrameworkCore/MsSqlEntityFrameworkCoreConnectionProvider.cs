@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Data;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -20,14 +21,16 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         
         public SqlConnection GetConnection()
         {
+            //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
+            _context.Database.CanConnect();
             return (SqlConnection)_context.Database.GetDbConnection();
         }
 
-        public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<SqlConnection>();
-            tcs.SetResult(GetConnection());
-            return tcs.Task;
+            //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
+            await _context.Database.CanConnectAsync(cancellationToken);
+            return (SqlConnection)_context.Database.GetDbConnection();
         }
 
         public SqlTransaction GetTransaction()
