@@ -54,6 +54,8 @@ namespace GreetingsSender.Web.Controllers
             var greetingAsync = new GreetingAsyncEvent("Deposit Hello from the web");
             var greeting = new GreetingEvent("Deposit Hello from the web");
 
+            await _commandProcessor.DepositPostAsync(greetingAsync);
+
             _context.Greetings.Add(greeting);
             _context.GreetingsAsync.Add(greetingAsync);
             await _context.SaveChangesAsync();

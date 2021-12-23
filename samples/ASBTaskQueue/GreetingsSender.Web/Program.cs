@@ -24,6 +24,7 @@ string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
     o.UseSqlServer(dbConnString);
+    //o.AddInterceptors(new AzureAdAuthenticationDbConnectionInterceptor());
 });
 
 //Services
@@ -67,7 +68,7 @@ if (app.Environment.IsDevelopment())
     var services = serviceScope.ServiceProvider;
     var dbContext = services.GetService<GreetingsDataContext>();
 
-    dbContext.Database.EnsureCreated();
+    //dbContext.Database.EnsureCreated();
 }
 else
 {
