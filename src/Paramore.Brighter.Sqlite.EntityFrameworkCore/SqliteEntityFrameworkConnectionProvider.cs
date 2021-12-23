@@ -29,6 +29,8 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// <returns>The Sqlite Connection that is in use</returns>
         public SqliteConnection GetConnection()
         {
+            //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
+            _context.Database.CanConnect();
             return (SqliteConnection) _context.Database.GetDbConnection();
         }
 
@@ -37,11 +39,11 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns></returns>
-        public Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<SqliteConnection>();
-            tcs.SetResult((SqliteConnection)_context.Database.GetDbConnection());
-            return tcs.Task;
+            //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
+            await _context.Database.CanConnectAsync(cancellationToken);
+            return (SqliteConnection)_context.Database.GetDbConnection();
         }
 
         /// <summary>
