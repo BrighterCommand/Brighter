@@ -49,7 +49,6 @@ namespace Paramore.Brighter
             if (_disposed)
                 return;
 
-
             if (disposing && ProducerRegistry != null)
                 ProducerRegistry.CloseAll();
             _disposed = true;
@@ -203,6 +202,60 @@ namespace Paramore.Brighter
             
             CheckOutstandingMessages();
 
+        }
+
+        internal async Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!HasAsyncOutbox())
+                throw new InvalidOperationException("No async outbox defined.");
+
+            var messages = await AsyncOutbox.GetAsync(posts, OutboxTimeout, cancellationToken);
+
+            s_logger.LogInformation(
+                "{RequestedNumberOfMessages} of {RetrievedNumberOfMessages} retrieved from the Outbox.", posts.Count(),
+                messages.Count());
+
+            await BulkClearOutboxAsync(messages, continueOnCapturedContext, cancellationToken);
+        }
+
+        internal async Task BulkClearOutboxAsync(IEnumerable<Message> posts, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (!HasAsyncOutbox())
+                throw new InvalidOperationException("No async outbox defined.");
+
+            CheckOutboxOutstandingLimit();
+
+            //Chunk into Topics
+            var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
+
+            foreach (var topicBatch in messagesByTopic)
+            {
+                var producer = ProducerRegistry.LookupBy(topicBatch.Key);
+
+                if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
+                {
+                    var messages = topicBatch.ToArray();
+                    s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
+                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, 10, cancellationToken);
+
+                    await foreach (var successfulMessage in dispatchesMessages.WithCancellation(cancellationToken))
+                    {
+                        if (!(producer is ISupportPublishConfirmation))
+                        {
+                            await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(successfulMessage,
+                                DateTime.UtcNow, cancellationToken: cancellationToken), cancellationToken: cancellationToken);
+                        }
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException("No async bulk message producer defined.");
+                }
+            }
+
+            CheckOutstandingMessages();
         }
 
         internal bool ConfigureAsyncPublisherCallbackMaybe(IAmAMessageProducer producer)

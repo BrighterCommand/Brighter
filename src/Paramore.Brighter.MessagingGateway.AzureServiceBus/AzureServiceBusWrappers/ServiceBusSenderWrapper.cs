@@ -48,6 +48,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
         }
 
+        public Task SendAsync(ServiceBusMessage[] messages, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return _serviceBusSender.SendMessagesAsync(messages, cancellationToken);
+        }
+
         public void ScheduleMessage(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime)
         {
             _serviceBusSender.ScheduleMessageAsync(message, scheduleEnqueueTime).Wait();
