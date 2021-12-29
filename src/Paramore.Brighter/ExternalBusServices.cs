@@ -178,7 +178,7 @@ namespace Paramore.Brighter
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
-                if (MessageProducerSync is ISupportPublishConfirmation producer)
+                if (AsyncMessageProducer is ISupportPublishConfirmation producer)
                 {
                     //mark dispatch handled by a callback - set in constructor
                     await RetryAsync(
