@@ -34,12 +34,14 @@ using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
     public class PostgresSqlInbox : IAmAnInbox, IAmAnInboxAsync
     {
         private readonly PostgresSqlInboxConfiguration _configuration;
+        private readonly IPostgreSqlConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlInbox>();
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -51,38 +53,43 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
-         public PostgresSqlInbox(PostgresSqlInboxConfiguration postgresSqlInboxConfiguration)
-         {
-             _configuration = postgresSqlInboxConfiguration;
-             ContinueOnCapturedContext = false;
-         }
-
+        public PostgresSqlInbox(PostgresSqlInboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
+        {
+            _configuration = configuration;
+            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
+            ContinueOnCapturedContext = false;
+        }
 
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-              var parameters = InitAddDbParameters(command, contextKey);
+            var parameters = InitAddDbParameters(command, contextKey);
+            var connection = GetOpenConnection();
 
-              using (var connection = GetConnection())
-              {
-                  connection.Open();
-                  var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                  try
-                  {
-                      sqlcmd.ExecuteNonQuery();
-                  }
-                  catch (PostgresException sqlException)
-                  {
-                      if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                      {
-                          s_logger.LogWarning(
-                              "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                              command.Id);
-                          return;
-                      }
-
-                      throw;
-                  }
-              }
+            try
+            {
+                using (var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds))
+                {
+                    sqlcmd.ExecuteNonQuery();
+                }
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    s_logger.LogWarning(
+                        "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
+                }
+                throw;
+            }
+            finally
+            {
+                if (!_connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction)
+                    connection.Close();
+            }
         }
 
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
@@ -90,8 +97,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             var sql = $"SELECT * FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandId", id),
-                CreateNpgsqlParameter("ContextKey", contextKey)
+                InitNpgsqlParameter("CommandId", id),
+                InitNpgsqlParameter("ContextKey", contextKey)
             };
 
             return ExecuteCommand(command => ReadCommand<T>(command.ExecuteReader(), id), sql, timeoutInMilliseconds, parameters);
@@ -102,38 +109,44 @@ namespace Paramore.Brighter.Inbox.Postgres
             var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandId", id),
-                CreateNpgsqlParameter("ContextKey", contextKey)
+                InitNpgsqlParameter("CommandId", id),
+                InitNpgsqlParameter("ContextKey", contextKey)
             };
 
             return ExecuteCommand(command => command.ExecuteReader().HasRows, sql, timeoutInMilliseconds, parameters);
         }
 
         public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
+            var connection = await GetOpenConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            using (var connection = GetConnection())
+            try
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                try
+                using (var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds))
                 {
                     await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
-                catch (PostgresException sqlException)
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
-                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                    {
-                        s_logger.LogWarning(
-                            "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                        return;
-                    }
-
-                    throw;
+                    s_logger.LogWarning(
+                        "PostgresSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
                 }
+
+                throw;
+            }
+            finally
+            {
+                if (!_connectionProvider.IsSharedConnection)
+                    await connection.DisposeAsync().ConfigureAwait(ContinueOnCapturedContext);
+                else if (!_connectionProvider.HasOpenTransaction)
+                    await connection.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
             }
         }
 
@@ -143,8 +156,8 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandId", id),
-                CreateNpgsqlParameter("ContextKey", contextKey)
+                InitNpgsqlParameter("CommandId", id),
+                InitNpgsqlParameter("ContextKey", contextKey)
             };
 
             return await ExecuteCommandAsync(
@@ -161,8 +174,8 @@ namespace Paramore.Brighter.Inbox.Postgres
             var sql = $"SELECT DISTINCT CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @CommandId AND ContextKey = @ContextKey FETCH FIRST 1 ROWS ONLY";
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandId", id),
-                CreateNpgsqlParameter("ContextKey", contextKey)
+                InitNpgsqlParameter("CommandId", id),
+                InitNpgsqlParameter("ContextKey", contextKey)
             };
 
             return await ExecuteCommandAsync<bool>(
@@ -178,12 +191,27 @@ namespace Paramore.Brighter.Inbox.Postgres
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private NpgsqlConnection GetConnection()
+        private NpgsqlConnection GetOpenConnection()
         {
-            return new NpgsqlConnection(_configuration.ConnectionString);
+            NpgsqlConnection connection = _connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+
+            return connection;
         }
 
-        private NpgsqlParameter CreateNpgsqlParameter(string parametername, object value)
+        private async Task<NpgsqlConnection> GetOpenConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            NpgsqlConnection connection = await _connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+            return connection;
+        }
+
+        private NpgsqlParameter InitNpgsqlParameter(string parametername, object value)
         {
             if (value != null)
                 return new NpgsqlParameter(parametername, value);
@@ -194,10 +222,9 @@ namespace Paramore.Brighter.Inbox.Postgres
         private DbCommand InitAddDbCommand(DbConnection connection, DbParameter[] parameters, int timeoutInMilliseconds)
         {
             var command = connection.CreateCommand();
-            var sql = string.Format(
+            command.CommandText = string.Format(
                 "INSERT INTO {0} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) VALUES (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)",
                 _configuration.InBoxTableName);
-            command.CommandText = sql;
             command.Parameters.AddRange(parameters);
             return command;
         }
@@ -207,11 +234,11 @@ namespace Paramore.Brighter.Inbox.Postgres
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateNpgsqlParameter("CommandID", command.Id),
-                CreateNpgsqlParameter("CommandType", typeof (T).Name),
-                CreateNpgsqlParameter("CommandBody", commandJson),
+                InitNpgsqlParameter("CommandID", command.Id),
+                InitNpgsqlParameter("CommandType", typeof (T).Name),
+                InitNpgsqlParameter("CommandBody", commandJson),
                 new NpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz) {Value = DateTimeOffset.UtcNow},
-                CreateNpgsqlParameter("ContextKey", contextKey)
+                InitNpgsqlParameter("ContextKey", contextKey)
             };
             return parameters;
         }
@@ -219,16 +246,27 @@ namespace Paramore.Brighter.Inbox.Postgres
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            var connection = GetOpenConnection();
 
-                connection.Open();
-                var item = execute(command);
-                return item;
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    if (timeoutInMilliseconds != -1)
+                        command.CommandTimeout = timeoutInMilliseconds;
+
+                    command.CommandText = sql;
+                    command.Parameters.AddRange(parameters);
+
+                    return execute(command);
+                }
+            }
+            finally
+            {
+                if (!_connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!_connectionProvider.HasOpenTransaction)
+                    connection.Close();
             }
         }
 
@@ -236,19 +274,30 @@ namespace Paramore.Brighter.Inbox.Postgres
             Func<DbCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
-            CancellationToken cancellationToken = default(CancellationToken),
+            CancellationToken cancellationToken = default,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            var connection = await GetOpenConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                return item;
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    if (timeoutInMilliseconds != -1)
+                        command.CommandTimeout = timeoutInMilliseconds;
+
+                    command.CommandText = sql;
+                    command.Parameters.AddRange(parameters);
+
+                    return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
+                }
+            }
+            finally
+            {
+                if (!_connectionProvider.IsSharedConnection)
+                    await connection.DisposeAsync().ConfigureAwait(ContinueOnCapturedContext);
+                else if (!_connectionProvider.HasOpenTransaction)
+                    await connection.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
             }
         }
 

@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.28922.388
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31912.275
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{235DE1F1-E71B-4817-8E27-3B34FF006E4C}"
 	ProjectSection(SolutionItems) = preProject
@@ -247,7 +247,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_MySqlMigrations",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsScopedReceiverConsole", "samples\ASBTaskQueue\GreetingsScopedReceiverConsole\GreetingsScopedReceiverConsole.csproj", "{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWorker", "samples\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj", "{93589653-2B49-4818-BE98-FE6F16EC72EC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWorker", "samples\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj", "{93589653-2B49-4818-BE98-FE6F16EC72EC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.PostgreSql", "src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj", "{08E6D0F8-B6CE-454F-8761-77731D99F743}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.PostgreSql.EntityFrameworkCore", "src\Paramore.Brighter.PostgreSql.EntityFrameworkCore\Paramore.Brighter.PostgreSql.EntityFrameworkCore.csproj", "{AA85493A-4120-4DA0-BAA5-CBF34D238A64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1327,6 +1331,30 @@ Global
 		{93589653-2B49-4818-BE98-FE6F16EC72EC}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{93589653-2B49-4818-BE98-FE6F16EC72EC}.Release|x86.ActiveCfg = Release|Any CPU
 		{93589653-2B49-4818-BE98-FE6F16EC72EC}.Release|x86.Build.0 = Release|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Debug|x86.Build.0 = Debug|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Release|Any CPU.Build.0 = Release|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Release|x86.ActiveCfg = Release|Any CPU
+		{08E6D0F8-B6CE-454F-8761-77731D99F743}.Release|x86.Build.0 = Release|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Debug|x86.Build.0 = Debug|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Release|x86.ActiveCfg = Release|Any CPU
+		{AA85493A-4120-4DA0-BAA5-CBF34D238A64}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
