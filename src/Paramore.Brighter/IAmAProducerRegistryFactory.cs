@@ -22,17 +22,20 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAMessageProducerFactory
     /// </summary>
-    public interface IAmAMessageProducerFactory
+    public interface IAmAProducerRegistryFactory
     {
         /// <summary>
-        /// Creates a message producer.
+        /// Creates message producers.
         /// </summary>
-        /// <returns>IAmAMessageProducer.</returns>
-        IAmAMessageProducerSync Create();
+        /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
+        IAmAProducerRegistry Create();
+        
     }
 }

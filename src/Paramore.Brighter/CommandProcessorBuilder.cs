@@ -71,7 +71,7 @@ namespace Paramore.Brighter
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAnOutbox<Message> _outbox;
-        private IAmAMessageProducer _messagingGateway;
+        private IAmAProducerRegistry _producers;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
@@ -165,7 +165,7 @@ namespace Paramore.Brighter
         public INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
         {
             _useExternalBus = true;
-            _messagingGateway = configuration.MessageProducer;
+            _producers = configuration.ProducerRegistry;
             _outbox = outbox;
             _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
@@ -193,7 +193,7 @@ namespace Paramore.Brighter
         {
             _useRequestReplyQueues = true;
             _replySubscriptions = subscriptions;
-            _messagingGateway = configuration.MessageProducer;
+            _producers = configuration.ProducerRegistry;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
@@ -239,7 +239,7 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
                     outBox: _outbox,
-                    messageProducer: _messagingGateway,
+                    producerRegistry: _producers,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
@@ -255,7 +255,7 @@ namespace Paramore.Brighter
                     mapperRegistry: _messageMapperRegistry,
                     replySubscriptions: _replySubscriptions,
                     outBox: _outbox,
-                    messageProducer: _messagingGateway,
+                    producerRegistry: _producers,
                     responseChannelFactory: _responseChannelFactory,
                     boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
                     );

@@ -6,34 +6,36 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// <summary>
     /// Factory class for creating instances of <see cref="AzureServiceBusMessageProducer"/>
     /// </summary>
-    public static class AzureServiceBusMessageProducerFactory
+    internal static class AzureServiceBusMessageProducerFactory
     {
         /// <summary>
-        /// Factory to create an Azure Service Bus Consumer
+        /// Factory to create an Azure Service Bus Producer
         /// </summary>
         /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
-        /// <param name="makeChannel">Mode to create channels <see cref="OnMissingChannel"/></param>
+        /// <param name="asbPublication">Describes the parameters for the producer</param>
         /// <returns>A Message Producer</returns>
-        public static AzureServiceBusMessageProducer Get(AzureServiceBusConfiguration configuration,
-            OnMissingChannel makeChannel = OnMissingChannel.Create)
+        public static AzureServiceBusMessageProducer Get(
+            AzureServiceBusConfiguration configuration,
+            AzureServiceBusPublication asbPublication)
         {
             var clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
-            return Get(clientProvider, makeChannel);
+            return Get(clientProvider, asbPublication);
         }
 
         /// <summary>
-        /// Factory to create an Azure Service Bus Consumer
+        /// Factory to create an Azure Service Bus Producer
         /// </summary>
-        /// <param name="clientProvider">A client Provider <see cref="IServiceBusClientProvider"/> to determine how to connect to ASB</param>
-        /// <param name="makeChannel">Mode to create channels <see cref="OnMissingChannel"/></param>
-        /// <returns>A Message Producer</returns>
-        public static AzureServiceBusMessageProducer Get(IServiceBusClientProvider clientProvider,
-            OnMissingChannel makeChannel = OnMissingChannel.Create)
+        /// <param name="clientProvider">The connection to ASB</param>
+        /// <param name="asbPublication">Describes the parameters for the producer</param>
+        /// <returns></returns>
+        public static AzureServiceBusMessageProducer Get(
+            IServiceBusClientProvider clientProvider,
+            AzureServiceBusPublication asbPublication)
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);
             var topicClientProvider = new ServiceBusSenderProvider(clientProvider);
 
-            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, makeChannel);
+            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, asbPublication.MakeChannels);
         }
     }
 }

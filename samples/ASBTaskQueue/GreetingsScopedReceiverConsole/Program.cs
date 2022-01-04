@@ -63,7 +63,6 @@ namespace GreetingsScopedReceiverConsole
                             options.UseScoped = true;
                         })
                         .UseInMemoryOutbox()
-                        .UseExternalBus(AzureServiceBusMessageProducerFactory.Get(asbClientProvider))
                         .AutoFromAssemblies();
 
                     services.AddHostedService<ServiceActivatorHostedService>();

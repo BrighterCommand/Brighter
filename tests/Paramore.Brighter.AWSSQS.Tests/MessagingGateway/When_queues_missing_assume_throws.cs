@@ -33,7 +33,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //create the topic, we want the queue to be the issue
             //We need to create the topic at least, to check the queues
             var producer = new SqsMessageProducer(awsConnection, 
-                new SqsPublication
+                new SnsPublication
                 {
                     MakeChannels = OnMissingChannel.Create 
                 });
