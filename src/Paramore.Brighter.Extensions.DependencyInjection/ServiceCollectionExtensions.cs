@@ -116,18 +116,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-        /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
+        /// <param name="producerRegistry">The collection of producers - clients that connect to a specific transport</param>
         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
         /// <param name="replyQueueSubscriptions">Reply queue subscription</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
+        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAProducerRegistry producerRegistry, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
-            brighterBuilder.Services.AddSingleton(producer);
             
-            if(producer is IAmAMessageProducerSync producerSync)
-                brighterBuilder.Services.AddSingleton(producerSync);
-            if(producer is IAmAMessageProducerAsync producerAsync)
-                brighterBuilder.Services.AddSingleton(producerAsync);
+            brighterBuilder.Services.AddSingleton<IAmAProducerRegistry>(producerRegistry);
             
             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
             
@@ -184,8 +180,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (outbox == null) outbox = new InMemoryOutbox();
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
 
-            var producer = provider.GetService<IAmAMessageProducerSync>();
-            var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
+            var producerRegistry = provider.GetService<IAmAProducerRegistry>();
 
             var needHandlers = CommandProcessorBuilder.With();
 
@@ -206,22 +201,22 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             INeedARequestContext externalBusBuilder;
             if (options.ChannelFactory is null)
             {
-                externalBusBuilder = producer == null
+                externalBusBuilder = producerRegistry == null
                     ? messagingBuilder.NoExternalBus()
-                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
+                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producerRegistry, messageMapperRegistry), outbox, overridingConnectionProvider);
             }
             else
             {
                 // If Producer has been added to DI
-                if (producer == null)
+                if (producerRegistry == null)
                 {
                     externalBusBuilder = messagingBuilder.NoExternalBus();
                 }
                 else
                 {
                     externalBusBuilder = useRequestResponse.RPC
-                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(producer, messageMapperRegistry, responseChannelFactory: options.ChannelFactory), outbox, useRequestResponse.ReplyQueueSubscriptions)
-                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
+                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(producerRegistry, messageMapperRegistry, responseChannelFactory: options.ChannelFactory), outbox, useRequestResponse.ReplyQueueSubscriptions)
+                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producerRegistry, messageMapperRegistry), outbox, overridingConnectionProvider);
                 }
             }
 

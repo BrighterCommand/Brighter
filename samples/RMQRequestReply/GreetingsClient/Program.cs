@@ -67,7 +67,18 @@ namespace GreetingsSender
                     options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                 })
                 .UseInMemoryOutbox()
-                .UseExternalBus(producer, true, replySubscriptions)
+                .UseExternalBus(
+                    new RmqProducerRegistryFactory(
+                        rmqConnection,
+                        new RmqPublication[]
+                        {
+                            new RmqPublication()
+                            {
+                                Topic = new RoutingKey("Greeting.Request")
+                            }
+                        }).Create(), 
+                    true, 
+                    replySubscriptions)
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

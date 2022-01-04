@@ -55,21 +55,17 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
     
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
-        private readonly Publication _publication; //not used for now, but passed in for future use
+        private readonly Publication _publication; 
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
-        public RedisMessageProducer(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
-            : this(redisMessagingGatewayConfiguration, new RedisMessagePublication {MakeChannels = OnMissingChannel.Create})
-        {}
-        
          public RedisMessageProducer(
              RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-             RedisMessagePublication publication = null)
+             RedisMessagePublication publication)
          
             : base(redisMessagingGatewayConfiguration)
          {
-             _publication = publication ?? new RedisMessagePublication{MakeChannels = OnMissingChannel.Create};
+             _publication = publication;
              MaxOutStandingMessages = _publication.MaxOutStandingMessages;
              MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
          }

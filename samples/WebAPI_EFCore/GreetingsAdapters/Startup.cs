@@ -130,20 +130,22 @@ namespace GreetingsAdapters
                          options.MapperLifetime = ServiceLifetime.Singleton;
                          options.PolicyRegistry = policyRegistry;
                      })
-                     .UseExternalBus(new RmqMessageProducer(
+                     .UseExternalBus(new RmqProducerRegistryFactory(
                              new RmqMessagingGatewayConnection
                              {
                                  AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                                  Exchange = new Exchange("paramore.brighter.exchange"),
                              },
-                             new RmqPublication
-                             {
-                                 MaxOutStandingMessages = 5,
-                                 MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                 WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                 MakeChannels = OnMissingChannel.Create
-                             }
-                         )
+                             new RmqPublication[]{
+                                 new RmqPublication
+                                {
+                                    Topic = new RoutingKey("GreetingMade"),
+                                    MaxOutStandingMessages = 5,
+                                    MaxOutStandingCheckIntervalMilliSeconds = 500,
+                                    WaitForConfirmsTimeOutInMilliseconds = 1000,
+                                    MakeChannels = OnMissingChannel.Create
+                                }}
+                         ).Create()
                      )
                      .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
                      .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
@@ -162,20 +164,22 @@ namespace GreetingsAdapters
                         options.MapperLifetime = ServiceLifetime.Singleton;
                         options.PolicyRegistry = policyRegistry;
                     })
-                    .UseExternalBus(new RmqMessageProducer(
+                    .UseExternalBus(new RmqProducerRegistryFactory(
                             new RmqMessagingGatewayConnection
                             {
                                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
                                 Exchange = new Exchange("paramore.brighter.exchange"),
                             },
-                            new RmqPublication
-                            {
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        )
+                            new RmqPublication[] {
+                                new RmqPublication
+                                {
+                                    Topic = new RoutingKey("GreetingMade"),
+                                    MaxOutStandingMessages = 5,
+                                    MaxOutStandingCheckIntervalMilliSeconds = 500,
+                                    WaitForConfirmsTimeOutInMilliseconds = 1000,
+                                    MakeChannels = OnMissingChannel.Create
+                                }}
+                        ).Create()
                     )
                     .UseMySqlOutbox(new MySqlConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
                     .UseMySqTransactionConnectionProvider(typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)

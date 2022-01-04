@@ -30,11 +30,20 @@ namespace GreetingsPumper
                     if (new CredentialProfileStoreChain().TryGetAWSCredentials("default", out var credentials))
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
-                        var producer = new SqsMessageProducer(awsConnection);
 
                         services.AddBrighter()
                             .UseInMemoryOutbox()
-                            .UseExternalBus(producer)
+                            .UseExternalBus(new SnsProducerRegistryFactory(
+                                awsConnection,
+                                new SnsPublication[]
+                                {
+                                    new SnsPublication()
+                                    {
+                                       Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName())
+                                    }
+                                }
+                                ).Create()
+                            )
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
                     }
 

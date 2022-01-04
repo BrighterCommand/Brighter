@@ -84,7 +84,6 @@ namespace GreetingsReceiverConsole
                         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     })
                     .UseInMemoryOutbox()
-                    .UseExternalBus(new RmqMessageProducer(rmqConnection))
                     .AutoFromAssemblies();
 
                     

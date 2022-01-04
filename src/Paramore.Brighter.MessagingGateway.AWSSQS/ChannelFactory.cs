@@ -160,7 +160,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
                 else
                 {
-                    throw new InvalidOperationException($"Could not create queue: {_subscription.ChannelName.Value} subscribed to {_channelTopicArn} on {_awsConnection.Region}");
+                    throw new InvalidOperationException($"Could not create queue: {_subscription.ChannelName.Value} subscribed to {ChannelTopicArn} on {_awsConnection.Region}");
                 }
             }
             catch (QueueDeletedRecentlyException ex)
@@ -268,7 +268,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void SubscribeToTopic(AmazonSQSClient sqsClient, AmazonSimpleNotificationServiceClient snsClient)
         {
-            var subscription = snsClient.SubscribeQueueAsync(_channelTopicArn, sqsClient, _queueUrl).Result;
+            var subscription = snsClient.SubscribeQueueAsync(ChannelTopicArn, sqsClient, _queueUrl).Result;
             if (!string.IsNullOrEmpty(subscription))
             {
                 //We need to support raw messages to allow the use of message attributes
@@ -285,7 +285,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             else
             {
                 throw new InvalidOperationException(
-                    $"Could not subscribe to topic: {_channelTopicArn} from queue: {_queueUrl} in region {_awsConnection.Region}");
+                    $"Could not subscribe to topic: {ChannelTopicArn} from queue: {_queueUrl} in region {_awsConnection.Region}");
             }
         }
 
@@ -344,7 +344,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             ListSubscriptionsByTopicResponse response;
             do
             {
-                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = _channelTopicArn}).GetAwaiter().GetResult();
+                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = ChannelTopicArn}).GetAwaiter().GetResult();
                 exists = response.Subscriptions.Any(sub => (sub.Protocol.ToLower() == "sqs") && (sub.Endpoint == queueArn));
             } while (!exists && response.NextToken != null);
 
@@ -383,7 +383,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
             using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
             {
-                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(_channelTopicArn);
+                (bool exists, string topicArn) = new ValidateTopicByArn(snsClient).Validate(ChannelTopicArn);
                 if (exists)
                 {
                     try
@@ -395,7 +395,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     catch (Exception)
                     {
                         //don't break on an exception here, if we can't delete, just exit
-                        s_logger.LogError("Could not delete topic {TopicResourceName}", _channelTopicArn);
+                        s_logger.LogError("Could not delete topic {TopicResourceName}", ChannelTopicArn);
                     }
                 }
             }
@@ -403,7 +403,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
         private void DeleteTopic(AmazonSimpleNotificationServiceClient snsClient)
         {
-            snsClient.DeleteTopicAsync(_channelTopicArn).GetAwaiter().GetResult();
+            snsClient.DeleteTopicAsync(ChannelTopicArn).GetAwaiter().GetResult();
         }
 
 
@@ -426,13 +426,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             ListSubscriptionsByTopicResponse response;
             do
             {
-                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = _channelTopicArn}).GetAwaiter().GetResult();
+                response = snsClient.ListSubscriptionsByTopicAsync(new ListSubscriptionsByTopicRequest {TopicArn = ChannelTopicArn}).GetAwaiter().GetResult();
                 foreach (var sub in response.Subscriptions)
                 {
                     var unsubscribe = snsClient.UnsubscribeAsync(new UnsubscribeRequest {SubscriptionArn = sub.SubscriptionArn}).GetAwaiter().GetResult();
                     if (unsubscribe.HttpStatusCode != HttpStatusCode.OK)
                     {
-                        s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}", _channelTopicArn, sub.SubscriptionArn);
+                        s_logger.LogError("Error unsubscribing from {TopicResourceName} for sub {ChannelResourceName}", ChannelTopicArn, sub.SubscriptionArn);
                     }
                 }
             } while (response.NextToken != null);

@@ -24,11 +24,14 @@ namespace GreetingsSender
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
             var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
-            var producer = new MsSqlMessageProducer(messagingConfiguration);
 
             serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
-                .UseExternalBus(producer)
+                .UseExternalBus(new MsSqlProducerRegistryFactory(
+                    messagingConfiguration,
+                    new Publication[] {new Publication()}
+                    )
+                    .Create())
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
