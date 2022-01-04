@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 },
                 messageMapperRegistry,
                 new InMemoryOutbox(),
-                new FakeMessageProducer(),
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyRequest", new FakeMessageProducer()},}),
                 replySubs,
                 responseChannelFactory: new InMemoryChannelFactory());
             

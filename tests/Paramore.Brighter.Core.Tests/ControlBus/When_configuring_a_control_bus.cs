@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using FakeItEasy;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -41,14 +42,15 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ControlBusBuilderTests()
         {
             var dispatcher = A.Fake<IDispatcher>();
-            var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
+            var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
 
-            A.CallTo(() => messageProducerFactory.Create()).Returns(new FakeMessageProducer());
+            A.CallTo(() => messageProducerFactory.Create())
+                .Returns(new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyTopic", new FakeMessageProducer()},}));
 
             _busReceiverBuilder = ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(dispatcher)
-                .ProducerFactory(messageProducerFactory)
+                .ProducerRegistryFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory()) as ControlBusReceiverBuilder;
         }
 

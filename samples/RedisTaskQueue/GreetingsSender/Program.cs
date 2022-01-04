@@ -90,11 +90,19 @@ namespace GreetingsSender
                         MaxPoolSize = 10,
                         MessageTimeToLive = TimeSpan.FromMinutes(10)
                     };
-                    var producer = new RedisMessageProducer(redisConnection);
                     
                     collection.AddBrighter()
                         .UseInMemoryOutbox()
-                        .UseExternalBus(producer)
+                        .UseExternalBus(new RedisProducerRegistryFactory(
+                            redisConnection,
+                            new RedisMessagePublication[]
+                                {
+                                    new RedisMessagePublication
+                                    {
+                                        Topic = new RoutingKey("greeting.event")
+                                    }
+                                }
+                            ).Create())
                         .AutoFromAssemblies();
                 });
     }

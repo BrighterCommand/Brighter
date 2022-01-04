@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         protected static readonly ILogger s_logger = ApplicationLogging.CreateLogger<AWSMessagingGateway>();
         protected AWSMessagingGatewayConnection _awsConnection;
-        protected string _channelTopicArn;
+        protected string ChannelTopicArn;
 
         public AWSMessagingGateway(AWSMessagingGatewayConnection awsConnection)
         {
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
                 ValidateTopic(topic, topicFindBy, makeTopic);
             else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
-            return _channelTopicArn;
+            return ChannelTopicArn;
         }
 
         private void CreateTopic(RoutingKey topicName, SnsAttributes snsAttributes)
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
                 
                 if (!string.IsNullOrEmpty(createTopic.TopicArn))
-                    _channelTopicArn = createTopic.TopicArn;
+                    ChannelTopicArn = createTopic.TopicArn;
                 else
                     throw new InvalidOperationException($"Could not create Topic topic: {topicName} on {_awsConnection.Region}");
             }
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             IValidateTopic topicValidationStrategy = GetTopicValidationStrategy(findTopicBy);
             (bool exists, string topicArn) = topicValidationStrategy.Validate(topic);
             if (exists)
-                _channelTopicArn = topicArn;
+                ChannelTopicArn = topicArn;
             else
                 throw new BrokerUnreachableException(
                     $"Topic validation error: could not find topic {topic}. Did you want Brighter to create infrastructure?");

@@ -34,16 +34,18 @@ namespace GreetingsPumper
                             Exchange = new Exchange("paramore.brighter.exchange")
 
                         };
-                        var producer = new RmqMessageProducer(
-                            connection:gatewayConnection, 
-                            new RmqPublication
-                            {
-                                MakeChannels =OnMissingChannel.Create
-                            });
-
+                        
                         services.AddBrighter()
                             .UseInMemoryOutbox()
-                            .UseExternalBus(producer)
+                            .UseExternalBus(new RmqProducerRegistryFactory(
+                                gatewayConnection,
+                                new RmqPublication[]
+                                {
+                                    new()
+                                    {
+                                        Topic = new RoutingKey("greeting.event")
+                                    }
+                                }).Create())
                             .UseOutboxSweeper()
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 

@@ -47,11 +47,10 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
-            //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
+            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
         }
 
 
@@ -87,8 +86,9 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _channelFactory.DeleteTopic();
-            _channelFactory.DeleteQueue();
+            _channelFactory?.DeleteTopic();
+            _channelFactory?.DeleteQueue();
+            _messageProducer?.Dispose();
         }
         
         private DateTime RoundToSeconds(DateTime dateTime)

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,10 +28,10 @@ namespace Tests
         }
 
         [Fact]
-        public void WithProducer()
+        public void WithProducerRegistry()
         {
             var serviceCollection = new ServiceCollection();
-            var producer = new FakeProducerSync();
+            var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() { { "MyTopic", new FakeProducerSync() }, });
             
             serviceCollection
                 .AddBrighter()

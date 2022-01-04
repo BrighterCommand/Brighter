@@ -15,7 +15,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
     {
         private readonly Message _message;
         private readonly IAmAChannel _channel;
-        private readonly AzureServiceBusMessageProducer _messageProducer;
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly ASBTestCommand _command;
         private readonly Guid _correlationId;
         private readonly string _contentType;
@@ -56,8 +56,14 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 new AzureServiceBusChannelFactory(new AzureServiceBusConsumerFactory(clientProvider, false));
             _channel = channelFactory.CreateChannel(subscription);
 
-            
-            _messageProducer = AzureServiceBusMessageProducerFactory.Get(clientProvider);
+            _producerRegistry = new AzureServiceBusProducerRegistryFactory(
+                clientProvider,
+                new AzureServiceBusPublication[]
+                    {
+                        new AzureServiceBusPublication { Topic = new RoutingKey(_topicName) }
+                    }
+                )
+                .Create();
         }
 
         [Fact]
@@ -67,7 +73,10 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             string testHeader = "TestHeader";
             string testHeaderValue = "Blah!!!";
             _message.Header.Bag.Add(testHeader, testHeaderValue);
-            await _messageProducer.SendAsync(_message);
+            
+            var producer = _producerRegistry.LookupBy(_topicName) as IAmAMessageProducerAsync;
+           
+            await producer.SendAsync(_message);
 
             var message = _channel.Receive(5000);
 
