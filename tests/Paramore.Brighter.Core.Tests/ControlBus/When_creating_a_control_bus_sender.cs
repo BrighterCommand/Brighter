@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FakeItEasy;
 using FluentAssertions;
 using Xunit;
@@ -22,7 +23,9 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         [Fact]
         public void When_creating_a_control_bus_sender()
         {
-            s_sender = s_senderFactory.Create(_fakeOutboxSync, s_fakeGateway);
+            s_sender = s_senderFactory.Create(
+                _fakeOutboxSync, 
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyTopic", s_fakeGateway},}));
 
             //_should_create_a_control_bus_sender
             s_sender.Should().NotBeNull();

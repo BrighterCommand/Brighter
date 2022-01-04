@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using Paramore.Brighter.Monitoring.Events;
 using Paramore.Brighter.Monitoring.Mappers;
 
@@ -36,11 +37,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
-        /// <param name="gateway">The gateway to the control bus to send messages</param>
         /// <param name="logger">The logger to use</param>
         /// <param name="outbox">The outbox for outgoing messages to the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        public IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAMessageProducer gateway)
+        public IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAProducerRegistry producerRegistry)
         {
             var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
@@ -48,7 +48,7 @@ namespace Paramore.Brighter
             return new ControlBusSender(CommandProcessorBuilder.With()
                     .Handlers(new HandlerConfiguration())
                     .DefaultPolicy()
-                    .ExternalBus(new MessagingConfiguration(gateway, mapper),outbox)
+                    .ExternalBus(new MessagingConfiguration(producerRegistry, mapper),outbox)
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

@@ -44,12 +44,12 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         public ControlBusTests()
         {
             _dispatcher = A.Fake<IDispatcher>();
-            var messageProducerFactory = A.Fake<IAmAMessageProducerFactory>();
+            var messageProducerFactory = A.Fake<IAmAProducerRegistryFactory>();
 
             _busReceiverBuilder = (ControlBusReceiverBuilder) ControlBusReceiverBuilder
                 .With()
                 .Dispatcher(_dispatcher)
-                .ProducerFactory(messageProducerFactory)
+                .ProducerRegistryFactory(messageProducerFactory)
                 .ChannelFactory(new InMemoryChannelFactory());
 
             _controlBus = _busReceiverBuilder.Build("tests");

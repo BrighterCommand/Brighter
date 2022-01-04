@@ -29,7 +29,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         {
             //arrange
             var producer = new SqsMessageProducer(_awsConnection, 
-                new SqsPublication
+                new SnsPublication
                 {
                     MakeChannels = OnMissingChannel.Validate
                 });

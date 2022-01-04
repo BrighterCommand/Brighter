@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using Confluent.Kafka;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
@@ -30,37 +31,25 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// Creates a <see cref="KafkaMessageProducer"/> from a <see cref="Publication"/>
     /// Note that we only return the interface and <see cref="KafkaMessageProducer"/> is internal as the underlying type is not needed
     /// </summary>
-    public class KafkaMessageProducerFactory : IAmAMessageProducerFactory
+    public class KafkaProducerRegistryFactory : IAmAProducerRegistryFactory
     {
         private readonly KafkaMessagingGatewayConfiguration _globalConfiguration;
-        private readonly KafkaPublication _publication;
+        private readonly IEnumerable<KafkaPublication> _publications;
         private Action<ProducerConfig> _configHook;
 
         /// <summary>
-        /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a <see cref="KafkaMessageProducer"/>.
-        /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, but defaults its
-        /// <see cref="KafkaPublication"/> with the MakeChannels equal to OnMissingChannel.Create
-        /// </summary>
-        /// <param name="globalConfiguration">Configures how we connect to the broker</param>
-        public KafkaMessageProducerFactory(
-            KafkaMessagingGatewayConfiguration globalConfiguration
-            ) : this(globalConfiguration, new KafkaPublication{MakeChannels = OnMissingChannel.Create})
-        {
-        }
-
-        /// <summary>
-        /// This constructs a <see cref="KafkaMessageProducerFactory"/> which can be used to create a <see cref="KafkaMessageProducer"/>.
+        /// This constructs a <see cref="KafkaProducerRegistryFactory"/> which can be used to create a <see cref="KafkaMessageProducer"/>.
         /// It takes a dependency on a <see cref="KafkaMessagingGatewayConfiguration"/> to connect to the broker, and a <see cref="KafkaPublication"/>
         /// that determines how we publish to Kafka and the parameters of any topic if required.
         /// </summary>
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         /// <param name="publication">How do we publish, both producer parameters and topic configuration</param>
-        public KafkaMessageProducerFactory(
+        public KafkaProducerRegistryFactory(
             KafkaMessagingGatewayConfiguration globalConfiguration, 
-            KafkaPublication publication)
+            IEnumerable<KafkaPublication> publications)
         {
             _globalConfiguration = globalConfiguration;
-            _publication = publication;
+            _publications = publications;
             _configHook = null;
         }
         
@@ -68,14 +57,21 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Create a message producer from tne <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> supplied
         /// to the constructor
         /// </summary>
-        /// <returns>An <see cref="IAmAMessageProducerSync"/> that represents a Kafka Message Producer</returns>
-        public IAmAMessageProducerSync Create()
+        /// <returns>An <see cref="IAmAProducerRegistry"/> that represents a collection of Kafka Message Producers</returns>
+        public IAmAProducerRegistry Create()
         {
-            var producer = new KafkaMessageProducer(_globalConfiguration, _publication);
-            if (_configHook != null)
-                producer.ConfigHook(_configHook);
-            producer.Init();
-            return producer;
+            var publicationsByTopic = new Dictionary<string, IAmAMessageProducer>();
+            foreach (var publication in _publications)
+            {
+
+                var producer = new KafkaMessageProducer(_globalConfiguration, publication);
+                if (_configHook != null)
+                    producer.ConfigHook(_configHook);
+                producer.Init();
+                publicationsByTopic[publication.Topic] = producer;
+            }
+
+            return new ProducerRegistry(publicationsByTopic);
         }
 
         /// <summary>

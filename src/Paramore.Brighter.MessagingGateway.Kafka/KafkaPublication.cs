@@ -128,11 +128,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public int RequestTimeoutMs { get; set; } = 500;
         
         /// <summary>
-        /// What is the Topic we wish to publish to. Required for topic creation
-        /// </summary>
-        public RoutingKey Topic { get; set; }
-
-        /// <summary>
         /// How long to wait when asking for topic metadata
         /// </summary>
         public int TopicFindTimeoutMs { get; set; } = 5000;

@@ -27,7 +27,9 @@ using System.Text.Json;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Registry;
+using Polly.Retry;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
@@ -35,11 +37,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     [Collection("CommandProcessor")]
     public class CommandProcessorPostMissingMessageProducerTests : IDisposable
     {
-        private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private Message _message;
         private readonly FakeOutboxSync _fakeOutboxSync;
         private Exception _exception;
+        private readonly MessageMapperRegistry _messageMapperRegistry;
+        private readonly RetryPolicy _retryPolicy;
+        private readonly CircuitBreakerPolicy _circuitBreakerPolicy;
 
         public CommandProcessorPostMissingMessageProducerTests()
         {
@@ -52,31 +56,31 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+            _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            _messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
-            var retryPolicy = Policy
+            _retryPolicy = Policy
                 .Handle<Exception>()
                 .Retry();
 
-            var circuitBreakerPolicy = Policy
+            _circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
-            _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
-                messageMapperRegistry,
-                _fakeOutboxSync,
-                null);
+
         }
 
         [Fact]
-        public void When_Posting_A_Message_And_There_Is_No_Message_Producer()
+        public void When_Creating_A_Command_Processor_Without_Producer_Registry()
         {
-            _exception = Catch.Exception(() => _commandProcessor.Post(_myCommand));
+            _exception = Catch.Exception(() => new CommandProcessor(
+                 new InMemoryRequestContextFactory(),
+                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, _retryPolicy }, { CommandProcessor.CIRCUITBREAKER, _circuitBreakerPolicy } },
+                 _messageMapperRegistry,
+                 _fakeOutboxSync,
+                 null));               
 
-            _exception.Should().BeOfType<InvalidOperationException>();
+            _exception.Should().BeOfType<ConfigurationException>();
         }
 
         public void Dispose()

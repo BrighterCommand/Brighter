@@ -2,7 +2,7 @@
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
-    public class SqsPublication : Publication
+    public class SnsPublication : Publication
     {
         /// <summary>
         /// Indicates how we should treat the routing key
@@ -20,11 +20,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         public SnsAttributes SnsAttributes { get; set; }
 
         /// <summary>
-        /// If we want to use topic Arns and not topics you need to supply a mapping file that tells us
-        /// the Arn to use for any message that you send to us, as we use the topic from the header to dispatch to
-        /// an Arn.
-        /// Internally we construct this routing table when creating on other paths
+        /// If we want to use topic Arns and not topics you need to supply  the Arn to use for any message that you send to us,
+        /// as we use the topic from the header to dispatch to  an Arn.
         /// </summary>
-        public Dictionary<string,string> TopicArns { get; set; }
+        public string TopicArn { get; set; }
     }
 }

@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             RedisMessagingGatewayConfiguration configuration = RedisMessagingGatewayConfiguration();
 
-            MessageProducer = new RedisMessageProducer(configuration);
+            MessageProducer = new RedisMessageProducer(configuration, new RedisMessagePublication() {Topic = new RoutingKey(Topic)});
             MessageConsumer = new RedisMessageConsumer(configuration, QueueName, Topic);
         }
 

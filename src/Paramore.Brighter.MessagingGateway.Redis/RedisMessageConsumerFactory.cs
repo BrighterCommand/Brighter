@@ -38,10 +38,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
 
         /// <summary>
-        /// Creates a consumer for the specified queue.
+        /// Interface IAmAMessageProducerFactory
         /// </summary>
-        /// <param name="subscription">The queue to connect to</param>
-        /// <returns>IAmAMessageConsumer</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
             return new RedisMessageConsumer(_configuration, subscription.ChannelName, subscription.RoutingKey);

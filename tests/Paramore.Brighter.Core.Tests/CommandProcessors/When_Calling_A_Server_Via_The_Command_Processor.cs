@@ -25,9 +25,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _fakeMessageProducer = new FakeMessageProducer();
 
+            const string topic = "MyRequest";
             var header = new MessageHeader(
                 messageId: _myRequest.Id, 
-                topic: "MyRequest", 
+                topic: topic, 
                 messageType:MessageType.MT_COMMAND,
                 correlationId: _myRequest.ReplyAddress.CorrelationId,
                 replyTo: _myRequest.ReplyAddress.Topic);
@@ -75,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 new InMemoryOutbox(),
-                _fakeMessageProducer,
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}),
                 replySubs,
                 responseChannelFactory: inMemoryChannelFactory);
             

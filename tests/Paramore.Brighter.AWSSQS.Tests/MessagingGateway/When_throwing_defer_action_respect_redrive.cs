@@ -68,7 +68,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
             //how do we send to the queue
-            _sender = new SqsMessageProducer(_awsConnection, new SqsPublication { MakeChannels = OnMissingChannel.Create });
+            _sender = new SqsMessageProducer(_awsConnection, new SnsPublication { MakeChannels = OnMissingChannel.Create });
 
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);

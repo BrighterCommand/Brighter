@@ -72,7 +72,7 @@ namespace GreetingsSender.Adapters
         private static IHost BuildHost()
         {
             return new HostBuilder()
-               .ConfigureServices((hostContext, services) =>
+                .ConfigureServices((hostContext, services) =>
                 {
                     var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
                     {
@@ -90,47 +90,44 @@ namespace GreetingsSender.Adapters
 
                     var policyRegistry = new PolicyRegistry()
                     {
-                        {CommandProcessor.RETRYPOLICY, retryPolicy},
-                        {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
-                        {CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync},
-                        {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
+                        { CommandProcessor.RETRYPOLICY, retryPolicy },
+                        { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+                        { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
+                        { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
                     };
 
-                    var producer = new KafkaMessageProducerFactory(
-                            new KafkaMessagingGatewayConfiguration()
-                            {
-                                Name = "paramore.brighter.greetingsender", 
-                                BootStrapServers = new[] {"localhost:9092"}
-                            },
-                            new KafkaPublication()
-                            {
-                                Topic = new RoutingKey("greeting.event"),
-                                ReplicationFactor = 3,
-                                MessageSendMaxRetries = 3,
-                                MessageTimeoutMs = 1000,
-                                MaxInFlightRequestsPerConnection = 1,
-                                MaxOutStandingMessages = 10,
-                                MaxOutStandingCheckIntervalMilliSeconds = 30000,
-                                MakeChannels = OnMissingChannel.Assume
-                            })
-                        .Create();
-
-                    services.AddSingleton<IAmAMessageProducerSync>(producer);
-
                     services.AddBrighter(options =>
-                    {
-                        options.PolicyRegistry = policyRegistry;
-                    })
+                        {
+                            options.PolicyRegistry = policyRegistry;
+                        })
                         .UseInMemoryOutbox()
-                        .UseExternalBus(producer)
+                        .UseExternalBus(new KafkaProducerRegistryFactory(
+                                new KafkaMessagingGatewayConfiguration()
+                                {
+                                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                                },
+                                new KafkaPublication[]
+                                {
+                                    new KafkaPublication()
+                                    {
+                                        Topic = new RoutingKey("greeting.event"),
+                                        ReplicationFactor = 3,
+                                        MessageSendMaxRetries = 3,
+                                        MessageTimeoutMs = 1000,
+                                        MaxInFlightRequestsPerConnection = 1,
+                                        MaxOutStandingMessages = 10,
+                                        MaxOutStandingCheckIntervalMilliSeconds = 30000,
+                                        MakeChannels = OnMissingChannel.Assume
+                                    }
+                                })
+                            .Create())
                         .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
                     services.AddHostedService<TimedMessageGenerator>();
                 })
-               .UseSerilog()
+                .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
         }
     }
 }
-

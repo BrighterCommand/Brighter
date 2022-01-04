@@ -49,7 +49,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
+            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
         }
 
         [Fact]
