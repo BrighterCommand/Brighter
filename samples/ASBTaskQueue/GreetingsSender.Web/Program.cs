@@ -24,6 +24,7 @@ string dbConnString =
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
     o.UseSqlServer(dbConnString);
+    //o.AddInterceptors(new AzureAdAuthenticationDbConnectionInterceptor());
 });
 
 //Services
@@ -77,7 +78,7 @@ if (app.Environment.IsDevelopment())
     var services = serviceScope.ServiceProvider;
     var dbContext = services.GetService<GreetingsDataContext>();
 
-    dbContext.Database.EnsureCreated();
+    //dbContext.Database.EnsureCreated();
 }
 else
 {
