@@ -63,10 +63,11 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             
             _messageProducer = new SqsMessageProducer(
                 awsConnection, 
-                new SqsPublication
+                new SnsPublication
                 {
                     FindTopicBy = TopicFindBy.Name,
-                    MakeChannels = OnMissingChannel.Validate
+                    MakeChannels = OnMissingChannel.Validate,
+                    Topic = new RoutingKey(topicName)
                 }
                 );
 
@@ -98,7 +99,5 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _consumer.Dispose();
             _messageProducer.Dispose();
         }
-        
-    
    }
 }

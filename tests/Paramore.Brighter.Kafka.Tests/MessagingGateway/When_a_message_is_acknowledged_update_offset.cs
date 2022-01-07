@@ -18,20 +18,20 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
-        private readonly IAmAMessageProducerSync _producerSync;
+        private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly string _kafkaGroupId = Guid.NewGuid().ToString();
 
         public KafkaMessageConsumerUpdateOffset(ITestOutputHelper output)
         {
             _output = output;
-            _producerSync = new KafkaMessageProducerFactory(
+            _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
                     Name = "Kafka Producer Send Test", 
                     BootStrapServers = new[] {"localhost:9092"}
                 },
-                new KafkaPublication()
+                new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
-                }).Create();
+                }}).Create();
         }
 
         [Fact]
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         private void SendMessage(Guid messageId)
         {
-            _producerSync.Send(new Message(
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(new Message(
                 new MessageHeader(messageId, _topic, MessageType.MT_COMMAND) {PartitionKey = _partitionKey},
                 new MessageBody($"test content [{_queueName}]")));
         }
@@ -155,7 +155,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         public void Dispose()
         {
-            _producerSync?.Dispose();
+            _producerRegistry?.Dispose();
         }
     }
 }

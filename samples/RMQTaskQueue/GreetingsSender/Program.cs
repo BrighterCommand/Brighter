@@ -53,18 +53,29 @@ namespace GreetingsSender
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
             
-            var producer = new RmqMessageProducer(rmqConnection, new RmqPublication
-            {
-                MaxOutStandingMessages = 5,
-                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                MakeChannels =OnMissingChannel.Create
-                
-            });
-
             serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
-                .UseExternalBus(producer, true)
+                .UseExternalBus(new RmqProducerRegistryFactory(
+                    rmqConnection,
+                    new RmqPublication[]
+                    {
+                        new()
+                        {
+                            MaxOutStandingMessages = 5,
+                            MaxOutStandingCheckIntervalMilliSeconds = 500,
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels =OnMissingChannel.Create,
+                            Topic = new RoutingKey("greeting.event")
+                        },
+                        new()
+                        {
+                            MaxOutStandingMessages = 5,
+                            MaxOutStandingCheckIntervalMilliSeconds = 500,
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels =OnMissingChannel.Create,
+                            Topic = new RoutingKey("farewell.event")                            
+                        }
+                    }).Create())
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

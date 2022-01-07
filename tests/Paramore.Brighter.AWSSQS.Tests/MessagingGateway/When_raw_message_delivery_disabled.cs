@@ -41,7 +41,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 rawMessageDelivery: false));
 
             _messageProducer = new SqsMessageProducer(awsConnection, 
-                new SqsPublication
+                new SnsPublication
                 {
                     MakeChannels = OnMissingChannel.Create 
                 });

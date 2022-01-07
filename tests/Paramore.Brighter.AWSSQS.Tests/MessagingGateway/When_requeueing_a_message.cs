@@ -47,7 +47,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
             
-            _sender = new SqsMessageProducer(awsConnection, new SqsPublication{MakeChannels = OnMissingChannel.Create});
+            _sender = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
             
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(awsConnection);

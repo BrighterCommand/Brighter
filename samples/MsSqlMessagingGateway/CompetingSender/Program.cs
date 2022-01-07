@@ -44,7 +44,10 @@ namespace CompetingSender
 
                     services.AddBrighter()
                         .UseInMemoryOutbox()
-                        .UseExternalBus(new MsSqlMessageProducer(messagingConfiguration))
+                        .UseExternalBus(new MsSqlProducerRegistryFactory(
+                            messagingConfiguration,
+                            new Publication[]{new Publication()})
+                            .Create())
                         .AutoFromAssemblies();
 
                     services.AddHostedService<RunCommandProcessor>(provider => new RunCommandProcessor(provider.GetService<IAmACommandProcessor>(),  repeatCount));
