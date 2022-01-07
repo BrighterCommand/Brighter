@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
-            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
+            _connectionProvider = connectionProvider;
         }
 
         /// <summary>
@@ -64,9 +64,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-
+            var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
             var parameters = InitAddDbParameters(message);
-            var connection = GetOpenConnection(transactionConnectionProvider);
+            var connection = GetOpenConnection(connectionProvider);
 
             try
             {
@@ -89,9 +89,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (!_connectionProvider.IsSharedConnection)
+                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
+                else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
             }
         }
@@ -112,7 +112,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            var connection = GetOpenConnection();
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
 
             try
             {
@@ -131,9 +132,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (!_connectionProvider.IsSharedConnection)
+                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
+                else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
             }
         }
@@ -147,7 +148,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <returns>A list of messages</returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            var connection = GetOpenConnection();
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
 
             try
             {
@@ -168,9 +170,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (!_connectionProvider.IsSharedConnection)
+                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
+                else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
             }
         }
@@ -198,7 +200,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            var connection = GetOpenConnection();
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
 
             try
             {
@@ -209,9 +212,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (!_connectionProvider.IsSharedConnection)
+                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
+                else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
             }
         }
@@ -230,7 +233,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
              int pageNumber = 1,
              Dictionary<string, object> args = null)
         {
-            var connection = GetOpenConnection();
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
 
             try
             {
@@ -251,16 +255,16 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (!_connectionProvider.IsSharedConnection)
+                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
+                else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
             }
         }
 
-        private NpgsqlConnection GetOpenConnection(IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        private IPostgreSqlConnectionProvider GetConnectionProvider(IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-            var connectionProvider = _connectionProvider;
+            var connectionProvider = _connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(_configuration);
 
             if (transactionConnectionProvider != null)
             {
@@ -270,6 +274,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     throw new Exception($"{nameof(transactionConnectionProvider)} does not implement interface {nameof(IPostgreSqlTransactionConnectionProvider)}.");
             }
 
+            return connectionProvider;
+        }
+
+        private NpgsqlConnection GetOpenConnection(IPostgreSqlConnectionProvider connectionProvider)
+        {
             NpgsqlConnection connection = connectionProvider.GetConnection();
 
             if (connection.State != ConnectionState.Open)
@@ -377,7 +386,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
             NpgsqlParameter[] parameters)
         {
-            var connection = GetOpenConnection();
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
 
             try
             {
@@ -394,9 +404,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
             finally
             {
-                if (!_connectionProvider.IsSharedConnection)
+                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
+                else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
             }
         }

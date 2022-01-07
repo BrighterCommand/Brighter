@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     public static class ServiceCollectionExtensions
     {
         public static IBrighterBuilder UsePostgreSqlOutbox(
-            this IBrighterBuilder brighterBuilder, PostgreSqlOutboxConfiguration configuration, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+            this IBrighterBuilder brighterBuilder, PostgreSqlOutboxConfiguration configuration, Type connectionProvider = null, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
@@ -17,6 +17,14 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 throw new ArgumentNullException($"{nameof(configuration)} cannot be null.", nameof(configuration));
 
             brighterBuilder.Services.AddSingleton<PostgreSqlOutboxConfiguration>(configuration);
+
+            if (connectionProvider is object)
+            {
+                if (!typeof(IPostgreSqlConnectionProvider).IsAssignableFrom(connectionProvider))
+                    throw new Exception($"Unable to register provider of type {connectionProvider.GetType().Name}. Class does not implement interface {nameof(IPostgreSqlConnectionProvider)}.");
+
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IPostgreSqlConnectionProvider), connectionProvider, serviceLifetime));
+            }
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildPostgreSqlOutboxSync, serviceLifetime));
 
@@ -43,7 +51,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             if (connectionProvider is null)
                 throw new ArgumentNullException($"{nameof(connectionProvider)} cannot be null.", nameof(connectionProvider));
 
-            if (!(connectionProvider is IPostgreSqlTransactionConnectionProvider provider))
+            if (!typeof(IPostgreSqlTransactionConnectionProvider).IsAssignableFrom(connectionProvider))
                 throw new Exception($"Unable to register provider of type {connectionProvider.GetType().Name}. Class does not implement interface {nameof(IPostgreSqlTransactionConnectionProvider)}.");
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
@@ -54,8 +62,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private static PostgreSqlOutboxSync BuildPostgreSqlOutboxSync(IServiceProvider provider)
         {
             var config = provider.GetService<PostgreSqlOutboxConfiguration>();
+            var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
 
-            return new PostgreSqlOutboxSync(config);
+            return new PostgreSqlOutboxSync(config, connectionProvider);
         }
     }
 }
