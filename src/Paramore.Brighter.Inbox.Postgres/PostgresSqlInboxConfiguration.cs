@@ -23,28 +23,26 @@ THE SOFTWARE. */
 
 #endregion
 
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class PostgresSqlInboxConfiguration
+    public class PostgresSqlInboxConfiguration : PostgreSqlConfiguration
     {
-        public PostgresSqlInboxConfiguration(string connectionString, string tableName)
+        public PostgresSqlInboxConfiguration(string connectionString, string tableName) : base(connectionString)
         {
-            ConnectionString = connectionString;
             InBoxTableName = tableName;
         }
 
-        /// <summary>
-        /// Gets the connection string.
-        /// </summary>
-        /// <value>The connection string.</value>
-        public string ConnectionString { get; private set; }
+        public PostgresSqlInboxConfiguration(string tableName) : base(null)
+        {
+            InBoxTableName = tableName;
+        }
 
         /// <summary>
         /// Gets the name of the outbox table.
         /// </summary>
         /// <value>The name of the outbox table.</value>
-        public string InBoxTableName { get; private set; }
- 
+        public string InBoxTableName { get; }
     }
 }
