@@ -126,7 +126,7 @@ namespace Paramore.Brighter
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
 
-                var producer = ProducerRegistry.LookupBy(message.Header.Topic);
+                var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
 
                 if (producer is IAmAMessageProducerSync producerSync)
                 {
@@ -168,7 +168,7 @@ namespace Paramore.Brighter
 
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, messageId.ToString());
                 
-                var producer = ProducerRegistry.LookupBy(message.Header.Topic);
+                var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
 
                 if (producer is IAmAMessageProducerAsync producerAsync)
                 {
@@ -339,7 +339,7 @@ namespace Paramore.Brighter
         internal void CallViaExternalBus<T, TResponse>(Message outMessage) where T : class, ICall where TResponse : class, IResponse
         {
             //We assume that this only occurs over a blocking producer
-            var producer = ProducerRegistry.LookupBy(outMessage.Header.Topic);
+            var producer = ProducerRegistry.LookupByOrDefault(outMessage.Header.Topic);
         if (producer is IAmAMessageProducerSync producerSync)
                 Retry(() => producerSync.Send(outMessage));
         }
