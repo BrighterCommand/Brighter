@@ -1,23 +1,27 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using GreetingsWatcher.Requests;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using SalutationAnalytics.Database;
+using SalutationPorts.Requests;
 
-namespace GreetingsWatcher
+namespace SalutationAnalytics
 {
     class Program
     {
         public static async Task Main(string[] args)
         {
-            await CreateHostBuilder(args).Build().RunAsync();
+            var host = CreateHostBuilder(args).Build();
+            host.CheckDbIsUp();
+            host.MigrateDatabase();
+            host.CreateInbox();
+            await host.RunAsync();
         }
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
@@ -26,7 +30,7 @@ namespace GreetingsWatcher
                 {
                     configHost.SetBasePath(Directory.GetCurrentDirectory());
                     configHost.AddJsonFile("hostsettings.json", optional: true);
-                    configHost.AddEnvironmentVariables(prefix: "ASPNETCORE_");
+                    configHost.AddEnvironmentVariables(prefix: "BRIGHTER_");
                     configHost.AddCommandLine(args);
                 })
                 .ConfigureServices((hostContext, services) =>
@@ -34,8 +38,8 @@ namespace GreetingsWatcher
                     var subscriptions = new Subscription[]
                     {
                         new RmqSubscription<GreetingMade>(
-                            new SubscriptionName("paramore.sample.greetingswatcher"),
-                            new ChannelName("GreetingsWatcher"),
+                            new SubscriptionName("paramore.sample.salutationanalytics"),
+                            new ChannelName("SalutationAnalytics"),
                             new RoutingKey("GreetingMade"),
                             timeoutInMilliseconds: 200,
                             isDurable: true,

@@ -1,4 +1,4 @@
-﻿namespace GreetingsAdapters.Models
+﻿namespace Greetingsweb.Models
 {
     public class NewGreeting
     {

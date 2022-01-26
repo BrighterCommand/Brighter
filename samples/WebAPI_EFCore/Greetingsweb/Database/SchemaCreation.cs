@@ -14,7 +14,7 @@ using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 
-namespace GreetingsAdapters.Database
+namespace Greetingsweb.Database
 {
     public static class SchemaCreation
     {
@@ -121,7 +121,7 @@ namespace GreetingsAdapters.Database
             sqlConnection.Open();
 
             using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = SqliteOutboxBuilder.GetExists(OUTBOX_TABLE_NAME);
+            exists.CommandText = SqliteOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
             using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
 
             if (reader.HasRows) return;

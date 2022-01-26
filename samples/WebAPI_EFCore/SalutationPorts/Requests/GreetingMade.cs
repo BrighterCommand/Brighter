@@ -1,7 +1,7 @@
 ﻿using System;
 using Paramore.Brighter;
 
-namespace GreetingsWatcher.Requests
+namespace SalutationPorts.Requests
 {
     public class GreetingMade : Event
     {

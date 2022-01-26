@@ -1,14 +1,14 @@
-﻿using System;
-using GreetingsWatcher.Requests;
-using Paramore.Brighter;
+﻿using Paramore.Brighter;
+using SalutationEntities;
+using SalutationPorts.Requests;
 
-namespace GreetingsWatcher.Handlers
+namespace SalutationPorts.Handlers
 {
     public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
         public override GreetingMade Handle(GreetingMade @event)
         {
-            Console.WriteLine(@event.Greeting);
+            var salutation = new Salutation(@event.Greeting);
             return base.Handle(@event);
         }
     }

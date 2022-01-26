@@ -1,9 +1,9 @@
 ﻿using System;
-using GreetingsWatcher.Requests;
 using Paramore.Brighter;
+using SalutationPorts.Requests;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace GreetingsWatcher
+namespace SalutationAnalytics
 {
     public class GreetingMadeMessageMapper : IAmAMessageMapper<GreetingMade>
     {
