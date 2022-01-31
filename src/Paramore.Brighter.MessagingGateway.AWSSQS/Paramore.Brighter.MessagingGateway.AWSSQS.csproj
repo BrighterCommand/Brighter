@@ -9,10 +9,10 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.100" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.1.110" />
     <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageReference Include="AWSSDK.SQS" Version="3.7.2.7" />
-    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.3.9" />
+    <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.3.19" />
   </ItemGroup>
 </Project>
