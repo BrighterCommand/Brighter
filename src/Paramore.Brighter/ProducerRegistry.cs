@@ -70,6 +70,18 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
+        /// Looks up the producer associated with this message via a topic or returns the default producer. The topic lives on the message headers
+        /// </summary>
+        /// <param name="topic">The topic we want to find the producer for</param>
+        /// <returns>A producer</returns>
+        public IAmAMessageProducer LookupByOrDefault(string topic)
+        {
+            if (_messageProducers.ContainsKey(topic)) return LookupBy(topic);
+
+            return GetDefaultProducer();
+        }
+
+        /// <summary>
         /// An iterable list of all the producers in the registry
         /// </summary>
         public IEnumerable<IAmAMessageProducer> Producers { get { return _messageProducers.Values; } }
