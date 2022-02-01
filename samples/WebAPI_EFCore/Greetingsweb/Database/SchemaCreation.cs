@@ -62,7 +62,7 @@ namespace Greetingsweb.Database
 
         private static void CreateDatabaseIfNotExists(string connectionString)
         {
-            //The migration does not create the Db, so we need to create it sot tthat it will add it
+            //The migration does not create the Db, so we need to create it sot that it will add it
             using var conn = new MySqlConnection(connectionString);
             conn.Open();
             using var command = conn.CreateCommand();

@@ -11,7 +11,7 @@ namespace SalutationPorts.EntityGateway
         {
             builder.HasKey("_id");
             builder.Property("_id");
-            builder.Property(g => g.Message).IsRequired();
+            builder.Property(g => g.Greeting).IsRequired();
         }
     }
 }

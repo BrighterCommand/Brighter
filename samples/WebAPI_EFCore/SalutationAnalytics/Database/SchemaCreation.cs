@@ -64,7 +64,7 @@ namespace SalutationAnalytics.Database
             using var conn = new MySqlConnection(connectionString);
             conn.Open();
             using var command = conn.CreateCommand();
-            command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
+            command.CommandText = "CREATE DATABASE IF NOT EXISTS Salutations";
             command.ExecuteScalar();
         }
 
@@ -103,9 +103,9 @@ namespace SalutationAnalytics.Database
                 var connectionString = DbConnectionString(config, env);
 
                 if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString);
+                    CreateInboxDevelopment(connectionString);
                 else
-                    CreateOutboxProduction(connectionString);
+                    CreateInboxProduction(connectionString);
             }
             catch (System.Exception e)
             {
@@ -113,7 +113,7 @@ namespace SalutationAnalytics.Database
             }
         }
 
-        private static void CreateOutboxDevelopment(string connectionString)
+        private static void CreateInboxDevelopment(string connectionString)
         {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
@@ -129,7 +129,7 @@ namespace SalutationAnalytics.Database
             command.ExecuteScalar();
         }
 
-        private static void CreateOutboxProduction(string connectionString)
+        private static void CreateInboxProduction(string connectionString)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -148,12 +148,12 @@ namespace SalutationAnalytics.Database
         private static string DbConnectionString(IConfiguration config, IHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("Greetings");
+            return env.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : config.GetConnectionString("Salutations");
         }
 
         private static string DbServerConnectionString(IConfiguration config, IHostEnvironment env)
         {
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
+            return env.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : config.GetConnectionString("SalutationsDb");
          }
     }
 }

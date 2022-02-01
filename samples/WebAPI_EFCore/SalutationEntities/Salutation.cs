@@ -4,10 +4,16 @@
     {
         private int _id;
         public byte[] TimeStamp { get; set; }
-         public string Message { get; }
+         public string Greeting { get; }
         public Salutation(string greeting)
         {
-            Message = greeting;
+            Greeting = greeting;
+        }
+
+        public Salutation(int id, string greeting)
+        {
+            _id = id;
+            Greeting = greeting;
         }
 
     }

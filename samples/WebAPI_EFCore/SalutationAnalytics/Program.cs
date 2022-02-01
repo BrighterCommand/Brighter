@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -9,6 +10,7 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using SalutationAnalytics.Database;
+using SalutationPorts.EntityGateway;
 using SalutationPorts.Requests;
 
 namespace SalutationAnalytics
@@ -29,12 +31,16 @@ namespace SalutationAnalytics
                 .ConfigureHostConfiguration(configHost =>
                 {
                     configHost.SetBasePath(Directory.GetCurrentDirectory());
-                    configHost.AddJsonFile("hostsettings.json", optional: true);
+                    configHost.AddJsonFile("appsettings.json", optional: true);
+                    configHost.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
+                    configHost.AddEnvironmentVariables(prefix: "ASPNETCORE_");  //NOTE: Although not web, we use this to grab the environment
                     configHost.AddEnvironmentVariables(prefix: "BRIGHTER_");
                     configHost.AddCommandLine(args);
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
+                    ConfigureEFCore(hostContext, services);
+                    
                     var subscriptions = new Subscription[]
                     {
                         new RmqSubscription<GreetingMade>(
@@ -66,5 +72,49 @@ namespace SalutationAnalytics
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
                 .UseConsoleLifetime();
+
+        private static string GetEnvironment()
+        {
+            //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
+            return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        }
+        
+        private static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)
+        {
+            string connectionString = DbConnectionString(hostContext);
+
+            if (hostContext.HostingEnvironment.IsDevelopment())
+            {
+                services.AddDbContext<SalutationsEntityGateway>(
+                    builder =>
+                    {
+                        builder.UseSqlite(connectionString, 
+                            optionsBuilder =>
+                            {
+                                optionsBuilder.MigrationsAssembly("Salutations_SqliteMigrations");
+                            });
+                    });
+            }
+            else
+            {
+               services.AddDbContextPool<SalutationsEntityGateway>(builder =>
+               {
+                   builder
+                       .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
+                       {
+                           optionsBuilder.MigrationsAssembly("Salutations_MySqlMigrations");
+                       })
+                       .EnableDetailedErrors()
+                       .EnableSensitiveDataLogging();
+               });
+            }
+        }
+        
+        private static string DbConnectionString(HostBuilderContext hostContext)
+        {
+            //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
+            return hostContext.HostingEnvironment.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : hostContext.Configuration.GetConnectionString("Salutations");
+        }
+
     }
 }
