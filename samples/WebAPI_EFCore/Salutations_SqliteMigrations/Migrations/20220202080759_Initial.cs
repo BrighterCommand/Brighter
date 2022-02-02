@@ -8,7 +8,7 @@ namespace Salutations_SqliteMigrations.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "People",
+                name: "Salutations",
                 columns: table => new
                 {
                     _id = table.Column<int>(type: "INTEGER", nullable: false)
@@ -18,14 +18,14 @@ namespace Salutations_SqliteMigrations.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_People", x => x._id);
+                    table.PrimaryKey("PK_Salutations", x => x._id);
                 });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "People");
+                name: "Salutations");
         }
     }
 }

@@ -23,6 +23,7 @@ namespace SalutationAnalytics
             host.CheckDbIsUp();
             host.MigrateDatabase();
             host.CreateInbox();
+            host.CreateOutbox();
             await host.RunAsync();
         }
 
@@ -47,6 +48,7 @@ namespace SalutationAnalytics
                             new SubscriptionName("paramore.sample.salutationanalytics"),
                             new ChannelName("SalutationAnalytics"),
                             new RoutingKey("GreetingMade"),
+                            runAsync: true,
                             timeoutInMilliseconds: 200,
                             isDurable: true,
                             makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -66,6 +68,7 @@ namespace SalutationAnalytics
                         {
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                            options.UseScoped = true;
                         })
                         .AutoFromAssemblies();
 

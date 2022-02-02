@@ -29,13 +29,14 @@ namespace Paramore.Brighter.Inbox.Sqlite
     /// </summary>
     public class SqliteInboxBuilder
     {
-        const string InboxDDL = @"CREATE TABLE {0} (
-                                    [CommandId] uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,
-                                    [CommandType] nvarchar(256),
-                                    [CommandBody] ntext,
-                                    [Timestamp] TIMESTAMPTZ DEFAULT Now(),
-                                    [ContextKey] nvarchar(256)
-                );";
+        const string InboxDDL = @"CREATE TABLE IF NOT EXISTS {0} 
+                                    (
+                                        [CommandId] uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,
+                                        [CommandType] nvarchar(256),
+                                        [CommandBody] ntext,
+                                        [Timestamp] TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                                        [ContextKey] nvarchar(256)
+                                    );";
 
         private const string InboxExistsSQL = "SELECT name FROM sqlite_master WHERE type='table' AND name='{0}'";
 

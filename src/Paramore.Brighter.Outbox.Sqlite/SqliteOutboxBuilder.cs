@@ -29,19 +29,20 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutboxBuilder
     {
-        const string OutboxDdl = @"CREATE TABLE {0} (
-                                          [MessageId] uniqueidentifier NOT NULL
-                                        , [Topic] nvarchar(255) NULL
-                                        , [MessageType] nvarchar(32) NULL
-                                        , [Timestamp] datetime NULL
-                                        , [CorrelationId] UNIQUEIDENTIFIER NULL
-                                        , [ReplyTo] NVARCHAR(255) NULL
-                                        , [ContentType] NVARCHAR(128) NULL  
-                                        , [Dispatched] datetime NULL
-                                        , [HeaderBag] ntext NULL
-                                        , [Body] ntext NULL
-                                        , CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
-                                        );";
+        const string OutboxDdl = @"CREATE TABLE {0} 
+                                    (
+                                        [MessageId] uniqueidentifier NOT NULL,
+                                        [Topic] nvarchar(255) NULL,
+                                        [MessageType] nvarchar(32) NULL,
+                                        [Timestamp] datetime NULL,
+                                        [CorrelationId] UNIQUEIDENTIFIER NULL,
+                                        [ReplyTo] NVARCHAR(255) NULL,
+                                        [ContentType] NVARCHAR(128) NULL,  
+                                        [Dispatched] datetime NULL,
+                                        [HeaderBag] ntext NULL,
+                                        [Body] ntext NULL,
+                                        CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
+                                    );";
 
         private const string InboxExistsQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='{0}';";
 

@@ -1,15 +1,14 @@
-﻿using System;
+﻿using System.Text.Json;
 using Paramore.Brighter;
 using SalutationPorts.Requests;
-using JsonSerializer = System.Text.Json.JsonSerializer;
 
-namespace SalutationAnalytics
+namespace SalutationAnalytics.Mappers
 {
     public class GreetingMadeMessageMapper : IAmAMessageMapper<GreetingMade>
     {
         public Message MapToMessage(GreetingMade request)
         {
-            throw new NotImplementedException();
+            throw new System.NotImplementedException();
         }
 
         public GreetingMade MapToRequest(Message message)

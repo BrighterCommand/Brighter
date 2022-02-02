@@ -32,7 +32,7 @@ namespace Salutations_MySqlMigrations.Migrations
 
                     b.HasKey("_id");
 
-                    b.ToTable("People");
+                    b.ToTable("Salutations");
                 });
 #pragma warning restore 612, 618
         }

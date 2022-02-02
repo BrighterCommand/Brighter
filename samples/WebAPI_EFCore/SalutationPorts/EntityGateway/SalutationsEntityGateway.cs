@@ -7,7 +7,7 @@ namespace SalutationPorts.EntityGateway
     {
         public SalutationsEntityGateway (DbContextOptions<SalutationsEntityGateway > options) : base(options) { }
         
-        public DbSet<Salutation> People { get; set; }
+        public DbSet<Salutation> Salutations { get; set; }
         
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {

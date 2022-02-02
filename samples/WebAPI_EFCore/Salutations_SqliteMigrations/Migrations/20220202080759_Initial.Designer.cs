@@ -9,7 +9,7 @@ using SalutationPorts.EntityGateway;
 namespace Salutations_SqliteMigrations.Migrations
 {
     [DbContext(typeof(SalutationsEntityGateway))]
-    [Migration("20220131210627_Initial")]
+    [Migration("20220202080759_Initial")]
     partial class Initial
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -33,7 +33,7 @@ namespace Salutations_SqliteMigrations.Migrations
 
                     b.HasKey("_id");
 
-                    b.ToTable("People");
+                    b.ToTable("Salutations");
                 });
 #pragma warning restore 612, 618
         }

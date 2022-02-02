@@ -9,6 +9,8 @@ using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
+using Paramore.Brighter.Outbox.MySql;
+using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 using SalutationPorts.EntityGateway;
 
@@ -17,6 +19,8 @@ namespace SalutationAnalytics.Database
     public static class SchemaCreation
     {
         private const string INBOX_TABLE_NAME = "Inbox";
+        private const string OUTBOX_TABLE_NAME = "Outbox";
+
 
         public static IHost MigrateDatabase(this IHost host)
         {
@@ -110,6 +114,7 @@ namespace SalutationAnalytics.Database
             catch (System.Exception e)
             {
                 Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
+                throw;
             }
         }
 
@@ -142,6 +147,70 @@ namespace SalutationAnalytics.Database
 
             using var command = sqlConnection.CreateCommand();
             command.CommandText = MySqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
+            command.ExecuteScalar();
+        }
+        
+        public static IHost CreateOutbox(this IHost webHost)
+        {
+            using (var scope = webHost.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+                var env = services.GetService<IHostEnvironment>();
+                var config = services.GetService<IConfiguration>();
+
+                CreateOutbox(config, env);
+            }
+
+            return webHost;
+        }
+
+        private static void CreateOutbox(IConfiguration config, IHostEnvironment env)
+        {
+            try
+            {
+                var connectionString = DbConnectionString(config, env);
+
+                if (env.IsDevelopment())
+                    CreateOutboxDevelopment(connectionString);
+                else
+                    CreateOutboxProduction(connectionString);
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
+                throw;
+            }
+        }
+
+        private static void CreateOutboxDevelopment(string connectionString)
+        {
+            using var sqlConnection = new SqliteConnection(connectionString);
+            sqlConnection.Open();
+
+            using var exists = sqlConnection.CreateCommand();
+            exists.CommandText = SqliteOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
+
+            if (reader.HasRows) return;
+
+            using var command = sqlConnection.CreateCommand();
+            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+            command.ExecuteScalar();
+        }
+
+        private static void CreateOutboxProduction(string connectionString)
+        {
+            using var sqlConnection = new MySqlConnection(connectionString);
+            sqlConnection.Open();
+
+            using var existsQuery = sqlConnection.CreateCommand();
+            existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+            bool exists = existsQuery.ExecuteScalar() != null;
+
+            if (exists) return;
+
+            using var command = sqlConnection.CreateCommand();
+            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
             command.ExecuteScalar();
         }
 

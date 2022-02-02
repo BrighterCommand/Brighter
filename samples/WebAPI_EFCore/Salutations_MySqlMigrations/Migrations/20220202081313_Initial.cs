@@ -12,7 +12,7 @@ namespace Salutations_MySqlMigrations.Migrations
                 .Annotation("MySql:CharSet", "utf8mb4");
 
             migrationBuilder.CreateTable(
-                name: "People",
+                name: "Salutations",
                 columns: table => new
                 {
                     _id = table.Column<int>(type: "int", nullable: false)
@@ -23,7 +23,7 @@ namespace Salutations_MySqlMigrations.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_People", x => x._id);
+                    table.PrimaryKey("PK_Salutations", x => x._id);
                 })
                 .Annotation("MySql:CharSet", "utf8mb4");
         }
@@ -31,7 +31,7 @@ namespace Salutations_MySqlMigrations.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "People");
+                name: "Salutations");
         }
     }
 }

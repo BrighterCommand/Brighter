@@ -112,6 +112,8 @@ namespace Greetingsweb.Database
             catch (System.Exception e)
             {
                 Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
+                //Rethrow, if we can't create the Outbox, shut down
+                throw;
             }
         }
 
