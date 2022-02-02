@@ -113,7 +113,7 @@ namespace SalutationAnalytics.Database
             }
             catch (System.Exception e)
             {
-                Console.WriteLine($"Issue with creating Outbox table, {e.Message}");
+                Console.WriteLine($"Issue with creating Inbox table, {e.Message}");
                 throw;
             }
         }
