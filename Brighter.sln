@@ -245,7 +245,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_MySqlMigrations",
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsScopedReceiverConsole", "samples\ASBTaskQueue\GreetingsScopedReceiverConsole\GreetingsScopedReceiverConsole.csproj", "{9D9F08A9-66EE-4AA2-8F11-2FA662EAADE2}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWorker", "samples\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj", "{93589653-2B49-4818-BE98-FE6F16EC72EC}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWorker", "samples\ASBTaskQueue\GreetingsWorker\GreetingsWorker.csproj", "{93589653-2B49-4818-BE98-FE6F16EC72EC}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.PostgreSql", "src\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj", "{08E6D0F8-B6CE-454F-8761-77731D99F743}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.PostgreSql.EntityFrameworkCore", "src\Paramore.Brighter.PostgreSql.EntityFrameworkCore\Paramore.Brighter.PostgreSql.EntityFrameworkCore.csproj", "{AA85493A-4120-4DA0-BAA5-CBF34D238A64}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWeb", "samples\WebAPI_EFCore\GreetingsWeb\GreetingsWeb.csproj", "{BC4C3DF7-52C0-41EA-98DD-70E402AD5116}"
 EndProject
