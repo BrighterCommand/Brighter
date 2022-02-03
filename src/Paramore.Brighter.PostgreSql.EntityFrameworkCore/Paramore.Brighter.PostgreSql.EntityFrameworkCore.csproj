@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1' ">
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="6.0.3" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="5.0.10" />
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
@@ -18,5 +18,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj" />
   </ItemGroup>
+  
 
 </Project>
