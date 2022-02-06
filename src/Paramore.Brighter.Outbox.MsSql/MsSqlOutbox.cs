@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -270,7 +271,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             using (var command = connection.CreateCommand())
             {
-                CreateListOfMessagesCommand(command, messageIds);
+                CreateListOfMessagesCommand(command, messageIds.ToList());
 
                 if (connection.State != ConnectionState.Open)
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -551,17 +552,12 @@ namespace Paramore.Brighter.Outbox.MsSql
             command.Parameters.AddRange(parameters);
         }
 
-        private void CreateListOfMessagesCommand(SqlCommand command, IEnumerable<Guid> messageIds)
+        private void CreateListOfMessagesCommand(SqlCommand command, List<Guid> messageIds)
         {
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId in ( @MessageIds )";
-
-            var parameters = new[]
-            {
-                CreateSqlParameter("MessageIds", string.Join(",", messageIds))
-            };
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
 
             command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
         }
 
 
@@ -656,11 +652,25 @@ namespace Paramore.Brighter.Outbox.MsSql
         private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId in ( @MessageIds )";
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId in ( {inClause} )";
+
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("MessageIds", string.Join(",", messageIds)));
             command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+
             return command;
+        }
+
+        private string GenerateInClauseAndAddParameters(SqlCommand command, List<Guid> messageIds)
+        {
+            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+
+            for (int i = 0; i < paramNames.Count(); i++)
+            {
+                command.Parameters.Add(CreateSqlParameter(paramNames[i], messageIds[i]));
+            }
+
+            return string.Join(",", paramNames);
         }
 
         private Message MapAMessage(SqlDataReader dr)
