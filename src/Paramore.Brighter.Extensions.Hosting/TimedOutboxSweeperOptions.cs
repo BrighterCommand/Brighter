@@ -13,5 +13,10 @@
         /// The age a message to pickup by the sweeper in milliseconds.
         /// </summary>
         public int MinimumMessageAge { get; set; } = 5000;
+
+        /// <summary>
+        /// Use bulk operations to dispatch messages.
+        /// </summary>
+        public bool UseBulk { get; set; } = false;
     }
 }
