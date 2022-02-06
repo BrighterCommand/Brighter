@@ -53,11 +53,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //should fetch 1 message
             _messages.Should().HaveCount(2);
             //should fetch expected message
-            _messages.First().Header.Topic.Should().Be(_Topic2);
-            //should not fetch null messages
-            _messages.Should().NotBeNull();
-            //Second Should be Message 2
-            _messages.First(m => m.Id == _message2.Id).Body.Should().Be(_message2.Body);
+            _messages.Should().Contain(m => m.Id == _message1.Id);
+            _messages.Should().Contain(m => m.Id == _message2.Id);
 
             await _sqlOutbox.MarkDispatchedAsync(_messages.Select(m => m.Id), DateTime.UtcNow);
 
