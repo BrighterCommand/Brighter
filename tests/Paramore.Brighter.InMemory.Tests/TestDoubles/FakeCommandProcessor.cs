@@ -109,6 +109,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
+        public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
+        }
+
         public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : class, IResponse
         {
             return null;

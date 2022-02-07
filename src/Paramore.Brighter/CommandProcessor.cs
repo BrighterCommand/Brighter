@@ -531,6 +531,19 @@ namespace Paramore.Brighter
             await _bus.ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken); 
         }
 
+        /// <summary>
+        /// Flushes the message box message given by <param name="posts"> to the broker using bulk sending.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// </summary>
+        /// <param name="posts">The posts to flush</param>
+        public async Task BulkClearOutboxAsync(
+            IEnumerable<Guid> posts,
+            bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            await _bus.BulkClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
+        }
+
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.

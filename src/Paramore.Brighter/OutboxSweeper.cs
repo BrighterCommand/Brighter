@@ -11,6 +11,7 @@ namespace Paramore.Brighter
         private readonly double _milliSecondsSinceSent;
         private readonly IAmAnOutboxViewer<Message> _outbox;
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly bool _useBulk;
 
         /// <summary>
         /// This sweeper clears an outbox of any outstanding messages within the time interval
@@ -18,11 +19,13 @@ namespace Paramore.Brighter
         /// <param name="milliSecondsSinceSent">How long can a message sit in the box before we attempt to resend</param>
         /// <param name="outbox">What is the outbox you want to check -- should be the same one supplied to the command processor below</param>
         /// <param name="commandProcessor">Who should post the messages</param>
-        public OutboxSweeper(double milliSecondsSinceSent, IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor)
+        /// <param name="useBulk"></param>
+        public OutboxSweeper(double milliSecondsSinceSent, IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor, bool useBulk = false)
         {
             _milliSecondsSinceSent = milliSecondsSinceSent;
             _outbox = outbox;
             _commandProcessor = commandProcessor;
+            _useBulk = useBulk;
 
             if (outbox is IAmAnOutboxViewerAsync<Message> outboxViewerAsync) _outboxAsync = outboxViewerAsync;
         }
@@ -46,10 +49,11 @@ namespace Paramore.Brighter
         {
             if(_outboxAsync == null)
                 throw new InvalidOperationException("No Async Outbox Viewer defined.");
-            await SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor, cancellationToken);
+
+            await SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor, cancellationToken, _useBulk);
         }
         
-        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
+        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken, bool useBulk = false)
         {
             //find all the unsent messages
             var outstandingMessages = (await outbox.OutstandingMessagesAsync(milliSecondsSinceSent, cancellationToken: cancellationToken)).ToArray();
@@ -58,7 +62,10 @@ namespace Paramore.Brighter
             if (outstandingMessages.Any())
             {
                 var messages = outstandingMessages.Select(message => message.Id).ToArray();
-                await commandProcessor.ClearOutboxAsync(messages, cancellationToken: cancellationToken);
+                if (useBulk)
+                    await commandProcessor.BulkClearOutboxAsync(messages, cancellationToken: cancellationToken);
+                else
+                    await commandProcessor.ClearOutboxAsync(messages, cancellationToken: cancellationToken);
             }
         } 
     }
