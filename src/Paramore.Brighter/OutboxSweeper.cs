@@ -11,6 +11,7 @@ namespace Paramore.Brighter
         private readonly double _milliSecondsSinceSent;
         private readonly IAmAnOutboxViewer<Message> _outbox;
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly int _batchSize;
         private readonly bool _useBulk;
 
         /// <summary>
@@ -19,12 +20,15 @@ namespace Paramore.Brighter
         /// <param name="milliSecondsSinceSent">How long can a message sit in the box before we attempt to resend</param>
         /// <param name="outbox">What is the outbox you want to check -- should be the same one supplied to the command processor below</param>
         /// <param name="commandProcessor">Who should post the messages</param>
-        /// <param name="useBulk"></param>
-        public OutboxSweeper(double milliSecondsSinceSent, IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor, bool useBulk = false)
+        /// <param name="batchSize">The maximum number of messages to dispatch.</param>
+        /// <param name="useBulk">Use the producers bulk dispatch functionality.</param>
+        public OutboxSweeper(double milliSecondsSinceSent, IAmAnOutboxViewer<Message> outbox,
+            IAmACommandProcessor commandProcessor, int batchSize = 100, bool useBulk = false)
         {
             _milliSecondsSinceSent = milliSecondsSinceSent;
             _outbox = outbox;
             _commandProcessor = commandProcessor;
+            _batchSize = batchSize;
             _useBulk = useBulk;
 
             if (outbox is IAmAnOutboxViewerAsync<Message> outboxViewerAsync) _outboxAsync = outboxViewerAsync;
@@ -50,13 +54,23 @@ namespace Paramore.Brighter
             if(_outboxAsync == null)
                 throw new InvalidOperationException("No Async Outbox Viewer defined.");
 
-            await SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor, cancellationToken, _useBulk);
+            await SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor, cancellationToken, _batchSize, _useBulk);
         }
         
-        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken, bool useBulk = false)
+        /// <summary>
+        /// Dispatch messages that have yet to be dispatched.
+        /// </summary>
+        /// <param name="milliSecondsSinceSent">Minimum age of messages to dispatch.</param>
+        /// <param name="outbox">Outbox to dispatch from.</param>
+        /// <param name="commandProcessor">Command Processor to dispatch to.</param>
+        /// <param name="cancellationToken">Cancellation Token.</param>
+        /// <param name="batchSize">The maximum number of messages to dispatch.</param>
+        /// <param name="useBulk">Use the producers bulk dispatch functionality.</param>
+        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken, int batchSize = 100, bool useBulk = false)
         {
             //find all the unsent messages
-            var outstandingMessages = (await outbox.OutstandingMessagesAsync(milliSecondsSinceSent, cancellationToken: cancellationToken)).ToArray();
+            var outstandingMessages = (await outbox.OutstandingMessagesAsync(milliSecondsSinceSent, pageSize: batchSize,
+                cancellationToken: cancellationToken)).ToArray();
            
             //send them if we have them
             if (outstandingMessages.Any())

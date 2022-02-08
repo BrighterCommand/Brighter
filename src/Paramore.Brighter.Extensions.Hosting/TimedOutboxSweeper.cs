@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 milliSecondsSinceSent: _options.MinimumMessageAge, 
                 outbox: outbox, 
                 commandProcessor: commandProcessor, 
+                _options.BatchSize,
                 _options.UseBulk);
 
             if(_options.UseBulk)
