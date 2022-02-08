@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             tcs.SetResult(message);
             return tcs.Task;
         }
-        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, int batchSize, [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             foreach (var msg in messages)
             {
