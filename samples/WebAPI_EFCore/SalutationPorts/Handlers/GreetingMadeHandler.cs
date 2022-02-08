@@ -21,7 +21,7 @@ namespace SalutationPorts.Handlers
             _postBox = postBox;
         }
 
-        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )]
+        [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )]
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
