@@ -467,14 +467,11 @@ namespace Paramore.Brighter.Outbox.MySql
 
         private void CreateBulkReadCommand(DbCommand command, IEnumerable<Guid> messageIds)
         {
-            var parameters = new[] { CreateSqlParameter("@MessageIds", string.Join(",", messageIds)) };
-
             var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
 
             var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE `MessageID` IN ( {inClause} )";
 
             command.CommandText = sql;
-            AddParamtersParamArrayToCollection(parameters, command);
         }
 
         private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
