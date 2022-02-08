@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             AzureServiceBusPublication asbPublication)
         {
             var clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
-            return Get(clientProvider, asbPublication);
+            return Get(clientProvider, asbPublication, configuration.BulkSendBatchSize);
         }
 
         /// <summary>
@@ -27,15 +27,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         /// <param name="clientProvider">The connection to ASB</param>
         /// <param name="asbPublication">Describes the parameters for the producer</param>
+        /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
         /// <returns></returns>
         public static AzureServiceBusMessageProducer Get(
             IServiceBusClientProvider clientProvider,
-            AzureServiceBusPublication asbPublication)
+            AzureServiceBusPublication asbPublication,
+            int bulkSendBatchSize = 10)
         {
             var nameSpaceManagerWrapper = new AdministrationClientWrapper(clientProvider);
             var topicClientProvider = new ServiceBusSenderProvider(clientProvider);
 
-            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, asbPublication.MakeChannels);
+            return new AzureServiceBusMessageProducer(nameSpaceManagerWrapper, topicClientProvider, asbPublication.MakeChannels, bulkSendBatchSize);
         }
     }
 }

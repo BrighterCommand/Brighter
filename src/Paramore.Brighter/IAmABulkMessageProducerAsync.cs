@@ -46,8 +46,7 @@ namespace Paramore.Brighter
         /// Sends the specified message.
         /// </summary>
         /// <param name="messages">The messages.</param>
-        /// <param name="batchSize">The Number of Messages to dispatch at a time.</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
-        IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, int batchSize, CancellationToken cancellationToken);
+        IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, CancellationToken cancellationToken);
     }
 }

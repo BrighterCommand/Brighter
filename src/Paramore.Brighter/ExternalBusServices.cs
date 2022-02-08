@@ -238,7 +238,7 @@ namespace Paramore.Brighter
                 {
                     var messages = topicBatch.ToArray();
                     s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
-                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, 10, cancellationToken);
+                    var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 
                     await foreach (var successfulMessage in dispatchesMessages.WithCancellation(cancellationToken))
                     {

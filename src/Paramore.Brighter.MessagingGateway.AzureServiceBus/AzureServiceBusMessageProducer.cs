@@ -29,12 +29,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         private const int TopicConnectionSleepBetweenRetriesInMilliseconds = 100;
         private const int TopicConnectionRetryCount = 5;
         private readonly OnMissingChannel _makeChannel;
+        private readonly int _bulkSendBatchSize;
 
-        public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, OnMissingChannel makeChannel = OnMissingChannel.Create)
+        /// <summary>
+        /// An Azure Service Bus Message producer <see cref="IAmAMessageProducer"/>
+        /// </summary>
+        /// <param name="administrationClientWrapper">The administrative client.</param>
+        /// <param name="serviceBusSenderProvider">The provider to use when producing messages.</param>
+        /// <param name="makeChannel">Behaviour to use when verifying Channels <see cref="OnMissingChannel"/>.</param>
+        /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
+        public AzureServiceBusMessageProducer(IAdministrationClientWrapper administrationClientWrapper, IServiceBusSenderProvider serviceBusSenderProvider, OnMissingChannel makeChannel = OnMissingChannel.Create, int bulkSendBatchSize = 10)
         {
             _administrationClientWrapper = administrationClientWrapper;
             _serviceBusSenderProvider = serviceBusSenderProvider;
             _makeChannel = makeChannel;
+            _bulkSendBatchSize = bulkSendBatchSize;
         }
         
         /// <summary>
@@ -62,8 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <returns>List of Messages successfully sent.</returns>
         /// <exception cref="NotImplementedException"></exception>
-        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, int batchSize,
-            [EnumeratorCancellation] CancellationToken cancellationToken)
+        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
             var topics = messages.Select(m => m.Header.Topic).Distinct();
             if (topics.Count() != 1)
@@ -73,15 +81,15 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             var topic = topics.Single();
 
-            var batches = Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)batchSize)))
+            var batches = Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)_bulkSendBatchSize)))
                 .Select(i => new List<Message>(messages
-                    .Skip(i * batchSize)
-                    .Take(batchSize)
+                    .Skip(i * _bulkSendBatchSize)
+                    .Take(_bulkSendBatchSize)
                     .ToArray()));
 
             var serviceBusSenderWrapper = GetSender(topic);
 
-            s_logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), batchSize);
+            s_logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), _bulkSendBatchSize);
             try
             {
                 foreach (var batch in batches)
