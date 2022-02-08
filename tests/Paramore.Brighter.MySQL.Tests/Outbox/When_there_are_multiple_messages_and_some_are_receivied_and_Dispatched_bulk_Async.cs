@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             
             await _sqlOutbox.MarkDispatchedAsync(_messages.Select(m => m.Id), DateTime.UtcNow);
 
-            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0);
+            var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(1);
 
             undispatchedMessages.Count().Should().Be(2);
         }
