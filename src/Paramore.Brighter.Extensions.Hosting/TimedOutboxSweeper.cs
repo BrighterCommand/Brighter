@@ -40,14 +40,17 @@ namespace Paramore.Brighter.Extensions.Hosting
             IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
 
             var outBoxSweeper = new OutboxSweeper(
-                milliSecondsSinceSent:_options.MinimumMessageAge, 
-                outbox:outbox, 
-                commandProcessor:commandProcessor);
+                milliSecondsSinceSent: _options.MinimumMessageAge, 
+                outbox: outbox, 
+                commandProcessor: commandProcessor, 
+                _options.UseBulk);
 
-            outBoxSweeper.Sweep();
-            
+            if(_options.UseBulk)
+                outBoxSweeper.SweepAsync(CancellationToken.None).RunSynchronously();
+            else
+                outBoxSweeper.Sweep();
+
             s_logger.LogInformation("Outbox Sweeper sleeping");
-           
         }
 
         public Task StopAsync(CancellationToken cancellationToken)

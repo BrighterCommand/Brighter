@@ -218,7 +218,20 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-        /// <summary>
+       public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+           CancellationToken cancellationToken = default(CancellationToken))
+       {
+           var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
+            ClearExpiredMessages();
+
+            var ids = messageIds.Select(m => m.ToString()).ToList();
+
+            tcs.SetResult(_requests.Values.Where(oe => ids.Contains(oe.Key)).Select(oe => oe.Message).ToList());
+
+           return tcs.Task;
+       }
+
+       /// <summary>
         /// Mark the message as dispatched
         /// </summary>
         /// <param name="id">The message to mark as dispatched</param>
@@ -233,7 +246,13 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-        /// <summary>
+       public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+           CancellationToken cancellationToken = default(CancellationToken))
+       {
+           throw new NotImplementedException();
+       }
+
+       /// <summary>
         /// Mark the message as dispatched
         /// </summary>
         /// <param name="id">The message to mark as dispatched</param>

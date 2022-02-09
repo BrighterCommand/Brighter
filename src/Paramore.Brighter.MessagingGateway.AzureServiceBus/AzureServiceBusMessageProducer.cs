@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -14,7 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     /// <summary>
     /// A Sync and Async Message Producer for Azure Service Bus.
     /// </summary>
-    public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
+    public class AzureServiceBusMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
@@ -53,6 +55,53 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         }
 
         /// <summary>
+        /// Sends a Batch of Messages
+        /// </summary>
+        /// <param name="messages">The messages to send.</param>
+        /// <param name="batchSize">The size of batches to send messages in.</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <returns>List of Messages successfully sent.</returns>
+        /// <exception cref="NotImplementedException"></exception>
+        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, int batchSize,
+            [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            var topics = messages.Select(m => m.Header.Topic).Distinct();
+            if (topics.Count() != 1)
+            {
+                s_logger.LogError("Cannot Bulk send for Multiple Topics, {NumberOfTopics} Topics Requested", topics.Count());
+                throw new Exception($"Cannot Bulk send for Multiple Topics, {topics.Count()} Topics Requested");
+            }
+            var topic = topics.Single();
+
+            var batches = Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)batchSize)))
+                .Select(i => new List<Message>(messages
+                    .Skip(i * batchSize)
+                    .Take(batchSize)
+                    .ToArray()));
+
+            var serviceBusSenderWrapper = GetSender(topic);
+
+            s_logger.LogInformation("Sending Messages for {TopicName} split into {NumberOfBatches} Batches of {BatchSize}", topic, batches.Count(), batchSize);
+            try
+            {
+                foreach (var batch in batches)
+                {
+                    var asbMessages = batch.Select(ConvertToServiceBusMessage).ToArray();
+
+                    s_logger.LogDebug("Publishing {NumberOfMessages} messages to topic {Topic}.",
+                        asbMessages.Length, topic);
+
+                    await serviceBusSenderWrapper.SendAsync(asbMessages, cancellationToken);
+                    yield return batch.Select(m => m.Id).ToArray();
+                }
+            }
+            finally
+            {
+                await serviceBusSenderWrapper.CloseAsync();
+            }
+        }
+
+        /// <summary>
         /// Send the specified message with specified delay
         /// </summary>
         /// <param name="message">The message.</param>
@@ -71,29 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             s_logger.LogDebug("Preparing  to send message on topic {Topic}", message.Header.Topic);
 
-            EnsureTopicExists(message.Header.Topic);
-
-            IServiceBusSenderWrapper serviceBusSenderWrapper;
-
-            try
-            {
-                RetryPolicy policy = Policy
-                    .Handle<Exception>()
-                    .Retry(TopicConnectionRetryCount, (exception, retryNumber) =>
-                    {
-                        s_logger.LogError(exception, "Failed to connect to topic {Topic}, retrying...", message.Header.Topic);
-
-                        Thread.Sleep(TimeSpan.FromMilliseconds(TopicConnectionSleepBetweenRetriesInMilliseconds));
-                    }
-                    );
-
-                serviceBusSenderWrapper = policy.Execute(() => _serviceBusSenderProvider.Get(message.Header.Topic));
-            }
-            catch (Exception e)
-            {
-                s_logger.LogError(e, "Failed to connect to topic {Topic}, aborting.", message.Header.Topic);
-                throw;
-            }
+            var serviceBusSenderWrapper = GetSender(message.Header.Topic);
 
             try
             {
@@ -101,16 +128,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     "Publishing message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}.",
                     message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
 
-                var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
-                azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
-                azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
-                foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
-                {
-                    azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
-                }
-                azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
-                azureServiceBusMessage.ContentType = message.Header.ContentType;
-                azureServiceBusMessage.MessageId = message.Header.Id.ToString();
+                var azureServiceBusMessage = ConvertToServiceBusMessage(message);
                 if (delayMilliseconds == 0)
                 {
                     await serviceBusSenderWrapper.SendAsync(azureServiceBusMessage);
@@ -138,6 +156,48 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
         public void Dispose()
         {
+        }
+
+        private IServiceBusSenderWrapper GetSender(string topic)
+        {
+            EnsureTopicExists(topic);
+
+            try
+            {
+                RetryPolicy policy = Policy
+                    .Handle<Exception>()
+                    .Retry(TopicConnectionRetryCount, (exception, retryNumber) =>
+                        {
+                            s_logger.LogError(exception, "Failed to connect to topic {Topic}, retrying...",
+                                topic);
+
+                            Thread.Sleep(TimeSpan.FromMilliseconds(TopicConnectionSleepBetweenRetriesInMilliseconds));
+                        }
+                    );
+
+                return policy.Execute(() => _serviceBusSenderProvider.Get(topic));
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Failed to connect to topic {Topic}, aborting.", topic);
+                throw;
+            }
+        }
+
+        private ServiceBusMessage ConvertToServiceBusMessage(Message message)
+        {
+            var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
+            foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
+            {
+                azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
+            }
+            azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
+            azureServiceBusMessage.ContentType = message.Header.ContentType;
+            azureServiceBusMessage.MessageId = message.Header.Id.ToString();
+
+            return azureServiceBusMessage;
         }
 
         private void EnsureTopicExists(string topic)
