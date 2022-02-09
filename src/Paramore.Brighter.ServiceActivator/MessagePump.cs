@@ -110,7 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
-                    s_logger.LogDebug("MessagePump: Quit receiving messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    s_logger.LogInformation("MessagePump: Quit receiving messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
                     Channel.Dispose();
                     break;
                 }
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    s_logger.LogError(configurationException,
+                    s_logger.LogCritical(configurationException,
                         "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
                         Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
@@ -214,7 +214,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                 if (exception is ConfigurationException)
                 {
-                    s_logger.LogError(exception,
+                    s_logger.LogCritical(exception,
                         "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
                         Channel.Name, Thread.CurrentThread.ManagedThreadId);
                     stop = true;
@@ -310,7 +310,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             if (_unacceptableMessageCount >= UnacceptableMessageLimit)
             {
-                s_logger.LogError(
+                s_logger.LogCritical(
                     "MessagePump: Unacceptable message limit of {UnacceptableMessageLimit} reached, stopping reading messages from {ChannelName} on thread # {ManagementThreadId}",
                     UnacceptableMessageLimit,
                     Channel.Name,

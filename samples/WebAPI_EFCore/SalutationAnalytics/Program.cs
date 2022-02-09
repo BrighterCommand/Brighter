@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
@@ -29,14 +30,19 @@ namespace SalutationAnalytics
 
         private static IHostBuilder CreateHostBuilder(string[] args) =>
             Host.CreateDefaultBuilder(args)
-                .ConfigureHostConfiguration(configHost =>
+                .ConfigureHostConfiguration(configurationBuilder =>
                 {
-                    configHost.SetBasePath(Directory.GetCurrentDirectory());
-                    configHost.AddJsonFile("appsettings.json", optional: true);
-                    configHost.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
-                    configHost.AddEnvironmentVariables(prefix: "ASPNETCORE_");  //NOTE: Although not web, we use this to grab the environment
-                    configHost.AddEnvironmentVariables(prefix: "BRIGHTER_");
-                    configHost.AddCommandLine(args);
+                    configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+                    configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+                    configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
+                    configurationBuilder.AddEnvironmentVariables(prefix: "ASPNETCORE_");  //NOTE: Although not web, we use this to grab the environment
+                    configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
+                    configurationBuilder.AddCommandLine(args);
+                })
+                .ConfigureLogging((context, builder) =>
+                {
+                    builder.AddConsole();
+                    builder.AddDebug();
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
