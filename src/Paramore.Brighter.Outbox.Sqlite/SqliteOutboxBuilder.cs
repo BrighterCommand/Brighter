@@ -24,30 +24,46 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Outbox.Sqlite
 {
+    /// <summary>
+    /// Provide SQL statement helpers for creation of an Outbox
+    /// </summary>
     public class SqliteOutboxBuilder
     {
-        const string OutboxDdl = @"CREATE TABLE {0} (
-                                          [MessageId] uniqueidentifier NOT NULL
-                                        , [Topic] nvarchar(255) NULL
-                                        , [MessageType] nvarchar(32) NULL
-                                        , [Timestamp] datetime NULL
-                                        , [CorrelationId] UNIQUEIDENTIFIER NULL
-                                        , [ReplyTo] NVARCHAR(255) NULL
-                                        , [ContentType] NVARCHAR(128) NULL  
-                                        , [Dispatched] datetime NULL
-                                        , [HeaderBag] ntext NULL
-                                        , [Body] ntext NULL
-                                        , CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
-                                        );";
+        const string OutboxDdl = @"CREATE TABLE {0} 
+                                    (
+                                        [MessageId] uniqueidentifier NOT NULL,
+                                        [Topic] nvarchar(255) NULL,
+                                        [MessageType] nvarchar(32) NULL,
+                                        [Timestamp] datetime NULL,
+                                        [CorrelationId] UNIQUEIDENTIFIER NULL,
+                                        [ReplyTo] NVARCHAR(255) NULL,
+                                        [ContentType] NVARCHAR(128) NULL,  
+                                        [Dispatched] datetime NULL,
+                                        [HeaderBag] ntext NULL,
+                                        [Body] ntext NULL,
+                                        CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
+                                    );";
 
-        public static string GetDDL(string tableName)
+        private const string InboxExistsQuery = "SELECT name FROM sqlite_master WHERE type='table' AND name='{0}';";
+
+         /// <summary>
+         /// Get the DDL statements to create an Outbox in Sqlite
+         /// </summary>
+         /// <param name="inboxTableName">The name you want to use for the table</param>
+         /// <returns>The required DDL</returns>
+        public static string GetDDL(string outboxTableName)
         {
-            return string.Format(OutboxDdl, tableName);
+            return string.Format(OutboxDdl, outboxTableName);
         }
         
-        public static string GetExists(string tableName)
+        /// <summary>
+        /// Get the SQL statements required to test for the existence of an Outbox in Sqlite
+        /// </summary>
+        /// <param name="outboxTableName">The name that was used for the Outbox table</param>
+        /// <returns>The required SQL</returns>
+        public static string GetExistsQuery(string outboxTableName)
         {
-            return string.Format($"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}';");
+            return string.Format(InboxExistsQuery, outboxTableName);
         }
     }
 }

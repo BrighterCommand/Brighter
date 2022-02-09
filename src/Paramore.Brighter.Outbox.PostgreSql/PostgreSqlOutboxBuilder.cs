@@ -24,6 +24,9 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
+    /// <summary>
+    /// Provide SQL statement helpers for creation of an Outbox
+    /// </summary>
     public class PostgreSqlOutboxBulder
     {
         const string OutboxDdl = @"
@@ -42,10 +45,27 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Body TEXT NULL
             );
         ";
-
-        public static string GetDDL(string OutboxTableName)
+        
+        private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        
+        /// <summary>
+        /// Get the DDL required to create the Outbox in Postgres
+        /// </summary>
+        /// <param name="outboxTableName">The name you want to use for the table</param>
+        /// <returns>The required DDL</returns>
+        public static string GetDDL(string outboxTableName)
         {
-            return string.Format(OutboxDdl, OutboxTableName);
+            return string.Format(OutboxDdl, outboxTableName);
+        }
+        
+        /// <summary>
+        /// Get the SQL statements required to test for the existence of an Inbox in Postgres
+        /// </summary>
+        /// <param name="inboxTableName">The name that was used for the Inbox table</param>
+        /// <returns>The required SQL</returns>
+        public static string GetExistsQuery(string inboxTableName)
+        {
+            return string.Format(OutboxExistsSQL, inboxTableName);
         }
     }
 }

@@ -110,7 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
-                    s_logger.LogDebug("MessagePump: Quit receiving messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
+                    s_logger.LogInformation("MessagePump: Quit receiving messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
                     Channel.Dispose();
                     break;
                 }
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.ServiceActivator
                 }
                 catch (ConfigurationException configurationException)
                 {
-                    s_logger.LogDebug(configurationException,
+                    s_logger.LogCritical(configurationException,
                         "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
                         Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             } while (true);
 
-            s_logger.LogDebug(
+            s_logger.LogInformation(
                 "MessagePump0: Finished running message loop, no longer receiving messages from {ChannelName} on thread # {ManagementThreadId}",
                 Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
@@ -214,14 +214,14 @@ namespace Paramore.Brighter.ServiceActivator
 
                 if (exception is ConfigurationException)
                 {
-                    s_logger.LogDebug(exception,
+                    s_logger.LogCritical(exception,
                         "MessagePump: Stopping receiving of messages from {ChannelName} on thread # {ManagementThreadId}",
                         Channel.Name, Thread.CurrentThread.ManagedThreadId);
                     stop = true;
                     break;
                 }
 
-                s_logger.LogError(exception,
+                s_logger.LogInformation(exception,
                     "MessagePump: Failed to dispatch message from {ChannelName} on thread # {ManagementThreadId}",
                     Channel.Name, Thread.CurrentThread.ManagedThreadId);
             }
@@ -236,7 +236,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         private void RejectMessage(Message message)
         {
-            s_logger.LogDebug("MessagePump: Rejecting message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+            s_logger.LogWarning("MessagePump: Rejecting message {Id} from {ChannelName} on thread # {ManagementThreadId}", message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
             IncrementUnacceptableMessageLimit();
 
             Channel.Reject(message);
@@ -310,7 +310,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             if (_unacceptableMessageCount >= UnacceptableMessageLimit)
             {
-                s_logger.LogError(
+                s_logger.LogCritical(
                     "MessagePump: Unacceptable message limit of {UnacceptableMessageLimit} reached, stopping reading messages from {ChannelName} on thread # {ManagementThreadId}",
                     UnacceptableMessageLimit,
                     Channel.Name,

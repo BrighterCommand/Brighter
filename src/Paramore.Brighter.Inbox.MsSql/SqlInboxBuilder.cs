@@ -24,9 +24,12 @@ THE SOFTWARE. */
 
 namespace Paramore.Brighter.Inbox.MsSql
 {
+    /// <summary>
+    /// Provide SQL statement helpers for creation of an Inbox
+    /// </summary>
     public class SqlInboxBuilder
     {
-        private const string _outboxDDL = @"
+        private const string OutboxDDL = @"
                     CREATE TABLE {0}
                         (
                             [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
@@ -38,9 +41,26 @@ namespace Paramore.Brighter.Inbox.MsSql
                             PRIMARY KEY ( [Id] )
                         );";
 
-        public static string GetDDL(string tableName)
+        private const string InboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        
+        /// <summary>
+        /// Get the DDL statements to create an Inbox in MSSQL
+        /// </summary>
+        /// <param name="inboxTableName">The name you want to use for the table</param>
+        /// <returns>The required DDL</returns>
+         public static string GetDDL(string inboxTableName)
         {
-            return string.Format(_outboxDDL, tableName);
+            return string.Format(OutboxDDL, inboxTableName);
+        }
+        
+        /// <summary>
+        /// Get the SQL statements required to test for the existence of an Inbox in MSSQL
+        /// </summary>
+        /// <param name="inboxTableName">The name that was used for the Inbox table</param>
+        /// <returns>The required SQL</returns>
+        public static string GetExistsQuery(string inboxTableName)
+        {
+            return string.Format(InboxExistsSQL, inboxTableName);
         }
     }
 }
