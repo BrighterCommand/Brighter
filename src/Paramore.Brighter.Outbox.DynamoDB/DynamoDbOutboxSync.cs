@@ -36,9 +36,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbOutboxSync :
         IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>,
-        IAmAnOutboxViewer<Message>,
-        IAmAnOutboxViewerAsync<Message>
+        IAmAnOutboxAsync<Message>
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;

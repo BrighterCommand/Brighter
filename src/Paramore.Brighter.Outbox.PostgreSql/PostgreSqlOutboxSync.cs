@@ -35,7 +35,7 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxViewer<Message>
+    public class PostgreSqlOutboxSync : IAmAnOutboxSync<Message>
     {
         private readonly PostgreSqlOutboxConfiguration _configuration;
         private readonly IPostgreSqlConnectionProvider _connectionProvider;

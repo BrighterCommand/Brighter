@@ -121,17 +121,34 @@ namespace Paramore.Brighter
         void ClearOutbox(params Guid[] posts);
 
         /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000);
+
+        /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// <param name="posts">The posts to flush</param>
         Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
-        /// Flushes the message box message given by <param name="posts"> to the broker using bulk sending.
+        /// Flushes any outstanding message box message to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
-        /// <param name="posts">The posts to flush</param>
-        Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken));
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="useBulk">Use the bulk send on the producer.</param>
+        /// <param name="continueOnCapturedContext">Continue on capture context.</param>
+        /// <param name="cancellationToken">The cancellation token.</param>
+        public Task ClearOutboxAsync(
+            int amountToClear = 100,
+            int minimumAge = 5000,
+            bool useBulk = false,
+            bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.

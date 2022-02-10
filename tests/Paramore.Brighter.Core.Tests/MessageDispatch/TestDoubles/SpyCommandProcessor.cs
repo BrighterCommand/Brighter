@@ -134,6 +134,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             }
         }
 
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
+        {
+            throw new NotImplementedException();
+        }
+
         public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -142,6 +147,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             var completionSource = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             completionSource.SetResult(null);
             await completionSource.Task;
+        }
+
+        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false,
+            bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotImplementedException();
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
