@@ -114,8 +114,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false,
-            bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false)
         {
             throw new NotImplementedException();
         }
