@@ -93,6 +93,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             await _commandProcessor.ClearOutboxAsync(2, 1, true);
 
+            await Task.Delay(1000);
+
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
 
