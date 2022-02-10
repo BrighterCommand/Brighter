@@ -64,11 +64,11 @@ namespace Paramore.Brighter
         /// Retrieves messages that have been sent within the window
         /// </summary>
         /// <param name="millisecondsDispatchedSince"></param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
-        /// <param name="outboxTimeout"></param>
+        /// <param name="pageSize">The number of messages to fetch.</param>
+        /// <param name="pageNumber">The page number.</param>
+        /// <param name="outboxTimeout">Timeout of sql call.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns></returns>
+        /// <returns>List of messages that need to be dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
             double millisecondsDispatchedSince, 
             int pageSize = 100, 
@@ -79,8 +79,8 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets all messages in the OutBox, LIFO
         /// </summary>
-        /// <param name="pageSize">number of items on the page, default is 100</param>
-        /// <param name="pageNumber">page number of results to return, default is first</param>
+        /// <param name="pageSize">Number of items on the page, default is 100</param>
+        /// <param name="pageNumber">Page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for the search, if any</param>
         /// <returns></returns>
         IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null);
@@ -89,8 +89,8 @@ namespace Paramore.Brighter
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
+        /// <param name="pageSize">Number of items on the page, default is 100</param>
+        /// <param name="pageNumber">Page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         IEnumerable<Message> OutstandingMessages(

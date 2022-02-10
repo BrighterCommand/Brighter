@@ -109,8 +109,8 @@ namespace Paramore.Brighter
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
         /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <param name="pageSize"></param>
-        /// <param name="pageNumber"></param>
+        /// <param name="pageSize">The number of messages to fetch.</param>
+        /// <param name="pageNumber">The page number.</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>

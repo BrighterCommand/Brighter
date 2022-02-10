@@ -26,12 +26,13 @@ namespace Paramore.Brighter
 
         internal IAmAProducerRegistry ProducerRegistry { get; set; }
         
-        private SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
+        private static SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
         private readonly object _checkOutStandingMessagesObject = new object();
+        private readonly object _implicitClearMessagesObject = new object();
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
@@ -140,20 +141,14 @@ namespace Paramore.Brighter
             CheckOutstandingMessages();
         }
 
+        /// <summary>
+        /// This is the clear outbox for implicit clearing of messages.
+        /// </summary>
+        /// <param name="amountToClear">Maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
         internal void ClearOutbox(int amountToClear, int minimumAge)
         {
-            _clearSemaphoreToken.Wait();
-            try
-            {
-                var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
-                Dispatch(messages);
-            }
-            finally
-            {
-                _clearSemaphoreToken.Release();
-            }
-
-            CheckOutstandingMessages();
+            Task.Run(() => BackgroundDispatch(amountToClear, minimumAge, false));
         }
 
         internal async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
@@ -165,7 +160,7 @@ namespace Paramore.Brighter
 
             CheckOutboxOutstandingLimit();
 
-            await _clearSemaphoreToken.WaitAsync();
+            await _clearSemaphoreToken.WaitAsync(cancellationToken);
             try
             {
                 foreach (var messageId in posts)
@@ -184,31 +179,47 @@ namespace Paramore.Brighter
 
             CheckOutstandingMessages();
         }
-        internal async Task ClearOutboxAsync(int amountToClear, int minimumAge, bool useBulk, bool continueOnCapturedContext, CancellationToken cancellationToken)
+        
+        /// <summary>
+        /// This is the clear outbox for implicit clearing of messages.
+        /// </summary>
+        /// <param name="amountToClear">Maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
+        /// <param name="useBulk">Use bulk sending capability of the message producer.</param>
+        internal Task ClearOutboxAsync(int amountToClear, int minimumAge, bool useBulk)
         {
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
             
             CheckOutboxOutstandingLimit();
 
-            await _clearSemaphoreToken.WaitAsync();
-            try
-            {
-                var messages =
-                    await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear,
-                        cancellationToken: cancellationToken);
+            Task.Run(() => BackgroundDispatch(amountToClear, minimumAge, useBulk), CancellationToken.None);
+            
+            return Task.CompletedTask;
+        }
 
-                if (useBulk)
-                    await BulkDispatchAsync(messages, cancellationToken);
-                else
-                    await DispatchAsync(messages, continueOnCapturedContext, cancellationToken);
-            }
-            finally
+        private async Task BackgroundDispatch(int amountToClear, int minimumAge, bool useBulk)
+        {
+            if (Monitor.TryEnter(_implicitClearMessagesObject))
             {
-                _clearSemaphoreToken.Release();
-            }
+                await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                try
+                {
+                    var messages =
+                        await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
 
-            CheckOutstandingMessages();
+                    if (useBulk)
+                        await BulkDispatchAsync(messages, CancellationToken.None);
+                    else
+                        await DispatchAsync(messages, false, CancellationToken.None);
+                }
+                finally
+                {
+                    _clearSemaphoreToken.Release();
+                }
+
+                CheckOutstandingMessages();
+            }
         }
 
         private void Dispatch(IEnumerable<Message> posts)

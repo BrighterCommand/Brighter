@@ -549,16 +549,12 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
-        /// <param name="continueOnCapturedContext">Continue on capture context.</param>
-        /// <param name="cancellationToken">The cancellation token.</param>
         public Task ClearOutboxAsync(
             int amountToClear = 100,
             int minimumAge = 5000,
-            bool useBulk = false,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            bool useBulk = false)
         {
-            return _bus.ClearOutboxAsync(amountToClear, minimumAge, useBulk, continueOnCapturedContext, cancellationToken); 
+            return _bus.ClearOutboxAsync(amountToClear, minimumAge, useBulk); 
         }
 
         /// <summary>
