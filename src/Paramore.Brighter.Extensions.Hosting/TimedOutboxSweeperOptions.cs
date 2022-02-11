@@ -15,6 +15,11 @@
         public int MinimumMessageAge { get; set; } = 5000;
 
         /// <summary>
+        /// The maximum number of messages to dispatch.
+        /// </summary>
+        public int BatchSize { get; set; } = 100;
+
+        /// <summary>
         /// Use bulk operations to dispatch messages.
         /// </summary>
         public bool UseBulk { get; set; } = false;

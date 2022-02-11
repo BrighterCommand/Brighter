@@ -43,7 +43,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly IAmAnOutboxSync<Message> _outbox;
-        private readonly IAmAnOutboxViewer<Message> _outboxViewer;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public ControlBusSenderPostMessageAsyncTests()
@@ -51,7 +50,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _myCommand.Value = "Hello World";
 
             _outbox = new InMemoryOutbox();
-            _outboxViewer = (IAmAnOutboxViewer<Message>)_outbox;
             _fakeMessageProducer = new FakeMessageProducer();
 
             const string topic = "MyCommand";
@@ -90,7 +88,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();
             
             //_should_store_the_message_in_the_sent_command_message_repository
-            var message = _outboxViewer
+            var message = _outbox
               .DispatchedMessages(1200000, 1)
               .SingleOrDefault();
               

@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -90,7 +91,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             await _fakeOutboxSync.AddAsync(_message);
             await _fakeOutboxSync.AddAsync(_message2);
 
-            await _commandProcessor.BulkClearOutboxAsync(new []{_message.Id, _message2.Id});
+            await _commandProcessor.ClearOutboxAsync(2, 1, true);
+
+            await Task.Delay(1000);
 
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducer.MessageWasSent.Should().BeTrue();

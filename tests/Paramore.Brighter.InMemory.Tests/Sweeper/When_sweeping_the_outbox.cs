@@ -18,7 +18,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, outbox, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
 
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, outbox, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
 
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
 
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              
              var outbox = new InMemoryOutbox();
              var commandProcessor = new FakeCommandProcessor();
-             var sweeper = new OutboxSweeper(milliSecondsSinceSent, outbox, commandProcessor);
+             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
  
              var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
  
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
-            var sweeper = new OutboxSweeper(milliSecondsSinceSent, outbox, commandProcessor);
+            var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
  
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
  

@@ -42,9 +42,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutboxSync :
         IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>,
-        IAmAnOutboxViewer<Message>,
-        IAmAnOutboxViewerAsync<Message>
+        IAmAnOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutboxSync>();
 
