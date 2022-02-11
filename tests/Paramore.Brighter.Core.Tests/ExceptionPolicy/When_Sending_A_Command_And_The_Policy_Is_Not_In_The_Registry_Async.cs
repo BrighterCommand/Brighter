@@ -66,10 +66,12 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(_myCommand));
 
             //_should_throw_an_exception
-            _exception.Should().BeOfType<KeyNotFoundException>();
+            _exception.Should().BeOfType<ConfigurationException>();
+            var innerException = _exception.InnerException;
+            innerException.Should().NotBeNull();
+            innerException.Should().BeOfType<KeyNotFoundException>();
             //_should_give_the_name_of_the_missing_policy
-            _exception.Should().NotBeNull();
-            _exception.Message.Should().Contain("The given key 'MyDivideByZeroPolicy' was not present in the dictionary");
+            innerException.Message.Should().Contain("The given key 'MyDivideByZeroPolicy' was not present in the dictionary");
         }
     }
 }
