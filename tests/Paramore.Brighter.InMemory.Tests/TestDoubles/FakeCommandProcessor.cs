@@ -97,7 +97,16 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
         {
-            throw new NotImplementedException();
+            //Note this does not take time into account
+            var postedKeys = Posted.Select(m => m.Id);
+            
+            var messagesToDispatch =
+                Dispatched.Where(m => !postedKeys.Contains(m.Key))
+                    .Take(amountToClear)
+                    .Select(m => m.Key)
+                    .ToArray();
+            
+            ClearOutbox(messagesToDispatch);
         }
 
         public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
@@ -114,9 +123,9 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false)
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false)
         {
-            throw new NotImplementedException();
+            ClearOutbox(amountToClear, minimumAge);
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,

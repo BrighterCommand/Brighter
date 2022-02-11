@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             await _fakeOutboxSync.AddAsync(_message);
             await _fakeOutboxSync.AddAsync(_message2);
 
-            await _commandProcessor.ClearOutboxAsync(2, 1, true);
+            _commandProcessor.ClearAsyncOutbox(2, 1, true);
 
             await Task.Delay(1000);
 

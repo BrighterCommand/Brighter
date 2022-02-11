@@ -520,13 +520,14 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
+        /// This will be run on a background task.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
         {
-            _bus.ClearOutbox(amountToClear, minimumAge); 
+            _bus.ClearOutbox(amountToClear, minimumAge, false, false); 
         }
 
         /// <summary>
@@ -544,17 +545,18 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// Flushes any outstanding message box message to the broker.
+        /// This will be run on a background task.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
-        public Task ClearOutboxAsync(
+        public void ClearAsyncOutbox(
             int amountToClear = 100,
             int minimumAge = 5000,
             bool useBulk = false)
         {
-            return _bus.ClearOutboxAsync(amountToClear, minimumAge, useBulk); 
+            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk); 
         }
 
         /// <summary>
