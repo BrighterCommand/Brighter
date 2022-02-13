@@ -93,7 +93,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              
              //Assert
              commandProcessor.Dispatched.Count.Should().Be(3);
-             commandProcessor.Posted.Count.Should().Be(0);
+             commandProcessor.Posted.Count.Should().Be(3);
            
         }
         
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              
             //Assert
             commandProcessor.Dispatched.Count.Should().Be(3);
-            commandProcessor.Posted.Count.Should().Be(0);
+            commandProcessor.Posted.Count.Should().Be(3);
            
         }
         

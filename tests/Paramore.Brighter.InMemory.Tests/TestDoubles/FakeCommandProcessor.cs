@@ -12,8 +12,10 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
     /// </summary>
     public class FakeCommandProcessor : IAmACommandProcessor
     {
+        //Sent to the Bus/Processor
         public readonly ConcurrentDictionary<Guid, IRequest> Dispatched = new ConcurrentDictionary<Guid, IRequest>();
-        public readonly ConcurrentQueue<IRequest> Posted = new ConcurrentQueue<IRequest>();
+        //Deposited into the Outbox
+        public readonly ConcurrentQueue<DepositedMessage> Posted = new ConcurrentQueue<DepositedMessage>();
         
         public void Send<T>(T command) where T : class, IRequest
         {
@@ -51,7 +53,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public void Post<T>(T request) where T : class, IRequest
         {
-            DepositPost(request);
+            ClearOutbox(DepositPost(request));
         }
 
         public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
@@ -68,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Guid DepositPost<T>(T request) where T : class, IRequest
         {
-            Dispatched.TryAdd(request.Id, request);
+            Posted.Enqueue(new DepositedMessage(request));
             return request.Id;
         }
 
@@ -90,23 +92,22 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         public void ClearOutbox(params Guid[] posts)
         {
             foreach (var post in posts)
-            { 
-                Posted.Enqueue(Dispatched[post]);
+            {
+                var msg = Posted.First(m => m.Request.Id == post);
+                Dispatched.TryAdd(post, msg.Request);
             }
         }
 
         public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
         {
-            //Note this does not take time into account
-            var postedKeys = Posted.Select(m => m.Id);
-            
-            var messagesToDispatch =
-                Dispatched.Where(m => !postedKeys.Contains(m.Key))
-                    .Take(amountToClear)
-                    .Select(m => m.Key)
-                    .ToArray();
-            
-            ClearOutbox(messagesToDispatch);
+            var depositedMessages = Posted.Where(m =>
+                m.EnqueuedTime < DateTime.Now.AddMilliseconds(-1 * minimumAge) &&
+                !Dispatched.ContainsKey(m.Request.Id))
+                .Take(amountToClear)
+                .Select(m => m.Request.Id)
+                .ToArray();
+
+            ClearOutbox(depositedMessages);
         }
 
         public Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
@@ -137,6 +138,18 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         public TResponse Call<T, TResponse>(T request, int timeOutInMilliseconds) where T : class, ICall where TResponse : class, IResponse
         {
             return null;
+        }
+    }
+
+    public class DepositedMessage
+    {
+        public IRequest Request { get; }
+        public DateTime EnqueuedTime { get; }
+
+        public DepositedMessage(IRequest request)
+        {
+            Request = request;
+            EnqueuedTime = DateTime.UtcNow;
         }
     }
 }
