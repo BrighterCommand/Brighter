@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Paramore.Brighter.MQTT.Tests": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}
