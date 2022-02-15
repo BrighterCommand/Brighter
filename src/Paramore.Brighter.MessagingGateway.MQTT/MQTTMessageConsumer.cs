@@ -30,7 +30,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// 
         /// </summary>
         /// <param name="configuration"></param>
-        /// <param name="topic"></param>
         public MQTTMessageConsumer(MQTTMessagingGatewayConsumerConfiguration configuration)
         {
             _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClient.ApplicationMessageReceivedHandler = new MqttApplicationMessageReceivedHandlerDelegate(e =>
             {
-                Console.WriteLine("Recieved");
+                s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", _config.TopicPrefix);
                 string message = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
                 _messageQueue.Enqueue(JsonSerializer.Deserialize<Message>(message));
             });
@@ -85,12 +84,6 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         {
             if (_messageQueue.Count==0)
                 return new Message[] { _noopMessage };
-
-            //s_logger.LogInformation(
-            //    "RmqMessageConsumer: Received message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}, message: {Request}",
-            //    _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
-            //    JsonSerializer.Serialize(message, JsonSerialisationOptions.Options),
-            //    Environment.NewLine);
 
             List<Message> messages = new List<Message>();
 
