@@ -141,16 +141,6 @@ namespace Paramore.Brighter
             CheckOutstandingMessages();
         }
 
-        /// <summary>
-        /// This is the clear outbox for implicit clearing of messages.
-        /// </summary>
-        /// <param name="amountToClear">Maximum number to clear.</param>
-        /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
-        internal void ClearOutbox(int amountToClear, int minimumAge)
-        {
-            Task.Run(() => BackgroundDispatch(amountToClear, minimumAge, false));
-        }
-
         internal async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -179,26 +169,54 @@ namespace Paramore.Brighter
 
             CheckOutstandingMessages();
         }
-        
+
         /// <summary>
         /// This is the clear outbox for implicit clearing of messages.
         /// </summary>
         /// <param name="amountToClear">Maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
-        /// <param name="useBulk">Use bulk sending capability of the message producer.</param>
-        internal Task ClearOutboxAsync(int amountToClear, int minimumAge, bool useBulk)
+        /// <param name="useAsync">Use the Async outbox and Producer</param>
+        /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
+        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk)
         {
-            if (!HasAsyncOutbox())
-                throw new InvalidOperationException("No async outbox defined.");
-            
             CheckOutboxOutstandingLimit();
 
-            Task.Run(() => BackgroundDispatch(amountToClear, minimumAge, useBulk), CancellationToken.None);
-            
-            return Task.CompletedTask;
+            if (useAsync)
+            {
+                if (!HasAsyncOutbox())
+                    throw new InvalidOperationException("No async outbox defined.");
+                
+                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk), CancellationToken.None);
+            }
+
+            else
+            {
+                if (!HasOutbox())
+                    throw new InvalidOperationException("No outbox defined.");
+                
+                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge));
+            }
         }
 
-        private async Task BackgroundDispatch(int amountToClear, int minimumAge, bool useBulk)
+        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge)
+        {
+            if (Monitor.TryEnter(_implicitClearMessagesObject))
+            {
+                await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
+                try
+                {
+                    Dispatch(OutBox.OutstandingMessages(minimumAge, amountToClear));
+                }
+                finally
+                {
+                    _clearSemaphoreToken.Release();
+                }
+
+                CheckOutstandingMessages();
+            }
+        }
+        
+        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk)
         {
             if (Monitor.TryEnter(_implicitClearMessagesObject))
             {

@@ -33,9 +33,11 @@ namespace Paramore.Brighter
             _commandProcessor.ClearOutbox(_batchSize, _milliSecondsSinceSent);
         }
 
-        public async Task SweepAsync(CancellationToken cancellationToken = default)
+        public Task SweepAsync(CancellationToken cancellationToken = default)
         {
-            await _commandProcessor.ClearOutboxAsync(_batchSize, _milliSecondsSinceSent, _useBulk);
+            _commandProcessor.ClearAsyncOutbox(_batchSize, _milliSecondsSinceSent, _useBulk);
+            
+            return Task.CompletedTask;
         }
     }
 }
