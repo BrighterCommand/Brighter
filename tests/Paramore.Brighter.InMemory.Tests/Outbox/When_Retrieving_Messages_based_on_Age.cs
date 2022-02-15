@@ -41,7 +41,7 @@ public class When_Retrieving_Messages_based_on_Age
     [Fact]
     public async Task When_outstanding_in_outbox_they_are_retrieved_correctly_async()
     {
-        var minimumAgeInMs = 500;
+        var minimumAgeInMs = 1000;
         var outbox = new InMemoryOutbox();
         
         await outbox.AddAsync(new MessageTestDataBuilder());
