@@ -35,6 +35,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             sweeper.Sweep();
             
+            //Wait for the sweeper to run in the background
+            Thread.Sleep(250);
+            
             //Assert
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
@@ -64,7 +67,10 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             Task.Delay(1000).Wait(); // -- let the messages expire
             
             await sweeper.SweepAsync();
-            
+
+            //Wait for the sweep
+            await Task.Delay(250);
+
             //Assert
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
@@ -96,6 +102,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              //Act
              sweeper.Sweep();
              
+             //Wait for sweep
+             Thread.Sleep(250);
+             
              //Assert
              commandProcessor.Dispatched.Count.Should().Be(1);
              commandProcessor.Deposited.Count.Should().Be(4);
@@ -125,6 +134,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
  
             //Act
             await sweeper.SweepAsync();
+
+            //This is as the sweeper above will run in a background thread so we need to wait
+            await Task.Delay(250);
              
             //Assert
             commandProcessor.Dispatched.Count.Should().Be(1);
