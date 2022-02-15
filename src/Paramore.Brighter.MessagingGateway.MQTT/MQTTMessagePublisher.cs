@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Runtime.Serialization.Formatters.Binary;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,21 +7,28 @@ using MQTTnet;
 using MQTTnet.Client;
 using MQTTnet.Client.Options;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.Serialization;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
+    /// <summary>
+    /// Class MQTTMessagePublisher .
+    /// </summary>
     public class MQTTMessagePublisher
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageProducer>();
-        private MQTTMessagingGatewayConfiguration _config;
-        private IMqttClient mqttClient;
-        private IMqttClientOptions mqttClientOptions;
+        private readonly MQTTMessagingGatewayConfiguration _config;
+        private readonly IMqttClient _mqttClient;
+        private readonly IMqttClientOptions _mqttClientOptions;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MQTTMessagePublisher"/> class.
+        /// </summary>
+        /// <param name="config">The Publisher configuration.</param>
         public MQTTMessagePublisher(MQTTMessagingGatewayConfiguration config)
         {
             _config = config;
 
-            mqttClient = new MqttFactory().CreateMqttClient();
+            _mqttClient = new MqttFactory().CreateMqttClient();
 
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
                 .WithTcpServer(_config.Hostname)
@@ -39,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
                 mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithCredentials(_config.Username, _config.Password);
             }
 
-            mqttClientOptions = mqttClientOptionsBuilder.Build();
+            _mqttClientOptions = mqttClientOptionsBuilder.Build();
 
             Connect();
         }
@@ -50,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             {
                 try
                 {
-                    mqttClient.ConnectAsync(mqttClientOptions, CancellationToken.None).GetAwaiter().GetResult();
+                    _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None).GetAwaiter().GetResult();
                     s_logger.LogInformation($"Connected to {_config.Hostname}");
                     return;
                 }
@@ -61,15 +66,24 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             }
         }
 
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void PublishMessage(Message message)
         {
             PublishMessageAsync(message).GetAwaiter().GetResult();
         }
 
+        /// <summary>
+        /// Sends the specified message asynchronously.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
         public async Task PublishMessageAsync(Message message)
         {
             MqttApplicationMessage mqttMessage = createMQTTMessage(message);
-            await mqttClient.PublishAsync(mqttMessage, CancellationToken.None);
+            await _mqttClient.PublishAsync(mqttMessage, CancellationToken.None);
         }
 
         private MqttApplicationMessage createMQTTMessage(Message message)

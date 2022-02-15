@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -15,39 +14,40 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
+    /// <summary>
+    /// Class MQTTMessageConsumer.
+    /// The <see cref="MQTTMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
+    /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching.
+    /// </summary>
     public class MQTTMessageConsumer : IAmAMessageConsumer
     {
         private readonly string _topic;
-        private readonly Queue<Message> _messageQueue;
+        private readonly Queue<Message> _messageQueue = new Queue<Message>();
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MQTTMessageConsumer>();
         private readonly Message _noopMessage = new Message();
         private readonly IMqttClientOptions _mqttClientOptions;
         private readonly IMqttClient _mqttClient;
 
-        public MQTTMessagingGatewayConsumerConfiguration _config { get; }
-
         /// <summary>
-        /// 
+        /// Initializes a new instance of the <see cref="MQTTMessageConsumer" /> class.
         /// </summary>
         /// <param name="configuration"></param>
         public MQTTMessageConsumer(MQTTMessagingGatewayConsumerConfiguration configuration)
         {
             _topic = $"{configuration.TopicPrefix}/#" ?? throw new ArgumentNullException(nameof(configuration.TopicPrefix));
-            _messageQueue = configuration.queue ?? new Queue<Message>();
-            _config = configuration;
-
+            
             MqttClientOptionsBuilder mqttClientOptionsBuilder = new MqttClientOptionsBuilder()
-               .WithTcpServer(_config.Hostname)
-               .WithCleanSession(_config.CleanSession);
+               .WithTcpServer(configuration.Hostname)
+               .WithCleanSession(configuration.CleanSession);
 
-            if (!string.IsNullOrEmpty(_config.ClientID))
+            if (!string.IsNullOrEmpty(configuration.ClientID))
             {
-                mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithClientId($"{_config.ClientID}");
+                mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithClientId($"{configuration.ClientID}");
             }
 
-            if (!string.IsNullOrEmpty(_config.Username))
+            if (!string.IsNullOrEmpty(configuration.Username))
             {
-                mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithCredentials(_config.Username, _config.Password);
+                mqttClientOptionsBuilder = mqttClientOptionsBuilder.WithCredentials(configuration.Username, configuration.Password);
             }
 
             _mqttClientOptions = mqttClientOptionsBuilder.Build();
@@ -56,15 +56,19 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
             _mqttClient.ApplicationMessageReceivedHandler = new MqttApplicationMessageReceivedHandlerDelegate(e =>
             {
-                s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", _config.TopicPrefix);
+                s_logger.LogInformation("MQTTMessageConsumer: Received message from queue {TopicPrefix}", configuration.TopicPrefix);
                 string message = Encoding.UTF8.GetString(e.ApplicationMessage.Payload);
                 _messageQueue.Enqueue(JsonSerializer.Deserialize<Message>(message));
             });
 
-            Task connectTask = Connect();
+            Task connectTask = Connect(configuration.ConnectionAttempts);
             connectTask.Wait();
         }
 
+        /// <summary>
+        /// Not implemented Acknowledge Method.
+        /// </summary>
+        /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
             throw new NotImplementedException();
@@ -75,11 +79,18 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             _mqttClient.Dispose();
         }
 
+        /// <summary>
+        /// Clears the internal Queue buffer.
+        /// </summary>
         public void Purge()
         {
             _messageQueue.Clear();
         }
 
+        /// <summary>
+        /// Retrieves the current recieved messages from the internal buffer.
+        /// </summary>
+        /// <param name="timeoutInMilliseconds"></param>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             if (_messageQueue.Count==0)
@@ -107,34 +118,42 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             return messages.ToArray();
         }
 
+        /// <summary>
+        /// Not implemented Reject Method.
+        /// </summary>
+        /// <param name="message"></param>
         public void Reject(Message message)
         {
             throw new NotImplementedException();
         }
 
+        /// <summary>
+        /// Not implemented Requeue Method.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <param name="delayMilliseconds"></param>
         public bool Requeue(Message message, int delayMilliseconds)
         {
             throw new NotImplementedException();
         }
 
-        private async Task Connect()
+        private async Task Connect(int connectionAttempts)
         {
-            for (int i = 0; i < _config.ConnectionAttempts; i++)
+            for (int i = 0; i < connectionAttempts; i++)
             {
                 try
                 {
-                   
                     await _mqttClient.ConnectAsync(_mqttClientOptions, CancellationToken.None);
-                    s_logger.LogInformation($"Connected to {_config.Hostname}");
+                    s_logger.LogInformation("MQTT Consumer Client Connected");
 
                     await _mqttClient.SubscribeAsync(new MqttTopicFilter { Topic = _topic, QualityOfServiceLevel = MqttQualityOfServiceLevel.AtLeastOnce });
-                    s_logger.LogInformation($"Subscribed to #");
+                    s_logger.LogInformation("Subscribed to {Topic}", _topic);
 
                     return;
                 }
                 catch (Exception)
                 {
-                    s_logger.LogError($"Unable to connect to {_config.Hostname}");
+                    s_logger.LogError("Unable to connect MQTT Consumer Client");
                 }
             }
         }

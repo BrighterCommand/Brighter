@@ -3,17 +3,21 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
 {
+    /// <summary>
+    /// Class ClientRequestHandler .
+    /// The <see cref="MQTTMessageProducer"/> is used by a client to talk to a server and abstracts the infrastructure for inter-process communication away from clients.
+    /// It handles subscription establishment, request sending and error handling
+    /// </summary>
     public class MQTTMessageProducer : IAmAMessageProducer, IAmAMessageProducerAsync, IAmAMessageProducerSync
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         private MQTTMessagePublisher _mqttMessagePublisher;
 
-        public MQTTMessageProducer(MQTTMessagingGatewayConfiguration configuration)
-        {
-            _mqttMessagePublisher = new MQTTMessagePublisher(configuration);
-        }
-
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MQTTMessageProducer" /> class.
+        /// </summary>
+        /// <param name="mqttMessagePublisher">The publisher used to send messages</param>
         public MQTTMessageProducer(MQTTMessagePublisher mqttMessagePublisher)
         {
             _mqttMessagePublisher = mqttMessagePublisher;
@@ -24,15 +28,23 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             _mqttMessagePublisher = null;
         }
 
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            System.Diagnostics.Debugger.Break();
             if (message == null)
                 throw new ArgumentNullException(nameof(message));
 
             _mqttMessagePublisher.PublishMessage(message);
         }
 
+        /// <summary>
+        /// Sends the specified message asynchronously.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <returns>Task.</returns>
         public async Task SendAsync(Message message)
         {
             if (message == null)
@@ -41,6 +53,12 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             await _mqttMessagePublisher.PublishMessageAsync(message);
         }
 
+
+        /// <summary>
+        /// Sends the specified message.
+        /// </summary>
+        /// <param name="message">The message.</param>
+        /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             Task.Delay(delayMilliseconds);
