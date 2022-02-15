@@ -200,6 +200,23 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 //ignore
             }
 
+            public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+                int outboxTimeout = -1, Dictionary<string, object> args = null)
+            {
+                return new Message[0];
+            }
+
+            public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+            {
+                return new Message[0]; 
+            }
+
+            public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
+                Dictionary<string, object> args = null)
+            {
+                return new Message[0]; 
+            }
+
             public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
             {
                return new Message[0]; 

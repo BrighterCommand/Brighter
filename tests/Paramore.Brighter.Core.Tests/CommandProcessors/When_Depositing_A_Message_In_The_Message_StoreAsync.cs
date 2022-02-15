@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             //message should be in the store
             var depositedPost = _fakeOutboxSync
-                .OutstandingMessages(3000)
+                .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
             depositedPost.Should().NotBeNull();
@@ -78,6 +78,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
+            
+            //message should be marked as outstanding if not sent
+            var outstandingMessages = await _fakeOutboxSync.OutstandingMessagesAsync(0);
+            var outstandingMessage = outstandingMessages.Single();
+            outstandingMessage.Id.Should().Be(_message.Id);
         }
         
         public void Dispose()
