@@ -23,7 +23,6 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -33,17 +32,18 @@ using Xunit;
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 {
     [Trait("Category", "MQTT")]
-    public class MqttMessageProducerSendMessageTests : IDisposable
+    public class When_queue_is_Purged : IDisposable
     {
         private const string MqttHost = "mosquitto.internal.timvw.co.uk";
         private readonly IAmAMessageProducerAsync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly string _topicPrefix = "BrighterIntegrationTests/ProducerTests";
+        private readonly string _topicPrefix = "BrighterIntegrationTests/PurgeTests";
+        private readonly Message _noopMessage = new();
 
-        public MqttMessageProducerSendMessageTests()
+        public When_queue_is_Purged()
         {
-            
-            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration 
+
+            var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration
             {
                 Hostname = MqttHost,
                 TopicPrefix = _topicPrefix
@@ -65,12 +65,9 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_posting_multiples_message_via_the_messaging_gateway()
+        public void When_purging_the_queue_on_the_messaging_gateway()
         {
-            const int messageCount = 1000;
-            List<Message> sentMessages = new();
-
-            for (int i = 0; i < messageCount; i++)
+            for (int i = 0; i < 5; i++)
             {
                 Message _message = new(
                     new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
@@ -79,15 +76,17 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 
                 Task task = _messageProducer.SendAsync(_message);
                 task.Wait();
-
-                sentMessages.Add(_message);
             }
+
+            Thread.Sleep(100);
+
+            _messageConsumer.Purge();
 
             Message[] recievedMessages = _messageConsumer.Receive(100);
 
             recievedMessages.Should().NotBeEmpty()
-            .And.HaveCount(messageCount)
-            .And.ContainInOrder(sentMessages)
+            .And.HaveCount(1)
+            .And.ContainInOrder(new[] { _noopMessage })
             .And.ContainItemsAssignableTo<Message>();
         }
 
