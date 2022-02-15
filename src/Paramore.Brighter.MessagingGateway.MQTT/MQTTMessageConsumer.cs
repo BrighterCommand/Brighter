@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
@@ -72,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            _mqttClient.Dispose();
         }
 
         public void Purge()
@@ -91,9 +92,26 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
             //    JsonSerializer.Serialize(message, JsonSerialisationOptions.Options),
             //    Environment.NewLine);
 
-            Message message = _messageQueue.Dequeue();
+            List<Message> messages = new List<Message>();
 
-            return new Message[1] { message };
+            using (CancellationTokenSource cts = new CancellationTokenSource(timeoutInMilliseconds))
+            {
+                cts.Token.Register(() => { throw new TimeoutException(); });
+                while (!cts.IsCancellationRequested && _messageQueue.Count > 0)
+                {
+                    try
+                    {
+                        Message message = _messageQueue.Dequeue();
+                        messages.Add(message);
+                    }
+                    catch (TimeoutException)
+                    {
+                        s_logger.LogWarning("MQTTMessageConsumer: Timed out retrieving messages.  Queue length: {QueueLength}", _messageQueue.Count);
+                    }
+                }
+            }
+
+            return messages.ToArray();
         }
 
         public void Reject(Message message)

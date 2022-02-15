@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -38,7 +37,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
     {
         private readonly IAmAMessageProducerAsync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
-        private readonly string _topicPrefix = "BrighterTests";
+        private readonly string _topicPrefix = "BrighterIntegrationTests";
+        private readonly Message _noopMessage = new Message();
 
         public MqttMessageProducerSendMessageTests()
         {
@@ -65,21 +65,56 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_posting_a_message_via_the_messaging_gateway()
+        public void When_posting_multiples_message_via_the_messaging_gateway()
         {
-            Message _message = new(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
-                new MessageBody($"test message")
-            );
+            const int messageCount = 1000;
+            List<Message> sentMessages = new();
 
-            Task task = _messageProducer.SendAsync(_message);
-            task.Wait();
+            for (int i = 0; i < messageCount; i++)
+            {
+                Message _message = new(
+                    new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
+                    new MessageBody($"test message")
+                );
 
-            Thread.Sleep(100);
+                Task task = _messageProducer.SendAsync(_message);
+                task.Wait();
+
+                sentMessages.Add(_message);
+            }
 
             Message[] recievedMessages = _messageConsumer.Receive(100);
 
-            recievedMessages.First().Body.Value.Should().Be(_message.Body.Value);
+            recievedMessages.Should().NotBeEmpty()
+            .And.HaveCount(messageCount)
+            .And.ContainInOrder(sentMessages)
+            .And.ContainItemsAssignableTo<Message>();
+        }
+
+        [Fact]
+        public void When_purging_the_queue_on_the_messaging_gateway()
+        {
+            for (int i = 0; i < 5; i++)
+            {
+                Message _message = new(
+                    new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
+                    new MessageBody($"test message")
+                );
+
+                Task task = _messageProducer.SendAsync(_message);
+                task.Wait();
+            }
+
+            Thread.Sleep(100);
+
+            _messageConsumer.Purge();
+            
+            Message[] recievedMessages = _messageConsumer.Receive(100);
+
+            recievedMessages.Should().NotBeEmpty()
+            .And.HaveCount(1)
+            .And.ContainInOrder(new[] { _noopMessage })
+            .And.ContainItemsAssignableTo<Message>();
         }
 
         public void Dispose()
