@@ -78,7 +78,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              //Arrange
              const int milliSecondsSinceSent = 500;
              
-             var outbox = new InMemoryOutbox();
              var commandProcessor = new FakeCommandProcessor();
              var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
              
@@ -91,7 +90,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
              foreach (var message in messages)
              {
-                 outbox.Add(message);
                  commandProcessor.DepositPost(message.ToStubRequest());
              }
 
@@ -109,8 +107,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         {
             //Arrange
             const int milliSecondsSinceSent = 500;
-             
-            var outbox = new InMemoryOutbox();
+            
             var commandProcessor = new FakeCommandProcessor();
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
  
@@ -123,7 +120,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             foreach (var message in messages)
             {
-                outbox.Add(message);
                 commandProcessor.DepositPost(message.ToStubRequest());
             }
  
