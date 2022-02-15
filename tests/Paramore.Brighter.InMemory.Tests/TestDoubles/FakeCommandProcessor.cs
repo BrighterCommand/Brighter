@@ -12,10 +12,14 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
     /// </summary>
     public class FakeCommandProcessor : IAmACommandProcessor
     {
-        //Sent to the Bus/Processor
+        /// <summary>
+        /// Message has been dispatched (to the bus or directly to the handler)
+        /// </summary>
         public readonly ConcurrentDictionary<Guid, IRequest> Dispatched = new ConcurrentDictionary<Guid, IRequest>();
-        //Deposited into the Outbox
-        public readonly ConcurrentQueue<DepositedMessage> Posted = new ConcurrentQueue<DepositedMessage>();
+        /// <summary>
+        /// Message has been placed into the outbox but not sent or dispatched
+        /// </summary>
+        public readonly ConcurrentQueue<DepositedMessage> Deposited = new ConcurrentQueue<DepositedMessage>();
         
         public void Send<T>(T command) where T : class, IRequest
         {
@@ -70,7 +74,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Guid DepositPost<T>(T request) where T : class, IRequest
         {
-            Posted.Enqueue(new DepositedMessage(request));
+            Deposited.Enqueue(new DepositedMessage(request));
             return request.Id;
         }
 
@@ -93,14 +97,14 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         {
             foreach (var post in posts)
             {
-                var msg = Posted.First(m => m.Request.Id == post);
+                var msg = Deposited.First(m => m.Request.Id == post);
                 Dispatched.TryAdd(post, msg.Request);
             }
         }
 
         public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
         {
-            var depositedMessages = Posted.Where(m =>
+            var depositedMessages = Deposited.Where(m =>
                 m.EnqueuedTime < DateTime.Now.AddMilliseconds(-1 * minimumAge) &&
                 !Dispatched.ContainsKey(m.Request.Id))
                 .Take(amountToClear)
