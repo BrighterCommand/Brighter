@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var container = new ServiceCollection();
             container.AddSingleton<MyGlobalInboxEventHandler>(handler);
-            container.AddSingleton<IAmAnInbox>(_inbox);
+            container.AddSingleton<IAmAnInboxSync>(_inbox);
             container.AddSingleton<UseInboxHandler<MyEvent>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 

@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
         private readonly InboxConfiguration _inboxConfiguration;
-        private IAmAnInbox _inbox;
+        private IAmAnInboxSync _inbox;
 
 
         public PipelineGlobalInboxNoInboxAttributeAsyncTests()
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             var container = new ServiceCollection();
             container.AddTransient<MyNoInboxCommandHandlerAsync>();
-            container.AddSingleton<IAmAnInbox>(_inbox);
+            container.AddSingleton<IAmAnInboxSync>(_inbox);
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
