@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2015 Toby Henderson <hendersont@gmail.com>
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter
         /// Creates message producers.
         /// </summary>
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
-        IAmAProducerRegistry Create();
+        IAmAProducerRegistry Create(int bulkSendBatchSize = 10);
         
     }
 }
