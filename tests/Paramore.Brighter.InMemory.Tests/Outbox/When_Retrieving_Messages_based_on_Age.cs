@@ -47,7 +47,7 @@ public class When_Retrieving_Messages_based_on_Age
         await outbox.AddAsync(new MessageTestDataBuilder());
         await outbox.AddAsync(new MessageTestDataBuilder());
         
-        await Task.Delay(minimumAgeInMs);
+        await Task.Delay(minimumAgeInMs * 2);
         
         await outbox.AddAsync(new MessageTestDataBuilder());
         await outbox.AddAsync(new MessageTestDataBuilder());
