@@ -7,11 +7,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     {
         private readonly IServiceBusClientProvider _clientProvider;
         private readonly IEnumerable<AzureServiceBusPublication> _asbPublications;
+        private readonly int _bulkSendBatchSize;
 
         /// <summary>
         /// Creates a producer registry initialized with producers for ASB derived from the publications
         /// </summary>
-        /// <param name="configuration">The configuration of the connection to AWS</param>
+        /// <param name="configuration">The configuration of the connection to ASB</param>
         /// <param name="asbPublications">A set of publications - topics on the server - to configure</param>
         public AzureServiceBusProducerRegistryFactory(
             AzureServiceBusConfiguration configuration, 
@@ -19,19 +20,23 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
              _clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
              _asbPublications = asbPublications;
+             _bulkSendBatchSize = configuration.BulkSendBatchSize;
         }
 
         /// <summary>
         /// Creates a producer registry initialized with producers for ASB derived from the publications
         /// </summary>
-        /// <param name="clientProvider">The connection to AWS</param>
+        /// <param name="clientProvider">The connection to ASB</param>
         /// <param name="asbPublications">A set of publications - topics on the server - to configure</param>
+        /// <param name="bulkSendBatchSize">The maximum size to chunk messages when dispatching to ASB</param>
         public AzureServiceBusProducerRegistryFactory(
             IServiceBusClientProvider clientProvider,
-            IEnumerable<AzureServiceBusPublication> asbPublications)
+            IEnumerable<AzureServiceBusPublication> asbPublications,
+            int bulkSendBatchSize = 10)
         {
             _clientProvider = clientProvider;
             _asbPublications = asbPublications;
+            _bulkSendBatchSize = bulkSendBatchSize;
         }
         
         
@@ -44,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var producers = new Dictionary<string, IAmAMessageProducer>();
             foreach (var publication in _asbPublications)
             {
-                producers[publication.Topic] = AzureServiceBusMessageProducerFactory.Get(_clientProvider, publication);;
+                producers[publication.Topic] = AzureServiceBusMessageProducerFactory.Get(_clientProvider, publication, _bulkSendBatchSize);
             }
 
             return new ProducerRegistry(producers);
