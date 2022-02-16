@@ -35,7 +35,7 @@ namespace Paramore.Brighter
         /// Creates message producers.
         /// </summary>
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
-        IAmAProducerRegistry Create(int bulkSendBatchSize = 10);
+        IAmAProducerRegistry Create();
         
     }
 }
