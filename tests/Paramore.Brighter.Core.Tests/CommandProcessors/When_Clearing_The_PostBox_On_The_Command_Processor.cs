@@ -40,14 +40,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly FakeOutboxSync _fakeOutbox;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public CommandProcessorPostBoxClearTests()
         {
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             _fakeOutbox = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             var topic = "MyCommand";
             _message = new Message(
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 _fakeOutbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
 
         [Fact]
@@ -82,9 +82,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.ClearOutbox(_message.Id);
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
 
-            var sentMessage = _fakeMessageProducer.SentMessages.FirstOrDefault();
+            var sentMessage = _fakeMessageProducerWithPublishConfirmation.SentMessages.FirstOrDefault();
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);

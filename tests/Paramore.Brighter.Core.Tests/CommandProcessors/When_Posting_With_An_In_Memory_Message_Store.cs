@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly InMemoryOutbox _outbox = new InMemoryOutbox();
-        private readonly FakeMessageProducer _fakeMessageProducer = new FakeMessageProducer();
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
         public CommandProcessorWithInMemoryOutboxTests()
         {
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 _outbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
 
         [Fact]
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //_should_store_the_message_in_the_sent_command_message_repository
             _outbox.Get(_myCommand.Id).Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
             // _should_convert_the_command_into_a_message
             _outbox.Get(_myCommand.Id).Should().Be(_message);
         }

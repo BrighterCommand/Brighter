@@ -39,5 +39,10 @@ namespace Paramore.Brighter
             
             return Task.CompletedTask;
         }
+
+        public void SweepAsyncOutbox()
+        {
+            _commandProcessor.ClearAsyncOutbox(_batchSize, _milliSecondsSinceSent, _useBulk);
+        }
     }
 }

@@ -35,6 +35,8 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             sweeper.Sweep();
 
+            Thread.Sleep(200);
+
             //Assert
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
@@ -63,7 +65,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Act
             await Task.Delay(milliSecondsSinceSent * 2); // -- let the messages expire
             
-            await sweeper.SweepAsync();
+            sweeper.SweepAsyncOutbox();
+
+            await Task.Delay(200);
 
             //Assert
             outbox.EntryCount.Should().Be(3);
@@ -96,8 +100,10 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              //Act
              sweeper.Sweep();
 
-             //Assert
-             commandProcessor.Dispatched.Count.Should().Be(1);
+             Thread.Sleep(200);
+
+            //Assert
+            commandProcessor.Dispatched.Count.Should().Be(1);
              commandProcessor.Deposited.Count.Should().Be(4);
            
         }
@@ -124,7 +130,9 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
  
             //Act
-            await sweeper.SweepAsync();
+            sweeper.SweepAsyncOutbox();
+
+            await Task.Delay(200);
 
             //Assert
             commandProcessor.Deposited.Count.Should().Be(4);

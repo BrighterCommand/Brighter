@@ -36,19 +36,31 @@ namespace Paramore.Brighter.Extensions.Hosting
             s_logger.LogInformation("Outbox Sweeper looking for unsent messages");
 
             var scope = _serviceScopeFactory.CreateScope();
-            IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
+            try
+            {
+                IAmACommandProcessor commandProcessor = scope.ServiceProvider.GetService<IAmACommandProcessor>();
 
-            var outBoxSweeper = new OutboxSweeper(
-                milliSecondsSinceSent: _options.MinimumMessageAge,
-                commandProcessor: commandProcessor, 
-                _options.BatchSize,
-                _options.UseBulk);
+                var outBoxSweeper = new OutboxSweeper(
+                    milliSecondsSinceSent: _options.MinimumMessageAge,
+                    commandProcessor: commandProcessor,
+                    _options.BatchSize,
+                    _options.UseBulk);
 
-            if(_options.UseBulk)
-                outBoxSweeper.SweepAsync(CancellationToken.None).RunSynchronously();
-            else
-                outBoxSweeper.Sweep();
-
+                if (_options.UseBulk)
+                    outBoxSweeper.SweepAsyncOutbox();
+                else
+                    outBoxSweeper.Sweep();
+            }
+            catch (Exception e)
+            {
+                s_logger.LogError(e, "Error while sweeping the outbox.");
+                throw;
+            }
+            finally
+            {
+                scope.Dispose();
+            }
+            
             s_logger.LogInformation("Outbox Sweeper sleeping");
         }
 
