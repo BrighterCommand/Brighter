@@ -61,6 +61,8 @@ namespace Paramore.Brighter
         internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
             where T : class, IRequest
         {
+            CheckOutboxOutstandingLimit();
+                
             var written = await RetryAsync(async ct => { await AsyncOutbox.AddAsync(message, OutboxTimeout, ct, overridingTransactionConnectionProvider).ConfigureAwait(continueOnCapturedContext); },
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
@@ -71,6 +73,8 @@ namespace Paramore.Brighter
             
         internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
         {
+            CheckOutboxOutstandingLimit();
+                
             var written = Retry(() => { OutBox.Add(message, OutboxTimeout, overridingTransactionConnectionProvider); });
 
             if (!written)
@@ -118,8 +122,6 @@ namespace Paramore.Brighter
             if (!HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            CheckOutboxOutstandingLimit();
-
             // Only allow a single Clear to happen at a time
             _clearSemaphoreToken.Wait();
             try
@@ -147,8 +149,6 @@ namespace Paramore.Brighter
 
             if (!HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
-
-            CheckOutboxOutstandingLimit();
 
             await _clearSemaphoreToken.WaitAsync(cancellationToken);
             try
@@ -179,8 +179,6 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
         internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk)
         {
-            CheckOutboxOutstandingLimit();
-
             if (useAsync)
             {
                 if (!HasAsyncOutbox())
@@ -205,11 +203,16 @@ namespace Paramore.Brighter
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
-                    Dispatch(OutBox.OutstandingMessages(minimumAge, amountToClear));
+                    var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
+                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
+                        messages.Count(), amountToClear);
+                    Dispatch(messages);
+                    s_logger.LogInformation("Messages have been cleared");
                 }
                 finally
                 {
                     _clearSemaphoreToken.Release();
+                    Monitor.Exit(_implicitClearMessagesObject);
                 }
 
                 CheckOutstandingMessages();
@@ -225,15 +228,21 @@ namespace Paramore.Brighter
                 {
                     var messages =
                         await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
+                    
+                    s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
+                        messages.Count(), amountToClear);
 
                     if (useBulk)
                         await BulkDispatchAsync(messages, CancellationToken.None);
                     else
                         await DispatchAsync(messages, false, CancellationToken.None);
+                    
+                    s_logger.LogInformation("Messages have been cleared");
                 }
                 finally
                 {
                     _clearSemaphoreToken.Release();
+                    Monitor.Exit(_implicitClearMessagesObject);
                 }
 
                 CheckOutstandingMessages();
