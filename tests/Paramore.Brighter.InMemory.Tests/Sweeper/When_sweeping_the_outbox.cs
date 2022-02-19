@@ -34,7 +34,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             Task.Delay(1000).Wait(); // -- let the messages expire
             
             sweeper.Sweep();
-            
+
             //Assert
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
@@ -61,10 +61,10 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
 
             //Act
-            Task.Delay(1000).Wait(); // -- let the messages expire
+            await Task.Delay(milliSecondsSinceSent * 2); // -- let the messages expire
             
             await sweeper.SweepAsync();
-            
+
             //Assert
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
              var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
             
-             Thread.Sleep(milliSecondsSinceSent);
+             Thread.Sleep(milliSecondsSinceSent * 2);
 
              foreach (var message in messages)
              {
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
              //Act
              sweeper.Sweep();
-             
+
              //Assert
              commandProcessor.Dispatched.Count.Should().Be(1);
              commandProcessor.Deposited.Count.Should().Be(4);
@@ -116,7 +116,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
 
-            await Task.Delay(milliSecondsSinceSent);
+            await Task.Delay(milliSecondsSinceSent * 2);
 
             foreach (var message in messages)
             {
@@ -125,11 +125,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
  
             //Act
             await sweeper.SweepAsync();
-             
+
             //Assert
-            commandProcessor.Dispatched.Count.Should().Be(1);
             commandProcessor.Deposited.Count.Should().Be(4);
-           
+            commandProcessor.Dispatched.Count.Should().Be(1);
+
         }
         
     }
