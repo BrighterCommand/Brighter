@@ -168,7 +168,7 @@ jobs:
           dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
-      - name: Redis Transport Tests
+      - name: MQTT Transport Tests
         run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
   
   rabbitmq-ci:
