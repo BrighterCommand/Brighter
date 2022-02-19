@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="message"></param>
         public void Acknowledge(Message message)
         {
-            throw new NotImplementedException();
+            return;
         }
 
         public void Dispose()
@@ -124,7 +124,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="message"></param>
         public void Reject(Message message)
         {
-            throw new NotImplementedException();
+            return;
         }
 
         /// <summary>
@@ -134,7 +134,7 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
         /// <param name="delayMilliseconds"></param>
         public bool Requeue(Message message, int delayMilliseconds)
         {
-            throw new NotImplementedException();
+            return false;
         }
 
         private async Task Connect(int connectionAttempts)
