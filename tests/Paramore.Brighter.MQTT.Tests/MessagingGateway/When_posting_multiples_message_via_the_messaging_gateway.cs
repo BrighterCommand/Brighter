@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
     [Trait("Category", "MQTT")]
     public class MqttMessageProducerSendMessageTests : IDisposable
     {
-        private const string MqttHost = "mosquitto.internal.timvw.co.uk";
+        private const string MqttHost = "localhost";
         private readonly IAmAMessageProducerAsync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly string _topicPrefix = "BrighterIntegrationTests/ProducerTests";
@@ -45,7 +45,8 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
             var mqttProducerConfig = new MQTTMessagingGatewayProducerConfiguration 
             {
                 Hostname = MqttHost,
-                TopicPrefix = _topicPrefix
+                TopicPrefix = _topicPrefix,
+                ClientID = "BrighterIntegrationTests"
             };
 
             MQTTMessagePublisher mqttMessagePublisher = new(
@@ -56,7 +57,7 @@ namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 
             MQTTMessagingGatewayConsumerConfiguration mqttConsumerConfig = new()
             {
-                Hostname = "mosquitto.internal.timvw.co.uk",
+                Hostname = MqttHost,
                 TopicPrefix = _topicPrefix
             };
 

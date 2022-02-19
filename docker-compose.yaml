@@ -69,7 +69,12 @@ services:
       - dynamodb:/data
     ports:
       - "8000:8000"
-  
+
+  mosquitto:
+    image: efrecon/mosquitto
+    ports:
+      - 1883:1883
+
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     hostname: zookeeper
