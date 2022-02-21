@@ -20,14 +20,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutboxSync _fakeOutboxSync;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public CommandProcessorDepositPostTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
             _fakeOutboxSync = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             var topic = "MyCommand";
             _message = new Message(
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 policyRegistry,
                 messageMapperRegistry,
                 _fakeOutboxSync,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
 
 
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             //assert
             //message should not be posted
-            _fakeMessageProducer.MessageWasSent.Should().BeFalse();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
             var depositedPost = _fakeOutboxSync

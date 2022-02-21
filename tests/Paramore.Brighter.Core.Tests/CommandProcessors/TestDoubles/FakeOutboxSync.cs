@@ -122,10 +122,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return tcs.Task;
         }
 
-        public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            throw new NotImplementedException();
+            foreach (var id in ids)
+            {
+                await MarkDispatchedAsync(id, dispatchedAt, args, cancellationToken);
+            }
         }
 
         public Task<IEnumerable<Message>> OutstandingMessagesAsync(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
