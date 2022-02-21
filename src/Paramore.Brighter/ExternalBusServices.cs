@@ -26,13 +26,13 @@ namespace Paramore.Brighter
 
         internal IAmAProducerRegistry ProducerRegistry { get; set; }
         
-        private static SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
+        private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         
         //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
         private readonly object _checkOutStandingMessagesObject = new object();
-        private readonly object _implicitClearMessagesObject = new object();
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
@@ -198,7 +198,7 @@ namespace Paramore.Brighter
 
         private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge)
         {
-            if (Monitor.TryEnter(_implicitClearMessagesObject))
+            if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
@@ -209,26 +209,35 @@ namespace Paramore.Brighter
                     Dispatch(messages);
                     s_logger.LogInformation("Messages have been cleared");
                 }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while dispatching from outbox");
+                }
                 finally
                 {
                     _clearSemaphoreToken.Release();
-                    Monitor.Exit(_implicitClearMessagesObject);
+                    _backgroundClearSemaphoreToken.Release();
                 }
 
                 CheckOutstandingMessages();
+            }
+            else
+            {
+                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
         
         private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk)
         {
-            if (Monitor.TryEnter(_implicitClearMessagesObject))
+            
+            if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
                     var messages =
                         await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
-                    
+
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
 
@@ -236,16 +245,24 @@ namespace Paramore.Brighter
                         await BulkDispatchAsync(messages, CancellationToken.None);
                     else
                         await DispatchAsync(messages, false, CancellationToken.None);
-                    
+
                     s_logger.LogInformation("Messages have been cleared");
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while dispatching from outbox");
                 }
                 finally
                 {
                     _clearSemaphoreToken.Release();
-                    Monitor.Exit(_implicitClearMessagesObject);
+                    _backgroundClearSemaphoreToken.Release();
                 }
 
                 CheckOutstandingMessages();
+            }
+            else
+            {
+                s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
 
@@ -323,7 +340,7 @@ namespace Paramore.Brighter
 
             foreach (var topicBatch in messagesByTopic)
             {
-                var producer = ProducerRegistry.LookupBy(topicBatch.Key);
+                var producer = ProducerRegistry.LookupByOrDefault(topicBatch.Key);
 
                 if (producer is IAmABulkMessageProducerAsync bulkMessageProducer)
                 {
