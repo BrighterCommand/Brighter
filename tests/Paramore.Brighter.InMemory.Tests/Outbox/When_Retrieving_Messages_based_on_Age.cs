@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Paramore.Brighter;
 using Paramore.Brighter.InMemory.Tests.Builders;
 using Xunit;
 
