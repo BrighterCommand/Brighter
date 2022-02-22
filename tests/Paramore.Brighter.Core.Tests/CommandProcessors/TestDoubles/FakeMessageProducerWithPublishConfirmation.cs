@@ -22,20 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
+using System;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    /// <summary>
-    /// Interface IAmAMessageProducerFactory
-    /// </summary>
-    public interface IAmAProducerRegistryFactory
+    public class FakeMessageProducerWithPublishConfirmation : FakeMessageProducer, ISupportPublishConfirmation
     {
-        /// <summary>
-        /// Creates message producers.
-        /// </summary>
-        /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
-        IAmAProducerRegistry Create();
-        
+        public event Action<bool, Guid> OnMessagePublished;
+
+        public new void Send(Message message)
+        {
+            MessageWasSent = true;
+            SentMessages.Add(message);
+            OnMessagePublished?.Invoke(true, message.Id);
+        }
     }
 }

@@ -43,16 +43,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly IAmAnOutboxSync<Message> _outbox;
-        private readonly IAmAnOutboxViewer<Message> _outboxViewer;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public ControlBusSenderPostMessageAsyncTests()
         {
             _myCommand.Value = "Hello World";
 
             _outbox = new InMemoryOutbox();
-            _outboxViewer = (IAmAnOutboxViewer<Message>)_outbox;
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
             _message = new Message(
@@ -76,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 _outbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
 
             _controlBusSender = new ControlBusSender(_commandProcessor);
         }
@@ -87,10 +85,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             await _controlBusSender.PostAsync(_myCommand);
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
             
             //_should_store_the_message_in_the_sent_command_message_repository
-            var message = _outboxViewer
+            var message = _outbox
               .DispatchedMessages(1200000, 1)
               .SingleOrDefault();
               

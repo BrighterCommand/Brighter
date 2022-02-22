@@ -28,15 +28,14 @@ using System.Linq;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class MessagingConfiguration.
-    /// Used to set the components of a work queue solution
+    /// Used to configure the Event Bus
     /// </summary>
-    public class MessagingConfiguration
+    public class ExternalBusConfiguration
     {
         /// <summary>
-        /// Gets the message producer.
+        /// The registry is a collection of producers 
         /// </summary>
-        /// <value>The message producer.</value>
+        /// <value>The registry of producers</value>
         public IAmAProducerRegistry ProducerRegistry { get; }
 
         /// <summary>
@@ -63,14 +62,14 @@ namespace Paramore.Brighter
         
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MessagingConfiguration"/> class.
+        /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
         /// </summary>
         /// <param name="producerRegistry">Clients for the external bus by topic they send to. The client details are specialised by transport</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipelie</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
-        public MessagingConfiguration(
+        public ExternalBusConfiguration(
             IAmAProducerRegistry producerRegistry,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,

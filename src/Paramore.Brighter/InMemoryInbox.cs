@@ -108,7 +108,7 @@ namespace Paramore.Brighter
     /// It is possible to use multiple performers within one process as competing consumers, and if you want to use an InMemoryInbox this is the most
     /// viable strategy - otherwise use an out-of-process inbox that provides shared state to all consumers
     /// </summary>
-    public class InMemoryInbox : InMemoryBox<InboxItem>, IAmAnInbox, IAmAnInboxAsync
+    public class InMemoryInbox : InMemoryBox<InboxItem>, IAmAnInboxSync, IAmAnInboxAsync
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.

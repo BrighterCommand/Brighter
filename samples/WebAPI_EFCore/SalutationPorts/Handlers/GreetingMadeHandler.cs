@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
 using Paramore.Brighter.Inbox.Attributes;
+using Paramore.Brighter.Logging.Attributes;
 using SalutationEntities;
 using SalutationPorts.EntityGateway;
 using SalutationPorts.Requests;
@@ -22,6 +23,7 @@ namespace SalutationPorts.Handlers
         }
 
         [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )]
+        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
@@ -39,9 +41,13 @@ namespace SalutationPorts.Handlers
 
                 await tx.CommitAsync(cancellationToken);
             }
-            catch (Exception)
+            catch (Exception e)
             {
+                Console.WriteLine(e);
+                
                 await tx.RollbackAsync(cancellationToken);
+                
+                Console.WriteLine("Salutation analytical record not saved");
             }
 
             await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);

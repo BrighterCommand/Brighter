@@ -153,7 +153,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .ExternalBus(new MessagingConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
+                .ExternalBus(new ExternalBusConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             
@@ -198,6 +198,23 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
             {
                 //ignore
+            }
+
+            public IEnumerable<Message> DispatchedMessages(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+                int outboxTimeout = -1, Dictionary<string, object> args = null)
+            {
+                return new Message[0];
+            }
+
+            public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
+            {
+                return new Message[0]; 
+            }
+
+            public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
+                Dictionary<string, object> args = null)
+            {
+                return new Message[0]; 
             }
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
