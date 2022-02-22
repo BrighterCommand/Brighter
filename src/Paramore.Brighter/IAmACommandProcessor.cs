@@ -143,7 +143,7 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
-        public Task ClearOutboxAsync(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false);
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false);
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.

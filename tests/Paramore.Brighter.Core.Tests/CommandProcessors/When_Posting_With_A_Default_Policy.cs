@@ -39,14 +39,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutboxSync _fakeOutboxSync;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public PostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
             _fakeOutboxSync = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
             _message = new Message(
@@ -61,8 +61,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducer},}), 
+                .ExternalBus(new MessagingConfiguration(
+                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}), 
                     messageMapperRegistry), 
                     _fakeOutboxSync)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .SingleOrDefault(msg => msg.Id == _message.Id)
                 .Should().NotBeNull();
             //should send a message via the messaging gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
             // should convert the command into a message
             _fakeOutboxSync.Get().First().Should().Be(_message);
         }
