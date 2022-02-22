@@ -21,12 +21,12 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.0" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.12">
+      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.2" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.13">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.13" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.2" />
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
     </ItemGroup>
 
