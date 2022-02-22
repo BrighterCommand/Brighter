@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Inbox.Handlers
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<UseInboxHandler<T>>();
 
-        private readonly IAmAnInbox _inbox;
+        private readonly IAmAnInboxSync _inbox;
         private bool _onceOnly;
         private string _contextKey;
         private OnceOnlyAction _onceOnlyAction;
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// Initializes a new instance of the <see cref="RequestHandler{TRequest}" /> class.
         /// </summary>
         /// <param name="inbox">The store for commands that pass into the system</param>
-        public UseInboxHandler(IAmAnInbox inbox)
+        public UseInboxHandler(IAmAnInboxSync inbox)
         {
             _inbox = inbox;
         }

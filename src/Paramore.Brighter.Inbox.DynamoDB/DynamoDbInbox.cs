@@ -35,7 +35,7 @@ using Paramore.Brighter.Inbox.Exceptions;
 
 namespace Paramore.Brighter.Inbox.DynamoDB
 {
-    public class DynamoDbInbox : IAmAnInbox, IAmAnInboxAsync
+    public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
        
         private readonly DynamoDBContext _context;

@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
     public class OnceOnlyAttributeWithWarnExceptionTests
     {
         private readonly MyCommand _command;
-        private readonly IAmAnInbox _inbox;
+        private readonly IAmAnInboxSync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
 
         public OnceOnlyAttributeWithWarnExceptionTests()

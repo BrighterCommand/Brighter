@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
     /// <summary>
     ///     Class SqliteInbox.
     /// </summary>
-    public class SqliteInbox : IAmAnInbox, IAmAnInboxAsync
+    public class SqliteInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteInbox>();
 

@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Inbox.MySql
     /// <summary>
     ///     Class MySqlInbox.
     /// </summary>
-    public class MySqlInbox : IAmAnInbox, IAmAnInboxAsync
+    public class MySqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlInbox>();
 
