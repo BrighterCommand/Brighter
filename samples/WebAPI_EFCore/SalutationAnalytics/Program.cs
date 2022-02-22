@@ -79,7 +79,27 @@ namespace SalutationAnalytics
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                             options.UseScoped = true;
+                            options.HandlerLifetime = ServiceLifetime.Scoped;
+                            options.MapperLifetime = ServiceLifetime.Singleton;
+                            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                         })
+                        .UseExternalBus(new RmqProducerRegistryFactory(
+                                new RmqMessagingGatewayConnection
+                                {
+                                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
+                                    Exchange = new Exchange("paramore.brighter.exchange"),
+                                },
+                                new RmqPublication[] {
+                                    new RmqPublication
+                                    {
+                                        Topic = new RoutingKey("SalutationReceived"),
+                                        MaxOutStandingMessages = 5,
+                                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                                        MakeChannels = OnMissingChannel.Create
+                                    }}
+                            ).Create()
+                        )
                         .AutoFromAssemblies()
                         .UseExternalInbox(
                             ConfigureInbox(hostContext),

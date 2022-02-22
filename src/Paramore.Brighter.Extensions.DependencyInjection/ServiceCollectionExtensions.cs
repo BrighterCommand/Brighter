@@ -99,16 +99,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
          /// <param name="inbox">The external inbox to use</param>
          /// <param name="inboxConfiguration">If this is null, configure by hand, if not, will auto-add inbox to handlers</param>
          /// <returns></returns>
-         public static IBrighterBuilder UseExternalInbox(this IBrighterBuilder brighterBuilder, IAmAnInbox inbox, InboxConfiguration inboxConfiguration = null)
+         public static IBrighterBuilder UseExternalInbox(
+             this IBrighterBuilder brighterBuilder, 
+             IAmAnInbox inbox, InboxConfiguration inboxConfiguration = null, 
+             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
          {
              if (inbox is IAmAnInboxSync)
              {
-                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => inbox, ServiceLifetime.Singleton));
+                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => inbox, serviceLifetime));
              }
 
              if (inbox is IAmAnInboxAsync)
              {
-                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => inbox, ServiceLifetime.Singleton));
+                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => inbox, serviceLifetime));
              }
 
              if (inboxConfiguration != null)
@@ -229,7 +232,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
 
             var inboxConfiguration = provider.GetService<InboxConfiguration>();
-
+            
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
 
             var needHandlers = CommandProcessorBuilder.With();
