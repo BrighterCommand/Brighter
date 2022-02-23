@@ -48,6 +48,8 @@ namespace SalutationPorts.Handlers
                 await tx.RollbackAsync(cancellationToken);
                 
                 Console.WriteLine("Salutation analytical record not saved");
+
+                throw;
             }
 
             await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);

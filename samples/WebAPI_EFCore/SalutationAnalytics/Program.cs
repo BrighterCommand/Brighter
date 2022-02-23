@@ -86,7 +86,7 @@ namespace SalutationAnalytics
                         .UseExternalBus(new RmqProducerRegistryFactory(
                                 new RmqMessagingGatewayConnection
                                 {
-                                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
+                                    AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
                                     Exchange = new Exchange("paramore.brighter.exchange"),
                                 },
                                 new RmqPublication[] {
