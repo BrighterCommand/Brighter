@@ -5,6 +5,72 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
+<> 2022-02-23T080140.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-02-23T080137.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-02-23T080136.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-02-23T080133.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-02-23T080131.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2022-02-23T080107.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
 <> 2022-02-21T191545.200.json
 
 ###
@@ -458,62 +524,6 @@ Content-Type: application/json
 }
 
 <> 2022-02-07T090141.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2022-02-07T090140.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2022-02-07T090137.200.json
-
-###
-
-GET http://localhost:5000/Greetings/Tyrion
-
-<> 2022-02-07T090110.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2022-02-07T090107.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2022-02-07T090102.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-02-07T090057.200.json
 
 ###
 
