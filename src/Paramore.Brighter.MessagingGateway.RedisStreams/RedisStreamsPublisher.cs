@@ -23,7 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using Newtonsoft.Json;
+using System.Text.Json;
 using StackExchange.Redis;
 
 namespace Paramore.Brighter.MessagingGateway.RedisStreams
@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         private static void WriteContentType(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
         {
-            entries.Add( new NameValueEntry(MessageNames.CONTENT_TYPE, messageHeader.ContentType.ToString()));
+            entries.Add( new NameValueEntry(MessageNames.CONTENT_TYPE, messageHeader.ContentType));
         }
 
         private static void WriteCorrelationId(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         private static void WriteMessageBag(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
         {
-            var flatBag = JsonConvert.SerializeObject(messageHeader.Bag);
+            var flatBag = JsonSerializer.Serialize(messageHeader.Bag);
             entries.Add(new NameValueEntry(MessageNames.BAG, flatBag));
         }
 
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         private static void WriteTimeStamp(MessageHeader messageHeader, ICollection<NameValueEntry> entries)
         {
-            entries.Add(new NameValueEntry(MessageNames.TIMESTAMP, JsonConvert.SerializeObject(messageHeader.TimeStamp)));
+            entries.Add(new NameValueEntry(MessageNames.TIMESTAMP, JsonSerializer.Serialize(messageHeader.TimeStamp)));
         }
     }
 }

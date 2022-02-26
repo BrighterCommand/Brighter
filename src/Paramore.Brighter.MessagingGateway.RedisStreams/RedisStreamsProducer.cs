@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using StackExchange.Redis;
 
@@ -32,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 {
     public class RedisStreamsProducer : RedisStreamsGateway, IAmAMessageProducer
     { 
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsProducer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisStreamsProducer>();
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
@@ -61,33 +62,40 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <returns>Task.</returns>
         public void Send(Message message)
         {
-            _logger.Value.DebugFormat("RedisMessageProducer: Preparing to send message");
+            s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
 
             try
             {
                 var redisMessage = RedisStreamsPublisher.Create(message);
 
-                _logger.Value.DebugFormat("RedisMessageProducer: Publishing message with topic {0} and id {1} and body: {2}", 
-                        message.Header.Topic, message.Id.ToString(), message.Body.Value);
+                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {MessageId} and body: {Body}", 
+                    message.Header.Topic, 
+                    message.Id.ToString(), 
+                    message.Body.Value
+                );
 
                 var db = Redis.GetDatabase();
                 var messageId = db.StreamAdd(message.Header.Topic, redisMessage);
                 
-               _logger.Value.DebugFormat("RedisMessageProducer: Published message with topic {0} and id {1} and body: {2}", 
-                        message.Header.Topic, message.Id.ToString(), message.Body.Value);
+                s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {MessageId} and body: {Body}", 
+                    message.Header.Topic,
+                    message.Id.ToString(),
+                    message.Body.Value
+                );
      
             }
             catch (Exception e)
             {
-                _logger.Value.ErrorFormat(
-                    "RedisStreamsProducer: Error talking to the Redis on {0}, resetting connection",
+                s_logger.LogError(
+                    "RedisStreamsProducer: Error talking to the Redis on {Configuration}, resetting connection",
                     Redis.Configuration 
-                    );
+                );
  
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", e);
             }
         }
         
+        /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>

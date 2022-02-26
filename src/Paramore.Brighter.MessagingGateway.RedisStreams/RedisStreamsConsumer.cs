@@ -26,7 +26,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using StackExchange.Redis;
 
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 
         /* see RedisMessageProducer to understand how we are using a dynamic recipient list model with Redis */
 
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsConsumer>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisStreamsConsumer>();
         private readonly string _queueName;
         private readonly string _consumerGroup;
         private readonly int _batchSize;
@@ -57,9 +58,8 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <summary>
         /// Creates a consumer that reads from a List in Redis via a BLPOP (so will block).
         /// </summary>
-        /// <param name="redisStreamsConfiguration">Configuration for our Redis cient etc.</param>
+        /// <param name="redisStreamsConfiguration">Configuration for our Redis client etc.</param>
         /// <param name="queueName">Key of the list in Redis we want to read from</param>
-        /// <param name="topic">The topic that the list subscribes to</param>
         public RedisStreamsConsumer(RedisStreamsConfiguration redisStreamsConfiguration, string queueName)
             : base(redisStreamsConfiguration)
         {
@@ -79,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         }
 
         /// <summary>
-        /// Free up our Redis connection. Connections are relatively expensive, so the Conumer can be kept on open for the lifetime
+        /// Free up our Redis connection. Connections are relatively expensive, so the Consumer can be kept on open for the lifetime
         /// of the application. The StackExchange client should handle most reconnection issues, but we can force a reconnection if it
         /// holds open to long 
         /// </summary>
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         public void Acknowledge(Message message)
         {
             var redisId = message.Header.Bag[MessageNames.REDIS_ID].ToString();
-            _logger.Value.InfoFormat("RmqMessageConsumer: Acknowledging message {0}", redisId);
+            s_logger.LogInformation("RmqMessageConsumer: Acknowledging message {RedisId}", redisId);
             _db.StreamAcknowledge(_queueName, _consumerGroup, new RedisValue(redisId));
         }
 
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// </summary>
         public void Purge()
         {
-            _logger.Value.DebugFormat("RmqMessageConsumer: Purging channel {0}", _queueName);
+            s_logger.LogDebug("RmqMessageConsumer: Purging channel {QueueName}", _queueName);
         }
 
         /// <summary>
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <returns>The message read from the list</returns>
         public Message[] Receive(int timeoutInMilliseconds)
         {
-            _logger.Value.DebugFormat("RedisStreamsConsumer: Preparing to retrieve next message from queue {0}", _queueName);
+            s_logger.LogDebug("RedisStreamsConsumer: Preparing to retrieve next message from queue {QueueName}", _queueName);
             
             //TODO: We need to read pending messages first, then we can start to consumer new messages
 
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             }
             catch (Exception e)    //TODO: What exceptions can be thrown, and what can we do with them
             {
-                throw new ChannelFailureException(string.Format("Could not read from Redis"));
+                throw new ChannelFailureException("Could not read from Redis");
             }
             return new Message[0];
         }
@@ -142,6 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// In a stream we can't delete, so we just skip over a record we don't intend to process so it won't get reprocessed
         /// This amounts to an acknowledge if requeue is false, so its the same operation on a stream. However, if you configure a DLQ, we will push onto
         /// the DLQ if requeue is false.
+        /// </summary>
         /// <param name="message">The message to reject</param>
         /// <param name="requeue">Should we requeue (do nothing), or not (skip and add to DLQ)</param>
         public void Reject(Message message, bool requeue)
@@ -176,7 +177,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         }
 
         /// <summary>
-        /// Requeues the specified message.
+        /// Re-queues the specified message.
         /// </summary>
         /// <param name="message"></param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>

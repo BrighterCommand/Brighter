@@ -17,14 +17,8 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// <param name="requeueCount">The number of times you want to requeue a message before dropping it.</param>
         /// <param name="requeueDelayInMilliseconds">The number of milliseconds to delay the delivery of a requeue message for.</param>
         /// <param name="unacceptableMessageLimit">The number of unacceptable messages to handle, before stopping reading from the channel.</param>
-        /// <param name="isDurable">The durability of the queue definition in the broker.</param>
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
-        /// <param name="highAvailability">Should we mirror the queue over multiple nodes</param>
-        /// <param name="lockTimeout">How long should a message remain locked for processing</param>
-        /// <param name="deadLetterChannelName">The dead letter channel </param>
-        /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
-        /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is inifinite</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         public RedisStreamsSubscription(
             Type dataType, 
