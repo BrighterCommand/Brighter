@@ -24,9 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
+using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using StackExchange.Redis;
 
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
 {
     public class RedisStreamsMessageCreator
     {
-        private static readonly Lazy<ILog> _logger = new Lazy<ILog>(LogProvider.For<RedisStreamsMessageCreator>);
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisStreamsMessageCreator>();
 
         /// <summary>
         /// Create a Brighter Message from the Redis StreamEntry
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         }
 
         /// <summary>
-        /// We can't just de-serializee the entries from JSON using Newtonsoft
+        /// We can't just de-serialize the entries from JSON using Newtonsoft
         /// (1) We want to support Postel's Law and be tolerant to missing input where we can
         /// (2) JSON parsers can struggle with some types.
         /// </summary>
@@ -170,7 +170,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             {
                 return new HeaderResult<string>(entries[MessageNames.CONTENT_TYPE], true);
             }
-            return new HeaderResult<string>(String.Empty, false);
+            return new HeaderResult<string>(string.Empty, false);
         }
 
         private HeaderResult<Guid> ReadCorrelationId(Dictionary<string, RedisValue> entries)
@@ -220,14 +220,14 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         /// convert to their target type
         /// </summary>
         /// <param name="entries">The raw json</param>
-        /// <returns>A dictionary, either empty if key missing or matching contents if present (could be mepty)</returns>
+        /// <returns>A dictionary, either empty if key missing or matching contents if present (could be empty)</returns>
         private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, RedisValue> entries)
         {
 
             if (entries.ContainsKey(MessageNames.BAG))
             {
                 var bagJson = entries[MessageNames.BAG];
-                var bag = JsonConvert.DeserializeObject<Dictionary<string, object>>(bagJson);
+                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(bagJson);
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
@@ -295,7 +295,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
             {
                 return new HeaderResult<string>(headers[MessageNames.TOPIC], false);
             }
-            return new HeaderResult<string>(String.Empty, false);
+            return new HeaderResult<string>(string.Empty, false);
         }
 
      }

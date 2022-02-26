@@ -29,7 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.RedisStreams
         private readonly RedisStreamsConfiguration _configuration;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RmqMessageConsumerFactory"/> class.
+        /// Initializes a new instance of the <see cref="RedisStreamsConsumerFactory"/> class.
         /// </summary>
         public RedisStreamsConsumerFactory(RedisStreamsConfiguration configuration)
         {
