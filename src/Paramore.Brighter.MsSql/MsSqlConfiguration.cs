@@ -9,14 +9,12 @@
         /// <param name="outBoxTableName">Name of the outbox table.</param>
         /// <param name="inboxTableName">Name of the inbox table.</param>
         /// <param name="queueStoreTable">Name of the queue store table.</param>
-        /// <param name="encrypt">Gets the name of the queue table.</param>
-        public MsSqlConfiguration(string connectionString, string outBoxTableName = null, string inboxTableName = null, string queueStoreTable = null, bool encrypt = false)
+        public MsSqlConfiguration(string connectionString, string outBoxTableName = null, string inboxTableName = null, string queueStoreTable = null)
         {
             OutBoxTableName = outBoxTableName;
             ConnectionString = connectionString;
             InBoxTableName = inboxTableName;
             QueueStoreTable = queueStoreTable;
-            Encrypt = encrypt;
         }
 
         /// <summary>
@@ -41,10 +39,5 @@
         /// Gets the name of the queue table.
         /// </summary>
         public string QueueStoreTable { get; private set; }
-
-        /// <summary>
-        /// Use an encrypted Sql connection.
-        /// </summary>
-        public bool Encrypt { get; private set; }
     }
 }

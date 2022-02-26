@@ -27,14 +27,8 @@ namespace Paramore.Brighter.MsSql.Azure
         protected MsSqlAzureConnectionProviderBase(MsSqlConfiguration configuration, bool cacheTokens = true)
         {
             _cacheTokens = cacheTokens;
+            _connectionString = configuration.ConnectionString;
             _authenticationTokenScopes = new string[1] {_azureScope};
-            
-            var builder = new SqlConnectionStringBuilder
-            {
-                ConnectionString = configuration.ConnectionString,
-                Encrypt = configuration.Encrypt,
-            };
-            _connectionString = builder.ConnectionString;
         }
 
         public SqlConnection GetConnection()

@@ -14,12 +14,7 @@ namespace Paramore.Brighter.MsSql
         /// <param name="configuration">Ms Sql Configuration</param>
         public MsSqlSqlAuthConnectionProvider(MsSqlConfiguration configuration)
         {
-            var builder = new SqlConnectionStringBuilder
-            {
-                ConnectionString = configuration.ConnectionString,
-                Encrypt = configuration.Encrypt,
-            };
-            _connectionString = builder.ConnectionString;
+            _connectionString = configuration.ConnectionString;
         }
 
         public SqlConnection GetConnection()
