@@ -5,7 +5,8 @@
         /// <summary>
         /// Initializes a new instance of the <see cref="MsSqlConfiguration"/> class.
         /// </summary>
-        /// <param name="connectionString">The connection string.</param>
+        /// <param name="connectionString">The connection string. Please note the latest library defaults Encryption to on
+        /// if this is a issue add 'Encypt=false' to your connection string.</param>
         /// <param name="outBoxTableName">Name of the outbox table.</param>
         /// <param name="inboxTableName">Name of the inbox table.</param>
         /// <param name="queueStoreTable">Name of the queue store table.</param>
