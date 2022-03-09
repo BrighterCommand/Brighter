@@ -1,111 +1,124 @@
-﻿using System;
-using System.Threading.Tasks;
-using Azure.Messaging.ServiceBus.Administration;
+﻿using System.Text.Json;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
 using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
+using Paramore.Brighter.ServiceActivator.Extensions.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
-namespace GreetingsWorker
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddLogging();
+
+builder.Services.AddScoped<InstanceCount>();
+builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddTransient(typeof(MonitoringAsyncHandler<>));
+builder.Services.AddTransient(typeof(MonitoringAttribute));
+
+var subscriptionName = "paramore.example.worker";
+
+var subscriptions = new Subscription[]
 {
-    class Program
-    {
-        public async static Task Main(string[] args)
-        {
-            var host = new HostBuilder()
-                .ConfigureServices((hostContext, services) =>
+    new AzureServiceBusSubscription<GreetingAsyncEvent>(
+        new SubscriptionName(GreetingEventAsyncMessageMapper.Topic),
+        new ChannelName(subscriptionName),
+        new RoutingKey(GreetingEventAsyncMessageMapper.Topic),
+        timeoutInMilliseconds: 400,
+        makeChannels: OnMissingChannel.Create,
+        requeueCount: 3,
+        isAsync: true,
+        noOfPerformers: 2, unacceptableMessageLimit: 1),
+    new AzureServiceBusSubscription<GreetingEvent>(
+        new SubscriptionName(GreetingEventMessageMapper.Topic),
+        new ChannelName(subscriptionName),
+        new RoutingKey(GreetingEventMessageMapper.Topic),
+        timeoutInMilliseconds: 400,
+        makeChannels: OnMissingChannel.Create,
+        requeueCount: 3,
+        isAsync: false,
+        noOfPerformers: 2),
+    new AzureServiceBusSubscription<AddGreetingCommand>(
+        new SubscriptionName(AddGreetingMessageMapper.Topic),
+        new ChannelName(subscriptionName),
+        new RoutingKey(AddGreetingMessageMapper.Topic),
+        timeoutInMilliseconds: 400,
+        makeChannels: OnMissingChannel.Create,
+        requeueCount: 3,
+        isAsync: true,
+        noOfPerformers: 2)
+};
 
-                {
-                    services.AddLogging();
-
-                    services.AddScoped<InstanceCount>();
-                    services.AddScoped<IUnitOfWork, UnitOfWork>();
-                    services.AddTransient(typeof(MonitoringAsyncHandler<>));
-                    services.AddTransient(typeof(MonitoringAttribute));
-
-                    var subscriptionName = "paramore.example.worker";
-                    
-                    var subscriptions = new Subscription[]
-                    {
-                        new AzureServiceBusSubscription<GreetingAsyncEvent>(
-                            new SubscriptionName(GreetingEventAsyncMessageMapper.Topic),
-                            new ChannelName(subscriptionName),
-                            new RoutingKey(GreetingEventAsyncMessageMapper.Topic),
-                            timeoutInMilliseconds: 400,
-                            makeChannels: OnMissingChannel.Create,
-                            requeueCount: 3,
-                            isAsync: true,
-                            noOfPerformers: 2),
-                        new AzureServiceBusSubscription<GreetingEvent>(
-                            new SubscriptionName(GreetingEventMessageMapper.Topic),
-                            new ChannelName(subscriptionName),
-                            new RoutingKey(GreetingEventMessageMapper.Topic),
-                            timeoutInMilliseconds: 400,
-                            makeChannels: OnMissingChannel.Create,
-                            requeueCount: 3,
-                            isAsync: false,
-                            noOfPerformers: 2),
-                        new AzureServiceBusSubscription<AddGreetingCommand>(
-                            new SubscriptionName(AddGreetingMessageMapper.Topic),
-                            new ChannelName(subscriptionName),
-                            new RoutingKey(AddGreetingMessageMapper.Topic),
-                            timeoutInMilliseconds: 400,
-                            makeChannels: OnMissingChannel.Create,
-                            requeueCount: 3,
-                            isAsync: true,
-                            noOfPerformers: 2)
-                    };
-                    
-                    string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
+string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
             
-                    //EF
-                    services.AddDbContext<GreetingsDataContext>(o =>
-                    {
-                        o.UseSqlServer(dbConnString);
-                    });
+//EF
+builder.Services.AddDbContext<GreetingsDataContext>(o =>
+{
+    o.UseSqlServer(dbConnString);
+});
 
-                    var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
-                    
-                    //TODO: add your ASB qualified name here
-                    var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
+var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
 
-                    var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
-                    services.AddServiceActivator(options =>
-                        {
-                            options.Subscriptions = subscriptions;
-                            options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
-                            options.UseScoped = true;
-                            
-                        }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-                        .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
-                        .AutoFromAssemblies();
+//TODO: add your ASB qualified name here
+var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
 
-                    services.AddHostedService<ServiceActivatorHostedService>();
-                })
-                .ConfigureLogging((hostingContext, logging) =>
+var asbConsumerFactory = new AzureServiceBusConsumerFactory(clientProvider, false);
+builder.Services.AddServiceActivator(options =>
+    {
+        options.Subscriptions = subscriptions;
+        options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
+        options.UseScoped = true;
+        
+    }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
+    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
+    .AutoFromAssemblies();
+
+builder.Services.AddHostedService<ServiceActivatorHostedService>();
+                
+builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
+
+
+builder.Services.AddRouting();
+builder.Services.AddHealthChecks()
+    .AddCheck<BrighterServiceActivatorHealthCheck>("Brighter", HealthStatus.Unhealthy);
+
+var app = builder.Build();
+
+app.UseRouting();
+app.UseEndpoints(endpoints =>
+{
+    endpoints.MapHealthChecks("/health");
+    endpoints.MapHealthChecks("/health/detail", new HealthCheckOptions
+    {
+        ResponseWriter = async (context, report) =>
+        {
+            var content = new
+            {
+                Status = report.Status.ToString(),
+                Results = report.Entries.ToDictionary(e => e.Key, e => new
                 {
-                    logging.SetMinimumLevel(LogLevel.Information);
-                    logging.AddConsole();
-                })
-                .UseConsoleLifetime()
-                .Build();
+                    Status = e.Value.Status.ToString(),
+                    Description = e.Value.Description,
+                    Duration = e.Value.Duration
+                }),
+                TotalDuration = report.TotalDuration
+            };
 
-            await host.RunAsync();
+            context.Response.ContentType = "application/json";
+            await context.Response.WriteAsync(JsonSerializer.Serialize(content, JsonSerialisationOptions.Options));
         }
-    }
-}
+    });
+});
+
+app.Run();
