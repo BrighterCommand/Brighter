@@ -26,9 +26,13 @@ We 'depend inwards' i.e. **GreetingsAdapters -> GreetingsPorts -> GreetingsEntit
 
 The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteMigrations** hold generated code to configure the Db. Consider this adapter layer code - the use of separate modules allows us to switch migration per enviroment.
 
-### GreetingsWatcher
+### SalutationAnalytics
 
-This just listens for a GreetingMade message and dumps it to the console. It demonstrates listening to a queue. In this case it is too trivial for a ports & adapters separation, but that approach could be used if there was an entity layer and domain logic.
+This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator, which work with EFCore. These support writing to an Outbox when this component raises a message in turn.
+
+We don't listen to that message, and without any listeners the RMQ will drop the message we send, as it has no queues to give it to. We don't listen because we would just be repeating what we have shown here.
+
+We also add an Inbox here. The Inbox can be used to de-duplicate messages. In messaging the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
 
 
 ## Build and Deploy
@@ -53,6 +57,20 @@ We provide a docker compose file to allow you to run a 'Production' environment 
 -- docker compose up -d mysql   -- will just start mysql
 
 and so on
+
+### Sqlite Database Read-Only Errors
+
+A Sqlite database will only have permissions for the process that created it. This can result in you receiving read-only errors between invocations of the sample. You either need to alter the permissions on your Db, or delete it between runs.
+
+Maintainers, please don't check the Sqlite files into source control.
+
+### Queue Creation and Dropped Messages
+
+Queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
+
+Generally, the rule of thumb is: start the consumer and *then* start the producer.
+
+You can spot this by looking in the [RMQ Management console](http://localhost:1567) and noting that no queue is bound to the routing key in th exchange.
 
 ## Tests
 

@@ -126,7 +126,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 connection.ConnectionBlocked += HandleBlocked;
                 connection.ConnectionUnblocked += HandleUnBlocked;
 
-                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on subscription {URL}",
+                s_logger.LogDebug("RMQMessagingGateway: Opening channel to Rabbit MQ on {URL}",
                     Connection.AmpqUri.GetSanitizedUri());
 
                 Channel = connection.CreateModel();

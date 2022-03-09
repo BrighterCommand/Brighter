@@ -14,8 +14,10 @@ using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using Polly.Registry;
 using SalutationAnalytics.Database;
 using SalutationPorts.EntityGateway;
+using SalutationPorts.Policies;
 using SalutationPorts.Requests;
 
 namespace SalutationAnalytics
@@ -82,11 +84,12 @@ namespace SalutationAnalytics
                             options.HandlerLifetime = ServiceLifetime.Scoped;
                             options.MapperLifetime = ServiceLifetime.Singleton;
                             options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+                            options.PolicyRegistry = new SalutationPolicy();
                         })
                         .UseExternalBus(new RmqProducerRegistryFactory(
                                 new RmqMessagingGatewayConnection
                                 {
-                                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
+                                    AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
                                     Exchange = new Exchange("paramore.brighter.exchange"),
                                 },
                                 new RmqPublication[] {
