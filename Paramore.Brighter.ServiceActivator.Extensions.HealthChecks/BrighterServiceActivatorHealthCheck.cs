@@ -22,11 +22,7 @@ public class BrighterServiceActivatorHealthCheck : IHealthCheck
 
         if (expectedConsumers != activeConsumers)
         {
-            var status = HealthStatus.Degraded;
-            if (activeConsumers < 1)
-            {
-                status = HealthStatus.Unhealthy;
-            }
+            var status = activeConsumers > 0 ? HealthStatus.Degraded : HealthStatus.Unhealthy;
 
             return Task.FromResult(new HealthCheckResult(status,
                 GenerateUnhealthyMessage()));
