@@ -22,7 +22,7 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.2" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.13">
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.3">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
