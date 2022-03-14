@@ -33,7 +33,7 @@
   </PropertyGroup>
 
   <ItemGroup Label="Package References">
-    <PackageReference Include="MinVer" PrivateAssets="All" Version="2.5.0" />
+    <PackageReference Include="MinVer" PrivateAssets="All" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>
