@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>disable</Nullable>
+        <LangVersion>7.3</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
+      <ProjectReference Include="..\Paramore.Brighter.MySql\Paramore.Brighter.MySql.csproj" />
+    </ItemGroup>
+
+</Project>
