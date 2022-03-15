@@ -1,4 +1,5 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Serialization;
 using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.CommandHandlers;
@@ -14,6 +15,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MsSql;
+using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
@@ -25,7 +27,6 @@ builder.Services.AddLogging();
 builder.Services.AddScoped<InstanceCount>();
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddTransient(typeof(MonitoringAsyncHandler<>));
-builder.Services.AddTransient(typeof(MonitoringAttribute));
 
 var subscriptionName = "paramore.example.worker";
 
@@ -98,6 +99,15 @@ var app = builder.Build();
 app.UseRouting();
 app.UseEndpoints(endpoints =>
 {
+    var jsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        WriteIndented = true
+    };
+
+    jsonOptions.Converters.Add(new JsonStringConverter());
+    jsonOptions.Converters.Add(new JsonStringEnumConverter());
+
     endpoints.MapHealthChecks("/health");
     endpoints.MapHealthChecks("/health/detail", new HealthCheckOptions
     {
@@ -116,9 +126,11 @@ app.UseEndpoints(endpoints =>
             };
 
             context.Response.ContentType = "application/json";
-            await context.Response.WriteAsync(JsonSerializer.Serialize(content, JsonSerialisationOptions.Options));
+            await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
         }
     });
+    
+    endpoints.Map("Dispatcher", (IDispatcher dispatcher) => { return dispatcher.Consumers.Count(); });
 });
 
 app.Run();
