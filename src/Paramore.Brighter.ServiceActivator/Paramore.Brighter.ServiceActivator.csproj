@@ -8,4 +8,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Update="MinVer" Version="3.0.0" />
+  </ItemGroup>
 </Project>
