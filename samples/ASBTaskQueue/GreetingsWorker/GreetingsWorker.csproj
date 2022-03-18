@@ -15,6 +15,7 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection\Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.HealthChecks\Paramore.Brighter.ServiceActivator.Extensions.HealthChecks.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.ServiceActivator.Extensions.Hosting\Paramore.Brighter.ServiceActivator.Extensions.Hosting.csproj" />
       <ProjectReference Include="..\Greetings\Greetings.csproj" />
     </ItemGroup>
