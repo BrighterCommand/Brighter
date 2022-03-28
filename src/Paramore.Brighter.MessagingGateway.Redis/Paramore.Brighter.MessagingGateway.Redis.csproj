@@ -12,6 +12,6 @@
   <ItemGroup>
     <PackageReference Include="ServiceStack.Redis.Core" Version="6.0.2" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
-    <PackageReference Update="MinVer" Version="3.0.0" />
+    <PackageReference Update="MinVer" Version="3.1.0" />
   </ItemGroup>
 </Project>
