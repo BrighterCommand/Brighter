@@ -15,7 +15,8 @@ In case you are using Command Line Interface for running the project, consider a
 dotnet run --launch-profile Production -d
 ```
 ## Architecture
-
+### Outbox
+ Brighter does have an [Outbox pattern support](https://paramore.readthedocs.io/en/latest/OutboxPattern.html). In case you are new to it, consider reading it before diving deeper.
 ### GreetingsAPI
 
 We follow a _ports and adapters_ archtectural style, dividing the app into the following modules:
@@ -66,13 +67,14 @@ docker compose up -d mysql   # will just start mysql
 
 and so on.
 
-### Sqlite Database Read-Only Errors
+### Possible issues
+#### Sqlite Database Read-Only Errors
 
 A Sqlite database will only have permissions for the process that created it. This can result in you receiving read-only errors between invocations of the sample. You either need to alter the permissions on your Db, or delete it between runs.
 
 Maintainers, please don't check the Sqlite files into source control.
 
-### Queue Creation and Dropped Messages
+#### Queue Creation and Dropped Messages
 
 Queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RabbitMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
 
@@ -84,16 +86,22 @@ You can use default credentials for the RabbitMQ Management console:
 user :guest
 passowrd: guest
 ```
-### Connection issue with the RabbitMQ
-When running RabbitMQ from the docker compose file (without any additional network setup, etc) your RabbitMQ instance in docker will still be accessible by **localhost** as a host name. Consider this when running your application in the Production environment.  
+#### Connection issue with the RabbitMQ
+When running RabbitMQ from the docker compose file (without any additional network setup, etc) your RabbitMQ instance in docker will still be accessible by **localhost** as a host name. Consider this when running your application in the Production environment.
 In Production the application by default will have:
 ```sh
 amqp://guest:guest@rabbitmq:5672
 ```
-
-as an Advanced Message Queuing Protocol (AMQP) connection string.
-
-you will not be able to connect to the RabbitMQ instaince in the docker container with 
+ 
+as an Advanced Message Queuing Protocol (AMQP) connection string.  
+So one of the options will be replacing AMQP connection string with:
+```sh
+amqp://guest:guest@localhost:5672
+```
+In case you still struggle consider following this steps: [RabbitMQ Troubleshooting Networking](https://www.rabbitmq.com/troubleshooting-networking.html)
+#### Helpful documentation links
+* [Brighter technical documentation](https://paramore.readthedocs.io/en/latest/index.html)
+* [Rabbit Message Queue (RMQ) documentation](https://www.rabbitmq.com/documentation.html)
 
 ## Tests
 
