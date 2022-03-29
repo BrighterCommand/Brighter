@@ -79,6 +79,21 @@ Queues are created by consumers. This is because publishers don't know who consu
 Generally, the rule of thumb is: start the consumer and *then* start the producer.
 
 You can spot this by looking in the [RabbitMQ Management console](http://localhost:1567) and noting that no queue is bound to the routing key in th exchange.
+You can use default credentials for the RabbitMQ Management console:
+```sh
+user :guest
+passowrd: guest
+```
+### Connection issue with the RabbitMQ
+When running RabbitMQ from the docker compose file (without any additional network setup, etc) your RabbitMQ instance in docker will still be accessible by **localhost** as a host name. Consider this when running your application in the Production environment.  
+In Production the application by default will have:
+```sh
+amqp://guest:guest@rabbitmq:5672
+```
+
+as an Advanced Message Queuing Protocol (AMQP) connection string.
+
+you will not be able to connect to the RabbitMQ instaince in the docker container with 
 
 ## Tests
 
