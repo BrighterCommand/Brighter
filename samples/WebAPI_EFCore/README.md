@@ -1,3 +1,19 @@
+# Table of content
+- [Web API and EF Core Example](#web-api-and-ef-core-example)
+  * [Enviroments](#enviroments)
+  * [Architecture](#architecture)
+    + [Outbox](#outbox)
+    + [GreetingsAPI](#greetingsapi)
+    + [SalutationAnalytics](#salutationanalytics)
+  * [Build and Deploy](#build-and-deploy)
+    + [Building](#building)
+    + [Deploy](#deploy)
+    + [Possible issues](#possible-issues)
+      - [Sqlite Database Read-Only Errors](#sqlite-database-read-only-errors)
+      - [Queue Creation and Dropped Messages](#queue-creation-and-dropped-messages)
+      - [Connection issue with the RabbitMQ](#connection-issue-with-the-rabbitmq)
+      - [Helpful documentation links](#helpful-documentation-links)
+  * [Tests](#tests)
 # Web API and EF Core Example
 This sample shows a typical scenario when using WebAPI and Brighter/Darker. It demonstrates both using Brigher and Darker to implement the API endpoints, and using a work queue to handle asynchronous work that results from handling the API call.
 
