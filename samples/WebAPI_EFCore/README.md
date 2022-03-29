@@ -9,12 +9,16 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 We provide launchSetting.json files for both, which allows you to run Production; you should launch MySQl and RabbitMQ from the docker compose file; useful for debugging MySQL operations.
 
+In case you are using Command Line Interface for running the project, consider adding --launch-profile:
 
+```sh
+dotnet run --launch-profile Production -d
+```
 ## Architecture
 
 ### GreetingsAPI
 
-We follow a ports and adapters archtectural style, dividing the app into the following modules:
+We follow a _ports and adapters_ archtectural style, dividing the app into the following modules:
 
 * **GreetingsAdapters**: The adapters module, handles the primary adapter of HTTP requests and responses to the app
 
@@ -30,7 +34,7 @@ The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteM
 
 This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator, which work with EFCore. These support writing to an Outbox when this component raises a message in turn.
 
-We don't listen to that message, and without any listeners the RMQ will drop the message we send, as it has no queues to give it to. We don't listen because we would just be repeating what we have shown here.
+We don't listen to that message, and without any listeners the RabbitMQ will drop the message we send, as it has no queues to give it to. We don't listen because we would just be repeating what we have shown here.
 
 We also add an Inbox here. The Inbox can be used to de-duplicate messages. In messaging the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
 
@@ -70,11 +74,11 @@ Maintainers, please don't check the Sqlite files into source control.
 
 ### Queue Creation and Dropped Messages
 
-Queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
+Queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RabbitMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
 
 Generally, the rule of thumb is: start the consumer and *then* start the producer.
 
-You can spot this by looking in the [RMQ Management console](http://localhost:1567) and noting that no queue is bound to the routing key in th exchange.
+You can spot this by looking in the [RabbitMQ Management console](http://localhost:1567) and noting that no queue is bound to the routing key in th exchange.
 
 ## Tests
 
