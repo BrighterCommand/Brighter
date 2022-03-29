@@ -3,11 +3,11 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 ## Enviroments
 
-*Development* - runs locally on your machine, uses Sqlite as a data store; uses RabbitMQ for messaging, can be launched invidvidually from the docker compose file; it represents a typical setup for development
+*Development* - runs locally on your machine, uses Sqlite as a data store; uses RabbitMQ for messaging, can be launched invidvidually from the docker compose file; it represents a typical setup for development.
 
 *Production* - runs in Docker, uses MySql as a data store; uses RabbitMQ for messaging; it emulates a possible production environment.
 
-We provide launchSetting.json files for both, which allows you to run Production; you should launch MySQl and RabbitMQ from the docker compose file; useful for for debugging MySQL operations.
+We provide launchSetting.json files for both, which allows you to run Production; you should launch MySQl and RabbitMQ from the docker compose file; useful for debugging MySQL operations.
 
 
 ## Architecture
