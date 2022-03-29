@@ -16,11 +16,11 @@ We provide launchSetting.json files for both, which allows you to run Production
 
 We follow a ports and adapters archtectural style, dividing the app into the following modules:
 
-**GreetingsAdapters**: The adapters module, handles the primary adapter of HTTP requests and responses to the app
+* **GreetingsAdapters**: The adapters module, handles the primary adapter of HTTP requests and responses to the app
 
-**GreetingsPorts**: the ports module, handles requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. The secondary port of the EntityGateway handles access to the DB via EF Core. We choose to treat EF Core as a port, not an adapter itself, here, as it wraps our underlying adapters for Sqlite or MySql.
+ * **GreetingsPorts**: the ports module, handles requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. The secondary port of the EntityGateway handles access to the DB via EF Core. We choose to treat EF Core as a port, not an adapter itself, here, as it wraps our underlying adapters for Sqlite or MySql.
 
-**GreetingsEntities**: the domain model (or application in ports & adapaters). In a fuller app, this would contain the logic that has a dependency on entity state.
+* **GreetingsEntities**: the domain model (or application in ports & adapaters). In a fuller app, this would contain the logic that has a dependency on entity state.
 
 We 'depend inwards' i.e. **GreetingsAdapters -> GreetingsPorts -> GreetingsEntities**
 
@@ -50,13 +50,17 @@ A common error is to change something, forget to run build.sh and use an old Doc
 
 ### Deploy
 
-We provide a docker compose file to allow you to run a 'Production' environment or to startup RabbitMQ for production
+We provide a docker compose file to allow you to run a 'Production' environment or to startup RabbitMQ for production:
+```sh
+docker compose up -d rabbitmq   # will just start rabbitmq
+```
 
--- docker compose up -d rabbitmq   -- will just start rabbitmq
+```sh
+docker compose up -d mysql   # will just start mysql
+```
 
--- docker compose up -d mysql   -- will just start mysql
 
-and so on
+and so on.
 
 ### Sqlite Database Read-Only Errors
 
@@ -75,7 +79,3 @@ You can spot this by looking in the [RMQ Management console](http://localhost:15
 ## Tests
 
 We provide a tests.http file (supported by both JetBrains Rider and VS Code with the REST Client plugin) to allow you to test operations.
-
-
-
-
