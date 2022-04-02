@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// <summary>
     ///     Class MsSqlInbox.
     /// </summary>
-    public class MsSqlInbox : IAmAnInbox, IAmAnInboxAsync
+    public class MsSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlInbox>();
 

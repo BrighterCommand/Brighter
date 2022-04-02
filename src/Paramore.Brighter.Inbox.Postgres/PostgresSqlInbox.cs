@@ -38,7 +38,7 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class PostgresSqlInbox : IAmAnInbox, IAmAnInboxAsync
+    public class PostgresSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly PostgresSqlInboxConfiguration _configuration;
         private readonly IPostgreSqlConnectionProvider _connectionProvider;

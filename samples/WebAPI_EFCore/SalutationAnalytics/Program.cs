@@ -7,11 +7,17 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.MySql;
+using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using Polly.Registry;
 using SalutationAnalytics.Database;
 using SalutationPorts.EntityGateway;
+using SalutationPorts.Policies;
 using SalutationPorts.Requests;
 
 namespace SalutationAnalytics
@@ -75,8 +81,37 @@ namespace SalutationAnalytics
                             options.Subscriptions = subscriptions;
                             options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                             options.UseScoped = true;
+                            options.HandlerLifetime = ServiceLifetime.Scoped;
+                            options.MapperLifetime = ServiceLifetime.Singleton;
+                            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+                            options.PolicyRegistry = new SalutationPolicy();
                         })
-                        .AutoFromAssemblies();
+                        .UseExternalBus(new RmqProducerRegistryFactory(
+                                new RmqMessagingGatewayConnection
+                                {
+                                    AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
+                                    Exchange = new Exchange("paramore.brighter.exchange"),
+                                },
+                                new RmqPublication[] {
+                                    new RmqPublication
+                                    {
+                                        Topic = new RoutingKey("SalutationReceived"),
+                                        MaxOutStandingMessages = 5,
+                                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                                        MakeChannels = OnMissingChannel.Create
+                                    }}
+                            ).Create()
+                        )
+                        .AutoFromAssemblies()
+                        .UseExternalInbox(
+                            ConfigureInbox(hostContext),
+                            new InboxConfiguration(
+                                scope: InboxScope.All,
+                                onceOnly: true,
+                                actionOnExists: OnceOnlyAction.Warn
+                                )
+                            );
 
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
@@ -117,6 +152,16 @@ namespace SalutationAnalytics
                        .EnableSensitiveDataLogging();
                });
             }
+        }
+
+        private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
+        {
+            if (hostContext.HostingEnvironment.IsDevelopment())
+            {
+                return new SqliteInbox(new SqliteInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+            }
+
+            return new MySqlInbox(new MySqlInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
         }
         
         private static string DbConnectionString(HostBuilderContext hostContext)

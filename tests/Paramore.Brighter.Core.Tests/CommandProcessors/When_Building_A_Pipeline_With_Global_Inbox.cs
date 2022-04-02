@@ -18,14 +18,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public PipelineGlobalInboxTests()
         {
-            IAmAnInbox inbox = new InMemoryInbox();
+            IAmAnInboxSync inbox = new InMemoryInbox();
             
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
             
             var container = new ServiceCollection();
             container.AddTransient<MyCommandHandler>();
-            container.AddSingleton<IAmAnInbox>(inbox);
+            container.AddSingleton<IAmAnInboxSync>(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
  

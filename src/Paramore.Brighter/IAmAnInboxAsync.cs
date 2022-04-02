@@ -32,7 +32,7 @@ namespace Paramore.Brighter
     /// Interface IAmAnInboxAsync
     /// An Inbox stores <see cref="Request"/>s for diagnostics or de-duplication.
     /// </summary>
-    public interface IAmAnInboxAsync
+    public interface IAmAnInboxAsync : IAmAnInbox
     {
         /// <summary>
         /// Awaitably adds the specified identifier.

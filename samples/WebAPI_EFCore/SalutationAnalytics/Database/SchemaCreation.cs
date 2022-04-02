@@ -18,8 +18,8 @@ namespace SalutationAnalytics.Database
 {
     public static class SchemaCreation
     {
-        private const string INBOX_TABLE_NAME = "Inbox";
-        private const string OUTBOX_TABLE_NAME = "Outbox";
+        internal const string INBOX_TABLE_NAME = "Inbox";
+        internal const string OUTBOX_TABLE_NAME = "Outbox";
 
 
         public static IHost MigrateDatabase(this IHost host)

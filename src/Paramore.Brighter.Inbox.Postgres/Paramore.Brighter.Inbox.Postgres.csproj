@@ -12,7 +12,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="6.0.0" />
+    <PackageReference Include="Npgsql" Version="6.0.3" />
+    <PackageReference Update="MinVer" Version="3.1.0" />
   </ItemGroup>
 
 </Project>

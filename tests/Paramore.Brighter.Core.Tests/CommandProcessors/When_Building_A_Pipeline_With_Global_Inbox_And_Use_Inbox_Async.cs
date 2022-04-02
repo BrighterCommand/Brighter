@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private AsyncPipelines<MyCommand> _chainOfResponsibility;
         private readonly RequestContext _requestContext;
         private readonly InboxConfiguration _inboxConfiguration;
-        private IAmAnInbox _inbox;
+        private IAmAnInboxSync _inbox;
 
 
         public PipelineGlobalInboxWhenUseInboxAsyncTests()
