@@ -4,4 +4,9 @@
     <TargetFramework>net5.0</TargetFramework>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\..\WebAPI_EFCore\GreetingsEntities\GreetingsEntities.csproj" />
+  </ItemGroup>
+
 </Project>

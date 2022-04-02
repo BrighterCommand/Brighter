@@ -243,6 +243,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsWeb", "samples\Web
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsEntities", "samples\WebAPI_Marten\GreetingsEntities\GreetingsEntities.csproj", "{CC25EFF8-93CB-4700-865E-9A40231F6280}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPorts", "samples\WebAPI_Marten\GreetingsPorts\GreetingsPorts.csproj", "{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1357,6 +1359,18 @@ Global
 		{CC25EFF8-93CB-4700-865E-9A40231F6280}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{CC25EFF8-93CB-4700-865E-9A40231F6280}.Release|x86.ActiveCfg = Release|Any CPU
 		{CC25EFF8-93CB-4700-865E-9A40231F6280}.Release|x86.Build.0 = Release|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Debug|x86.Build.0 = Debug|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Release|x86.ActiveCfg = Release|Any CPU
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1432,6 +1446,7 @@ Global
 		{8EA2B9DF-BE60-4E98-A1C0-9AFF68D2900E} = {235DE1F1-E71B-4817-8E27-3B34FF006E4C}
 		{A45F2BE8-B767-4C47-A1D8-8D50CEEE49EC} = {8EA2B9DF-BE60-4E98-A1C0-9AFF68D2900E}
 		{CC25EFF8-93CB-4700-865E-9A40231F6280} = {8EA2B9DF-BE60-4E98-A1C0-9AFF68D2900E}
+		{AC68FBDA-159A-43D3-AC99-F9848C8C8A75} = {8EA2B9DF-BE60-4E98-A1C0-9AFF68D2900E}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
