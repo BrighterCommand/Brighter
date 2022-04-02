@@ -168,10 +168,10 @@ jobs:
           dotnet-version: 6.0.x
       - name: Install dependencies
         run: dotnet restore
-      - name: MQTT Transport Tests
-        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
       - name: Debugging with tmate
         uses: mxschmitt/action-tmate@v3.1
+      - name: MQTT Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
   rabbitmq-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
