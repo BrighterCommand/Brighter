@@ -1,0 +1,31 @@
+version: '3'
+
+services:
+  postgres:
+    container_name: pgdb_container
+    image: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql
+      - postgres-data:/etc/postgresql
+      - postgres-data:/var/log/postgresql
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: password
+  pgadmin:
+    container_name: pgadmin4_container
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+  pgadmin_data:
+    driver: local
+  postgres-data:
+    driver: local
+

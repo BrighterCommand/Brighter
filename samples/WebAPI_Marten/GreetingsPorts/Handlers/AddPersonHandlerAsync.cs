@@ -26,6 +26,7 @@ namespace GreetingsPorts.Handlers
             // _uow.Add(new Person(command.Name));
             // await savechangesasync
             Console.WriteLine("Hello World!");
+            _uow.Check();
             return await base.HandleAsync(command, cancellationToken);
         }
     }
