@@ -1,4 +1,5 @@
 ﻿using GreetingsPorts.EntityGateway;
+using GreetingsPorts.Handlers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Darker.AspNetCore;
 
 namespace GreetingsWeb
 {
@@ -51,7 +53,18 @@ namespace GreetingsWeb
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsWeb", Version = "v1" });
             });
 
+            ConfigureDarker(services);
             ConfigureBrighter(services);
+        }
+
+        private void ConfigureDarker(IServiceCollection services)
+        {
+            services.AddDarker(options =>
+            {
+                options.HandlerLifetime = ServiceLifetime.Scoped;
+                options.QueryProcessorLifetime = ServiceLifetime.Scoped;
+            })
+            .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly);
         }
 
         private void ConfigureBrighter(IServiceCollection services)

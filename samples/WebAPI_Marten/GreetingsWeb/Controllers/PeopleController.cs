@@ -1,8 +1,10 @@
 ﻿using System.Threading.Tasks;
 using GreetingsPorts.Requests;
+using GreetingsPorts.Responses;
 using GreetingsWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Paramore.Brighter;
+using Paramore.Darker;
 
 namespace GreetingsWeb.Controllers
 {
@@ -11,17 +13,27 @@ namespace GreetingsWeb.Controllers
     public class PeopleController : ControllerBase
     {
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly IQueryProcessor _queryProcessor;
 
-        public PeopleController(IAmACommandProcessor commandProcessor)
+        public PeopleController(IAmACommandProcessor commandProcessor, IQueryProcessor queryProcessor)
         {
             _commandProcessor = commandProcessor;
+            _queryProcessor = queryProcessor;
         }
 
         [HttpPost("new")]
-        public async Task<ActionResult> Post(NewPerson newPerson)
+        public async Task<ActionResult<FindPersonResult>> Post(NewPerson newPerson)
         {
             await _commandProcessor.SendAsync(new AddPerson(newPerson.Name));
-            return Ok();
+
+            var addedPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(newPerson.Name));
+
+            if (addedPerson is null)
+            {
+                return new NotFoundResult();
+            }
+
+            return Ok(addedPerson);
         }
     }
 }
