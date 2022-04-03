@@ -12,11 +12,12 @@ namespace GreetingsPorts.Handlers
 {
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
-        // private readonly GreetingsEntityGateway _uow;
+        private readonly GreetingsEntityGateway _uow;
         private readonly IAmACommandProcessor _commandProcessor;
 
-        public AddPersonHandlerAsync(IAmACommandProcessor commandProcessor)
+        public AddPersonHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor commandProcessor)
         {
+            _uow = uow;
             _commandProcessor = commandProcessor;
         }
 
