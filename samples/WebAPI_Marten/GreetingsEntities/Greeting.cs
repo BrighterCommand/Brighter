@@ -2,9 +2,12 @@
 {
     public class Greeting
     {
-        private readonly int _id;
+        public int Id { get; set; }
         public string Message { get; set; }
         public Person Recipient { get; set; }
+
+        public Greeting()
+        { }
 
         public Greeting(string message)
         {
@@ -13,7 +16,7 @@
 
         public Greeting(int id, string message, Person recipient)
         {
-            _id = id;
+            Id = id;
             Message = message;
             Recipient = recipient;
         }

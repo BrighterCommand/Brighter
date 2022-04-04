@@ -1,29 +1,38 @@
-﻿using GreetingsEntities;
+﻿using System;
+using System.Linq;
+using System.Threading.Tasks;
+using GreetingsEntities;
 using Marten;
 
 namespace GreetingsPorts.EntityGateway
 {
-    public class GreetingsEntityGateway
+    public class GreetingsEntityGateway : IDisposable
     {
-        public void Check()
-        {
-            var store = DocumentStore
-                .For("host=localhost;database=marten_db;password=password;username=root");
+        private readonly IDocumentSession session;
 
-            using var session = store.LightweightSession();
-            var fakeUser = new FakeUser
-            {
-                Id = 1,
-                Name = "test-name",
-            };
-            session.Store(fakeUser);
-            session.SaveChanges();
+        public GreetingsEntityGateway(IDocumentSession session)
+        {
+            this.session = session;
         }
 
-        public class FakeUser
+        public void Add(Person person)
         {
-            public int Id { get; set; }
-            public string Name { get; set; }
+            session.Insert(person);
+        }
+        
+        public Task<Greeting> Get(int id)
+        {
+            return session.LoadAsync<Greeting>(id);
+        }
+
+        public async Task CommitChanges()
+        {
+            await session.SaveChangesAsync();
+        }
+
+        public void Dispose()
+        {
+            session.Dispose();
         }
     }
 

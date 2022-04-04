@@ -4,7 +4,7 @@ namespace GreetingsEntities
 {
     public class Person
     {
-        private readonly int _id;
+        public int Id { get; set; }
         private readonly List<Greeting> _greetings = new List<Greeting>();
         public byte[] TimeStamp { get; set; }
         public string Name { get; set; }
@@ -18,7 +18,7 @@ namespace GreetingsEntities
 
         public Person(int id, string name)
         {
-            _id = id;
+            Id = id;
             Name = name;
         }
 

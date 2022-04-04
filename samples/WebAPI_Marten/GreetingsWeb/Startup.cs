@@ -1,5 +1,6 @@
 ﻿using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
+using Marten;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -45,7 +46,7 @@ namespace GreetingsWeb
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddSingleton<GreetingsEntityGateway>();
+            services.AddScoped<GreetingsEntityGateway>();
 
             services.AddControllers();
             services.AddSwaggerGen(c =>
@@ -55,6 +56,14 @@ namespace GreetingsWeb
 
             ConfigureDarker(services);
             ConfigureBrighter(services);
+            ConfigureMarten(services);
+        }
+
+        private void ConfigureMarten(IServiceCollection services)
+        {
+            var connectionString = Configuration.GetConnectionString("MartenDb");
+            services.AddMarten(connectionString)
+                .UseLightweightSessions();
         }
 
         private void ConfigureDarker(IServiceCollection services)

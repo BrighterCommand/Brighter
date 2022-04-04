@@ -17,9 +17,10 @@ namespace GreetingsPorts.Handlers
             _uow = uow;
         }
 
-        public override Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = default)
+        public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var greeting = await _uow.Get(1);
+            return null;
         }
     }
 }

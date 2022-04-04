@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-    <ProjectReference Include="..\..\WebAPI_EFCore\GreetingsEntities\GreetingsEntities.csproj" />
+    <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
   </ItemGroup>
 
 </Project>
