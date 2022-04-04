@@ -20,9 +20,14 @@ namespace GreetingsPorts.EntityGateway
             session.Insert(person);
         }
         
-        public Task<Greeting> Get(int id)
+        public Task<Person> GetById(int id)
         {
-            return session.LoadAsync<Greeting>(id);
+            return session.LoadAsync<Person>(id);
+        }
+
+        public Task<Person> GetByName(string name)
+        {
+            return session.Query<Person>().SingleOrDefaultAsync(x => x.Name == name);
         }
 
         public async Task CommitChanges()
@@ -30,6 +35,7 @@ namespace GreetingsPorts.EntityGateway
             await session.SaveChangesAsync();
         }
 
+        // TODO: implement IDisposable correclty
         public void Dispose()
         {
             session.Dispose();

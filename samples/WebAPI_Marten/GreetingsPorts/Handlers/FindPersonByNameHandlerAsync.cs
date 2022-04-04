@@ -19,8 +19,9 @@ namespace GreetingsPorts.Handlers
 
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = default)
         {
-            var greeting = await _uow.Get(1);
-            return null;
+            var person = await _uow.GetByName(query.Name);
+
+            return new FindPersonResult(person);
         }
     }
 }

@@ -21,6 +21,17 @@ namespace GreetingsWeb.Controllers
             _queryProcessor = queryProcessor;
         }
 
+        [HttpGet("{name}")]
+        public async Task<ActionResult<FindPersonResult>> Get(string name)
+        {
+            var foundPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(name));
+            if (foundPerson is null)
+            {
+                return NotFound();
+            }
+            return Ok(foundPerson);
+        }
+
         [HttpPost("new")]
         public async Task<ActionResult<FindPersonResult>> Post(NewPerson newPerson)
         {
@@ -30,7 +41,7 @@ namespace GreetingsWeb.Controllers
 
             if (addedPerson is null)
             {
-                return new NotFoundResult();
+                return NotFound();
             }
 
             return Ok(addedPerson);

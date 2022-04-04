@@ -11,6 +11,9 @@ namespace GreetingsEntities
 
         public IReadOnlyList<Greeting> Greetings => _greetings;
 
+        public Person()
+        { }
+
         public Person(string name)
         {
             Name = name;
