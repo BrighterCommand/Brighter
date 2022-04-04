@@ -48,6 +48,9 @@ namespace Paramore.Brighter.ServiceActivator
         public int UnacceptableMessageLimit { get; set; }
 
         public IAmAChannel Channel { get; set; }
+        
+        public int EmptyChannelDelay { get; set; }
+        public int ChannelFailureDelay { get; set; }
 
         public void Run()
         {
@@ -69,13 +72,13 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
                     s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(1000).Wait();
+                    Task.Delay(ChannelFailureDelay).Wait();
                     continue;
                 }
                 catch (ChannelFailureException)
                 {
                     s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(1000).Wait();
+                    Task.Delay(ChannelFailureDelay).Wait();
                     continue;
                 }
                 catch (Exception exception)
@@ -92,7 +95,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    Task.Delay(500).Wait();
+                    Task.Delay(EmptyChannelDelay).Wait();
                     continue;
                 }
 

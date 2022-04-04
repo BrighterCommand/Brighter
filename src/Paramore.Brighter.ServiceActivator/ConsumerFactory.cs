@@ -73,7 +73,9 @@ namespace Paramore.Brighter.ServiceActivator
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
                 RequeueCount = _subscription.RequeueCount,
                 RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
-                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
+                UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit,
+                EmptyChannelDelay = _subscription.EmptyChannelDelay,
+                ChannelFailureDelay = _subscription.ChannelFailureDelay
             };
 
             return new Consumer(_consumerName, _subscription.Name, channel, messagePump);

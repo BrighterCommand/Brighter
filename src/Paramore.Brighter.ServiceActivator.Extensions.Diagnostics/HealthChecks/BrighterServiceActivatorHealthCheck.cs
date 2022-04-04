@@ -4,7 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Paramore.Brighter.ServiceActivator.Extensions.HealthChecks;
+namespace Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
 
 public class BrighterServiceActivatorHealthCheck : IHealthCheck
 {

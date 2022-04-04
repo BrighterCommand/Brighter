@@ -5,7 +5,6 @@
     <Description>This Microsoft Extensions Diagnostics Health Checks for Service Activator</Description>
     <Authors>Paul Reardon</Authors>
     <LangVersion>latest</LangVersion>
-    <RootNamespace>Paramore.Brighter.ServiceActivator.Extensions.HealthChecks</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
