@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
@@ -19,17 +18,12 @@ namespace GreetingsPorts.Handlers
 
         public override async Task<AddGreeting> HandleAsync(AddGreeting command, CancellationToken cancellationToken = default)
         {
-            try
-            {
-                var greeting = new Greeting(command.Greeting);
-                // send the message via RMQ to consumer
+            var person = await _uow.GetByName(command.Name);
+            var greeting = new Greeting(command.Greeting);
 
-                //await _uow.SaveChangesAsync();
-            }
-            catch (Exception)
-            {
+            person.AddGreeting(greeting);
+            await _uow.CommitChanges();
 
-            }
             return await base.HandleAsync(command, cancellationToken);
         }
     }
