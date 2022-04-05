@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Threading.Tasks;
 using GreetingsEntities;
+using GreetingsPorts.EntityGateway.Interfaces;
 using Marten;
 
 namespace GreetingsPorts.EntityGateway
 {
-    public class GreetingsEntityGateway : IDisposable
+    public class GreetingsEntityGateway : IGreetingsEntityGateway
     {
         private readonly IDocumentSession session;
 
@@ -14,22 +15,27 @@ namespace GreetingsPorts.EntityGateway
             this.session = session;
         }
 
-        public void Add(Person person)
+        public void AddPerson(Person person)
         {
             session.Insert(person);
         }
-        
-        public void Update(Person person)
+
+        public void UpdatePerson(Person person)
         {
             session.Update(person);
         }
 
-        public Task<Person> GetById(int id)
+        public void DeletePerson(int id)
+        {
+            session.Delete<Person>(id);
+        }
+        
+        public Task<Person> GetPersonById(int id)
         {
             return session.LoadAsync<Person>(id);
         }
 
-        public Task<Person> GetByName(string name)
+        public Task<Person> GetPersonByName(string name)
         {
             return session.Query<Person>()
                 .SingleOrDefaultAsync(x => x.Name == name);

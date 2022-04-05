@@ -67,7 +67,9 @@ namespace GreetingsWeb
             services.AddMarten(opts =>
             {
                 opts.Connection(connectionString);
-                opts.Schema.For<Person>().UniqueIndex(UniqueIndexType.Computed, x => x.Name);
+                opts.Schema.For<Person>()
+                .SoftDeleted()
+                .UniqueIndex(UniqueIndexType.Computed, x => x.Name);
             })
             .UseLightweightSessions();
         }

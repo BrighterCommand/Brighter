@@ -20,14 +20,14 @@ namespace GreetingsPorts.Handlers
         {
             using (unitOfWork)
             {
-                var person = await unitOfWork.GetByName(command.Name);
+                var person = await unitOfWork.GetPersonByName(command.Name);
                 var greeting = new Greeting
                 {
                     Message = command.Greeting,
                 };
 
                 person.AddGreeting(greeting);
-                unitOfWork.Update(person);
+                unitOfWork.UpdatePerson(person);
 
                 await unitOfWork.CommitChanges();
             }

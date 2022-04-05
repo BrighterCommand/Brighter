@@ -23,7 +23,7 @@ namespace GreetingsPorts.Handlers
         {
             using (unitOfWork)
             {
-                var person = await unitOfWork.GetByName(query.PersonName);
+                var person = await unitOfWork.GetPersonByName(query.PersonName);
 
                 if (person is null)
                 {

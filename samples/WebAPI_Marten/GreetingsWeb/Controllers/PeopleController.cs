@@ -32,6 +32,13 @@ namespace GreetingsWeb.Controllers
             return Ok(foundPerson);
         }
 
+        [HttpDelete("{name}")]
+        public async Task<IActionResult> Delete(string name)
+        {
+            await _commandProcessor.SendAsync(new DeletePerson(name));
+            return Ok();
+        }
+
         [HttpPost("new")]
         public async Task<ActionResult<FindPersonResult>> Post(NewPerson newPerson)
         {

@@ -1,0 +1,16 @@
+﻿using System;
+using System.Threading.Tasks;
+using GreetingsEntities;
+
+namespace GreetingsPorts.EntityGateway.Interfaces
+{
+    internal interface IGreetingsEntityGateway : IDisposable
+    {
+        void AddPerson(Person person);
+        void UpdatePerson(Person person);
+        void DeletePerson(int id);
+        Task<Person> GetPersonById(int id);
+        Task<Person> GetPersonByName(string name);
+        Task CommitChanges();
+    }
+}

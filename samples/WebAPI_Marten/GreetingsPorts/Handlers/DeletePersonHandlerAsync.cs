@@ -1,26 +1,27 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
 
 namespace GreetingsPorts.Handlers
 {
-    public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
+    public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
         private readonly GreetingsEntityGateway unitOfWork;
 
-        public AddPersonHandlerAsync(GreetingsEntityGateway unitOfWork)
+        public DeletePersonHandlerAsync(GreetingsEntityGateway unitOfWork)
         {
             this.unitOfWork = unitOfWork;
         }
 
-        public override async Task<AddPerson> HandleAsync(AddPerson command, CancellationToken cancellationToken = default)
+        public override async Task<DeletePerson> HandleAsync(DeletePerson command, CancellationToken cancellationToken = default)
         {
             using (unitOfWork)
             {
-                unitOfWork.AddPerson(new Person(command.Name));
+                var personToDelete = await unitOfWork.GetPersonByName(command.Name);
+
+                unitOfWork.DeletePerson(personToDelete.Id);
                 await unitOfWork.CommitChanges();
             }
 

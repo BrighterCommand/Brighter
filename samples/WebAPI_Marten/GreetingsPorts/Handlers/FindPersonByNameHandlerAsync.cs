@@ -21,7 +21,13 @@ namespace GreetingsPorts.Handlers
         {
             using (unitOfWork)
             {
-                var person = await unitOfWork.GetByName(query.Name);
+                var person = await unitOfWork.GetPersonByName(query.Name);
+
+                if (person is null)
+                {
+                    return null;
+                }
+
                 return new FindPersonResult(person);
             }
         }
