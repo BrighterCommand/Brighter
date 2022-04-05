@@ -1,7 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using GreetingsEntities;
-using GreetingsPorts.EntityGateway;
+using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
 
@@ -9,9 +9,9 @@ namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync : RequestHandlerAsync<AddGreeting>
     {
-        private readonly GreetingsEntityGateway unitOfWork;
+        private readonly IGreetingsEntityGateway unitOfWork;
 
-        public AddGreetingHandlerAsync(GreetingsEntityGateway unitOfWork)
+        public AddGreetingHandlerAsync(IGreetingsEntityGateway unitOfWork)
         {
             this.unitOfWork = unitOfWork;
         }

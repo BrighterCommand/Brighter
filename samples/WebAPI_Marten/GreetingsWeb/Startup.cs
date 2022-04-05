@@ -1,5 +1,6 @@
 ﻿using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
+using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Handlers;
 using Marten;
 using Marten.Schema;
@@ -48,7 +49,7 @@ namespace GreetingsWeb
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<GreetingsEntityGateway>();
+            services.AddScoped<IGreetingsEntityGateway,GreetingsEntityGateway>();
 
             services.AddControllers();
             services.AddSwaggerGen(c =>

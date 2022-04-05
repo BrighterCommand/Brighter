@@ -1,6 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using GreetingsPorts.EntityGateway;
+using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
 
@@ -8,9 +8,9 @@ namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
-        private readonly GreetingsEntityGateway unitOfWork;
+        private readonly IGreetingsEntityGateway unitOfWork;
 
-        public DeletePersonHandlerAsync(GreetingsEntityGateway unitOfWork)
+        public DeletePersonHandlerAsync(IGreetingsEntityGateway unitOfWork)
         {
             this.unitOfWork = unitOfWork;
         }

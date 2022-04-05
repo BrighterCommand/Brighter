@@ -4,7 +4,7 @@ using GreetingsEntities;
 
 namespace GreetingsPorts.EntityGateway.Interfaces
 {
-    internal interface IGreetingsEntityGateway : IDisposable
+    public interface IGreetingsEntityGateway : IDisposable
     {
         void AddPerson(Person person);
         void UpdatePerson(Person person);
