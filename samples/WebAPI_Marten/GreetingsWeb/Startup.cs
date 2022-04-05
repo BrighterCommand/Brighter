@@ -1,6 +1,8 @@
-﻿using GreetingsPorts.EntityGateway;
+﻿using GreetingsEntities;
+using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
 using Marten;
+using Marten.Schema;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -62,8 +64,12 @@ namespace GreetingsWeb
         private void ConfigureMarten(IServiceCollection services)
         {
             var connectionString = Configuration.GetConnectionString("MartenDb");
-            services.AddMarten(connectionString)
-                .UseLightweightSessions();
+            services.AddMarten(opts =>
+            {
+                opts.Connection(connectionString);
+                opts.Schema.For<Person>().UniqueIndex(UniqueIndexType.Computed, x => x.Name);
+            })
+            .UseLightweightSessions();
         }
 
         private void ConfigureDarker(IServiceCollection services)
