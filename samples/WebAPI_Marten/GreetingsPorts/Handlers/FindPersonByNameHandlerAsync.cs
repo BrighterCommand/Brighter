@@ -10,18 +10,20 @@ namespace GreetingsPorts.Handlers
 {
     public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {
-        private readonly GreetingsEntityGateway _uow;
+        private readonly GreetingsEntityGateway unitOfWork;
 
-        public FindPersonByNameHandlerAsync(GreetingsEntityGateway uow)
+        public FindPersonByNameHandlerAsync(GreetingsEntityGateway unitOfWork)
         {
-            _uow = uow;
+            this.unitOfWork = unitOfWork;
         }
 
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = default)
         {
-            var person = await _uow.GetByName(query.Name);
-
-            return new FindPersonResult(person);
+            using (unitOfWork)
+            {
+                var person = await unitOfWork.GetByName(query.Name);
+                return new FindPersonResult(person);
+            }
         }
     }
 }

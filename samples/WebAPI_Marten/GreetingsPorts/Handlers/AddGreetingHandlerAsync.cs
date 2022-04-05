@@ -9,25 +9,28 @@ namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync : RequestHandlerAsync<AddGreeting>
     {
-        private readonly GreetingsEntityGateway _uow;
+        private readonly GreetingsEntityGateway unitOfWork;
 
-        public AddGreetingHandlerAsync(GreetingsEntityGateway uow)
+        public AddGreetingHandlerAsync(GreetingsEntityGateway unitOfWork)
         {
-            _uow = uow;
+            this.unitOfWork = unitOfWork;
         }
 
         public override async Task<AddGreeting> HandleAsync(AddGreeting command, CancellationToken cancellationToken = default)
         {
-            var person = await _uow.GetByName(command.Name);
-            var greeting = new Greeting
+            using (unitOfWork)
             {
-                Message = command.Greeting,
-            };
+                var person = await unitOfWork.GetByName(command.Name);
+                var greeting = new Greeting
+                {
+                    Message = command.Greeting,
+                };
 
-            person.AddGreeting(greeting);
-            _uow.Update(person);
+                person.AddGreeting(greeting);
+                unitOfWork.Update(person);
 
-            await _uow.CommitChanges();
+                await unitOfWork.CommitChanges();
+            }
 
             return await base.HandleAsync(command, cancellationToken);
         }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading.Tasks;
 using GreetingsEntities;
 using Marten;
@@ -32,7 +31,8 @@ namespace GreetingsPorts.EntityGateway
 
         public Task<Person> GetByName(string name)
         {
-            return session.Query<Person>().SingleOrDefaultAsync(x => x.Name == name);
+            return session.Query<Person>()
+                .SingleOrDefaultAsync(x => x.Name == name);
         }
 
         public async Task CommitChanges()
@@ -40,11 +40,18 @@ namespace GreetingsPorts.EntityGateway
             await session.SaveChangesAsync();
         }
 
-        // TODO: implement IDisposable correclty
         public void Dispose()
         {
-            session.Dispose();
+            Dispose(true);
+            GC.SuppressFinalize(this);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                session.Dispose();
+            }
         }
     }
-
 }
