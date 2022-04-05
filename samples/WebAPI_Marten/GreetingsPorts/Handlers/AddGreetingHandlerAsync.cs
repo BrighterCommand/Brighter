@@ -19,9 +19,14 @@ namespace GreetingsPorts.Handlers
         public override async Task<AddGreeting> HandleAsync(AddGreeting command, CancellationToken cancellationToken = default)
         {
             var person = await _uow.GetByName(command.Name);
-            var greeting = new Greeting(command.Greeting);
+            var greeting = new Greeting
+            {
+                Message = command.Greeting,
+            };
 
             person.AddGreeting(greeting);
+            _uow.Update(person);
+
             await _uow.CommitChanges();
 
             return await base.HandleAsync(command, cancellationToken);

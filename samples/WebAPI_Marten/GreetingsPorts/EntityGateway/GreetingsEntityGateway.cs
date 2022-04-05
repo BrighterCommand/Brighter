@@ -20,6 +20,11 @@ namespace GreetingsPorts.EntityGateway
             session.Insert(person);
         }
         
+        public void Update(Person person)
+        {
+            session.Update(person);
+        }
+
         public Task<Person> GetById(int id)
         {
             return session.LoadAsync<Person>(id);
