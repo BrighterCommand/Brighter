@@ -17,7 +17,7 @@ using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
-using Paramore.Brighter.ServiceActivator.Extensions.HealthChecks;
+using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);

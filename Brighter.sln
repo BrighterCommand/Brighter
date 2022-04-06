@@ -235,7 +235,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutations_MySqlMigrations
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutations_SqliteMigrations", "samples\WebAPI_EFCore\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj", "{05647D1B-87A3-4440-B468-82866B206E49}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.ServiceActivator.Extensions.HealthChecks", "src\Paramore.Brighter.ServiceActivator.Extensions.HealthChecks\Paramore.Brighter.ServiceActivator.Extensions.HealthChecks.csproj", "{72763FBA-675A-4784-8A57-E69AD41DC685}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.ServiceActivator.Extensions.Diagnostics", "src\Paramore.Brighter.ServiceActivator.Extensions.Diagnostics\Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.csproj", "{72763FBA-675A-4784-8A57-E69AD41DC685}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
