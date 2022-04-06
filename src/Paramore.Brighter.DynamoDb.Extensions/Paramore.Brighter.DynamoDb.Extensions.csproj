@@ -5,7 +5,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.3.15" />
+      <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.3.18" />
       <PackageReference Update="MinVer" Version="3.1.0" />
     </ItemGroup>
    
