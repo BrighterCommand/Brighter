@@ -7,7 +7,4 @@ user_name: root
 password: password  
 
 Npgsql.PostgresException (0x80004005): 3D000: database "marten_db" does not exist
-(make sure that you have created an actual db and not the server)  
-
-select * from mt_doc_greetingsentitygateway_fakeuser
-
+(make sure that you have created an actual db and not the server)  :)
