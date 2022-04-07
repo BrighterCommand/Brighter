@@ -26,6 +26,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public AzureServiceBusSubscription(
             Type dataType,
             SubscriptionName name = null,
@@ -40,9 +42,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null)
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit, isAsync, channelFactory,
-                makeChannels)
+                makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             Configuration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
         }
@@ -70,6 +74,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="subscriptionConfiguration">The configuration options for the subscriptions.</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public AzureServiceBusSubscription(
             SubscriptionName name = null,
             ChannelName channelName = null,
@@ -83,10 +89,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             bool isAsync = false,
             IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
-            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null)
+            AzureServiceBusSubscriptionConfiguration subscriptionConfiguration = null,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers,
                 timeoutInMilliseconds, requeueCount, requeueDelayInMs, unacceptableMessageLimit,
-                isAsync, channelFactory, makeChannels, subscriptionConfiguration)
+                isAsync, channelFactory, makeChannels, subscriptionConfiguration, emptyChannelDelay, channelFailureDelay)
         {
         }
     }

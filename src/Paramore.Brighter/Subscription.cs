@@ -34,11 +34,11 @@ namespace Paramore.Brighter
     /// </summary>
     public enum OnMissingChannel
     {
-        Create = 0, 
+        Create = 0,
         Validate = 1,
         Assume = 2
     }
-    
+
     /// <summary>
     /// Class Subscription.
     /// A <see cref="Subscription"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
@@ -53,7 +53,7 @@ namespace Paramore.Brighter
         /// Must be greater than 1 and less than 10.
         /// </summary>
         public int BufferSize { get; }
-        
+
         /// <summary>
         /// Gets the channel.
         /// </summary>
@@ -111,23 +111,33 @@ namespace Paramore.Brighter
         /// <value>The name.</value>
         public RoutingKey RoutingKey { get; set; }
 
-         /// <summary>
+        /// <summary>
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
         /// or busy
         /// </summary>
         /// <value>The timeout in miliseconds.</value>
         public int TimeoutInMiliseconds { get; }
-        
+
         /// <summary>
         /// Gets the number of messages before we will terminate the channel due to high error rates
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
-     
+
         /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>
         public OnMissingChannel MakeChannels { get; }
+
+        /// <summary>
+        /// How long to pause when a channel is empty in milliseconds
+        /// </summary>
+        public int EmptyChannelDelay { get; set; }
+
+        /// <summary>
+        /// How long to pause when there is a channel failure in milliseconds
+        /// </summary>
+        public int ChannelFailureDelay { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
@@ -145,20 +155,24 @@ namespace Paramore.Brighter
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
             Type dataType,
             SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
             int bufferSize = 1,
-            int noOfPerformers = 1, 
+            int noOfPerformers = 1,
             int timeoutInMilliseconds = 300,
             int requeueCount = -1,
             int requeueDelayInMilliseconds = 0,
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000)
         {
             DataType = dataType;
             Name = name ?? new SubscriptionName(dataType.FullName);
@@ -173,6 +187,8 @@ namespace Paramore.Brighter
             RunAsync = runAsync;
             ChannelFactory = channelFactory;
             MakeChannels = makeChannels;
+            EmptyChannelDelay = emptyChannelDelay;
+            ChannelFailureDelay = channelFailureDelay;
         }
     }
 
@@ -194,6 +210,8 @@ namespace Paramore.Brighter
         /// <param name="runAsync"></param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public Subscription(
             SubscriptionName name = null,
             ChannelName channelName = null,
@@ -206,21 +224,25 @@ namespace Paramore.Brighter
             int unacceptableMessageLimit = 0,
             bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000)
             : base(
-                typeof(T), 
-                name, 
-                channelName, 
-                routingKey, 
+                typeof(T),
+                name,
+                channelName,
+                routingKey,
                 bufferSize,
-                noOfPerformers, 
-                timeoutInMilliseconds, 
-                requeueCount, 
-                requeueDelayInMilliseconds, 
-                unacceptableMessageLimit, 
-                runAsync, 
-                channelFactory, 
-                makeChannels)
+                noOfPerformers,
+                timeoutInMilliseconds,
+                requeueCount,
+                requeueDelayInMilliseconds,
+                unacceptableMessageLimit,
+                runAsync,
+                channelFactory,
+                makeChannels,
+                emptyChannelDelay,
+                channelFailureDelay)
         {
         }
     }
