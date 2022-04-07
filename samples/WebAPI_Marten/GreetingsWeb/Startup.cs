@@ -87,6 +87,7 @@ namespace GreetingsWeb
                 .SoftDeleted()
                 .UniqueIndex(UniqueIndexType.Computed, x => x.Name);
             })
+            .OptimizeArtifactWorkflow()
             .UseLightweightSessions();
         }
 
