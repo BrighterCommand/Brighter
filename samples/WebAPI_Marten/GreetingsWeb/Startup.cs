@@ -2,6 +2,7 @@
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Handlers;
+using Hellang.Middleware.ProblemDetails;
 using Marten;
 using Marten.Schema;
 using Microsoft.AspNetCore.Builder;
@@ -51,7 +52,12 @@ namespace GreetingsWeb
         {
             services.AddScoped<IGreetingsEntityGateway,GreetingsEntityGateway>();
 
-            services.AddControllers();
+            services.AddControllers(options =>
+            {
+                options.RespectBrowserAcceptHeader = true;
+            }).AddXmlSerializerFormatters();
+
+            services.AddProblemDetails();
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsWeb", Version = "v1" });
