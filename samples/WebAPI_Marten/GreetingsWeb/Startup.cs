@@ -1,7 +1,10 @@
-﻿using GreetingsEntities;
+﻿using System;
+using System.ComponentModel;
+using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Handlers;
+using GreetingsWeb.Extensions;
 using Hellang.Middleware.ProblemDetails;
 using Marten;
 using Marten.Schema;
@@ -11,8 +14,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Darker.AspNetCore;
+using Polly;
 
 namespace GreetingsWeb
 {
@@ -72,9 +77,12 @@ namespace GreetingsWeb
         private void ConfigureMarten(IServiceCollection services)
         {
             var connectionString = Configuration.GetConnectionString("MartenDb");
+
             services.AddMarten(opts =>
             {
+                
                 opts.Connection(connectionString);
+                opts.RetryPolicy(MartenRetryPolicy.Twice(exception => exception is NpgsqlException ne && ne.IsTransient));
                 opts.Schema.For<Person>()
                 .SoftDeleted()
                 .UniqueIndex(UniqueIndexType.Computed, x => x.Name);
