@@ -57,18 +57,7 @@ jobs:
         run: dotnet build --configuration Release
       - name: Core Tests
         run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
-      - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: nuget packages
-          path: "**/*.nupkg"
-      - name: Push to GitHub Feed
-        if: ${{ github.event_name != 'pull_request' }}
-        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPOSITORY_OWNER: ${{ github.repository_owner }}
-  
+      
   mqtt-ci:
     runs-on: ubuntu-latest
     timeout-minutes: 5
