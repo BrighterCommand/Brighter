@@ -1,4 +1,4 @@
-name: CI
+name: MQTTTEST
 # CI build for Brighter
 # It creates a package on the github nuger feed for this project
 # We run tests for transports as separate jobs to create greater visibility of failure, and to parallelize
