@@ -1,0 +1,103 @@
+name: CI
+# CI build for Brighter
+# It creates a package on the github nuger feed for this project
+# We run tests for transports as separate jobs to create greater visibility of failure, and to parallelize
+# HINT: If you need to debug a config issue, tmate allows you to hop on to the server, check in the build
+# logs for the SSH address to let you hop onto the box via tmate. It will timeout and not connect if left too long
+# - name: Debugging with tmate
+#   uses: mxschmitt/action-tmate@v3.1
+
+
+on:
+  workflow_dispatch:
+    inputs:
+      debug_enabled:
+        description: 'Run the build with tmate debugging enabled (https://github.com/marketplace/actions/debugging-with-tmate)'     
+        required: false
+        default: false
+  
+env:
+ # Stop wasting time caching packages
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  # Disable sending usage data to Microsoft
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  # Don't show a logo on first run of CLI
+  DOTNET_NOLOGO: true
+  # GitHub Packages Feed settings
+  GITHUB_FEED: https://nuget.pkg.github.com/
+  GITHUB_USER: iancooper
+  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+jobs:
+  build:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    steps:
+      - name: setup-dotnet tests-sdk
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "3.1.*"
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "5.0.*"
+      - uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: "6.0.*"
+      - run: dotnet --info
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/cache@v2
+        with:
+          path: ~/.nuget/packages
+          key: Linux-nuget-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            Linux-nuget-
+      - name: Build
+        run: dotnet build --configuration Release
+      - name: Core Tests
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
+      - name: Upload packages as artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: nuget packages
+          path: "**/*.nupkg"
+      - name: Push to GitHub Feed
+        if: ${{ github.event_name != 'pull_request' }}
+        run: dotnet nuget push **/*.nupkg --source https://nuget.pkg.github.com/${REPOSITORY_OWNER}/index.json --api-key ${GITHUB_TOKEN} --skip-duplicate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+  
+  mqtt-ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: [build]
+    
+    services:
+      mosquitto:  
+        image: efrecon/mosquitto:latest
+        ports:
+        - 1883:1883
+      
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup dotnet 3.1
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Setup dotnet 5.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 5.0.x
+      - name: Setup dotnet 6.0.x
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: 6.0.x
+      - name: Install dependencies
+        run: dotnet restore
+      - name: Debugging with tmate
+        uses: mxschmitt/action-tmate@v3.1
+        if: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.debug_enabled }}
+      - name: MQTT Transport Tests
+        run: dotnet test ./tests/Paramore.Brighter.MQTT.Tests/Paramore.Brighter.MQTT.Tests.csproj --filter "Fragile!=CI" --configuration Release --logger "console;verbosity=normal" --blame -v n
