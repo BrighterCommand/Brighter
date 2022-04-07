@@ -28,6 +28,8 @@ namespace GreetingsWeb
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
+            app.UseProblemDetails();
+
             if (env.IsDevelopment())
             {
                 app.UseDeveloperExceptionPage();
@@ -38,8 +40,6 @@ namespace GreetingsWeb
             app.UseHttpsRedirection();
 
             app.UseRouting();
-
-            app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
             {
@@ -55,7 +55,8 @@ namespace GreetingsWeb
             services.AddControllers(options =>
             {
                 options.RespectBrowserAcceptHeader = true;
-            }).AddXmlSerializerFormatters();
+            })
+            .AddXmlSerializerFormatters();
 
             services.AddProblemDetails();
             services.AddSwaggerGen(c =>
