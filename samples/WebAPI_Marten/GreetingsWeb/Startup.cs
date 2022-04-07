@@ -1,6 +1,4 @@
-﻿using System;
-using System.ComponentModel;
-using GreetingsEntities;
+﻿using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Handlers;
@@ -17,7 +15,6 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Darker.AspNetCore;
-using Polly;
 
 namespace GreetingsWeb
 {
@@ -55,7 +52,7 @@ namespace GreetingsWeb
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddScoped<IGreetingsEntityGateway,GreetingsEntityGateway>();
+            services.AddScoped<IGreetingsEntityGateway, GreetingsEntityGateway>();
 
             services.AddControllers(options =>
             {
@@ -80,7 +77,7 @@ namespace GreetingsWeb
 
             services.AddMarten(opts =>
             {
-                
+
                 opts.Connection(connectionString);
                 opts.RetryPolicy(MartenRetryPolicy.Twice(exception => exception is NpgsqlException ne && ne.IsTransient));
                 opts.Schema.For<Person>()
