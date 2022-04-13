@@ -245,6 +245,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsPorts", "samples\W
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GreetingsWeb", "samples\WebAPI_Marten\GreetingsWeb\GreetingsWeb.csproj", "{87964D27-A4A6-483A-B741-426594CB7535}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationEntities", "samples\WebAPI_Marten\SalutationEntities\SalutationEntities.csproj", "{248697B3-99F4-4B56-9436-07B1D11B60DE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1371,6 +1373,18 @@ Global
 		{87964D27-A4A6-483A-B741-426594CB7535}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{87964D27-A4A6-483A-B741-426594CB7535}.Release|x86.ActiveCfg = Release|Any CPU
 		{87964D27-A4A6-483A-B741-426594CB7535}.Release|x86.Build.0 = Release|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Debug|x86.Build.0 = Debug|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Release|x86.ActiveCfg = Release|Any CPU
+		{248697B3-99F4-4B56-9436-07B1D11B60DE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1447,6 +1461,7 @@ Global
 		{306B7B8D-F2A7-4982-A99D-CAD29E380979} = {F46560D6-51AA-4835-BD68-AB2CC0359EEA}
 		{BEB5527D-A79D-49AC-8FC3-541282787734} = {F46560D6-51AA-4835-BD68-AB2CC0359EEA}
 		{87964D27-A4A6-483A-B741-426594CB7535} = {F46560D6-51AA-4835-BD68-AB2CC0359EEA}
+		{248697B3-99F4-4B56-9436-07B1D11B60DE} = {F46560D6-51AA-4835-BD68-AB2CC0359EEA}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}
