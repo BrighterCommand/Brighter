@@ -36,7 +36,7 @@ namespace GreetingsWeb
             {
                 app.UseDeveloperExceptionPage();
                 app.UseSwagger();
-                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GreetingsWeb v1"));
+                app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "GreetingsAPI v1"));
             }
 
             app.UseHttpsRedirection();
@@ -63,12 +63,12 @@ namespace GreetingsWeb
             services.AddProblemDetails();
             services.AddSwaggerGen(c =>
             {
-                c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsWeb", Version = "v1" });
+                c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
 
+            ConfigureMarten(services);
             ConfigureDarker(services);
             ConfigureBrighter(services);
-            ConfigureMarten(services);
         }
 
         private void ConfigureMarten(IServiceCollection services)
