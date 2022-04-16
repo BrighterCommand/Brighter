@@ -1,4 +1,5 @@
-﻿using GreetingsEntities;
+﻿using System;
+using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Handlers;
@@ -13,8 +14,11 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Npgsql;
+using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Darker.AspNetCore;
+using Polly;
+using Polly.Registry;
 
 namespace GreetingsWeb
 {
@@ -100,12 +104,28 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
+            var retryPolicy = Policy.Handle<Exception>()
+                .WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+            var retryPolicyAsync = Policy.Handle<Exception>()
+                .WaitAndRetryAsync(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
+            var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+            var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
+
+            var policyRegistry = new PolicyRegistry()
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
+            };
+
             services.AddBrighter(options =>
             {
                 // we want to use scoped, so make sure everything understands that which needs to
                 options.HandlerLifetime = ServiceLifetime.Scoped;
                 options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                 options.MapperLifetime = ServiceLifetime.Singleton;
+                options.PolicyRegistry = policyRegistry;
             })
             .AutoFromAssemblies();
         }
