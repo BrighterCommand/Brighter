@@ -16,6 +16,7 @@ using Microsoft.OpenApi.Models;
 using Npgsql;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Polly;
 using Polly.Registry;
@@ -92,7 +93,7 @@ namespace GreetingsWeb
             .UseLightweightSessions();
         }
 
-        private void ConfigureDarker(IServiceCollection services)
+        private static void ConfigureDarker(IServiceCollection services)
         {
             services.AddDarker(options =>
             {
@@ -102,7 +103,7 @@ namespace GreetingsWeb
             .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly);
         }
 
-        private void ConfigureBrighter(IServiceCollection services)
+        private static void ConfigureBrighter(IServiceCollection services)
         {
             var retryPolicy = Policy.Handle<Exception>()
                 .WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
@@ -127,6 +128,23 @@ namespace GreetingsWeb
                 options.MapperLifetime = ServiceLifetime.Singleton;
                 options.PolicyRegistry = policyRegistry;
             })
+            .UseExternalBus(new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }}
+                ).Create())
             .AutoFromAssemblies();
         }
     }
