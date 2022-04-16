@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using GreetingsWeb.Extensions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -12,6 +13,7 @@ namespace GreetingsWeb
         {
             var host = CreateHostBuilder(args).Build();
 
+            host.CheckDbIsUp();
             host.Run();
         }
 
