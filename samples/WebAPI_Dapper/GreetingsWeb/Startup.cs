@@ -1,25 +1,24 @@
 using System;
-using System.Data;
-using System.Data.Common;
-using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using MySqlConnector;
 using Paramore.Brighter;
+using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.MySql.Dapper;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
+using Paramore.Brighter.Sqlite.Dapper;
 using Paramore.Darker.AspNetCore;
 using Polly;
 using Polly.Registry;
@@ -118,7 +117,10 @@ namespace Greetingsweb
 
             if (_env.IsDevelopment())
             {
-                 services.AddBrighter(options =>
+                    services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+                    services.AddScoped(typeof(IUnitOfWork), typeof(Paramore.Brighter.Sqlite.Dapper.UnitOfWork));
+                    
+                    services.AddBrighter(options =>
                      {
                          //we want to use scoped, so make sure everything understands that which needs to
                          options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -144,7 +146,7 @@ namespace Greetingsweb
                          ).Create()
                      )
                      .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
-                     //.UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
+                     .UseSqliteTransactionConnectionProvider(typeof(SqliteDapperConnectionProvider), ServiceLifetime.Scoped)
                      .UseOutboxSweeper(options =>
                      {
                          options.TimerInterval = 5;
@@ -154,6 +156,9 @@ namespace Greetingsweb
             }
             else
             {
+                services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+                services.AddScoped(typeof(IUnitOfWork), typeof(Paramore.Brighter.MySql.Dapper.UnitOfWork));
+                
                 services.AddBrighter(options =>
                     {
                         options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -178,7 +183,7 @@ namespace Greetingsweb
                         ).Create()
                     )
                     .UseMySqlOutbox(new MySqlConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
-                    //.UseMySqTransactionConnectionProvider(typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
+                    .UseMySqTransactionConnectionProvider(typeof(MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
                     .UseOutboxSweeper()
                     .AutoFromAssemblies();
             }

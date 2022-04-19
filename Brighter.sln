@@ -251,7 +251,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationAnalytics", "samp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MySql.Dapper", "src\Paramore.Brighter.MySql.Dapper\Paramore.Brighter.MySql.Dapper.csproj", "{083115C7-B622-4E42-89E9-B934D1B38321}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Dapper", "src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj", "{0060E67E-13AC-466A-9DB6-A72EC762660C}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Sqlite.Dapper", "src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj", "{519968EE-19A6-4B1E-944F-BFE84E673A40}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Dapper", "src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj", "{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1415,18 +1417,30 @@ Global
 		{083115C7-B622-4E42-89E9-B934D1B38321}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{083115C7-B622-4E42-89E9-B934D1B38321}.Release|x86.ActiveCfg = Release|Any CPU
 		{083115C7-B622-4E42-89E9-B934D1B38321}.Release|x86.Build.0 = Release|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Debug|x86.Build.0 = Debug|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Release|x86.ActiveCfg = Release|Any CPU
-		{0060E67E-13AC-466A-9DB6-A72EC762660C}.Release|x86.Build.0 = Release|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Debug|x86.Build.0 = Debug|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Release|Any CPU.Build.0 = Release|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Release|x86.ActiveCfg = Release|Any CPU
+		{519968EE-19A6-4B1E-944F-BFE84E673A40}.Release|x86.Build.0 = Release|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Debug|x86.Build.0 = Debug|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Release|x86.ActiveCfg = Release|Any CPU
+		{8F8079E8-A61A-46E1-A3FE-F800DB8FE05B}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

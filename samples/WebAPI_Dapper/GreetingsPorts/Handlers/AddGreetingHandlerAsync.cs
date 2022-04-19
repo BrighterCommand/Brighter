@@ -1,20 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Dapper;
 using GreetingsEntities;
-using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
+using Paramore.Brighter.Dapper;
 
 namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync: RequestHandlerAsync<AddGreeting>
     {
-        private readonly GreetingsEntityGateway _uow;
         private readonly IAmACommandProcessor _postBox;
-                
-        public AddGreetingHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
+        private readonly IUnitOfWork _uow;
+
+
+        public AddGreetingHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox)
         {
             _uow = uow;
             _postBox = postBox;
@@ -25,17 +28,19 @@ namespace GreetingsPorts.Handlers
         {
             var posts = new List<Guid>();
             
-            //We span a Db outside of EF's control, so start an explicit transactional scope
-            //var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
+            //We use the unit of work to grab connection and transaction, because Outbox needs
+            //to share them 'behind the scenes'
+            
+            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
             try
             {
-                //var person = await _uow.People
-                //    .Where(p => p.Name == addGreeting.Name)
-                //    .SingleAsync(cancellationToken);
+                var sql = "select Id, Name from People where Name = @Name";
+                var people = await _uow.Database.QueryAsync<Person>(sql, new { Name = addGreeting.Name });
+                var person = people.Single();
                 
                 var greeting = new Greeting(addGreeting.Greeting);
                 
-                //person.AddGreeting(greeting);
+                person.AddGreeting(greeting);
                 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
