@@ -26,7 +26,7 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.15" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.4" />
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
     </ItemGroup>
 
