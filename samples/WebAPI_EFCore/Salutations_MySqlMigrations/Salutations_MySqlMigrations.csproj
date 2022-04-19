@@ -6,12 +6,10 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <ItemGroup>
-      <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
-    </ItemGroup>
 
     <ItemGroup>
       <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
-    </ItemGroup>
+       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
+     </ItemGroup>
 
 </Project>
