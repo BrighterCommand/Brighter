@@ -6,11 +6,11 @@
 
     <ItemGroup>
         <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.4.1" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.15">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.16">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.15" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.16" />
         <PackageReference Include="Paramore.Darker.AspNetCore" Version="2.0.78" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.3.0" />
     </ItemGroup>
