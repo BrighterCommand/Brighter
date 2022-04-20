@@ -31,13 +31,15 @@ using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxViewer<Message>
+    public class PostgreSqlOutboxSync : IAmAnOutboxSync<Message>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
         private readonly PostgreSqlOutboxConfiguration _configuration;
+        private readonly IPostgreSqlConnectionProvider _connectionProvider;
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
 
         public bool ContinueOnCapturedContext
         {
@@ -48,10 +50,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <summary>
         /// Initialises a new instance of <see cref="PostgreSqlOutboxSync"> class.
         /// </summary>
-        /// <param name="configuration">PostgreSql Configuration.</param>
-        public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration)
+        /// <param name="postgresSqlOutboxConfiguration">PostgreSql Outbox Configuration.</param>
+        public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
+            _connectionProvider = connectionProvider;
         }
 
         /// <summary>
@@ -61,29 +64,35 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
+            var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
             var parameters = InitAddDbParameters(message);
-            using (var connection = GetConnection())
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
             {
-                connection.Open();
                 using (var command = InitAddDbCommand(connection, parameters))
                 {
-                    try
-                    {
-                        command.ExecuteNonQuery();
-                    }
-                    catch (PostgresException sqlException)
-                    {
-                        if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                        {
-                            s_logger.LogWarning(
-                                "PostgresSQLOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                                message.Id);
-                            return;
-                        }
-
-                        throw;
-                    }
+                    command.ExecuteNonQuery();
                 }
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    s_logger.LogWarning(
+                        "PostgresSQLOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                        message.Id);
+                    return;
+                }
+
+                throw;
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
             }
         }
 
@@ -103,22 +112,30 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
             {
-                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
-
-                connection.Open();
-
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
+                using (var command = InitPagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber))
                 {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
+                    var messages = new List<Message>();
 
-                return messages;
+                    using (var dbDataReader = command.ExecuteReader())
+                    {
+                        while (dbDataReader.Read())
+                            messages.Add(MapAMessage(dbDataReader));
+                    }
+
+                    return messages;
+                }
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
             }
         }
 
@@ -131,25 +148,34 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <returns>A list of messages</returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
             {
-                CreatePagedReadCommand(command, _configuration, pageSize, pageNumber);
-
-                connection.Open();
-
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
+                using (var command = InitPagedReadCommand(connection, pageSize, pageNumber))
                 {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
+                    var messages = new List<Message>();
 
-                return messages;
+                    using (var dbDataReader = command.ExecuteReader())
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            messages.Add(MapAMessage(dbDataReader));
+                        }
+                    }
+
+                    return messages;
+                }
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
             }
         }
-
 
         /// <summary>
         /// Gets the specified message identifier.
@@ -162,7 +188,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var sql = string.Format(
                 "SELECT Id, MessageId, Topic, MessageType, Timestamp, Correlationid, ReplyTo, ContentType, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId",
                 _configuration.OutboxTableName);
-            var parameters = new[] {CreateNpgsqlParameter("MessageId", messageId)};
+            var parameters = new[] { InitNpgsqlParameter("MessageId", messageId) };
 
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
         }
@@ -174,13 +200,22 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
             {
-                connection.Open();
                 using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
                 {
                     command.ExecuteNonQuery();
                 }
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
             }
         }
 
@@ -190,34 +225,69 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
         /// <param name="pageSize">How many messages to return at once?</param>
         /// <param name="pageNumber">Which page number of messages</param>
-          /// <param name="args">Additional parameters required for search, if any</param>
-       /// <returns>A list of messages that are outstanding for dispatch</returns>
-       public IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent,
-            int pageSize = 100,
-            int pageNumber = 1,
-            Dictionary<string, object> args = null)
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <returns>A list of messages that are outstanding for dispatch</returns>
+        public IEnumerable<Message> OutstandingMessages(
+             double millSecondsSinceSent,
+             int pageSize = 100,
+             int pageNumber = 1,
+             Dictionary<string, object> args = null)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
             {
-                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
-
-                connection.Open();
-
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
+                using (var command = InitPagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber))
                 {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
+                    var messages = new List<Message>();
 
-                return messages;
+                    using (var dbDataReader = command.ExecuteReader())
+                    {
+                        while (dbDataReader.Read())
+                        {
+                            messages.Add(MapAMessage(dbDataReader));
+                        }
+                    }
+
+                    return messages;
+                }
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
             }
         }
 
-        private NpgsqlParameter CreateNpgsqlParameter(string parametername, object value)
+        private IPostgreSqlConnectionProvider GetConnectionProvider(IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(_configuration);
+
+            if (transactionConnectionProvider != null)
+            {
+                if (transactionConnectionProvider is IPostgreSqlTransactionConnectionProvider provider)
+                    connectionProvider = provider;
+                else
+                    throw new Exception($"{nameof(transactionConnectionProvider)} does not implement interface {nameof(IPostgreSqlTransactionConnectionProvider)}.");
+            }
+
+            return connectionProvider;
+        }
+
+        private NpgsqlConnection GetOpenConnection(IPostgreSqlConnectionProvider connectionProvider)
+        {
+            NpgsqlConnection connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+
+            return connection;
+        }
+
+        private NpgsqlParameter InitNpgsqlParameter(string parametername, object value)
         {
             if (value != null)
                 return new NpgsqlParameter(parametername, value);
@@ -225,121 +295,133 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 return new NpgsqlParameter(parametername, DBNull.Value);
         }
 
-        private void CreatePagedDispatchedCommand(NpgsqlCommand command, double millisecondsDispatchedSince,
+        private NpgsqlCommand InitPagedDispatchedCommand(NpgsqlConnection connection, double millisecondsDispatchedSince,
             int pageSize, int pageNumber)
-        {
-            var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            var parameters = new[]
-            {
-                CreateNpgsqlParameter("PageNumber", pageNumber),
-                CreateNpgsqlParameter("PageSize", pageSize),
-                CreateNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-        }
-
-        private void CreatePagedReadCommand(NpgsqlCommand command, PostgreSqlOutboxConfiguration configuration,
-            int pageSize, int pageNumber)
-        {
-            var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            var parameters = new[]
-            {
-                CreateNpgsqlParameter("PageNumber", pageNumber),
-                CreateNpgsqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-        }
-
-        private void CreatePagedOutstandingCommand(NpgsqlCommand command, double milliSecondsSinceAdded, int pageSize,
-            int pageNumber)
-        {
-            var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
-            var parameters = new[]
-            {
-                CreateNpgsqlParameter("PageNumber", pageNumber),
-                CreateNpgsqlParameter("PageSize", pageSize),
-                CreateNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-        }
-
-        private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
-            NpgsqlParameter[] parameters)
-        {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
-
-                if (messageStoreTimeout != -1) command.CommandTimeout = messageStoreTimeout;
-
-                connection.Open();
-                return execute(command);
-            }
-        }
-
-        private NpgsqlConnection GetConnection()
-        {
-            return new NpgsqlConnection(_configuration.ConnectionString);
-        }
-
-        private NpgsqlCommand InitAddDbCommand(NpgsqlConnection connection, NpgsqlParameter[] parameters)
         {
             var command = connection.CreateCommand();
-            var sql = string.Format(
-                "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamptz, @CorrelationId, @ReplyTo, @ContentType,  @HeaderBag, @Body)",
-                _configuration.OutboxTableName);
-            command.CommandText = sql;
+
+            var parameters = new[]
+            {
+                InitNpgsqlParameter("PageNumber", pageNumber),
+                InitNpgsqlParameter("PageSize", pageSize),
+                InitNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
+            };
+
+            var pagingSqlFormat =
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+
+            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
             command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+
+        private NpgsqlCommand InitPagedReadCommand(NpgsqlConnection connection, int pageSize, int pageNumber)
+        {
+            var command = connection.CreateCommand();
+
+            var parameters = new[]
+            {
+                InitNpgsqlParameter("PageNumber", pageNumber),
+                InitNpgsqlParameter("PageSize", pageSize)
+            };
+
+            var pagingSqlFormat =
+                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+
+            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+
+        private NpgsqlCommand InitPagedOutstandingCommand(NpgsqlConnection connection, double milliSecondsSinceAdded, int pageSize,
+            int pageNumber)
+        {
+            var command = connection.CreateCommand();
+
+            var parameters = new[]
+            {
+                InitNpgsqlParameter("PageNumber", pageNumber),
+                InitNpgsqlParameter("PageSize", pageSize),
+                InitNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
+            };
+
+            var pagingSqlFormat =
+               "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
+
+            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
+            command.Parameters.AddRange(parameters);
+
             return command;
         }
 
         private NpgsqlParameter[] InitAddDbParameters(Message message)
         {
             var bagjson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            var parameters = new NpgsqlParameter[]
+            return new NpgsqlParameter[]
             {
-                CreateNpgsqlParameter("MessageId", message.Id),
-                CreateNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
-                CreateNpgsqlParameter("Topic", message.Header.Topic),
+                InitNpgsqlParameter("MessageId", message.Id),
+                InitNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
+                InitNpgsqlParameter("Topic", message.Header.Topic),
                 new NpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz) {Value = message.Header.TimeStamp},
-                CreateNpgsqlParameter("CorrelationId", message.Header.CorrelationId),
-                CreateNpgsqlParameter("ReplyTo", message.Header.ReplyTo),
-                CreateNpgsqlParameter("ContentType", message.Header.ContentType),
-                CreateNpgsqlParameter("HeaderBag", bagjson),
-                CreateNpgsqlParameter("Body", message.Body.Value)
+                InitNpgsqlParameter("CorrelationId", message.Header.CorrelationId),
+                InitNpgsqlParameter("ReplyTo", message.Header.ReplyTo),
+                InitNpgsqlParameter("ContentType", message.Header.ContentType),
+                InitNpgsqlParameter("HeaderBag", bagjson),
+                InitNpgsqlParameter("Body", message.Body.Value)
             };
-            return parameters;
         }
 
         private NpgsqlCommand InitMarkDispatchedCommand(NpgsqlConnection connection, Guid messageId,
             DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql =
-                $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
-            command.CommandText = sql;
-            command.Parameters.Add(CreateNpgsqlParameter("MessageId", messageId));
-            command.Parameters.Add(CreateNpgsqlParameter("DispatchedAt", dispatchedAt));
+            command.CommandText = $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
+            command.Parameters.Add(InitNpgsqlParameter("MessageId", messageId));
+            command.Parameters.Add(InitNpgsqlParameter("DispatchedAt", dispatchedAt));
             return command;
         }
 
+        private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
+            NpgsqlParameter[] parameters)
+        {
+            var connectionProvider = GetConnectionProvider();
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
+            {
+                using (var command = connection.CreateCommand())
+                {
+                    command.CommandText = sql;
+                    command.Parameters.AddRange(parameters);
+
+                    if (messageStoreTimeout != -1)
+                        command.CommandTimeout = messageStoreTimeout;
+
+                    return execute(command);
+                }
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
+            }
+        }
+
+        private NpgsqlCommand InitAddDbCommand(NpgsqlConnection connection, NpgsqlParameter[] parameters)
+        {
+            var command = connection.CreateCommand();
+
+            var addSqlFormat = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamptz, @CorrelationId, @ReplyTo, @ContentType,  @HeaderBag, @Body)";
+
+            command.CommandText = string.Format(addSqlFormat, _configuration.OutboxTableName);
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
 
         private Message MapFunction(IDataReader reader)
         {
@@ -363,11 +445,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var contentType = GetContentType(dr);
 
             var header = new MessageHeader(
-                messageId:id,
-                topic:topic,
-                messageType:messageType,
-                timeStamp:timeStamp,
-                handledCount:0,
+                messageId: id,
+                topic: topic,
+                messageType: messageType,
+                timeStamp: timeStamp,
+                handledCount: 0,
                 delayedMilliseconds: 0,
                 correlationId: correlationId,
                 replyTo: replyTo,
@@ -405,7 +487,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private string GetContentType(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal)) return null;
+            if (dr.IsDBNull(ordinal))
+                return null;
 
             var replyTo = dr.GetString(ordinal);
             return replyTo;
@@ -413,11 +496,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private string GetReplyTo(IDataReader dr)
         {
-             var ordinal = dr.GetOrdinal("ReplyTo");
-             if (dr.IsDBNull(ordinal)) return null;
+            var ordinal = dr.GetOrdinal("ReplyTo");
+            if (dr.IsDBNull(ordinal))
+                return null;
 
-             var replyTo = dr.GetString(ordinal);
-             return replyTo;
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
         }
 
         private static Dictionary<string, object> GetContextBag(IDataReader dr)
@@ -431,7 +515,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private Guid? GetCorrelationId(IDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null;
+            if (dr.IsDBNull(ordinal))
+                return null;
 
             var correlationId = dr.GetGuid(ordinal);
             return correlationId;
@@ -447,7 +532,4 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
     }
-
-
 }
-

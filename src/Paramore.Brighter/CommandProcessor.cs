@@ -130,8 +130,8 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="outBox">The outbox.</param>
-        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="outBox">The outbox</param>
+        /// <param name="producerRegistry">The register of producers via whom we send messages over the external bus</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
@@ -141,7 +141,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
-            IAmAMessageProducer messageProducer,
+            IAmAProducerRegistry producerRegistry,
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
@@ -153,10 +153,10 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
 
-            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, messageProducer);
-
-            _bus.ConfigurePublisherCallbackMaybe();
+            ConfigureCallbacks(producerRegistry);
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="outBox">The outbox</param>
-        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="producerRegistry">The register of producers via whom we send messages over the external bus</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
         /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
@@ -183,7 +183,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
-            IAmAMessageProducer messageProducer,
+            IAmAProducerRegistry producerRegistry,
             IEnumerable<Subscription> replySubscriptions,
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
@@ -199,9 +199,9 @@ namespace Paramore.Brighter
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _replySubscriptions = replySubscriptions;
 
-            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, messageProducer);
-
-            _bus.ConfigurePublisherCallbackMaybe();
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
+              
+            ConfigureCallbacks(producerRegistry);
         }
 
         /// <summary>
@@ -214,7 +214,7 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="outBox">The outbox.</param>
-        /// <param name="messageProducer">The messaging gateway.</param>
+        /// <param name="producerRegistry">The register of producers via whom we send messages over the external bus</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
@@ -226,7 +226,7 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
-            IAmAMessageProducer messageProducer,
+            IAmAProducerRegistry producerRegistry,
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
@@ -237,13 +237,12 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
-            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, messageProducer);
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
 
-            //Only register one, to avoid two callbacks where we support both interfaces on a producer
-            if (!_bus.ConfigurePublisherCallbackMaybe()) _bus.ConfigureAsyncPublisherCallbackMaybe();
+            ConfigureCallbacks(producerRegistry);
         }
 
-        /// <summary>
+       /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -503,7 +502,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, _boxTransactionConnectionProvider);
+            await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
             return message.Id;
         }
@@ -518,6 +517,18 @@ namespace Paramore.Brighter
         {
             _bus.ClearOutbox(posts); 
         }
+        
+        /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// This will be run on a background task.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
+        {
+            _bus.ClearOutbox(amountToClear, minimumAge, false, false); 
+        }
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
@@ -531,7 +542,22 @@ namespace Paramore.Brighter
         {
             await _bus.ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken); 
         }
-
+        
+        /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// This will be run on a background task.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="useBulk">Use the bulk send on the producer.</param>
+        public void ClearAsyncOutbox(
+            int amountToClear = 100,
+            int minimumAge = 5000,
+            bool useBulk = false)
+        {
+            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk); 
+        }
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.
@@ -590,7 +616,7 @@ namespace Paramore.Brighter
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
                 s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
-                _bus.SendViaExternalBus<T, TResponse>(outMessage);
+                _bus.CallViaExternalBus<T, TResponse>(outMessage);
 
                 Message responseMessage = null;
 
@@ -644,6 +670,16 @@ namespace Paramore.Brighter
             if (handlerCount == 0)
                 throw new ArgumentException($"No command handler was found for the typeof command {typeof(T)} - a command should have exactly one handler.");
         }
+        
+        
+        private void ConfigureCallbacks(IAmAProducerRegistry producerRegistry)
+        {
+            //Only register one, to avoid two callbacks where we support both interfaces on a producer
+            foreach (var producer in producerRegistry.Producers)
+            {
+                if (!_bus.ConfigurePublisherCallbackMaybe(producer)) _bus.ConfigureAsyncPublisherCallbackMaybe(producer);
+            }
+        }
 
         //Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
         //set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
@@ -651,7 +687,7 @@ namespace Paramore.Brighter
         private void InitExtServiceBus(IPolicyRegistry<string> policyRegistry,
             IAmAnOutbox<Message> outbox,
             int outboxTimeout,
-            IAmAMessageProducer messageProducer)
+            IAmAProducerRegistry producerRegistry)
         {
             if (_bus == null)
             {
@@ -659,16 +695,15 @@ namespace Paramore.Brighter
                 {
                     if (_bus == null)
                     {
+                        if (producerRegistry == null) throw new ConfigurationException("A producer registry is required to create an external bus");
+                        
                         _bus = new ExternalBusServices();
                         if(outbox is IAmAnOutboxSync<Message> syncOutbox)_bus.OutBox = syncOutbox;
                         if(outbox is IAmAnOutboxAsync<Message> asyncOutbox)_bus.AsyncOutbox = asyncOutbox;
 
                         _bus.OutboxTimeout = outboxTimeout;
                         _bus.PolicyRegistry = policyRegistry;
-                        if (messageProducer is IAmAMessageProducerSync syncMessageProducer)
-                            _bus.MessageProducerSync = syncMessageProducer;
-                        if (messageProducer is IAmAMessageProducerAsync asyncMessageProducer)
-                            _bus.AsyncMessageProducer = asyncMessageProducer;
+                        _bus.ProducerRegistry = producerRegistry;
                     }
                 }
             }

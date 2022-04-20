@@ -36,6 +36,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         Task SendAsync(ServiceBusMessage message, CancellationToken cancellationToken = default(CancellationToken));
 
         /// <summary>
+        /// Send Messages
+        /// </summary>
+        /// <param name="messages">The messages to send.</param>
+        /// <param name="cancellationToken">Cancellation Token.</param>
+        Task SendAsync(ServiceBusMessage[] messages, CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
         /// Schedule a message to be sent.
         /// </summary>
         /// <param name="message">Message to be scheduled.</param>

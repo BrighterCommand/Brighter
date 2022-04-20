@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var container = new ServiceCollection();
             container.AddTransient<MyCommandHandler>();
-            container.AddSingleton<IAmAnInbox, InMemoryInbox>();
+            container.AddSingleton<IAmAnInboxSync, InMemoryInbox>();
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Send(command);
 
             //assert we are in, and auto-context added us under our name
-            var inbox = _provider.GetService<IAmAnInbox>();
+            var inbox = _provider.GetService<IAmAnInboxSync>();
             inbox.Should().NotBeNull();
             var boxed = inbox.Exists<MyCommand>(command.Id, typeof(MyCommandHandler).FullName, 100);
             boxed.Should().BeTrue();

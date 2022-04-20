@@ -57,16 +57,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
          
          /// <summary>
-        /// Use an external Brighter Outbox tp store messages Posted to another process (evicts based on age and size).
+        /// Use an external Brighter Outbox to store messages Posted to another process (evicts based on age and size).
         /// Advantages: By using the same Db to store both any state changes for your app, and outgoing messages you can create a transaction that spans both
         ///  your state change and writing to an outbox [use DepositPost to store]. Then a sweeper process can look for message not flagged as sent and send them.
         ///  For low latency just send after the transaction with ClearOutbox, for higher latency just let the sweeper run in the background.
         ///  The outstanding messages dispatched this way can be sent from any producer that runs a sweeper process and so it not tied to the lifetime of the
         ///  producer, offering guaranteed, at least once, delivery.
         ///  NOTE: there may be a database specific Use*OutBox available. If so, use that in preference to this generic method
-        /// Disadvantages: The Outbox will not survive restarts, so messages not published by shutdown will not be flagged as not posted
         /// If not null, registers singletons with the service collection :-
-        ///  - IAmAnOutbox - what messages have we posted
+        ///  - IAmAnOutboxSync - what messages have we posted
         ///  - ImAnOutboxAsync - what messages have we posted (async pipeline compatible)
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
@@ -76,26 +75,59 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (outbox is IAmAnOutboxSync<Message>)
             {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => outbox,
-                    ServiceLifetime.Singleton));
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => outbox, ServiceLifetime.Singleton));
             }
 
             if (outbox is IAmAnOutboxAsync<Message>)
             {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox,
-                    ServiceLifetime.Singleton));
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
             }
 
             return brighterBuilder;
              
         }
 
+         /// <summary>
+         /// Uses an external Brighter Inbox to record messages received to allow "once only" or diagnostics (how did we get here?)
+         /// Advantages: by using an external inbox then you can share "once only" across multiple threads/processes and support a competing consumer
+         /// model; an internal inbox is useful for testing but outside of single consumer scenarios won't work as intended
+         /// If not null, registers singletons with the service collecion :-
+         ///  - IAmAnInboxSync - what messages have we received
+         ///  - IAmAnInboxAsync - what messages have we received (async pipeline compatible)
+         /// </summary>
+         /// <param name="brighterBuilder">Extension method to support a fluent interface</param>
+         /// <param name="inbox">The external inbox to use</param>
+         /// <param name="inboxConfiguration">If this is null, configure by hand, if not, will auto-add inbox to handlers</param>
+         /// <returns></returns>
+         public static IBrighterBuilder UseExternalInbox(
+             this IBrighterBuilder brighterBuilder, 
+             IAmAnInbox inbox, InboxConfiguration inboxConfiguration = null, 
+             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+         {
+             if (inbox is IAmAnInboxSync)
+             {
+                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => inbox, serviceLifetime));
+             }
+
+             if (inbox is IAmAnInboxAsync)
+             {
+                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => inbox, serviceLifetime));
+             }
+
+             if (inboxConfiguration != null)
+             {
+                 brighterBuilder.Services.AddSingleton<InboxConfiguration>(inboxConfiguration);
+             }
+
+             return brighterBuilder;
+         }
+
         /// <summary>
-        /// Use the Brighter In-Memory Outbox tp store messages Posted to another process (evicts based on age and size).
+        /// Use the Brighter In-Memory Outbox to store messages Posted to another process (evicts based on age and size).
         /// Advantages: fast and no additional infrastructure required
         /// Disadvantages: The Outbox will not survive restarts, so messages not published by shutdown will not be flagged as not posted
         /// Registers singletons with the service collection :-
-        ///  - InMemoryOutbox - what messages have we posted
+        ///  - InMemoryOutboxSync - what messages have we posted
         ///  - InMemoryOutboxAsync - what messages have we posted (async pipeline compatible)
         /// </summary>
         /// <param name="brighterBuilder">The builder we are adding this facility to</param>
@@ -109,6 +141,25 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
+        /// Uses the Brighter In-Memory Inbox to store messages received to support once-only messaging and diagnostics
+        /// Advantages: Fast and no additional infrastructure required
+        /// Disadvantages: The inbox will not survive restarts, so messages will not be de-duped if received after a restart.
+        ///                The inbox will not work across threads/processes so only works with a single performer/consumer.
+        /// Registers singletons with the service collection:
+        ///  - InMemoryInboxSync - what messages have we received
+        ///  - InMemoryInboxAsync - what messages have we recived (async pipeline compatible)
+        /// </summary>
+        /// <param name="brighterBuilder"></param>
+        /// <returns></returns>
+        public static IBrighterBuilder UseInMemoryInbox(this IBrighterBuilder brighterBuilder)
+        {
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
+
+            return brighterBuilder;
+        }
+
+        /// <summary>
         /// An external bus is the use of Message Oriented Middleware (MoM) to dispatch a message between a producer and a consumer. The assumption is that this
         /// is being used for inter-process communication, for example the work queue pattern for distributing work, or between microservicves
         /// Registers singletons with the service collection :-
@@ -116,18 +167,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - UseRpc - do we want to use Rpc i.e. a command blocks waiting for a response, over middleware
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
-        /// <param name="producer">The gateway for access to a specific MoM implementation - a transport</param>
+        /// <param name="producerRegistry">The collection of producers - clients that connect to a specific transport</param>
         /// <param name="useRequestResponseQueues">Add support for RPC over MoM by using a reply queue</param>
         /// <param name="replyQueueSubscriptions">Reply queue subscription</param>
         /// <returns>The Brighter builder to allow chaining of requests</returns>
-        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAMessageProducer producer, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
+        public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAProducerRegistry producerRegistry, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
-            brighterBuilder.Services.AddSingleton(producer);
             
-            if(producer is IAmAMessageProducerSync producerSync)
-                brighterBuilder.Services.AddSingleton(producerSync);
-            if(producer is IAmAMessageProducerAsync producerAsync)
-                brighterBuilder.Services.AddSingleton(producerAsync);
+            brighterBuilder.Services.AddSingleton<IAmAProducerRegistry>(producerRegistry);
             
             brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
             
@@ -184,8 +231,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (outbox == null) outbox = new InMemoryOutbox();
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
 
-            var producer = provider.GetService<IAmAMessageProducerSync>();
-            var asyncProducer = provider.GetService<IAmAMessageProducerAsync>();
+            var inboxConfiguration = provider.GetService<InboxConfiguration>();
+            
+            var producerRegistry = provider.GetService<IAmAProducerRegistry>();
 
             var needHandlers = CommandProcessorBuilder.With();
 
@@ -202,36 +250,68 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var loggerFactory = provider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
-            
-            INeedARequestContext externalBusBuilder;
-            if (options.ChannelFactory is null)
-            {
-                externalBusBuilder = producer == null
-                    ? messagingBuilder.NoExternalBus()
-                    : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
-            }
-            else
-            {
-                // If Producer has been added to DI
-                if (producer == null)
-                {
-                    externalBusBuilder = messagingBuilder.NoExternalBus();
-                }
-                else
-                {
-                    externalBusBuilder = useRequestResponse.RPC
-                        ? messagingBuilder.ExternalRPC(new MessagingConfiguration(producer, messageMapperRegistry, responseChannelFactory: options.ChannelFactory), outbox, useRequestResponse.ReplyQueueSubscriptions)
-                        : messagingBuilder.ExternalBus(new MessagingConfiguration(producer, messageMapperRegistry), outbox, overridingConnectionProvider);
-                }
-            }
 
-            var commandProcessor = externalBusBuilder
+            var commandProcessor = AddExternalBusMaybe(
+                    options, 
+                    producerRegistry, 
+                    messagingBuilder, 
+                    messageMapperRegistry, 
+                    inboxConfiguration, 
+                    outbox, 
+                    overridingConnectionProvider, 
+                    useRequestResponse)
                 .RequestContextFactory(options.RequestContextFactory)
                 .Build();
 
             return commandProcessor;
         }
 
+        private enum ExternalBusType
+        {
+            None = 0,
+            FireAndForget = 1,
+            RPC = 2
+        }
+        
+        private static INeedARequestContext AddExternalBusMaybe(
+            IBrighterOptions options, 
+            IAmAProducerRegistry producerRegistry, 
+            INeedMessaging messagingBuilder,
+            MessageMapperRegistry messageMapperRegistry, 
+            InboxConfiguration inboxConfiguration, 
+            IAmAnOutboxSync<Message> outbox,
+            IAmABoxTransactionConnectionProvider overridingConnectionProvider, 
+            IUseRpc useRequestResponse)
+        {
+            ExternalBusType externalBusType = GetExternalBusType(producerRegistry, useRequestResponse);
 
+            if (externalBusType == ExternalBusType.None)
+                return messagingBuilder.NoExternalBus();
+            else if (externalBusType == ExternalBusType.FireAndForget)
+                return messagingBuilder.ExternalBus(
+                    new ExternalBusConfiguration(producerRegistry, messageMapperRegistry, useInbox: inboxConfiguration),
+                    outbox,
+                    overridingConnectionProvider);
+            else if (externalBusType == ExternalBusType.RPC)
+            {
+                return messagingBuilder.ExternalRPC(
+                    new ExternalBusConfiguration(
+                        producerRegistry,
+                        messageMapperRegistry,
+                        responseChannelFactory: options.ChannelFactory,
+                        useInbox: inboxConfiguration),
+                    outbox,
+                    useRequestResponse.ReplyQueueSubscriptions);
+            }
+
+            throw new ArgumentOutOfRangeException("The external bus type requested was not understood");
+        }
+
+        private static ExternalBusType GetExternalBusType(IAmAProducerRegistry producerRegistry, IUseRpc useRequestResponse)
+        {
+            var externalBusType = producerRegistry == null ? ExternalBusType.None : ExternalBusType.FireAndForget;
+            if (externalBusType == ExternalBusType.FireAndForget && useRequestResponse.RPC) externalBusType = ExternalBusType.RPC;
+            return externalBusType;
+        }
     }
 }

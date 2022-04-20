@@ -24,19 +24,20 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
+    public class FakeMessageProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync, IAmABulkMessageProducerAsync
     {
-        public event Action<bool, Guid> OnMessagePublished;
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-        
+
         public List<Message> SentMessages = new List<Message>();
         public bool MessageWasSent { get; set; }
-        
+
         public void Dispose() { }
 
         public Task SendAsync(Message message)
@@ -46,18 +47,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             tcs.SetResult(message);
             return tcs.Task;
         }
+        public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            foreach (var msg in messages)
+            {
+                yield return new[] { msg.Id };
+            }
+            MessageWasSent = true;
+            SentMessages.AddRange(messages);
+        }
 
-       public void Send(Message message)
+        public void Send(Message message)
         {
             MessageWasSent = true;
             SentMessages.Add(message);
-            OnMessagePublished?.Invoke(true, message.Id);
         }
-        
+
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             Send(message);
         }
-
-   }
+    }
 }

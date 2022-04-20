@@ -1,65 +1,42 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-
-namespace Paramore.Brighter
+﻿namespace Paramore.Brighter
 {
     public class OutboxSweeper
     {
-        private readonly IAmAnOutboxViewerAsync<Message> _outboxAsync = null;
-        private readonly double _milliSecondsSinceSent;
-        private readonly IAmAnOutboxViewer<Message> _outbox;
+        private readonly int _millisecondsSinceSent;
         private readonly IAmACommandProcessor _commandProcessor;
+        private readonly int _batchSize;
+        private readonly bool _useBulk;
 
         /// <summary>
         /// This sweeper clears an outbox of any outstanding messages within the time interval
         /// </summary>
-        /// <param name="milliSecondsSinceSent">How long can a message sit in the box before we attempt to resend</param>
-        /// <param name="outbox">What is the outbox you want to check -- should be the same one supplied to the command processor below</param>
+        /// <param name="millisecondsSinceSent">How long can a message sit in the box before we attempt to resend</param>
         /// <param name="commandProcessor">Who should post the messages</param>
-        public OutboxSweeper(double milliSecondsSinceSent, IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor)
+        /// <param name="batchSize">The maximum number of messages to dispatch.</param>
+        /// <param name="useBulk">Use the producers bulk dispatch functionality.</param>
+        public OutboxSweeper(int millisecondsSinceSent, IAmACommandProcessor commandProcessor, int batchSize = 100,
+            bool useBulk = false)
         {
-            _milliSecondsSinceSent = milliSecondsSinceSent;
-            _outbox = outbox;
+            _millisecondsSinceSent = millisecondsSinceSent;
             _commandProcessor = commandProcessor;
-
-            if (outbox is IAmAnOutboxViewerAsync<Message> outboxViewerAsync) _outboxAsync = outboxViewerAsync;
+            _batchSize = batchSize;
+            _useBulk = useBulk;
         }
 
+        /// <summary>
+        /// Dispatches the oldest un-dispatched messages from the outbox in a background thread.
+        /// </summary>
         public void Sweep()
         {
-            Sweep(_milliSecondsSinceSent, _outbox, _commandProcessor);
+            _commandProcessor.ClearOutbox(_batchSize, _millisecondsSinceSent);
         }
 
-        public static void Sweep(double milliSecondsSinceSent, IAmAnOutboxViewer<Message> outbox, IAmACommandProcessor commandProcessor)
+        /// <summary>
+        /// Dispatches the oldest un-dispatched messages from the asynchronous outbox in a background thread.
+        /// </summary>
+        public void SweepAsyncOutbox()
         {
-            //find all the unsent messages
-            var outstandingMessages = outbox.OutstandingMessages(milliSecondsSinceSent);
-           
-            //send them if we have them
-            if (outstandingMessages.Any())
-                commandProcessor.ClearOutbox(outstandingMessages.Select(message => message.Id).ToArray());
+            _commandProcessor.ClearAsyncOutbox(_batchSize, _millisecondsSinceSent, _useBulk);
         }
-
-        public async Task SweepAsync(CancellationToken cancellationToken = default)
-        {
-            if(_outboxAsync == null)
-                throw new InvalidOperationException("No Async Outbox Viewer defined.");
-            await SweepAsync(_milliSecondsSinceSent, _outboxAsync, _commandProcessor, cancellationToken);
-        }
-        
-        public static async Task SweepAsync(double milliSecondsSinceSent, IAmAnOutboxViewerAsync<Message> outbox, IAmACommandProcessor commandProcessor, CancellationToken cancellationToken)
-        {
-            //find all the unsent messages
-            var outstandingMessages = (await outbox.OutstandingMessagesAsync(milliSecondsSinceSent, cancellationToken: cancellationToken)).ToArray();
-           
-            //send them if we have them
-            if (outstandingMessages.Any())
-            {
-                var messages = outstandingMessages.Select(message => message.Id).ToArray();
-                await commandProcessor.ClearOutboxAsync(messages, cancellationToken: cancellationToken);
-            }
-        } 
     }
 }

@@ -79,15 +79,22 @@ namespace Paramore.Brighter
 
         public Pipelines<TRequest> Build(IRequestContext requestContext)
         {
-            var handlers = _interpreter.GetHandlers();
+            try
+            {
+                var handlers = _interpreter.GetHandlers();
 
-            var pipelines = new Pipelines<TRequest>();
+                var pipelines = new Pipelines<TRequest>();
 
-            handlers.Each(handler => pipelines.Add(BuildPipeline(handler, requestContext)));
+                handlers.Each(handler => pipelines.Add(BuildPipeline(handler, requestContext)));
 
-            pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
+                pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
 
-            return pipelines;
+                return pipelines;
+            }
+            catch (Exception e) when (!(e is ConfigurationException))
+            {
+                throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
+            }
         }
 
         /// <summary>
@@ -150,14 +157,21 @@ namespace Paramore.Brighter
 
         public AsyncPipelines<TRequest> BuildAsync(IRequestContext requestContext, bool continueOnCapturedContext)
         {
-            var handlers = _interpreter.GetAsyncHandlers();
+            try
+            {
+                var handlers = _interpreter.GetAsyncHandlers();
 
-            var pipelines = new AsyncPipelines<TRequest>();
-            handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext, continueOnCapturedContext)));
+                var pipelines = new AsyncPipelines<TRequest>();
+                handlers.Each(handler => pipelines.Add(BuildAsyncPipeline(handler, requestContext, continueOnCapturedContext)));
 
-            pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
+                pipelines.Each(handler => handler.AddToLifetime(_instanceScope));
 
-            return pipelines;
+                return pipelines;
+            }
+            catch (Exception e) when(!(e is ConfigurationException))
+            {
+                throw new ConfigurationException("Error when building pipeline, see inner Exception for details", e);
+            }
         }
 
         private IHandleRequestsAsync<TRequest> BuildAsyncPipeline(RequestHandlerAsync<TRequest> implicitHandler, IRequestContext requestContext, bool continueOnCapturedContext)

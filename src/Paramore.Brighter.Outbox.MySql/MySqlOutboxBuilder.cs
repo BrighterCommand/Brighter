@@ -27,7 +27,10 @@ using System.ComponentModel;
 
 namespace Paramore.Brighter.Outbox.MySql
 {
-    public class MySqlOutboxBuilder
+     /// <summary>
+     /// Provide SQL statement helpers for creation of an Outbox
+     /// </summary>
+     public class MySqlOutboxBuilder
     {
         const string OutboxDdl = @"CREATE TABLE {0} ( 
 	`MessageId` CHAR(36) NOT NULL , 
@@ -46,25 +49,31 @@ namespace Paramore.Brighter.Outbox.MySql
 	PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
         
-        const string TableExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
+        const string outboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
 
         /// <summary>
         /// Get the DDL that describes the table we will store messages in
         /// </summary>
-        /// <param name="tableName">The name of the table to store messages in</param>
+        /// <param name="outboxTableName">The name of the table to store messages in</param>
         /// <returns></returns>
-        public static string GetDDL(string tableName)
+        public static string GetDDL(string outboxTableName)
         {
-            if (string.IsNullOrEmpty(tableName))
-                throw new InvalidEnumArgumentException($"You must provide a tablename for the message box table");
-            return string.Format(OutboxDdl, tableName);
+            if (string.IsNullOrEmpty(outboxTableName))
+                throw new InvalidEnumArgumentException($"You must provide a tablename for the OutBox table");
+            return string.Format(OutboxDdl, outboxTableName);
         }
 
-        public static string GetExistsQuery(string tableName)
+        /// <summary>
+        /// Gets the SQL statements required to check for the existence of an Outbox in MySQL
+        /// </summary>
+        /// <param name="inboxTableName"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidEnumArgumentException"></exception>
+        public static string GetExistsQuery(string inboxTableName)
         {
-            if (string.IsNullOrEmpty(tableName))
-                throw new InvalidEnumArgumentException($"You must provide a tablename for the message box table");
-            return string.Format(TableExistsQuery, tableName);
+            if (string.IsNullOrEmpty(inboxTableName))
+                throw new InvalidEnumArgumentException($"You must provide a tablename for the  OutBox table");
+            return string.Format(outboxExistsQuery, inboxTableName);
              
         }
     }

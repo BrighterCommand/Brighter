@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -118,13 +118,32 @@ namespace Paramore.Brighter
         /// Flushes the message box message given by <param name="posts"> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
         /// <param name="posts">The posts to flush</param>
+        /// </summary>
         void ClearOutbox(params Guid[] posts);
+
+        /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBox"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000);
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// </summary>
         /// <param name="posts">The posts to flush</param>
         Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
+        /// Flushes any outstanding message box message to the broker.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
+        /// </summary>
+        /// <param name="amountToClear">The maximum number to clear.</param>
+        /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
+        /// <param name="useBulk">Use the bulk send on the producer.</param>
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false);
 
         /// <summary>
         /// Uses the Request-Reply messaging approach to send a message to another server and block awaiting a reply.

@@ -43,9 +43,7 @@ namespace Paramore.Brighter.Outbox.EventStore
     /// </summary>
     public class EventStoreOutboxSync :
         IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>,
-        IAmAnOutboxViewer<Message>,
-        IAmAnOutboxViewerAsync<Message>
+        IAmAnOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutboxSync>();
 
@@ -201,6 +199,12 @@ namespace Paramore.Brighter.Outbox.EventStore
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         ///     Returns multiple events from a given stream.
         ///     If all the events do not exist, as many as can be found will be returned.
@@ -256,6 +260,12 @@ namespace Paramore.Brighter.Outbox.EventStore
             var eventData = EventStoreMessageWriter.CreateEventData(message);
 
             await _eventStore.AppendToStreamAsync(stream, nextEventNumber.Value, eventData);
+        }
+
+        public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotImplementedException();
         }
 
         /// <summary>

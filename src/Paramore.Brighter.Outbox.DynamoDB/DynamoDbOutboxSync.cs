@@ -36,9 +36,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbOutboxSync :
         IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>,
-        IAmAnOutboxViewer<Message>,
-        IAmAnOutboxViewerAsync<Message>
+        IAmAnOutboxAsync<Message>
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
@@ -153,6 +151,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
+        public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var messages = new List<Message>();
+            foreach (var messageId in messageIds)
+            {
+                messages.Add(await GetAsync(messageId, -1, cancellationToken));
+            }
+
+            return messages;
+        }
+
         /// <summary>
         /// Get paginated list of Messages.
         /// </summary>
@@ -200,7 +210,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName},
                 cancellationToken);
        }
-          
+
+        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            foreach(var messageId in ids)
+            {
+                await MarkDispatchedAsync(messageId, dispatchedAt, args, cancellationToken);
+            }
+        }
+
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>

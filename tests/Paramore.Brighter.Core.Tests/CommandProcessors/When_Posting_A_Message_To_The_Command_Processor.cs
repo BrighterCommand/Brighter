@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using FluentAssertions;
@@ -40,17 +41,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
         private readonly FakeOutboxSync _fakeOutbox;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public CommandProcessorPostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
             _fakeOutbox = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
+            const string topic = "MyCommand";
             _message = new Message(
-                new MessageHeader(_myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -70,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 _fakeOutbox,
-                _fakeMessageProducer);
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
 
         [Fact]
@@ -84,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .SingleOrDefault(msg => msg.Id == _message.Id)
                 .Should().NotBeNull();
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
             //_should_convert_the_command_into_a_message
             _fakeOutbox.Get().First().Should().Be(_message);
         }

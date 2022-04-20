@@ -22,36 +22,35 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxConfiguration
+    public class PostgreSqlOutboxConfiguration : PostgreSqlConfiguration
     {
         /// <summary>
         /// Initialises a new instance of <see cref="PostgreSqlOutboxConfiguration" class/>
         /// </summary>
         /// <param name="connectionstring">The Subscription String</param>
         /// <param name="outBoxTablename">Name of the OutBox table</param>
-        public PostgreSqlOutboxConfiguration(string connectionstring,string outBoxTablename)
+        public PostgreSqlOutboxConfiguration(string connectionstring, string outBoxTablename) : base(connectionstring)
         {
-            ConnectionString = connectionstring;
             OutboxTableName = outBoxTablename;
         }
 
         /// <summary>
-        /// Gets the subscription string.
+        /// Initialises a new instance of <see cref="PostgreSqlOutboxConfiguration" class/>
         /// </summary>
-        /// <value>The subscription string.</value>
-        public string ConnectionString { get; private set; }
+        /// <param name="outBoxTablename">Name of the OutBox table</param>
+        public PostgreSqlOutboxConfiguration(string outBoxTablename) : base(null)
+        {
+            OutboxTableName = outBoxTablename;
+        }
 
         /// <summary>
         /// Gets the name of the outbox table.
         /// </summary>
         /// <value>The name of the outbox table.</value>
-        public string OutboxTableName { get; private set; }
-      
+        public string OutboxTableName { get; }
     }
 }

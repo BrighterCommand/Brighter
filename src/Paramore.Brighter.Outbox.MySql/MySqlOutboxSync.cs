@@ -43,9 +43,7 @@ namespace Paramore.Brighter.Outbox.MySql
     /// </summary>
     public class MySqlOutboxSync :
         IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>,
-        IAmAnOutboxViewer<Message>,
-        IAmAnOutboxViewerAsync<Message>
+        IAmAnOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutboxSync>();
 
@@ -233,6 +231,31 @@ namespace Paramore.Brighter.Outbox.MySql
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
+        public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
+            var connection = _connectionProvider.GetConnection();
+
+            using (var command = connection.CreateCommand())
+            {
+                CreateBulkReadCommand(command, messageIds);
+
+                if (connection.State != ConnectionState.Open)
+                    await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+                var messages = new List<Message>();
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                {
+                    while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
+                }
+
+                return messages;
+            }
+        }
+
 
         /// <summary>
         /// Returns all messages in the store
@@ -305,12 +328,19 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
+            return MarkDispatchedAsync(new[] {id}, dispatchedAt, args, cancellationToken);
+        }
+
+        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken))
+        {
             var connection = _connectionProvider.GetConnection();
-            if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
             {
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -325,7 +355,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var connection = _connectionProvider.GetConnection();
             if (connection.State != ConnectionState.Open) connection.Open();
-            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+            using (var command = InitMarkDispatchedCommand(connection, new [] {id}, dispatchedAt))
             {
                 command.ExecuteNonQuery();
             }
@@ -433,6 +463,15 @@ namespace Paramore.Brighter.Outbox.MySql
             AddParamtersParamArrayToCollection(parameters, command);
         }
 
+        private void CreateBulkReadCommand(DbCommand command, IEnumerable<Guid> messageIds)
+        {
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE `MessageID` IN ( {inClause} )";
+
+            command.CommandText = sql;
+        }
+
         private void CreatePagedOutstandingCommand(DbCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
             var offset = (pageNumber - 1) * pageSize;
@@ -512,14 +551,27 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
-        private DbCommand InitMarkDispatchedCommand(DbConnection connection, Guid messageId, DateTime? dispatchedAt)
+        private DbCommand InitMarkDispatchedCommand(DbConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId IN ( {inClause} )";
+
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("@MessageId", messageId));
             command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt));
             return command;
+        }
+
+        private string GenerateInClauseAndAddParameters(DbCommand command, List<Guid> messageIds)
+        {
+            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+
+            for (int i = 0; i < paramNames.Count(); i++)
+            {
+                command.Parameters.Add(CreateSqlParameter(paramNames[i], messageIds[i]));
+            }
+
+            return string.Join(",", paramNames);
         }
 
         private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)

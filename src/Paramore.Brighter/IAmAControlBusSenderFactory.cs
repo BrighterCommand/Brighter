@@ -23,6 +23,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -37,6 +39,6 @@ namespace Paramore.Brighter
         /// <param name="gateway">The gateway to the control bus</param>
         /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
         /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAMessageProducer gateway);
+        IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAProducerRegistry producerRegistry);
     }
 }

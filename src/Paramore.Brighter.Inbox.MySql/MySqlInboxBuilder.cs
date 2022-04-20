@@ -22,11 +22,16 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.ComponentModel;
+
 namespace Paramore.Brighter.Inbox.MySql
 {
+    /// <summary>
+    /// Provide SQL statement helpers for creation of an Inbox
+    /// </summary>
     public class MySqlInboxBuilder
     {
-        private const string _outboxDDL = @"CREATE TABLE {0} 
+        private const string OutboxDDL = @"CREATE TABLE {0} 
             ( 
                 `CommandId` CHAR(36) NOT NULL , 
                 `CommandType` VARCHAR(256) NOT NULL , 
@@ -36,9 +41,30 @@ namespace Paramore.Brighter.Inbox.MySql
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;";
 
-        public static string GetDDL(string tableName)
+        const string InboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
+
+
+        /// <summary>
+        /// Gets the DDL statements to create an Inbox in MySQL
+        /// </summary>
+        /// <param name="imboxTableName">The Inbox Table Name</param>
+        /// <returns></returns>
+        public static string GetDDL(string imboxTableName)
         {
-            return string.Format(_outboxDDL, tableName);
+            return string.Format(OutboxDDL, imboxTableName);
+        }
+
+        /// <summary>
+        /// Gets the SQL statements required to check for the existence of an Inbox in MySQL
+        /// </summary>
+        /// <param name="inboxTableName"></param>
+        /// <returns>The SQL to test for the existence of an Inbox</returns>
+        /// <exception cref="InvalidEnumArgumentException"></exception>
+        public static string GetExistsQuery(string inboxTableName)
+        {
+            if (string.IsNullOrEmpty(inboxTableName))
+                throw new InvalidEnumArgumentException($"You must provide a tablename for the inbox table");
+            return string.Format(InboxExistsQuery, inboxTableName);
         }
     }
 }

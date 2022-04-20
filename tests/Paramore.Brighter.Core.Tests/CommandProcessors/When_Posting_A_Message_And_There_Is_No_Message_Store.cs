@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -36,14 +37,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
         private Exception _exception;
 
         public CommandProcessorNoOutboxTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
@@ -61,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 null,
-                _fakeMessageProducer);
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyCommand", _fakeMessageProducerWithPublishConfirmation},}));
         }
 
         [Fact]

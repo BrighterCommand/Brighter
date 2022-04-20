@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
             if (string.IsNullOrEmpty(fullyQualifiedNameSpace))
             {
                 throw new ArgumentNullException(nameof(fullyQualifiedNameSpace),
-                    "Configuration is null, ensure this is set in the constructor.");
+                    "Fully qualified Namespace is null or empty, ensure this is set in the constructor.");
             }
             
             _fullyQualifiedNameSpace = fullyQualifiedNameSpace;

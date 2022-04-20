@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -40,17 +41,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly FakeOutboxSync _fakeOutboxSync;
-        private readonly FakeMessageProducer _fakeMessageProducer;
+        private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public CommandProcessorPostBoxClearAsyncTests()
         {
             var myCommand = new MyCommand{ Value = "Hello World"};
 
             _fakeOutboxSync = new FakeOutboxSync();
-            _fakeMessageProducer = new FakeMessageProducer();
+            _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
+            const string topic = "MyCommand";
             _message = new Message(
-                new MessageHeader(myCommand.Id, "MyCommand", MessageType.MT_COMMAND),
+                new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
 
@@ -70,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 _fakeOutboxSync,
-                _fakeMessageProducer);
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
 
         [Fact]
@@ -81,9 +83,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway
-            _fakeMessageProducer.MessageWasSent.Should().BeTrue();
+            _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
 
-            var sentMessage = _fakeMessageProducer.SentMessages.FirstOrDefault();
+            var sentMessage = _fakeMessageProducerWithPublishConfirmation.SentMessages.FirstOrDefault();
             sentMessage.Should().NotBeNull();
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);

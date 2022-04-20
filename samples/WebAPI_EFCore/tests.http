@@ -27,5 +27,5 @@ Content-Type: application/json
 
 ### And now look up Tyrion's greetings
 
-GET http://localhost:5000/Greetings/tyrion HTTP/1.1
+GET http://localhost:5000/Greetings/Tyrion HTTP/1.1
 

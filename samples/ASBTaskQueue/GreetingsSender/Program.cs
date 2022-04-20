@@ -19,10 +19,26 @@ namespace GreetingsSender
             //TODO: add your ASB qualified name here
             var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
 
-            var producer = AzureServiceBusMessageProducerFactory.Get(asbClientProvider);
             serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
-                .UseExternalBus(producer, false)
+                .UseExternalBus(new AzureServiceBusProducerRegistryFactory(
+                    asbClientProvider,
+                    new AzureServiceBusPublication[] 
+                    {
+                        new AzureServiceBusPublication()
+                        {
+                            Topic = new RoutingKey("greeting.event")
+                        },
+                        new AzureServiceBusPublication()
+                        {
+                            Topic = new RoutingKey("greeting.addGreetingCommand")
+                        },
+                        new AzureServiceBusPublication()
+                        {
+                            Topic = new RoutingKey("greeting.Asyncevent")
+                        }
+                    }
+                    ).Create())
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

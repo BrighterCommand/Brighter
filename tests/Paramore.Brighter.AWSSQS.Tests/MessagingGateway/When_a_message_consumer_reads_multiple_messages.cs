@@ -48,7 +48,7 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             //just for the tests, so create a new consumer from the properties
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, _bufferSize);
             _messageProducer = new SqsMessageProducer(awsConnection, 
-                new SqsPublication
+                new SnsPublication
                 {
                     MakeChannels = OnMissingChannel.Create 
                 });

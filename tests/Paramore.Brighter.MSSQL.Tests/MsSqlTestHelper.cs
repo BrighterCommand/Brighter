@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Configuration;
 using Paramore.Brighter.Inbox.MsSql;
-using Paramore.Brighter.MessagingGateway.MsSql;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Outbox.MsSql;
 
@@ -12,6 +11,8 @@ namespace Paramore.Brighter.MSSQL.Tests
     {
         private string _tableName;
         private SqlSettings _sqlSettings;
+        private IMsSqlConnectionProvider _connectionProvider;
+        private IMsSqlConnectionProvider _masterConnectionProvider;
 
         private const string _queueDDL = @"CREATE TABLE [dbo].[{0}](
                 [Id][bigint] IDENTITY(1, 1) NOT NULL,
@@ -33,12 +34,14 @@ namespace Paramore.Brighter.MSSQL.Tests
             configuration.GetSection("Sql").Bind(_sqlSettings);
 
             _tableName = $"test_{Guid.NewGuid()}";
-
+            
+            _connectionProvider = new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString));
+            _masterConnectionProvider = new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsMasterConnectionString));
         }
 
        public void CreateDatabase()
-        {
-            using (var connection = new SqlConnection(_sqlSettings.TestsMasterConnectionString))
+       {
+            using (var connection = _masterConnectionProvider.GetConnection())
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -80,7 +83,7 @@ namespace Paramore.Brighter.MSSQL.Tests
         private void CreateQueueTable()
         {
             _tableName = $"queue_{_tableName}";
-            using var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString);
+            using var connection = _connectionProvider.GetConnection();
             var createTableSql = string.Format(_queueDDL, _tableName, Guid.NewGuid().ToString());
 
             connection.Open();
@@ -93,7 +96,7 @@ namespace Paramore.Brighter.MSSQL.Tests
         }
         public void CleanUpDb()
         {
-            using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
+            using (var connection = _connectionProvider.GetConnection())
             {
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -110,7 +113,7 @@ namespace Paramore.Brighter.MSSQL.Tests
 
         public void CreateOutboxTable()
         {
-            using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
+            using (var connection = _connectionProvider.GetConnection())
             {
                 _tableName = $"[message_{_tableName}]";
                 var createTableSql = SqlOutboxBuilder.GetDDL(_tableName);
@@ -126,7 +129,7 @@ namespace Paramore.Brighter.MSSQL.Tests
 
         public void CreateInboxTable()
         {
-            using (var connection = new SqlConnection(_sqlSettings.TestsBrighterConnectionString))
+            using (var connection = _connectionProvider.GetConnection())
             {
                 _tableName = $"[command_{_tableName}]";
                 var createTableSql = SqlInboxBuilder.GetDDL(_tableName);
@@ -144,9 +147,9 @@ namespace Paramore.Brighter.MSSQL.Tests
     internal class SqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } =
-            "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests";
+            "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
 
         public string TestsMasterConnectionString { get; set; } =
-            "Server=127.0.0.1,11433;Database=master;User Id=sa;Password=Password1!;Application Name=BrighterTests";
+            "Server=127.0.0.1,11433;Database=master;User Id=sa;Password=Password1!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
     }
 }

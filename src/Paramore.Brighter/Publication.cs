@@ -51,5 +51,11 @@ namespace Paramore.Brighter
         /// What do we do with infrastructure dependencies for the producer?
         /// </summary>
         public OnMissingChannel MakeChannels { get; set; }
+        
+        
+        /// <summary>
+        /// The topic this publication is for
+        /// </summary>
+        public RoutingKey Topic { get; set; }
     }
 }

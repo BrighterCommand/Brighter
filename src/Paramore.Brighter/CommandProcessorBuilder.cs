@@ -50,7 +50,7 @@ namespace Paramore.Brighter
     ///      </item>
     ///     <item>
     ///         <description>
-    ///             A <see cref="MessagingConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAnOutbox{T}"/>
+    ///             A <see cref="ExternalBusConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAnOutbox{T}"/>
     ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAMessageProducer"/> and we  want to know how
     ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using 
     ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
@@ -71,7 +71,7 @@ namespace Paramore.Brighter
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
         private IAmAnOutbox<Message> _outbox;
-        private IAmAMessageProducer _messagingGateway;
+        private IAmAProducerRegistry _producers;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
@@ -162,10 +162,10 @@ namespace Paramore.Brighter
         /// <param name="outbox">The Outbox.</param>
         /// <param name="boxTransactionConnectionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+        public INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
         {
             _useExternalBus = true;
-            _messagingGateway = configuration.MessageProducer;
+            _producers = configuration.ProducerRegistry;
             _outbox = outbox;
             _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
@@ -189,11 +189,11 @@ namespace Paramore.Brighter
         /// <param name="outbox">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating reply queues</param>
         /// <returns></returns>
-        public INeedARequestContext ExternalRPC(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
+        public INeedARequestContext ExternalRPC(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
         {
             _useRequestReplyQueues = true;
             _replySubscriptions = subscriptions;
-            _messagingGateway = configuration.MessageProducer;
+            _producers = configuration.ProducerRegistry;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
@@ -239,7 +239,7 @@ namespace Paramore.Brighter
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
                     outBox: _outbox,
-                    messageProducer: _messagingGateway,
+                    producerRegistry: _producers,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry,
                     boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
@@ -255,7 +255,7 @@ namespace Paramore.Brighter
                     mapperRegistry: _messageMapperRegistry,
                     replySubscriptions: _replySubscriptions,
                     outBox: _outbox,
-                    messageProducer: _messagingGateway,
+                    producerRegistry: _producers,
                     responseChannelFactory: _responseChannelFactory,
                     boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
                     );
@@ -320,7 +320,7 @@ namespace Paramore.Brighter
         /// <param name="outbox">The outbox.</param>
         /// <param name="boxTransactionConnectionProvider">The connection provider to use when adding messages to the bus</param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBus(MessagingConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null);
+        INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null);
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
@@ -330,10 +330,10 @@ namespace Paramore.Brighter
         /// <summary>
         ///  We want to use RPC to send messages to another process
         /// </summary>
-        /// <param name="messagingConfiguration"></param>
+        /// <param name="externalBusConfiguration"></param>
         /// <param name="outboxSync">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
-        INeedARequestContext ExternalRPC(MessagingConfiguration messagingConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
+        INeedARequestContext ExternalRPC(ExternalBusConfiguration externalBusConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
     }
 
     /// <summary>

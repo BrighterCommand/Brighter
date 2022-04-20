@@ -50,7 +50,6 @@ namespace GreetingsReceiver
                         options.ChannelFactory = new ChannelFactory(redisConsumerFactory);
                     })
                         .UseInMemoryOutbox()
-                        .UseExternalBus(new RedisMessageProducer(redisConnection))
                         .AutoFromAssemblies();
 
 
