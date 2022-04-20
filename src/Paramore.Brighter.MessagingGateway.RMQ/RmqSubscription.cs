@@ -87,6 +87,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
         /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is inifinite</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public RmqSubscription(
             Type dataType, 
             SubscriptionName name = null, 
@@ -105,8 +107,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             ChannelName deadLetterChannelName = null, 
             string deadLetterRoutingKey = null, 
             int? ttl = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000) 
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
             DeadLetterChannelName = deadLetterChannelName;
@@ -139,6 +143,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
         /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is inifinite</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public RmqSubscription(SubscriptionName name = null,
             ChannelName channelName = null,
             RoutingKey routingKey = null,
@@ -155,9 +161,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             ChannelName deadLetterChannelName = null, 
             string deadLetterRoutingKey = null, 
             int? ttl = null,
-            OnMissingChannel makeChannels = OnMissingChannel.Create)
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000)
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds,
-                unacceptableMessageLimit, isDurable, runAsync, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels)
+                unacceptableMessageLimit, isDurable, runAsync, channelFactory, highAvailability, deadLetterChannelName, deadLetterRoutingKey, ttl, makeChannels, emptyChannelDelay, channelFailureDelay)
         { }
 
     }

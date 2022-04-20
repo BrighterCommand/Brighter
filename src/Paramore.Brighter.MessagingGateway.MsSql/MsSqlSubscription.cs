@@ -44,6 +44,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public MsSqlSubscription(
             Type dataType, 
             SubscriptionName name = null, 
@@ -57,9 +59,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             int unacceptableMessageLimit = 0, 
             bool runAsync = false, 
             IAmAChannelFactory channelFactory = null, 
-            OnMissingChannel makeChannels = OnMissingChannel.Create) 
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
+                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }
@@ -81,6 +85,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// <param name="runAsync">Is this channel read asynchronously</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public MsSqlSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -93,9 +99,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             int unacceptableMessageLimit = 0, 
             bool runAsync = false, 
             IAmAChannelFactory channelFactory = null, 
-            OnMissingChannel makeChannels = OnMissingChannel.Create) 
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000) 
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels)
+                requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
        

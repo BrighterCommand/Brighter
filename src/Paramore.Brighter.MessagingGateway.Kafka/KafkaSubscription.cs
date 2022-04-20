@@ -119,6 +119,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="numOfPartitions">How many partitions should this topic have - used if we create the topic</param>
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>       /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public KafkaSubscription (
             Type dataType, 
             SubscriptionName name = null, 
@@ -141,9 +143,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
-            OnMissingChannel makeChannels = OnMissingChannel.Create) 
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
-                requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels)
+                requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
             GroupId = groupId;
@@ -183,6 +187,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="replicationFactor">How many copies of each partition should we have across our broker's nodes - used if we create the topic</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
+        /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
+        /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public KafkaSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -204,11 +210,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int numOfPartitions = 1,
             short replicationFactor = 1,
             IAmAChannelFactory channelFactory = null, 
-            OnMissingChannel makeChannels = OnMissingChannel.Create) 
+            OnMissingChannel makeChannels = OnMissingChannel.Create,
+            int emptyChannelDelay = 500,
+            int channelFailureDelay = 1000) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
                 requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
                 sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, 
-                numOfPartitions, replicationFactor, channelFactory, makeChannels)
+                numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
     }
