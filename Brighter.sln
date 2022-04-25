@@ -257,6 +257,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MySql.Dap
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.Dapper", "src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj", "{5FDA646C-30DA-4F13-8399-A3C533D2D16E}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_SqliteMigrations", "samples\WebAPI_Dapper\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj", "{026230E1-F388-425A-98CB-6E17C174FE62}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1455,6 +1457,18 @@ Global
 		{5FDA646C-30DA-4F13-8399-A3C533D2D16E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{5FDA646C-30DA-4F13-8399-A3C533D2D16E}.Release|x86.ActiveCfg = Release|Any CPU
 		{5FDA646C-30DA-4F13-8399-A3C533D2D16E}.Release|x86.Build.0 = Release|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|x86.Build.0 = Debug|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|x86.ActiveCfg = Release|Any CPU
+		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1534,6 +1548,7 @@ Global
 		{526E4E1A-9E8E-4233-B851-D6172D013AF6} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{79A46154-4754-48B1-849F-374AD729C040} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{4164912F-F69E-4AD7-A521-6D58253B5ABC} = {202BA107-89D5-4868-AC5A-3527114C0109}
+		{026230E1-F388-425A-98CB-6E17C174FE62} = {202BA107-89D5-4868-AC5A-3527114C0109}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

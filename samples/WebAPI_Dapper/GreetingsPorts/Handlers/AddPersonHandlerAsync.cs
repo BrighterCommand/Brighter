@@ -1,28 +1,25 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
+using DapperExtensions;
 using GreetingsEntities;
-using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
+using Paramore.Brighter.Dapper;
 
 namespace GreetingsPorts.Handlers
 {
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
-        private readonly GreetingsEntityGateway _uow;
-        private readonly IAmACommandProcessor _postBox;
+        private readonly IUnitOfWork _uow;
 
-        public AddPersonHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
+        public AddPersonHandlerAsync(IUnitOfWork uow)
         {
             _uow = uow;
-            _postBox = postBox;
         }
 
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //_uow.Add(new Person(addPerson.Name));
-            
-            //await _uow.SaveChangesAsync(cancellationToken);
+            await _uow.Database.InsertAsync<Person>(new Person(addPerson.Name));
             
             return await base.HandleAsync(addPerson, cancellationToken);
         }

@@ -3,11 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Dapper;
-using GreetingsEntities;
-using GreetingsPorts.Requests;
+using DapperExtensions;
+using DapperExtensions.Predicate;
 using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
+using GreetingsEntities;
+using GreetingsPorts.Requests;
 
 namespace GreetingsPorts.Handlers
 {
@@ -34,8 +35,8 @@ namespace GreetingsPorts.Handlers
             var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
             try
             {
-                var sql = "select Id, Name from People where Name = @Name";
-                var people = await _uow.Database.QueryAsync<Person>(sql, new { Name = addGreeting.Name });
+                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
+                var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
                 var person = people.Single();
                 
                 var greeting = new Greeting(addGreeting.Greeting);
@@ -45,16 +46,17 @@ namespace GreetingsPorts.Handlers
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
                 
-                //write the changed entity to the Db
-                //await _uow.SaveChangesAsync(cancellationToken);
+                //write the added child entity to the Db
+                await _uow.Database.InsertAsync(greeting, tx);
 
-                //write new person and the associated message to the Db
-                //await tx.CommitAsync(cancellationToken);
+                //commit both new greeting and outgoing message
+                await tx.CommitAsync(cancellationToken);
             }
             catch (Exception)
             {
                 //it went wrong, rollback the entity change and the downstream message
-                //await tx.RollbackAsync(cancellationToken);
+                await tx.RollbackAsync(cancellationToken);
+                return await base.HandleAsync(addGreeting, cancellationToken);
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

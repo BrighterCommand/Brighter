@@ -4,7 +4,7 @@ namespace GreetingsEntities
 {
     public class Greeting
     {
-        private int _id;
+        public int Id { get; }
         public string Message { get; set; }
         public Person Recipient { get; set; }
 
@@ -12,10 +12,16 @@ namespace GreetingsEntities
         {
             Message = message;
         }
+
+        public Greeting(string message, Person recipient)
+        {
+            Message = message;
+            Recipient = recipient;
+        }
         
         public Greeting(int id, string message, Person recipient)
         {
-            _id = id;
+            Id = id;
             Message = message;
             Recipient = recipient;
         }

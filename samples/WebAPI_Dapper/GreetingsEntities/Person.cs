@@ -5,9 +5,9 @@ namespace GreetingsEntities
 {
     public class Person
     {
-        private int _id;
         private readonly List<Greeting> _greetings = new List<Greeting>();
         public byte[] TimeStamp { get; set; }
+        public int Id { get; }
         public string Name { get; }
         public IReadOnlyList<Greeting> Greetings => _greetings;
 
@@ -18,7 +18,7 @@ namespace GreetingsEntities
 
         public Person(int id, string name)
         {
-            _id = id;
+            Id = id;
             Name = name;
         }
 

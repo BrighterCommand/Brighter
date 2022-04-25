@@ -1,4 +1,8 @@
 using System;
+using DapperExtensions;
+using DapperExtensions.Sql;
+using FluentMigrator.Runner;
+using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.Handlers;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
@@ -71,10 +75,49 @@ namespace Greetingsweb
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
 
+            ConfigureMigration(services);
+            ConfigureDapper(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
-        
+
+        private void ConfigureMigration(IServiceCollection services)
+        {
+            if (_env.IsDevelopment())
+            {
+                services
+                    .AddFluentMigratorCore()
+                    .ConfigureRunner(c => c.AddSQLite()
+                        .WithGlobalConnectionString(DbConnectionString())
+                        .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations()
+                    );
+            }
+            else
+            {
+                services
+                    .AddFluentMigratorCore()
+                    .ConfigureRunner(c => c.AddMySql5()
+                        .WithGlobalConnectionString(DbConnectionString())
+                        .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations()
+                    ); 
+            }
+             
+        }
+
+        private void ConfigureDapper(IServiceCollection services)
+        {
+            if (_env.IsDevelopment())
+            {
+                DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
+                DapperAsyncExtensions.SqlDialect = new SqliteDialect();
+            }
+            else
+            {
+                DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
+                DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+            }
+        }
+
         private void CheckDbIsUp()
         {
             string connectionString = DbConnectionString();

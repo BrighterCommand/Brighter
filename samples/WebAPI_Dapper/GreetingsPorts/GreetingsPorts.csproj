@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -12,7 +12,7 @@
 
     <ItemGroup>
       <PackageReference Include="Dapper" Version="2.0.123" />
-      <PackageReference Include="Dapper.Contrib" Version="2.0.78" />
+      <PackageReference Include="DapperExtensions" Version="1.7.0" />
       <PackageReference Include="Paramore.Darker" Version="2.0.78" />
     </ItemGroup>
 

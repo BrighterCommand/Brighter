@@ -1,4 +1,5 @@
 using System.IO;
+using FluentMigrator.Runner;
 using Greetingsweb.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
@@ -14,6 +15,7 @@ namespace Greetingsweb
             var host = CreateHostBuilder(args).Build();
             
             host.CheckDbIsUp();
+            host.MigrateDatabase();
             host.CreateOutbox();
             
             host.Run();
@@ -38,6 +40,7 @@ namespace Greetingsweb
                     {
                         logging.AddConsole();
                         logging.AddDebug();
+                        logging.AddFluentMigratorConsole();
                     });
                     webBuilder.UseDefaultServiceProvider((context, options) =>
                     {

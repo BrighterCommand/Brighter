@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Data;
-using GreetingsPorts.EntityGateway;
+using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
@@ -8,7 +8,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
-using Paramore.Brighter;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
@@ -58,6 +57,28 @@ namespace Greetingsweb.Database
                 using var conn = new MySqlConnection(connectionString);
                 conn.Open();
             });
+        }
+
+        public static IHost MigrateDatabase(this IHost webHost)
+        {
+           using (var scope = webHost.Services.CreateScope())
+           {
+               var services = scope.ServiceProvider;
+
+               try
+               {
+                   var runner = services.GetRequiredService<IMigrationRunner>();
+                   runner.ListMigrations();
+                   runner.MigrateUp();
+               }
+               catch (Exception ex)
+               {
+                   var logger = services.GetRequiredService<ILogger<Program>>();
+                   logger.LogError(ex, "An error occurred while migrating the database.");
+               }
+           }
+
+           return webHost;
         }
 
 

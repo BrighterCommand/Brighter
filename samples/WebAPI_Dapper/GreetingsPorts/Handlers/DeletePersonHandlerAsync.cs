@@ -1,30 +1,46 @@
-﻿using System.Threading;
+﻿using System;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
-using GreetingsPorts.EntityGateway;
+using DapperExtensions;
+using DapperExtensions.Predicate;
+using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
+using Paramore.Brighter.Dapper;
 
 namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
-        private readonly GreetingsEntityGateway _uow;
+        private readonly IUnitOfWork _uow;
 
-        public DeletePersonHandlerAsync(GreetingsEntityGateway uow)
+        public DeletePersonHandlerAsync(IUnitOfWork uow)
         {
             _uow = uow;
         }
         public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
         {
-            //var person = await _uow.People
-            //    .Include(p => p.Greetings)
-            //    .Where(p => p.Name == deletePerson.Name)
-            //    .SingleAsync(cancellationToken);
+            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
+            try
+            {
 
-            //_uow.Remove(person);
+                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, deletePerson.Name);
+                var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
+                var person = people.Single();
 
-            // await _uow.SaveChangesAsync(cancellationToken);
-            
+                var deleteById = Predicates.Field<Greeting>(g => g.Recipient, Operator.Eq, person);
+                await _uow.Database.DeleteAsync(deleteById, tx);
+                
+                await tx.CommitAsync(cancellationToken);
+            }
+            catch (Exception)
+            {
+                //it went wrong, rollback the entity change and the downstream message
+                await tx.RollbackAsync(cancellationToken);
+                return await base.HandleAsync(deletePerson, cancellationToken);
+            }
+
             return await base.HandleAsync(deletePerson, cancellationToken);
         }
     }
