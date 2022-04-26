@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Data;
+using System.Data.Common;
 using FluentMigrator.Runner;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,15 +33,14 @@ namespace Greetingsweb.Database
             if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(connectionString);
-            CreateDatabaseIfNotExists(connectionString);
+            CreateDatabaseIfNotExists(new MySqlConnection(connectionString));
 
             return webHost;
         }
 
-        private static void CreateDatabaseIfNotExists(string connectionString)
+        private static void CreateDatabaseIfNotExists(DbConnection conn)
         {
             //The migration does not create the Db, so we need to create it sot that it will add it
-            using var conn = new MySqlConnection(connectionString);
             conn.Open();
             using var command = conn.CreateCommand();
             command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
@@ -75,6 +76,7 @@ namespace Greetingsweb.Database
                {
                    var logger = services.GetRequiredService<ILogger<Program>>();
                    logger.LogError(ex, "An error occurred while migrating the database.");
+                   throw;
                }
            }
 

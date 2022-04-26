@@ -1,14 +1,15 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Paramore.Brighter.Dapper;
 
 namespace Paramore.Brighter.Sqlite.Dapper
 {
     public class SqliteDapperConnectionProvider : ISqliteTransactionConnectionProvider 
     {
-        private readonly UnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public SqliteDapperConnectionProvider(UnitOfWork unitOfWork)
+        public SqliteDapperConnectionProvider(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
         }

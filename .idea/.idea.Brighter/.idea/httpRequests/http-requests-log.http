@@ -1,3 +1,14 @@
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2022-04-26T082842.500.json
+
+###
+
 POST http://localhost:5000/Greetings/Tyrion/new
 Content-Type: application/json
 
@@ -527,12 +538,6 @@ Content-Type: application/json
 }
 
 <> 2022-02-07T192907.200.json
-
-###
-
-GET http://localhost:5000/Greetings/Tyrion
-
-<> 2022-02-07T192855.200.json
 
 ###
 

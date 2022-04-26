@@ -1,14 +1,15 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
+using Paramore.Brighter.Dapper;
 
 namespace Paramore.Brighter.MySql.Dapper
 {
     public class MySqlDapperConnectionProvider : IMySqlTransactionConnectionProvider 
     {
-        private readonly UnitOfWork _unitOfWork;
+        private readonly IUnitOfWork _unitOfWork;
 
-        public MySqlDapperConnectionProvider(UnitOfWork unitOfWork)
+        public MySqlDapperConnectionProvider(IUnitOfWork unitOfWork)
         {
             _unitOfWork = unitOfWork;
         }

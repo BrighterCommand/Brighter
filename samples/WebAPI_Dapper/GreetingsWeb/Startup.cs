@@ -2,6 +2,8 @@ using System;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
+using FluentMigrator.Runner.Initialization;
+using FluentMigrator.Runner.Processors;
 using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.Handlers;
 using Hellang.Middleware.ProblemDetails;
@@ -87,10 +89,12 @@ namespace Greetingsweb
             {
                 services
                     .AddFluentMigratorCore()
-                    .ConfigureRunner(c => c.AddSQLite()
-                        .WithGlobalConnectionString(DbConnectionString())
-                        .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations()
-                    );
+                    .ConfigureRunner(c =>
+                    {
+                        c.AddSQLite()
+                            .WithGlobalConnectionString(DbConnectionString())
+                            .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations();
+                    });
             }
             else
             {
@@ -106,16 +110,22 @@ namespace Greetingsweb
 
         private void ConfigureDapper(IServiceCollection services)
         {
+            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString()));
+                
             if (_env.IsDevelopment())
             {
                 DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
                 DapperAsyncExtensions.SqlDialect = new SqliteDialect();
+                services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
             }
             else
             {
                 DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
                 DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+                services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
             }
+
+
         }
 
         private void CheckDbIsUp()

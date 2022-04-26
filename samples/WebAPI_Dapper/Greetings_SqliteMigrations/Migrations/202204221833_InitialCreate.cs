@@ -2,6 +2,7 @@
 
 namespace Greetings_SqliteMigrations.Migrations;
 
+[Migration(1)]
 public class SqlliteInitialCreate : Migration
 {
     public override void Up()
