@@ -44,7 +44,7 @@ jobs:
         with:
           dotnet-version: "6.0.*"
       - run: dotnet --info
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
       - uses: actions/cache@v2
@@ -88,7 +88,7 @@ jobs:
     needs: [build]
     
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -123,7 +123,7 @@ jobs:
           --health-retries 5             
       
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -159,7 +159,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -220,7 +220,7 @@ jobs:
     - name: docker check
       run: docker ps -a
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
     - name: Setup dotnet 3.1
       uses: actions/setup-dotnet@v1
       with:
@@ -256,7 +256,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -296,7 +296,7 @@ jobs:
          EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
      
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -328,7 +328,7 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password1!
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -362,7 +362,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -399,7 +399,7 @@ jobs:
           - 8000:8000
       
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -428,7 +428,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
       
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
@@ -460,7 +460,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup dotnet 3.1
         uses: actions/setup-dotnet@v1
         with:
