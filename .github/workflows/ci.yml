@@ -34,13 +34,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: setup-dotnet tests-sdk
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: "3.1.*"
-      - uses: actions/setup-dotnet@v1
+      - uses: actions/setup-dotnet@v2
         with:
           dotnet-version: "5.0.*"
-      - uses: actions/setup-dotnet@v1
+      - uses: actions/setup-dotnet@v2
         with:
           dotnet-version: "6.0.*"
       - run: dotnet --info
@@ -90,15 +90,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -125,15 +125,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -161,15 +161,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -222,15 +222,15 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v2
     - name: Setup dotnet 3.1
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v2
       with:
         dotnet-version: '3.1.x'
     - name: Setup dotnet 5.0.x
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v2
       with:
         dotnet-version: 5.0.x
     - name: Setup dotnet 6.0.x
-      uses: actions/setup-dotnet@v1
+      uses: actions/setup-dotnet@v2
       with:
         dotnet-version: 6.0.x
     - name: Install dependencies
@@ -258,15 +258,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -298,15 +298,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -330,15 +330,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -364,15 +364,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -401,15 +401,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -430,15 +430,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
@@ -462,15 +462,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: '3.1.x'
       - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 5.0.x
       - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v2
         with:
           dotnet-version: 6.0.x
       - name: Install dependencies
