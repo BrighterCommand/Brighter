@@ -7,9 +7,9 @@ namespace GreetingsEntities
     {
         private readonly List<Greeting> _greetings = new List<Greeting>();
         public byte[] TimeStamp { get; set; }
-        public int Id { get; }
-        public string Name { get; }
-        public IReadOnlyList<Greeting> Greetings => _greetings;
+        public long Id { get; set; }
+        public string Name { get; set; }
+        public IEnumerable<Greeting> Greetings => _greetings;
 
         public Person(string name)
         {

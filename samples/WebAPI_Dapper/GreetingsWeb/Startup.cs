@@ -5,6 +5,7 @@ using FluentMigrator.Runner;
 using FluentMigrator.Runner.Initialization;
 using FluentMigrator.Runner.Processors;
 using Greetings_SqliteMigrations.Migrations;
+using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
@@ -125,7 +126,8 @@ namespace Greetingsweb
                 services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
             }
 
-
+            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
+            DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(PersonMapper).Assembly});
         }
 
         private void CheckDbIsUp()
@@ -205,7 +207,7 @@ namespace Greetingsweb
                          options.TimerInterval = 5;
                          options.MinimumMessageAge = 5000;
                      })
-                     .AutoFromAssemblies();
+                     .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
             }
             else
             {
@@ -238,7 +240,7 @@ namespace Greetingsweb
                     .UseMySqlOutbox(new MySqlConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
                     .UseMySqTransactionConnectionProvider(typeof(MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
                     .UseOutboxSweeper()
-                    .AutoFromAssemblies();
+                    .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
             }
 
         }

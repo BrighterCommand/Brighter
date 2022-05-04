@@ -10,7 +10,7 @@ public class SqlliteInitialCreate : Migration
         Create.Table("Person")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
             .WithColumn("Name").AsString().Unique()
-            .WithColumn("TimeStamp").AsBinary();
+            .WithColumn("TimeStamp").AsBinary().WithDefault(SystemMethods.CurrentDateTime);
 
         Create.Table("Greeting")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
