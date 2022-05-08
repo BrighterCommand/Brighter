@@ -8,22 +8,19 @@ namespace GreetingsEntities
         public ICollection<Greeting> Greetings { get; set; }
         public string Name { get; set; }
 
-        public Person()
-        { }
-
         public Person(string name)
         {
             Name = name;
         }
 
-        public Person(int id, string name)
-        {
-            Id = id;
-            Name = name;
-        }
-
         public void AddGreeting(Greeting greeting)
         {
+            if (Greetings is null)
+            {
+                // this looks really bad, temporary for rmq setup
+                Greetings = new List<Greeting>();
+            }
+
             Greetings.Add(greeting);
         }
     }
