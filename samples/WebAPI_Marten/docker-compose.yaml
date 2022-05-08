@@ -22,10 +22,19 @@ services:
       - "5050:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
+  rabbitmq:
+    image: brightercommand/rabbitmq:3.8-management-delay
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-home:/var/lib/rabbitmq
 
 volumes:
   pgadmin_data:
     driver: local
   postgres-data:
+    driver: local
+  rabbitmq-home:
     driver: local
 
