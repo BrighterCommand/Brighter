@@ -196,8 +196,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
-
-                //if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -273,9 +272,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
                 if (connection.State != ConnectionState.Open)
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-                if (_connectionProvider.HasOpenTransaction)
-                    command.Transaction = _connectionProvider.GetTransaction();
+                
                 var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
@@ -309,8 +306,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 if(connection.State != ConnectionState.Open) connection.Open();
-
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
+                
                 var dbDataReader = command.ExecuteReader();
 
                 var messages = new List<Message>();
@@ -479,7 +475,7 @@ namespace Paramore.Brighter.Outbox.MsSql
            Dictionary<string, object> args = null,
            CancellationToken cancellationToken = default)
        {
-           var connection = await _connectionProvider.GetConnectionAsync();
+           var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
            using (var command = connection.CreateCommand())
            {
                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
@@ -576,7 +572,6 @@ namespace Paramore.Brighter.Outbox.MsSql
                 if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 if(connection.State!= ConnectionState.Open) connection.Open();
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var response = execute(command);
                 
                 if(!_connectionProvider.IsSharedConnection) connection.Dispose();
@@ -601,7 +596,6 @@ namespace Paramore.Brighter.Outbox.MsSql
                 command.Parameters.AddRange(parameters);
 
                 if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                //if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
                 var response =  await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 
                 if(!_connectionProvider.IsSharedConnection) connection.Dispose();
