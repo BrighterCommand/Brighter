@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
-using GreetingsEntities;
+﻿using GreetingsEntities;
 using GreetingsPorts.EntityGateway.Interfaces;
 using Marten;
 
@@ -29,7 +27,7 @@ namespace GreetingsPorts.EntityGateway
         {
             session.Delete<Person>(id);
         }
-        
+
         public Task<Person> GetPersonById(int id)
         {
             return session.LoadAsync<Person>(id);

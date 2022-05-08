@@ -1,6 +1,4 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
-using GreetingsPorts.EntityGateway.Interfaces;
+﻿using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
 

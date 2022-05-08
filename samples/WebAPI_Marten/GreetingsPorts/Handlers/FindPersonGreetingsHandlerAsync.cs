@@ -1,9 +1,4 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using GreetingsEntities;
-using GreetingsPorts.EntityGateway.Interfaces;
+﻿using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
 using Paramore.Darker;

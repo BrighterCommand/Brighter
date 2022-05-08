@@ -1,7 +1,4 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using GreetingsPorts.EntityGateway.Interfaces;
+﻿using GreetingsPorts.EntityGateway.Interfaces;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
 using Paramore.Darker;

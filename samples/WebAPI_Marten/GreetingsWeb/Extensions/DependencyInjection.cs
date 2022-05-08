@@ -4,10 +4,10 @@ using Marten;
 using Marten.Schema;
 using Npgsql;
 using Paramore.Brighter;
+using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Polly;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly.Registry;
 
 namespace GreetingsWeb.Extensions

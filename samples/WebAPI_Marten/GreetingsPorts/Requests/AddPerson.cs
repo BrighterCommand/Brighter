@@ -1,5 +1,4 @@
-﻿using System;
-using Paramore.Brighter;
+﻿using Paramore.Brighter;
 
 namespace GreetingsPorts.Requests
 {
@@ -8,7 +7,7 @@ namespace GreetingsPorts.Requests
         public string Name { get; set; }
 
         public AddPerson(string name)
-            :base(Guid.NewGuid())
+            : base(Guid.NewGuid())
         {
             Name = name;
         }

@@ -1,9 +1,4 @@
-﻿using System;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Npgsql;
+﻿using Npgsql;
 using Polly;
 
 namespace GreetingsWeb.Extensions
@@ -12,8 +7,8 @@ namespace GreetingsWeb.Extensions
     {
         public static IHost CheckDbIsUp(this IHost webHost)
         {
-            using var scope = webHost.Services.CreateScope() ;
-            
+            using var scope = webHost.Services.CreateScope();
+
             var services = scope.ServiceProvider;
             var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();

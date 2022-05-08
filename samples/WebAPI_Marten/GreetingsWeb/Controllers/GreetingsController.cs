@@ -1,5 +1,4 @@
-﻿using System.Threading.Tasks;
-using GreetingsPorts.Requests;
+﻿using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
 using GreetingsWeb.Models;
 using Microsoft.AspNetCore.Mvc;
