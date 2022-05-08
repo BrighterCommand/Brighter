@@ -107,14 +107,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public Guid DepositPost<T>(T request) where T : class, IRequest
+        public Guid DepositPost<T>(T request, string transactionName = null) where T : class, IRequest
         {
             _postBox.Add(request.Id, request);
             return request.Id;
         }
 
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default(CancellationToken), string transactionProviderName = null) where T : class, IRequest
         {
             _postBox.Add(request.Id, request);
 

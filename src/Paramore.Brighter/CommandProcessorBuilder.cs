@@ -83,7 +83,7 @@ namespace Paramore.Brighter
         private bool _useExternalBus = false;
         private bool _useRequestReplyQueues = false;
         private IEnumerable<Subscription> _replySubscriptions;
-        private IAmABoxTransactionConnectionProvider _overridingBoxTransactionConnectionProvider = null;
+        private IAmABoxTransactionConnectionProviderRegistry _overridingBoxTransactionConnectionProviderRegistry = null;
         
         private CommandProcessorBuilder()
         {
@@ -160,14 +160,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
         /// <param name="outbox">The Outbox.</param>
-        /// <param name="boxTransactionConnectionProvider"></param>
+        /// <param name="boxTransactionConnectionProviderRegistry"></param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+        public INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProviderRegistry boxTransactionConnectionProviderRegistry = null)
         {
             _useExternalBus = true;
             _producers = configuration.ProducerRegistry;
             _outbox = outbox;
-            _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _overridingBoxTransactionConnectionProviderRegistry = boxTransactionConnectionProviderRegistry;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             return this;
@@ -242,7 +242,7 @@ namespace Paramore.Brighter
                     producerRegistry: _producers,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry,
-                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
+                    boxTransactionConnectionProviderRegistry: _overridingBoxTransactionConnectionProviderRegistry
                 );
             }
             else if (_useRequestReplyQueues)
@@ -257,7 +257,7 @@ namespace Paramore.Brighter
                     outBox: _outbox,
                     producerRegistry: _producers,
                     responseChannelFactory: _responseChannelFactory,
-                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
+                    boxTransactionConnectionProviderRegistry: _overridingBoxTransactionConnectionProviderRegistry
                     );
             }
             else
@@ -318,9 +318,9 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="outbox">The outbox.</param>
-        /// <param name="boxTransactionConnectionProvider">The connection provider to use when adding messages to the bus</param>
+        /// <param name="boxTransactionConnectionProviderRegistry">The connection provider registry to use when adding messages to the bus</param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null);
+        INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionConnectionProviderRegistry boxTransactionConnectionProviderRegistry = null);
         /// <summary>
         /// We don't send messages out of process
         /// </summary>

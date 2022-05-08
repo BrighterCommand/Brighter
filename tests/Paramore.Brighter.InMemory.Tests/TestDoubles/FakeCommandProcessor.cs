@@ -72,13 +72,13 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
               return tcs.Task;
         }
 
-        public Guid DepositPost<T>(T request) where T : class, IRequest
+        public Guid DepositPost<T>(T request, string transactionProviderName = null) where T : class, IRequest
         {
             Deposited.Enqueue(new DepositedMessage(request));
             return request.Id;
         }
 
-        public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken), string transactionProviderName = null) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             

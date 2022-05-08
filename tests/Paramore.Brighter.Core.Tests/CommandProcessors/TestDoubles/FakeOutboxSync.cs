@@ -35,11 +35,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
 
+        public Dictionary<Guid, Type> TransactionProviderUsedForPost { get; } = new Dictionary<Guid, Type>();
+
         public bool ContinueOnCapturedContext { get; set; }
 
         public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
+            if (transactionConnectionProvider != null)
+                TransactionProviderUsedForPost.Add(message.Id, transactionConnectionProvider.GetType());
         }
 
         public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
@@ -47,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);
 
-            Add(message, outBoxTimeout);
+            Add(message, outBoxTimeout, transactionConnectionProvider);
 
             return Task.FromResult(0);
         }

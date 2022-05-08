@@ -98,9 +98,10 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="transactionProviderName">The name of the transaction provider to use (if registered and not provided default will be used)</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
-        Guid DepositPost<T>(T request) where T : class, IRequest;
+        Guid DepositPost<T>(T request, string transactionProviderName = null) where T : class, IRequest;
 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
@@ -110,9 +111,10 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutboxAsync"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="transactionProviderName">The name of the transaction provider to use (if registered and not provided default will be used)</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
-        Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest;
+        Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken), string transactionProviderName = null) where T : class, IRequest;
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.

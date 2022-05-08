@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         private readonly IAmARequestContextFactory _requestContextFactory;
         private readonly IPolicyRegistry<string> _policyRegistry;
         private readonly InboxConfiguration _inboxConfiguration;
-        private readonly IAmABoxTransactionConnectionProvider _boxTransactionConnectionProvider;
+        private readonly IAmABoxTransactionConnectionProviderRegistry _boxTransactionConnectionProviderRegistry;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
 
@@ -135,7 +135,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProviderRegistry">The Box Connection Provider Registry to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -145,14 +145,14 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+            IAmABoxTransactionConnectionProviderRegistry boxTransactionConnectionProviderRegistry = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
-            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _boxTransactionConnectionProviderRegistry = boxTransactionConnectionProviderRegistry;
             
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
 
@@ -175,7 +175,7 @@ namespace Paramore.Brighter
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="boxTransactionConnectionProviderRegistry">The Box Connection Provider to use when Depositing into the outbox.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -189,14 +189,14 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             IAmAChannelFactory responseChannelFactory = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+            IAmABoxTransactionConnectionProviderRegistry boxTransactionConnectionProviderRegistry = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
-            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _boxTransactionConnectionProviderRegistry = boxTransactionConnectionProviderRegistry;
             _replySubscriptions = replySubscriptions;
 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
@@ -230,12 +230,12 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+            IAmABoxTransactionConnectionProviderRegistry boxTransactionConnectionProviderRegistry = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _inboxConfiguration = inboxConfiguration;
-            _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _boxTransactionConnectionProviderRegistry = boxTransactionConnectionProviderRegistry;
 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
 
@@ -411,7 +411,7 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<T>(T request) where T : class, IRequest
         {
-            ClearOutbox(DepositPost(request, null));
+            ClearOutbox(DepositPost(request, connectionProvider: null));
         }
 
         /// <summary>
@@ -445,11 +445,12 @@ namespace Paramore.Brighter
         /// Pass deposited Guid to <see cref="ClearOutbox"/> 
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
+        /// <param name="transactionProviderName">The name of the transaction provider to use (if registered and not provided default will be used)</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid DepositPost<T>(T request) where T : class, IRequest
+        public Guid DepositPost<T>(T request, string transactionProviderName = null) where T : class, IRequest
         {
-            return DepositPost(request, _boxTransactionConnectionProvider);
+            return DepositPost(request, GetBoxTxnProvider(transactionProviderName));
         }
         
         private Guid DepositPost<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
@@ -480,12 +481,13 @@ namespace Paramore.Brighter
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <param name="transactionProviderName">The name of the transaction provider to use (if registered and not provided default will be used)</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default(CancellationToken), string transactionProviderName = null) where T : class, IRequest
         {
-            return await DepositPostAsync(request, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
+            return await DepositPostAsync(request, GetBoxTxnProvider(transactionProviderName), continueOnCapturedContext, cancellationToken);
         }
         
         private async Task<Guid> DepositPostAsync<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
@@ -505,6 +507,19 @@ namespace Paramore.Brighter
             await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
             return message.Id;
+        }
+        
+        private IAmABoxTransactionConnectionProvider GetBoxTxnProvider(string name)
+        {
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null;
+            if (_boxTransactionConnectionProviderRegistry != null)
+            {
+                boxTransactionConnectionProvider = string.IsNullOrWhiteSpace(name)
+                    ? _boxTransactionConnectionProviderRegistry.GetDefault()
+                    : _boxTransactionConnectionProviderRegistry.Lookup(name);
+            }
+
+            return boxTransactionConnectionProvider;
         }
 
 

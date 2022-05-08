@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var outbox = provider.GetService<IAmAnOutboxSync<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
-            var overridingConnectionProvider = provider.GetService<IAmABoxTransactionConnectionProvider>();
+            var overridingConnectionProviderRegistry = provider.GetService<IAmABoxTransactionConnectionProviderRegistry>();
 
             if (outbox == null) outbox = new InMemoryOutbox();
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
@@ -258,7 +258,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     messageMapperRegistry, 
                     inboxConfiguration, 
                     outbox, 
-                    overridingConnectionProvider, 
+                    overridingConnectionProviderRegistry, 
                     useRequestResponse)
                 .RequestContextFactory(options.RequestContextFactory)
                 .Build();
@@ -280,7 +280,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             MessageMapperRegistry messageMapperRegistry, 
             InboxConfiguration inboxConfiguration, 
             IAmAnOutboxSync<Message> outbox,
-            IAmABoxTransactionConnectionProvider overridingConnectionProvider, 
+            IAmABoxTransactionConnectionProviderRegistry overridingConnectionProviderRegistry, 
             IUseRpc useRequestResponse)
         {
             ExternalBusType externalBusType = GetExternalBusType(producerRegistry, useRequestResponse);
@@ -291,7 +291,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return messagingBuilder.ExternalBus(
                     new ExternalBusConfiguration(producerRegistry, messageMapperRegistry, useInbox: inboxConfiguration),
                     outbox,
-                    overridingConnectionProvider);
+                    overridingConnectionProviderRegistry);
             else if (externalBusType == ExternalBusType.RPC)
             {
                 return messagingBuilder.ExternalRPC(
