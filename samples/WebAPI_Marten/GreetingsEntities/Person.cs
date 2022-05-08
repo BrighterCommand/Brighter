@@ -4,9 +4,11 @@ namespace GreetingsEntities
 {
     public class Person
     {
-        public int Id { get; set; }
-        public ICollection<Greeting> Greetings { get; set; }
+        private readonly ICollection<Greeting> _greetings = new List<Greeting>();
+        public int Id { get;  set; }
+        public int Version { get; set;}
         public string Name { get; set; }
+        public IEnumerable<Greeting> Greetings => _greetings;
 
         public Person(string name)
         {
@@ -15,13 +17,7 @@ namespace GreetingsEntities
 
         public void AddGreeting(Greeting greeting)
         {
-            if (Greetings is null)
-            {
-                // this looks really bad, temporary for rmq setup
-                Greetings = new List<Greeting>();
-            }
-
-            Greetings.Add(greeting);
+            _greetings.Add(greeting);
         }
     }
 }

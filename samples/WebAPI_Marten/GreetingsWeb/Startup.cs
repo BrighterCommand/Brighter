@@ -82,8 +82,8 @@ namespace GreetingsWeb
 
             services.AddMarten(opts =>
             {
-
                 opts.Connection(connectionString);
+                opts.UseDefaultSerialization(nonPublicMembersStorage: NonPublicMembersStorage.NonPublicSetters);
                 opts.RetryPolicy(MartenRetryPolicy.Twice(exception => exception is NpgsqlException ne && ne.IsTransient));
                 opts.Schema.For<Person>()
                 .SoftDeleted()

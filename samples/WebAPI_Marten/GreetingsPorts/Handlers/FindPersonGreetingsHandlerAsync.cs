@@ -30,8 +30,6 @@ namespace GreetingsPorts.Handlers
                     return null;
                 }
 
-                person.Greetings ??= new List<Greeting>();
-
                 return new FindPersonGreetingsResult
                 {
                     PersonName = person.Name,
