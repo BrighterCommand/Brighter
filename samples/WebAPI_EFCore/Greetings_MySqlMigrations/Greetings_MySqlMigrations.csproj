@@ -1,12 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
-
+  
     <ItemGroup>
       <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
     </ItemGroup>
+
 
 </Project>

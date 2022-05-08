@@ -2,14 +2,28 @@
 
     <PropertyGroup>
         <Authors>Ian Cooper</Authors>
-        <TargetFramework>netstandard2.0</TargetFramework>
         <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+        <TargetFrameworks>net6.0;netstandard2.1</TargetFrameworks>
     </PropertyGroup>
-  <ItemGroup>
-    <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.3" />
-    <PackageReference Update="MinVer" Version="3.1.0" />
-  </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-  </ItemGroup>
+  
+    <ItemGroup>
+      
+    </ItemGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
+       <PackageReference Include="Microsoft.Data.Sqlite" Version="6.0.4" />
+       <PackageReference Update="MinVer" Version="3.1.0" />
+       <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1">
+         <PrivateAssets>all</PrivateAssets>
+         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+       </PackageReference>
+    </ItemGroup>
+  
+     <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.1' ">
+       <PackageReference Include="Microsoft.Data.Sqlite" Version="5.0.16" />
+     </ItemGroup>
+
+    <ItemGroup>
+       <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+    </ItemGroup>
 </Project>
