@@ -6,7 +6,6 @@ namespace GreetingsEntities
     {
         private readonly ICollection<Greeting> _greetings = new List<Greeting>();
         public int Id { get;  set; }
-        public int Version { get; set;}
         public string Name { get; set; }
         public IEnumerable<Greeting> Greetings => _greetings;
 
