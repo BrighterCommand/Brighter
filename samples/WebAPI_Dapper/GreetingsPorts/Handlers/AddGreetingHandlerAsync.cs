@@ -9,20 +9,22 @@ using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
+using Microsoft.Extensions.Logging;
 
 namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync: RequestHandlerAsync<AddGreeting>
     {
         private readonly IAmACommandProcessor _postBox;
+        private readonly ILogger<AddGreetingHandlerAsync> _logger;
         private readonly IUnitOfWork _uow;
 
 
-        public AddGreetingHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox)
+        public AddGreetingHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
             _uow = uow;
             _postBox = postBox;
- 
+            _logger = logger;
         }
 
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
@@ -41,7 +43,8 @@ namespace GreetingsPorts.Handlers
                 
                 var greeting = new Greeting(addGreeting.Greeting);
                 
-                person.AddGreeting(greeting);
+                //person.AddGreeting(greeting);
+                greeting.RecipientId = person.Id;
                 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
@@ -52,8 +55,9 @@ namespace GreetingsPorts.Handlers
                 //commit both new greeting and outgoing message
                 await tx.CommitAsync(cancellationToken);
             }
-            catch (Exception)
-            {
+            catch (Exception e)
+            {   
+                _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);

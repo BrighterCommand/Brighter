@@ -29,7 +29,7 @@ namespace GreetingsPorts.Handlers
                 var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
                 var person = people.Single();
 
-                var deleteById = Predicates.Field<Greeting>(g => g.Recipient, Operator.Eq, person);
+                var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
                 await _uow.Database.DeleteAsync(deleteById, tx);
                 
                 await tx.CommitAsync(cancellationToken);

@@ -7,15 +7,10 @@ namespace GreetingsEntities
     {
         public long Id { get; set; }
         public string Message { get; set; }
-        public Person Recipient { get; set; }
+        //public Person Recipient { get; set; }
+        public long RecipientId { get; set; }
 
-        public long RecipientId
-        {
-            get
-            {
-                return Recipient.Id;
-            }
-        }
+        public Greeting() { /*Required by Dapperextensions*/}
 
         public Greeting(string message)
         {
@@ -25,19 +20,22 @@ namespace GreetingsEntities
         public Greeting(string message, Person recipient)
         {
             Message = message;
-            Recipient = recipient;
+            //Recipient = recipient;
+            RecipientId = recipient.Id;
         }
         
         public Greeting(int id, string message, Person recipient)
         {
             Id = id;
             Message = message;
-            Recipient = recipient;
+            //Recipient = recipient;
+            RecipientId = recipient.Id;
         }
 
         public string Greet()
         {
-            return $"{Message} {Recipient.Name}!";
+            //return $"{Message} {Recipient.Name}!";
+            return $"{Message}!";
         }
     }
 }

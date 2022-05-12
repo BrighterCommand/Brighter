@@ -10,6 +10,8 @@ namespace GreetingsEntities
         public long Id { get; set; }
         public string Name { get; set; }
         public IEnumerable<Greeting> Greetings => _greetings;
+        
+        public Person(){ /*Required for DapperExtensions*/}
 
         public Person(string name)
         {
@@ -24,7 +26,8 @@ namespace GreetingsEntities
 
         public void AddGreeting(Greeting greeting)
         {
-            greeting.Recipient = this;
+            //greeting.Recipient = this;
+            greeting.RecipientId = Id;
             _greetings.Add(greeting);
         }
 

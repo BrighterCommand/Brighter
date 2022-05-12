@@ -7,4 +7,4 @@ COPY out/ .
 EXPOSE 5000
 ENV ASPNETCORE_URLS=http://+:5000
 #run the site
-ENTRYPOINT ["dotnet", "GreetingsAdapters.dll"]
+ENTRYPOINT ["dotnet", "GreetingsWeb.dll"]
