@@ -21,24 +21,14 @@
     </ItemGroup>
 
  
-    <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-       <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.4" />
-       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.3">
+    <ItemGroup>
+       <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.5" />
+       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.5">
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
        </PackageReference>
-       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.4" />
+       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.5" />
        <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.1" /> 
-    </ItemGroup>
-  
-    <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' "> 
-       <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="5.0.16" />
-       <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="5.0.16">
-         <PrivateAssets>all</PrivateAssets>
-         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-       </PackageReference>
-       <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="5.0.16" />
-       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="5.0.4" />
     </ItemGroup>
 
     <ItemGroup>
