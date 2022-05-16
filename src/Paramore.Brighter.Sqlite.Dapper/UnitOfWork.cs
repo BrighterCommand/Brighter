@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -42,29 +43,33 @@ namespace Paramore.Brighter.Sqlite.Dapper
             return _transaction;
         }
         
-        public Task<DbTransaction> BeginOrGetTransactionAsync(CancellationToken cancellationToken)
+        /// <summary>
+        /// Begins a transaction, if one not already started. Closes connection if required
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+        public async Task<DbTransaction> BeginOrGetTransactionAsync(CancellationToken cancellationToken)
         {
-            //NOTE: Sqlite does not support async begin transaction, so we fake it
-            var tcs = new TaskCompletionSource<DbTransaction>();
             if (!HasTransaction())
             {
+                if (_connection.State != ConnectionState.Open)
+                {
+                    await _connection.OpenAsync(cancellationToken);
+                }
                 _transaction = _connection.BeginTransaction();
             }
-            
-            tcs.SetResult(_transaction);
 
-            return tcs.Task;
+            return _transaction;
         }
-
 
         public bool HasTransaction()
         {
-            return _transaction == null;
+            return _transaction != null;
         }
 
         public void Dispose()
         {
-            if (_transaction != null)
+            if (HasTransaction())
             {
                 _transaction.Rollback();
             }

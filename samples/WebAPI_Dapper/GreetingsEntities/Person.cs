@@ -23,13 +23,5 @@ namespace GreetingsEntities
             Id = id;
             Name = name;
         }
-
-        public void AddGreeting(Greeting greeting)
-        {
-            //greeting.Recipient = this;
-            greeting.RecipientId = Id;
-            _greetings.Add(greeting);
-        }
-
     }
 }

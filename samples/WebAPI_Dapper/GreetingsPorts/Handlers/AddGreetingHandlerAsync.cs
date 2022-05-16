@@ -41,16 +41,13 @@ namespace GreetingsPorts.Handlers
                 var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
                 var person = people.Single();
                 
-                var greeting = new Greeting(addGreeting.Greeting);
-                
-                //person.AddGreeting(greeting);
-                greeting.RecipientId = person.Id;
+                var greeting = new Greeting(addGreeting.Greeting, person);
                 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
                 
                 //write the added child entity to the Db
-                await _uow.Database.InsertAsync(greeting, tx);
+                await _uow.Database.InsertAsync<Greeting>(greeting, tx);
 
                 //commit both new greeting and outgoing message
                 await tx.CommitAsync(cancellationToken);

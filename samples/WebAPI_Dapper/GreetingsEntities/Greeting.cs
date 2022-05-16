@@ -20,7 +20,6 @@ namespace GreetingsEntities
         public Greeting(string message, Person recipient)
         {
             Message = message;
-            //Recipient = recipient;
             RecipientId = recipient.Id;
         }
         
@@ -28,13 +27,11 @@ namespace GreetingsEntities
         {
             Id = id;
             Message = message;
-            //Recipient = recipient;
             RecipientId = recipient.Id;
         }
 
         public string Greet()
         {
-            //return $"{Message} {Recipient.Name}!";
             return $"{Message}!";
         }
     }
