@@ -71,9 +71,14 @@ namespace Paramore.Brighter.Sqlite.Dapper
         {
             if (HasTransaction())
             {
-                _transaction.Rollback();
+                //will throw if transaction completed, but no way to check transaction state via api
+                try { _transaction.Rollback(); } catch (Exception) { }
             }
-            _connection?.Close();
+
+            if (_connection is { State: ConnectionState.Open })
+            {
+                _connection.Close();
+            }
         }
     }
 }

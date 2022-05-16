@@ -5,6 +5,28 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
+<> 2022-05-16T091734.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-16T083253.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
 <> 2022-05-16T082709.200.json
 
 ###
@@ -444,24 +466,6 @@ Content-Type: application/json
 }
 
 <> 2022-05-04T115956.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
 
 ###
 
