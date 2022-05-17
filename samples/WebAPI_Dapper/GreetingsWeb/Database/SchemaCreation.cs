@@ -22,8 +22,8 @@ namespace Greetingsweb.Database
 
         public static IHost CheckDbIsUp(this IHost webHost)
         {
-            using var scope = webHost.Services.CreateScope() ;
-            
+            using var scope = webHost.Services.CreateScope();
+
             var services = scope.ServiceProvider;
             var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();
@@ -38,51 +38,28 @@ namespace Greetingsweb.Database
             return webHost;
         }
 
-        private static void CreateDatabaseIfNotExists(DbConnection conn)
-        {
-            //The migration does not create the Db, so we need to create it sot that it will add it
-            conn.Open();
-            using var command = conn.CreateCommand();
-            command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
-            command.ExecuteScalar();
-        }
-
-        private static void WaitToConnect(string connectionString)
-        {
-            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
-                retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) => { Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}"); });
-
-            policy.Execute(() =>
-            {
-                using var conn = new MySqlConnection(connectionString);
-                conn.Open();
-            });
-        }
-
         public static IHost MigrateDatabase(this IHost webHost)
         {
-           using (var scope = webHost.Services.CreateScope())
-           {
-               var services = scope.ServiceProvider;
+            using (var scope = webHost.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
 
-               try
-               {
-                   var runner = services.GetRequiredService<IMigrationRunner>();
-                   runner.ListMigrations();
-                   runner.MigrateUp();
-               }
-               catch (Exception ex)
-               {
-                   var logger = services.GetRequiredService<ILogger<Program>>();
-                   logger.LogError(ex, "An error occurred while migrating the database.");
-                   throw;
-               }
-           }
+                try
+                {
+                    var runner = services.GetRequiredService<IMigrationRunner>();
+                    runner.ListMigrations();
+                    runner.MigrateUp();
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "An error occurred while migrating the database.");
+                    throw;
+                }
+            }
 
-           return webHost;
+            return webHost;
         }
-
 
         public static IHost CreateOutbox(this IHost webHost)
         {
@@ -97,6 +74,16 @@ namespace Greetingsweb.Database
 
             return webHost;
         }
+
+        private static void CreateDatabaseIfNotExists(DbConnection conn)
+        {
+            //The migration does not create the Db, so we need to create it sot that it will add it
+            conn.Open();
+            using var command = conn.CreateCommand();
+            command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
+            command.ExecuteScalar();
+        }
+
 
         private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env)
         {
@@ -158,6 +145,22 @@ namespace Greetingsweb.Database
         private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
-         }
+        }
+
+        private static void WaitToConnect(string connectionString)
+        {
+            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
+                retryAttempt => TimeSpan.FromSeconds(2),
+                (exception, timespan) =>
+                {
+                    Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
+                });
+
+            policy.Execute(() =>
+            {
+                using var conn = new MySqlConnection(connectionString);
+                conn.Open();
+            });
+        }
     }
 }

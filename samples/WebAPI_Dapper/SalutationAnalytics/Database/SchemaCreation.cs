@@ -36,31 +36,7 @@ namespace SalutationAnalytics.Database
             return host;
         }
 
-        private static void CreateDatabaseIfNotExists(string connectionString)
-        {
-            //The migration does not create the Db, so we need to create it sot that it will add it
-            using var conn = new MySqlConnection(connectionString);
-            conn.Open();
-            using var command = conn.CreateCommand();
-            command.CommandText = "CREATE DATABASE IF NOT EXISTS Salutations";
-            command.ExecuteScalar();
-        }
-
-        private static void WaitToConnect(string connectionString)
-        {
-            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
-                retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) => { Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}"); });
-
-            policy.Execute(() =>
-            {
-                using var conn = new MySqlConnection(connectionString);
-                conn.Open();
-            });
-        }
-
-
-        public static IHost CreateInbox(this IHost host)
+       public static IHost CreateInbox(this IHost host)
         {
             using (var scope = host.Services.CreateScope())
             {
@@ -74,8 +50,23 @@ namespace SalutationAnalytics.Database
             return host;
         }
 
-        private static void CreateInbox(IConfiguration config, IHostEnvironment env)
+       public static IHost MigrateDatabase(this IHost host)
+       {
+           return host;
+       }
+
+        private static void CreateDatabaseIfNotExists(string connectionString)
         {
+            //The migration does not create the Db, so we need to create it sot that it will add it
+            using var conn = new MySqlConnection(connectionString);
+            conn.Open();
+            using var command = conn.CreateCommand();
+            command.CommandText = "CREATE DATABASE IF NOT EXISTS Salutations";
+            command.ExecuteScalar();
+        }
+
+        private static void CreateInbox(IConfiguration config, IHostEnvironment env)
+         {
             try
             {
                 var connectionString = DbConnectionString(config, env);
@@ -90,7 +81,7 @@ namespace SalutationAnalytics.Database
                 Console.WriteLine($"Issue with creating Inbox table, {e.Message}");
                 throw;
             }
-        }
+         }
 
         private static void CreateInboxDevelopment(string connectionString)
         {
@@ -197,6 +188,18 @@ namespace SalutationAnalytics.Database
         private static string DbServerConnectionString(IConfiguration config, IHostEnvironment env)
         {
             return env.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : config.GetConnectionString("SalutationsDb");
-         }
-    }
+        }
+        private static void WaitToConnect(string connectionString)
+        {
+            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
+                retryAttempt => TimeSpan.FromSeconds(2),
+                (exception, timespan) => { Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}"); });
+
+            policy.Execute(() =>
+            {
+                using var conn = new MySqlConnection(connectionString);
+                conn.Open();
+            });
+        }
+     }
 }

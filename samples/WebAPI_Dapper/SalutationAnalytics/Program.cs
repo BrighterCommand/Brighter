@@ -1,11 +1,15 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using DapperExtensions;
+using DapperExtensions.Sql;
+using FluentMigrator.Runner;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
@@ -14,8 +18,10 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using SalutationAnalytics.Database;
+using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
 using SalutationPorts.Requests;
+using Salutations_SqliteMigrations.Migrations;
 
 namespace SalutationAnalytics
 {
@@ -25,6 +31,7 @@ namespace SalutationAnalytics
         {
             var host = CreateHostBuilder(args).Build();
             host.CheckDbIsUp();
+            host.MigrateDatabase();
             host.CreateInbox();
             host.CreateOutbox();
             await host.RunAsync();
@@ -47,7 +54,10 @@ namespace SalutationAnalytics
                     builder.AddDebug();
                 })
                 .ConfigureServices((hostContext, services) =>
-                {
+                {      
+                    ConfigureMigration(hostContext, services);
+                    ConfigureDapper(hostContext, services);
+                    
                     var subscriptions = new Subscription[]
                     {
                         new RmqSubscription<GreetingMade>(
@@ -111,10 +121,50 @@ namespace SalutationAnalytics
                 })
                 .UseConsoleLifetime();
 
-        private static string GetEnvironment()
+        private static void ConfigureMigration(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
-            //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
-            return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+            if (hostBuilderContext.HostingEnvironment.IsDevelopment())
+            {
+                services
+                    .AddFluentMigratorCore()
+                    .ConfigureRunner(c =>
+                    {
+                        c.AddSQLite()
+                            .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
+                            .ScanIn(typeof(Salutations_SqliteMigrations.Migrations.SqliteInitialCreate).Assembly).For.Migrations();
+                    });
+            }
+            else
+            {
+                services
+                    .AddFluentMigratorCore()
+                    .ConfigureRunner(c => c.AddMySql5()
+                        .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
+                        .ScanIn(typeof(Salutations_SqliteMigrations.Migrations.SqliteInitialCreate).Assembly).For.Migrations()
+                    ); 
+            }
+             
+        }
+
+        private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
+        {
+            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString(hostBuilderContext)));
+                
+            if (hostBuilderContext.HostingEnvironment.IsDevelopment())
+            {
+                DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
+                DapperAsyncExtensions.SqlDialect = new SqliteDialect();
+                services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+            }
+            else
+            {
+                DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
+                DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+                services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+            }
+
+            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
+            DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(SalutationMapper).Assembly});
         }
         
         private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
@@ -132,6 +182,11 @@ namespace SalutationAnalytics
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
             return hostContext.HostingEnvironment.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : hostContext.Configuration.GetConnectionString("Salutations");
         }
-
+        
+        private static string GetEnvironment()
+        {
+            //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
+            return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
+        }
     }
 }
