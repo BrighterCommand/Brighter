@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Data;
+using FluentMigrator.Runner;
 using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using MySqlConnector;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
@@ -20,8 +22,8 @@ namespace SalutationAnalytics.Database
 
         public static IHost CheckDbIsUp(this IHost host)
         {
-            using var scope = host.Services.CreateScope() ;
-            
+            using var scope = host.Services.CreateScope();
+
             var services = scope.ServiceProvider;
             var env = services.GetService<IHostEnvironment>();
             var config = services.GetService<IConfiguration>();
@@ -36,7 +38,7 @@ namespace SalutationAnalytics.Database
             return host;
         }
 
-       public static IHost CreateInbox(this IHost host)
+        public static IHost CreateInbox(this IHost host)
         {
             using (var scope = host.Services.CreateScope())
             {
@@ -50,10 +52,28 @@ namespace SalutationAnalytics.Database
             return host;
         }
 
-       public static IHost MigrateDatabase(this IHost host)
-       {
-           return host;
-       }
+        public static IHost MigrateDatabase(this IHost host)
+        {
+            using (var scope = host.Services.CreateScope())
+            {
+                var services = scope.ServiceProvider;
+
+                try
+                {
+                    var runner = services.GetRequiredService<IMigrationRunner>();
+                    runner.ListMigrations();
+                    runner.MigrateUp();
+                }
+                catch (Exception ex)
+                {
+                    var logger = services.GetRequiredService<ILogger<Program>>();
+                    logger.LogError(ex, "An error occurred while migrating the database.");
+                    throw;
+                }
+            }
+
+            return host;
+        }
 
         private static void CreateDatabaseIfNotExists(string connectionString)
         {
@@ -66,7 +86,7 @@ namespace SalutationAnalytics.Database
         }
 
         private static void CreateInbox(IConfiguration config, IHostEnvironment env)
-         {
+        {
             try
             {
                 var connectionString = DbConnectionString(config, env);
@@ -81,7 +101,7 @@ namespace SalutationAnalytics.Database
                 Console.WriteLine($"Issue with creating Inbox table, {e.Message}");
                 throw;
             }
-         }
+        }
 
         private static void CreateInboxDevelopment(string connectionString)
         {
@@ -114,7 +134,7 @@ namespace SalutationAnalytics.Database
             command.CommandText = MySqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
             command.ExecuteScalar();
         }
-        
+
         public static IHost CreateOutbox(this IHost webHost)
         {
             using (var scope = webHost.Services.CreateScope())
@@ -189,11 +209,15 @@ namespace SalutationAnalytics.Database
         {
             return env.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : config.GetConnectionString("SalutationsDb");
         }
+
         private static void WaitToConnect(string connectionString)
         {
             var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
                 retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) => { Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}"); });
+                (exception, timespan) =>
+                {
+                    Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
+                });
 
             policy.Execute(() =>
             {
@@ -201,5 +225,5 @@ namespace SalutationAnalytics.Database
                 conn.Open();
             });
         }
-     }
+    }
 }

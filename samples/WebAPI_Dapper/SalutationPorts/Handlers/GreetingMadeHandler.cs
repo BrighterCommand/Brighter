@@ -33,12 +33,12 @@ namespace SalutationPorts.Handlers
         {
             var posts = new List<Guid>();
             
-            var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
+            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
             try
             {
                 var salutation = new Salutation(@event.Greeting);
                 
-                _uow.Database.InsertAsync<Salutation>(salutation, tx);
+                await _uow.Database.InsertAsync<Salutation>(salutation, tx);
                 
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
                 

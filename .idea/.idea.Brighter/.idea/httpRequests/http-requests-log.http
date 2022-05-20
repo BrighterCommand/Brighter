@@ -5,6 +5,235 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184959.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184958.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184957.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184956.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184955.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184953.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-20T184949.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2022-05-20T184943.500.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T083001.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T083000.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082959.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082958.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082956.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082954.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082800.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082735.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2022-05-18T082727.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082025.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2022-05-18T082018.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2022-05-18T082011.500.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
 <> 2022-05-16T091734.200.json
 
 ###
@@ -282,208 +511,6 @@ Content-Type: application/json
 }
 
 <> 2022-05-09T073359.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-09T073033.500.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2022-05-04T202600.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T202546.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T190828.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T185104.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T184924.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T181431.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T120021.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2022-05-04T115956.500.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-
-{
-  "Name" : "Tyrion"
-}
 
 ###
 

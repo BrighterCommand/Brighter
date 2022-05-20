@@ -2,7 +2,8 @@
 
 namespace Salutations_SqliteMigrations.Migrations;
 
-public class SqliteInitialCreate : Migration 
+[Migration(1)]
+public class SqliteInitialCreate : Migration
 {
     public override void Up()
     {
