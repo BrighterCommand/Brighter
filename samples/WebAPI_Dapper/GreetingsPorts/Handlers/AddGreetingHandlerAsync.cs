@@ -3,53 +3,58 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using GreetingsEntities;
-using GreetingsPorts.EntityGateway;
-using GreetingsPorts.Requests;
-using Microsoft.EntityFrameworkCore;
+using DapperExtensions;
+using DapperExtensions.Predicate;
 using Paramore.Brighter;
+using Paramore.Brighter.Dapper;
+using GreetingsEntities;
+using GreetingsPorts.Requests;
+using Microsoft.Extensions.Logging;
 
 namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync: RequestHandlerAsync<AddGreeting>
     {
-        private readonly GreetingsEntityGateway _uow;
         private readonly IAmACommandProcessor _postBox;
-                
-        public AddGreetingHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
+        private readonly ILogger<AddGreetingHandlerAsync> _logger;
+        private readonly IUnitOfWork _uow;
+
+
+        public AddGreetingHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
             _uow = uow;
             _postBox = postBox;
- 
+            _logger = logger;
         }
 
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
             
-            //We span a Db outside of EF's control, so start an explicit transactional scope
-            var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
+            //We use the unit of work to grab connection and transaction, because Outbox needs
+            //to share them 'behind the scenes'
+            
+            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
             try
             {
-                var person = await _uow.People
-                    .Where(p => p.Name == addGreeting.Name)
-                    .SingleAsync(cancellationToken);
+                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
+                var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
+                var person = people.Single();
                 
-                var greeting = new Greeting(addGreeting.Greeting);
-                
-                person.AddGreeting(greeting);
+                var greeting = new Greeting(addGreeting.Greeting, person);
                 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
                 
-                //write the changed entity to the Db
-                await _uow.SaveChangesAsync(cancellationToken);
+                //write the added child entity to the Db
+                await _uow.Database.InsertAsync<Greeting>(greeting, tx);
 
-                //write new person and the associated message to the Db
+                //commit both new greeting and outgoing message
                 await tx.CommitAsync(cancellationToken);
             }
-            catch (Exception)
-            {
+            catch (Exception e)
+            {   
+                _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);

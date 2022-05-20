@@ -1,4 +1,4 @@
-pushd GreetingsAdapters || exit
+pushd GreetingsWeb || exit
 rm -rf out
 dotnet restore
 dotnet build

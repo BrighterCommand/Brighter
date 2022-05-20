@@ -62,7 +62,7 @@ We also add an Inbox here. The Inbox can be used to de-duplicate messages. In me
 
 Use the build.sh file to:
 
-- Build both GreetingsAdapters and SalutationAnalytics and publish it to the /out directory. The Dockerfile assumes the app will be published here. 
+- Build both GreetingsAdapters and GreetingsWatcher and publish it to the /out directory. The Dockerfile assumes the app will be published here. 
 - Build the Docker image from the Dockerfile for each.
 
 (Why not use a multi-stage Docker build? We can't do this as the projects here reference projects not NuGet packages for Brighter libraries and there are not in the Docker build context.)
