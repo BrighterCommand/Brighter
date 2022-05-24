@@ -40,7 +40,6 @@ namespace SalutationPorts.Handlers
                 
                 await _uow.Database.InsertAsync<Salutation>(salutation, tx);
                 
-                //we don't consume these in the sample
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
                 
                 await tx.CommitAsync(cancellationToken);
