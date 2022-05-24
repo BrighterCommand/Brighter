@@ -10,12 +10,10 @@ namespace GreetingsPorts.Handlers
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
         private readonly GreetingsEntityGateway _uow;
-        private readonly IAmACommandProcessor _postBox;
 
-        public AddPersonHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
+        public AddPersonHandlerAsync(GreetingsEntityGateway uow)
         {
             _uow = uow;
-            _postBox = postBox;
         }
 
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
