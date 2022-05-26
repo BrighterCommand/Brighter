@@ -1,20 +1,20 @@
 # Table of content
-- [Web API and EF Core Example](#web-api-and-ef-core-example)
-  * [Environments](#environments)
-  * [Architecture](#architecture)
-    + [Outbox](#outbox)
-    + [GreetingsAPI](#greetingsapi)
-    + [SalutationAnalytics](#salutationanalytics)
-  * [Build and Deploy](#build-and-deploy)
-    + [Building](#building)
-    + [Deploy](#deploy)
-    + [Possible issues](#possible-issues)
-      - [Sqlite Database Read-Only Errors](#sqlite-database-read-only-errors)
-      - [Queue Creation and Dropped Messages](#queue-creation-and-dropped-messages)
-      - [Connection issue with the RabbitMQ](#connection-issue-with-the-rabbitmq)
-      - [Helpful documentation links](#helpful-documentation-links)
-  * [Tests](#tests)
-# Web API and EF Core Example
+- [Web API and Dapper Example](#web-api-and-dapper-example)
+    * [Environments](#environments)
+    * [Architecture](#architecture)
+        + [Outbox](#outbox)
+        + [GreetingsAPI](#greetingsapi)
+        + [SalutationAnalytics](#salutationanalytics)
+    * [Build and Deploy](#build-and-deploy)
+        + [Building](#building)
+        + [Deploy](#deploy)
+        + [Possible issues](#possible-issues)
+            - [Sqlite Database Read-Only Errors](#sqlite-database-read-only-errors)
+            - [Queue Creation and Dropped Messages](#queue-creation-and-dropped-messages)
+            - [Connection issue with the RabbitMQ](#connection-issue-with-the-rabbitmq)
+            - [Helpful documentation links](#helpful-documentation-links)
+    * [Tests](#tests)
+# Web API and Dapper Example
 This sample shows a typical scenario when using WebAPI and Brighter/Darker. It demonstrates both using Brighter and Darker to implement the API endpoints, and using a work queue to handle asynchronous work that results from handling the API call.
 
 ## Environments
@@ -32,14 +32,14 @@ dotnet run --launch-profile Production -d
 ```
 ## Architecture
 ### Outbox
- Brighter does have an [Outbox pattern support](https://paramore.readthedocs.io/en/latest/OutboxPattern.html). In case you are new to it, consider reading it before diving deeper.
+Brighter does have an [Outbox pattern support](https://paramore.readthedocs.io/en/latest/OutboxPattern.html). In case you are new to it, consider reading it before diving deeper.
 ### GreetingsAPI
 
 We follow a _ports and adapters_ architectural style, dividing the app into the following modules:
 
 * **GreetingsAdapters**: The adapters' module, handles the primary adapter of HTTP requests and responses to the app
 
- * **GreetingsPorts**: the ports' module, handles requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. The secondary port of the EntityGateway handles access to the DB via EF Core. We choose to treat EF Core as a port, not an adapter itself, here, as it wraps our underlying adapters for Sqlite or MySql.
+* **GreetingsPorts**: the ports' module, handles requests from the primary adapter (HTTP) to the domain, and requests to secondary adapters. In a fuller app, the handlers for the primary adapter would correspond to our use case boundaries. The secondary port of the EntityGateway handles access to the DB via EF Core. We choose to treat EF Core as a port, not an adapter itself, here, as it wraps our underlying adapters for Sqlite or MySql.
 
 * **GreetingsEntities**: the domain model (or application in ports & adapters). In a fuller app, this would contain the logic that has a dependency on entity state.
 
@@ -51,7 +51,7 @@ The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteM
 
 This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator, which work with EFCore. These support writing to an Outbox when this component raises a message in turn.
 
-We don't listen to that message, and without any listeners the RabbitMQ will drop the message we send, as it has no queues to give it to. We don't listen because we would just be repeating what we have shown here.
+We don't listen to that message, and without any listeners the RabbitMQ will drop the message we send, as it has no queues to give it to. We don't listen because we would just be repeating what we have shown here. If you want to see the messages produced, use the RMQ Management Console (localhost:15672) to create a queue and then bind it to the paramore.binding.exchange with the routingkey of SalutationReceived.
 
 We also add an Inbox here. The Inbox can be used to de-duplicate messages. In messaging, the guarantee is 'at least once' if you use a technique such as an Outbox to ensure sending. This means we may receive a message twice. We either need, as in this case, to use an Inbox to de-duplicate, or we need to be idempotent such that receiving the message multiple times would result in the same outcome.
 
@@ -62,7 +62,7 @@ We also add an Inbox here. The Inbox can be used to de-duplicate messages. In me
 
 Use the build.sh file to:
 
-- Build both GreetingsAdapters and GreetingsWatcher and publish it to the /out directory. The Dockerfile assumes the app will be published here. 
+- Build both GreetingsAdapters and SalutationAnalytics and publish it to the /out directory. The Dockerfile assumes the app will be published here.
 - Build the Docker image from the Dockerfile for each.
 
 (Why not use a multi-stage Docker build? We can't do this as the projects here reference projects not NuGet packages for Brighter libraries and there are not in the Docker build context.)
@@ -108,7 +108,7 @@ In Production, the application by default will have:
 ```sh
 amqp://guest:guest@rabbitmq:5672
 ```
- 
+
 as an Advanced Message Queuing Protocol (AMQP) connection string.  
 So one of the options will be replacing AMQP connection string with:
 ```sh
