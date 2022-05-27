@@ -4,6 +4,7 @@ using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using FluentMigrator.Runner.Initialization;
 using FluentMigrator.Runner.Processors;
+using Greetings_MySqlMigrations.Migrations;
 using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
@@ -103,7 +104,7 @@ namespace Greetingsweb
                     .AddFluentMigratorCore()
                     .ConfigureRunner(c => c.AddMySql5()
                         .WithGlobalConnectionString(DbConnectionString())
-                        .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations()
+                        .ScanIn(typeof(MySqlInitialCreate).Assembly).For.Migrations()
                     ); 
             }
              

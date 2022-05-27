@@ -146,7 +146,7 @@ namespace SalutationAnalytics
                     .AddFluentMigratorCore()
                     .ConfigureRunner(c => c.AddMySql5()
                         .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-                        .ScanIn(typeof(Salutations_SqliteMigrations.Migrations.SqliteInitialCreate).Assembly).For.Migrations()
+                        .ScanIn(typeof(Salutations_mySqlMigrations.Migrations.MySqlInitialCreate).Assembly).For.Migrations()
                     ); 
             }
              

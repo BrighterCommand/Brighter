@@ -18,6 +18,7 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
       <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
+      <ProjectReference Include="..\Salutations_mySqlMigrations\Salutations_mySqlMigrations.csproj" />
       <ProjectReference Include="..\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj" />
     </ItemGroup>
 
