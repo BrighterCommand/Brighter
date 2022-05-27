@@ -1,3 +1,9 @@
+GET http://localhost:5000/Greetings/Tyrion
+
+<> 2022-05-27T095555.200.json
+
+###
+
 POST http://localhost:5000/Greetings/Tyrion/new
 Content-Type: application/json
 
@@ -514,17 +520,6 @@ Content-Type: application/json
 }
 
 <> 2022-05-18T082959.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2022-05-18T082958.200.json
 
 ###
 
