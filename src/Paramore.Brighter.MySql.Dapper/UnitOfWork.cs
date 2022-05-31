@@ -1,4 +1,6 @@
-﻿using System.Data.Common;
+﻿using System;
+using System.Data;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
@@ -35,6 +37,10 @@ namespace Paramore.Brighter.MySql.Dapper
             //ToDo: make this thread safe
             if (!HasTransaction())
             {
+                if (_connection.State != ConnectionState.Open)
+                {
+                    _connection.Open();
+                }
                 _transaction = _connection.BeginTransaction();
             }
 
@@ -45,6 +51,10 @@ namespace Paramore.Brighter.MySql.Dapper
         {
             if (!HasTransaction())
             {
+                if (_connection.State != ConnectionState.Open)
+                {
+                    await _connection.OpenAsync(cancellationToken);
+                }
                 _transaction = await _connection.BeginTransactionAsync(cancellationToken);
             }
 
@@ -53,16 +63,21 @@ namespace Paramore.Brighter.MySql.Dapper
 
         public bool HasTransaction()
         {
-            return _transaction == null;
+            return _transaction != null;
         }
 
         public void Dispose()
         {
             if (_transaction != null)
             {
-                _transaction.Rollback();
+                //can't check transaction status, so it will throw if already committed
+                try { _transaction.Rollback(); } catch (Exception) { }
             }
-            _connection?.Close();
+            
+            if (_connection.State == ConnectionState.Open)
+            {
+                _connection.Close();
+            }
         }
     }
 }

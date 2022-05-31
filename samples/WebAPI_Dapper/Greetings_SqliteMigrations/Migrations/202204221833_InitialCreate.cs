@@ -19,7 +19,7 @@ public class SqlliteInitialCreate : Migration
 
         Create.ForeignKey()
             .FromTable("Greeting").ForeignColumn("Recipient_Id")
-            .ToTable("People").PrimaryColumn("Id");
+            .ToTable("Person").PrimaryColumn("Id");
     }
 
     public override void Down()

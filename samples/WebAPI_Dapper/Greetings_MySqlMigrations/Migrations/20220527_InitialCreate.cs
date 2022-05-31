@@ -10,7 +10,7 @@ public class MySqlInitialCreate : Migration
         Create.Table("Person")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
             .WithColumn("Name").AsString().Unique()
-            .WithColumn("TimeStamp").AsBinary().WithDefault(SystemMethods.CurrentDateTime);
+            .WithColumn("TimeStamp").AsDateTime().Nullable().WithDefault(SystemMethods.CurrentDateTime);
 
         Create.Table("Greeting")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
@@ -19,7 +19,7 @@ public class MySqlInitialCreate : Migration
 
         Create.ForeignKey()
             .FromTable("Greeting").ForeignColumn("Recipient_Id")
-            .ToTable("People").PrimaryColumn("Id");
+            .ToTable("Person").PrimaryColumn("Id");
     }
 
     public override void Down()

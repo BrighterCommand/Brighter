@@ -37,6 +37,10 @@ namespace Paramore.Brighter.Sqlite.Dapper
         {
             if (!HasTransaction())
             {
+                if (_connection.State != ConnectionState.Open)
+                {
+                    _connection.Open();
+                }
                 _transaction = _connection.BeginTransaction();
             }
 
