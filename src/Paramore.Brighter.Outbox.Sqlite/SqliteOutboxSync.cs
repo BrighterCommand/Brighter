@@ -239,7 +239,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
-                var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+                var inClause = string.Join(",", messageIds.ToList().Select((s, i) => "'" + s + "'").ToArray());
                 var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
 
                 command.CommandText = sql;
@@ -486,18 +486,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return new SqliteParameter(parameterName, value);
         }
 
-        private string GenerateInClauseAndAddParameters(SqliteCommand command, List<Guid> messageIds)
-        {
-            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
-
-            for (int i = 0; i < paramNames.Count(); i++)
-            {
-                command.Parameters.Add(CreateSqlParameter(paramNames[i], messageIds[i]));
-            }
-
-            return string.Join(",", paramNames);
-        }
-
         private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int outboxTimeout,
             params SqliteParameter[] parameters)
         {
@@ -562,10 +550,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private SqliteCommand InitMarkDispatchedCommand(SqliteConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId IN ( {inClause} )";
+            var inClause = string.Join(",", messageIds.ToList().Select((s, i) => "'" + s + "'").ToArray());
+            var dispatchTime = dispatchedAt.HasValue ? "datetime('" + dispatchedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + "')" : "datetime('now')"; 
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched =  {dispatchTime} WHERE MessageId IN ( {inClause} )";
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt.HasValue ? dispatchedAt.Value.ToString("s"): DateTime.UtcNow.ToString("s")));
             return command;
         }
 

@@ -33,21 +33,17 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - name: setup-dotnet tests-sdk
-        uses: actions/setup-dotnet@v1
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: "3.1.*"
-      - uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: "5.0.*"
-      - uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: "6.0.*"
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - run: dotnet --info
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      - uses: actions/cache@v2
+      - uses: actions/cache@v3
         with:
           path: ~/.nuget/packages
           key: Linux-nuget-${{ hashFiles('**/*.csproj') }}
@@ -58,7 +54,7 @@ jobs:
       - name: Core Tests
         run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
       - name: Upload packages as artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: nuget packages
           path: "**/*.nupkg"
@@ -76,7 +72,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v2
+      - uses: actions/download-artifact@v3
         with:
           name: nuget packages
       - name: Push generated package to NuGet
@@ -88,19 +84,13 @@ jobs:
     needs: [build]
     
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -123,19 +113,13 @@ jobs:
           --health-retries 5             
       
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -159,19 +143,13 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
@@ -220,19 +198,13 @@ jobs:
     - name: docker check
       run: docker ps -a
     - name: Checkout code
-      uses: actions/checkout@v2
-    - name: Setup dotnet 3.1
-      uses: actions/setup-dotnet@v1
+      uses: actions/checkout@v3
+    - name: Setup dotnet 5, 6
+      uses: actions/setup-dotnet@v2
       with:
-        dotnet-version: '3.1.x'
-    - name: Setup dotnet 5.0.x
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 5.0.x
-    - name: Setup dotnet 6.0.x
-      uses: actions/setup-dotnet@v1
-      with:
-        dotnet-version: 6.0.x
+        dotnet-version: |
+          5.0.x
+          6.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -256,19 +228,13 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -296,19 +262,13 @@ jobs:
          EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
      
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: EventStore Tests
@@ -328,19 +288,13 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password1!
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -362,19 +316,13 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -399,19 +347,13 @@ jobs:
           - 8000:8000
       
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -428,19 +370,13 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
       
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -460,19 +396,13 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/checkout@v2
-      - name: Setup dotnet 3.1
-        uses: actions/setup-dotnet@v1
+      - uses: actions/checkout@v3
+      - name: Setup dotnet 5, 6
+        uses: actions/setup-dotnet@v2
         with:
-          dotnet-version: '3.1.x'
-      - name: Setup dotnet 5.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 5.0.x
-      - name: Setup dotnet 6.0.x
-        uses: actions/setup-dotnet@v1
-        with:
-          dotnet-version: 6.0.x
+          dotnet-version: |
+            5.0.x
+            6.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
