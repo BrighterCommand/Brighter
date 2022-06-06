@@ -14,7 +14,7 @@ using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 
-namespace Greetingsweb.Database
+namespace GreetingsWeb.Database
 {
     public static class SchemaCreation
     {
@@ -120,7 +120,12 @@ namespace Greetingsweb.Database
             command.ExecuteScalar();
         }
 
-        private static void CreateOutboxProduction(string connectionString)
+        private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString)
+        {
+            CreateOutboxMySql(connectionString);
+        }
+
+        private static void CreateOutboxMySql(string connectionString)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -145,6 +150,17 @@ namespace Greetingsweb.Database
         private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
+        }
+
+        private static DatabaseType GetDatabaseType(IConfiguration config)
+        {
+            return config[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+            {
+                DatabaseGlobals.MYSQL => DatabaseType.MySql,
+                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
+                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
         }
 
         private static void WaitToConnect(string connectionString)

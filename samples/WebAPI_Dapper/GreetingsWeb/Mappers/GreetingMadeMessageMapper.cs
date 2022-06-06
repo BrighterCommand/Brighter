@@ -3,7 +3,7 @@ using GreetingsPorts.Requests;
 using Paramore.Brighter;
 
 
-namespace Greetingsweb.Mappers
+namespace GreetingsWeb.Mappers
 {
     public class GreetingMadeMessageMapper : IAmAMessageMapper<GreetingMade>
     {

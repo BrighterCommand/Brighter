@@ -21,14 +21,15 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 *Development* - runs locally on your machine, uses Sqlite as a data store; uses RabbitMQ for messaging, can be launched individually from the docker compose file; it represents a typical setup for development.
 
-*Production* - runs in Docker, uses MySql as a data store; uses RabbitMQ for messaging; it emulates a possible production environment.
+*Production* - runs in Docker;uses RabbitMQ for messaging; it emulates a possible production environment. We offer support for a range of common SQL stores in this example. We determine which SQL store to use via an environment 
+variable. The process is: (1) determine we are running in a non-development environment (2) lookup the type of database we want to support (3) initialise an enum to identify that.
 
-We provide launchSetting.json files for both, which allows you to run Production; you should launch MySQl and RabbitMQ from the docker compose file; useful for debugging MySQL operations.
+We provide launchSetting.json files for all of these, which allows you to run Production with the appropriate db; you should launch your SQL data store and RabbitMQ from the docker compose file. 
 
 In case you are using Command Line Interface for running the project, consider adding --launch-profile:
 
 ```sh
-dotnet run --launch-profile Production -d
+dotnet run --launch-profile XXXXXX -d
 ```
 ## Architecture
 ### Outbox
@@ -79,7 +80,6 @@ docker compose up -d rabbitmq   # will just start rabbitmq
 ```sh
 docker compose up -d mysql   # will just start mysql
 ```
-
 
 and so on.
 

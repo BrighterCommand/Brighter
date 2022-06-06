@@ -2,12 +2,11 @@ using System;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
-using FluentMigrator.Runner.Initialization;
-using FluentMigrator.Runner.Processors;
 using Greetings_MySqlMigrations.Migrations;
 using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
+using GreetingsWeb.Database;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -15,7 +14,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using MySqlConnector;
 using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -31,7 +29,7 @@ using Paramore.Darker.AspNetCore;
 using Polly;
 using Polly.Registry;
 
-namespace Greetingsweb
+namespace GreetingsWeb
 {
     public class Startup
     {
@@ -100,14 +98,42 @@ namespace Greetingsweb
             }
             else
             {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c => c.AddMySql5()
-                        .WithGlobalConnectionString(DbConnectionString())
-                        .ScanIn(typeof(MySqlInitialCreate).Assembly).For.Migrations()
-                    ); 
+                ConfigureProductionDatabase(GetDatabaseType(), services);
             }
              
+        }
+
+        private DatabaseType GetDatabaseType()
+        {
+            return Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+            {
+                DatabaseGlobals.MYSQL => DatabaseType.MySql,
+                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
+                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+
+        private void ConfigureProductionDatabase(DatabaseType databaseType, IServiceCollection services)
+        {
+            switch (databaseType)
+            {
+                case DatabaseType.MySql:
+                    ConfigureMySql(services);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+            }
+        }
+
+        private void ConfigureMySql(IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddMySql5()
+                    .WithGlobalConnectionString(DbConnectionString())
+                    .ScanIn(typeof(MySqlInitialCreate).Assembly).For.Migrations()
+                );
         }
 
         private void ConfigureDapper(IServiceCollection services)
@@ -122,37 +148,30 @@ namespace Greetingsweb
             }
             else
             {
-                DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-                DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-                services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+                ConfigureProductionDapper(GetDatabaseType(), services);
             }
 
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
             DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(PersonMapper).Assembly});
         }
 
-        private void CheckDbIsUp()
+        private static void ConfigureProductionDapper(DatabaseType databaseType, IServiceCollection services)
         {
-            string connectionString = DbConnectionString();
-            
-            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
-                retryAttempt => TimeSpan.FromSeconds(2),
-                (exception, timespan) =>
-                {
-                    Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
-                });
-
-            policy.Execute(() =>
+            switch (databaseType)
             {
-                //don't check this for SQlite in development
-                if (!_env.IsDevelopment())
-                {
-                    using (var conn = new MySqlConnection(connectionString))
-                    {
-                        conn.Open();
-                    }
-                }
-            });
+               case DatabaseType.MySql: 
+                    ConfigureDapperMySql(services);
+                    break;
+               default:
+                  throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+             }
+        }
+
+        private static void ConfigureDapperMySql(IServiceCollection services)
+        {
+            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
+            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
         }
 
         private void ConfigureBrighter(IServiceCollection services)
@@ -259,7 +278,16 @@ namespace Greetingsweb
         private string DbConnectionString()
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return _env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : Configuration.GetConnectionString("Greetings");
+            return _env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : GetConnectionString(GetDatabaseType());
+        }
+
+        private string GetConnectionString(DatabaseType databaseType)
+        {
+            return databaseType switch
+            { 
+                DatabaseType.MySql => Configuration.GetConnectionString("GreetingsMySql"),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
         }
     }
 }

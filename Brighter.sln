@@ -265,6 +265,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_MySqlMigrations",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutations_mySqlMigrations", "samples\WebAPI_Dapper\Salutations_mySqlMigrations\Salutations_mySqlMigrations.csproj", "{F72FF4C5-4CD8-4EFE-B468-5FAE45D20931}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Paramore.Brighter.MsSql.Dapper", "src\Paramore.Brighter.MsSql.Dapper\Paramore.Brighter.MsSql.Dapper.csproj", "{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -1511,6 +1513,18 @@ Global
 		{F72FF4C5-4CD8-4EFE-B468-5FAE45D20931}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{F72FF4C5-4CD8-4EFE-B468-5FAE45D20931}.Release|x86.ActiveCfg = Release|Any CPU
 		{F72FF4C5-4CD8-4EFE-B468-5FAE45D20931}.Release|x86.Build.0 = Release|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Debug|x86.Build.0 = Debug|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Release|x86.ActiveCfg = Release|Any CPU
+		{1E4A5095-2D49-43EF-9628-BF7CE147CAE9}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

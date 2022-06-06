@@ -1,12 +1,12 @@
 ﻿using System.Threading.Tasks;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
-using Greetingsweb.Models;
+using GreetingsWeb.Models;
 using Microsoft.AspNetCore.Mvc;
 using Paramore.Brighter;
 using Paramore.Darker;
 
-namespace Greetingsweb.Controllers
+namespace GreetingsWeb.Controllers
 {
     [ApiController]
     [Route("[controller]")]
