@@ -33,7 +33,7 @@ namespace GreetingsWeb.Database
             if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(connectionString);
-            CreateDatabaseIfNotExists(new MySqlConnection(connectionString));
+            CreateDatabaseIfNotExists(GetDbConnection(GetDatabaseType(config), connectionString));
 
             return webHost;
         }
@@ -94,7 +94,7 @@ namespace GreetingsWeb.Database
                 if (env.IsDevelopment())
                     CreateOutboxDevelopment(connectionString);
                 else
-                    CreateOutboxProduction(connectionString);
+                    CreateOutboxProduction(GetDatabaseType(config), connectionString);
             }
             catch (System.Exception e)
             {
@@ -122,7 +122,14 @@ namespace GreetingsWeb.Database
 
         private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString)
         {
-            CreateOutboxMySql(connectionString);
+            switch (databaseType)
+            {
+                case DatabaseType.MySql:
+                    CreateOutboxMySql(connectionString);
+                    break;
+                default:
+                    throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
+            }
         }
 
         private static void CreateOutboxMySql(string connectionString)
@@ -144,12 +151,39 @@ namespace GreetingsWeb.Database
         private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("Greetings");
+            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : GetDbConnectionString(config, GetDatabaseType(config)); 
         }
 
         private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
+            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : GetConnectionString(config, GetDatabaseType(config));
+        }
+
+        private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)
+        {
+            return databaseType switch
+            {
+                DatabaseType.MySql => new MySqlConnection(connectionString),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+        
+        private static string GetConnectionString(IConfiguration config, DatabaseType databaseType)
+        {
+            return databaseType switch
+            { 
+                DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+
+        private static string GetDbConnectionString(IConfiguration config, DatabaseType databaseType)
+        {
+            return databaseType switch
+            {
+                DatabaseType.MySql => config.GetConnectionString("Greetings"),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+             };
         }
 
         private static DatabaseType GetDatabaseType(IConfiguration config)
