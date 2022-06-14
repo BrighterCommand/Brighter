@@ -106,6 +106,11 @@ namespace GreetingsWeb.Database
 
         private static void CreateOutboxDevelopment(string connectionString)
         {
+            CreateOutboxSqlite(connectionString);
+        }
+
+        private static void CreateOutboxSqlite(string connectionString)
+        {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
 
@@ -151,12 +156,22 @@ namespace GreetingsWeb.Database
         private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : GetDbConnectionString(config, GetDatabaseType(config)); 
+            return env.IsDevelopment() ? GetDevDbConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
+        }
+
+        private static string GetDevDbConnectionString()
+        {
+            return "Filename=Greetings.db;Cache=Shared";
         }
 
         private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : GetConnectionString(config, GetDatabaseType(config));
+            return env.IsDevelopment() ? GetDevConnectionString() : GetProductionConnectionString(config, GetDatabaseType(config));
+        }
+
+        private static string GetDevConnectionString()
+        {
+            return "Filename=Greetings.db;Cache=Shared";
         }
 
         private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)
@@ -168,7 +183,7 @@ namespace GreetingsWeb.Database
             };
         }
         
-        private static string GetConnectionString(IConfiguration config, DatabaseType databaseType)
+        private static string GetProductionConnectionString(IConfiguration config, DatabaseType databaseType)
         {
             return databaseType switch
             { 
@@ -177,7 +192,7 @@ namespace GreetingsWeb.Database
             };
         }
 
-        private static string GetDbConnectionString(IConfiguration config, DatabaseType databaseType)
+        private static string GetProductionDbConnectionString(IConfiguration config, DatabaseType databaseType)
         {
             return databaseType switch
             {

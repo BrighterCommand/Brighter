@@ -17,14 +17,7 @@ using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
-using Paramore.Brighter.MySql;
-using Paramore.Brighter.MySql.Dapper;
-using Paramore.Brighter.Outbox.MySql;
-using Paramore.Brighter.Outbox.Sqlite;
-using Paramore.Brighter.Sqlite;
-using Paramore.Brighter.Sqlite.Dapper;
 using Paramore.Darker.AspNetCore;
 using Polly;
 using Polly.Registry;
@@ -142,9 +135,7 @@ namespace GreetingsWeb
                 
             if (_env.IsDevelopment())
             {
-                DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-                DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-                services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+                ConfigureDevelopmentDapper(services);
             }
             else
             {
@@ -153,6 +144,18 @@ namespace GreetingsWeb
 
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
             DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(PersonMapper).Assembly});
+        }
+
+        private static void ConfigureDevelopmentDapper(IServiceCollection services)
+        {
+            ConfigureDapperSqlite(services);
+        }
+
+        private static void ConfigureDapperSqlite(IServiceCollection services)
+        {
+            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
+            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
+            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
         }
 
         private static void ConfigureProductionDapper(DatabaseType databaseType, IServiceCollection services)
@@ -190,79 +193,40 @@ namespace GreetingsWeb
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
 
-            if (_env.IsDevelopment())
-            {
-                    services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
-                    services.AddScoped(typeof(IUnitOfWork), typeof(Paramore.Brighter.Sqlite.Dapper.UnitOfWork));
-                    
-                    services.AddBrighter(options =>
+            services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+            services.AddScoped(typeof(IUnitOfWork), typeof(Paramore.Brighter.Sqlite.Dapper.UnitOfWork));
+            
+            services.AddBrighter(options =>
+             {
+                 //we want to use scoped, so make sure everything understands that which needs to
+                 options.HandlerLifetime = ServiceLifetime.Scoped;
+                 options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+                 options.MapperLifetime = ServiceLifetime.Singleton;
+                 options.PolicyRegistry = policyRegistry;
+             })
+             .UseExternalBus(new RmqProducerRegistryFactory(
+                     new RmqMessagingGatewayConnection
                      {
-                         //we want to use scoped, so make sure everything understands that which needs to
-                         options.HandlerLifetime = ServiceLifetime.Scoped;
-                         options.CommandProcessorLifetime = ServiceLifetime.Scoped;
-                         options.MapperLifetime = ServiceLifetime.Singleton;
-                         options.PolicyRegistry = policyRegistry;
-                     })
-                     .UseExternalBus(new RmqProducerRegistryFactory(
-                             new RmqMessagingGatewayConnection
-                             {
-                                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                                 Exchange = new Exchange("paramore.brighter.exchange"),
-                             },
-                             new RmqPublication[]{
-                                 new RmqPublication
-                                {
-                                    Topic = new RoutingKey("GreetingMade"),
-                                    MaxOutStandingMessages = 5,
-                                    MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                    WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                    MakeChannels = OnMissingChannel.Create
-                                }}
-                         ).Create()
-                     )
-                     .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
-                     .UseSqliteTransactionConnectionProvider(typeof(SqliteDapperConnectionProvider), ServiceLifetime.Scoped)
-                     .UseOutboxSweeper(options =>
-                     {
-                         options.TimerInterval = 5;
-                         options.MinimumMessageAge = 5000;
-                     })
-                     .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
-            }
-            else
-            {
-                services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
-                services.AddScoped(typeof(IUnitOfWork), typeof(Paramore.Brighter.MySql.Dapper.UnitOfWork));
-                
-                services.AddBrighter(options =>
-                    {
-                        options.HandlerLifetime = ServiceLifetime.Scoped;
-                        options.MapperLifetime = ServiceLifetime.Singleton;
-                        options.PolicyRegistry = policyRegistry;
-                    })
-                    .UseExternalBus(new RmqProducerRegistryFactory(
-                            new RmqMessagingGatewayConnection
-                            {
-                                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                                Exchange = new Exchange("paramore.brighter.exchange"),
-                            },
-                            new RmqPublication[] {
-                                new RmqPublication
-                                {
-                                    Topic = new RoutingKey("GreetingMade"),
-                                    MaxOutStandingMessages = 5,
-                                    MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                    WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                    MakeChannels = OnMissingChannel.Create
-                                }}
-                        ).Create()
-                    )
-                    .UseMySqlOutbox(new MySqlConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
-                    .UseMySqTransactionConnectionProvider(typeof(MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
-                    .UseOutboxSweeper()
-                    .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
-            }
-
+                         AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                         Exchange = new Exchange("paramore.brighter.exchange"),
+                     },
+                     new RmqPublication[]{
+                         new RmqPublication
+                        {
+                            Topic = new RoutingKey("GreetingMade"),
+                            MaxOutStandingMessages = 5,
+                            MaxOutStandingCheckIntervalMilliSeconds = 500,
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels = OnMissingChannel.Create
+                        }}
+                 ).Create()
+             )
+             //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
+             //types easily. You may just choose to call the methods directly if you do not need to support multiple
+             //db types (which we just need to allow you to see how to configure your outbox type).
+             //It's also an example of how you can extend the DSL here easily if you have this kind of variability
+             .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName)
+             .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
         private void ConfigureDarker(IServiceCollection services)
@@ -278,7 +242,12 @@ namespace GreetingsWeb
         private string DbConnectionString()
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return _env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : GetConnectionString(GetDatabaseType());
+            return _env.IsDevelopment() ? GetDevDbConnectionString() : GetConnectionString(GetDatabaseType());
+        }
+
+        private static string GetDevDbConnectionString()
+        {
+            return "Filename=Greetings.db;Cache=Shared";
         }
 
         private string GetConnectionString(DatabaseType databaseType)

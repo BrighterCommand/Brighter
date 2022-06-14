@@ -8,11 +8,13 @@ public static class DatabaseGlobals
     public const string MYSQL = "MySQL";
     public const string MSSQL = "MsSQL";
     public const string POSTGRESSQL = "PostgresSQL";
+    public const string SQLITE = "Sqlite";
 }
 
 public enum DatabaseType
 {
     MySql,
     MsSql,
-    Postgres
+    Postgres,
+    Sqlite
 } 
