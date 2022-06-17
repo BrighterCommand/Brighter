@@ -21,9 +21,9 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="6.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.5" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite.Core" Version="6.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="6.0.6" />
   </ItemGroup>
 
     <ItemGroup>
