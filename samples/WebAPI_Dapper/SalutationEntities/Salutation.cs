@@ -2,9 +2,9 @@
 {
     public class Salutation
     {
-        public int Id { get; }
+        public long Id { get; set; }
         public byte[] TimeStamp { get; set; }
-        public string Greeting { get; }
+        public string Greeting { get; set; }
 
         public Salutation() { /* ORM needs to create */ }
 

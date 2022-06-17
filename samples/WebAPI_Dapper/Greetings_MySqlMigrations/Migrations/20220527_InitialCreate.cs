@@ -1,16 +1,16 @@
 ﻿using FluentMigrator;
 
-namespace Greetings_SqliteMigrations.Migrations;
+namespace Greetings_MySqlMigrations.Migrations;
 
 [Migration(1)]
-public class SqlliteInitialCreate : Migration
+public class MySqlInitialCreate : Migration 
 {
     public override void Up()
     {
         Create.Table("Person")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
             .WithColumn("Name").AsString().Unique()
-            .WithColumn("TimeStamp").AsBinary().WithDefault(SystemMethods.CurrentDateTime);
+            .WithColumn("TimeStamp").AsDateTime().Nullable().WithDefault(SystemMethods.CurrentDateTime);
 
         Create.Table("Greeting")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
@@ -26,5 +26,5 @@ public class SqlliteInitialCreate : Migration
     {
         Delete.Table("Greeting");
         Delete.Table("Person");
-    }
+    }    
 }

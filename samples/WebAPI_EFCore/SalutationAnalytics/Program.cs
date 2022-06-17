@@ -53,69 +53,75 @@ namespace SalutationAnalytics
                 .ConfigureServices((hostContext, services) =>
                 {
                     ConfigureEFCore(hostContext, services);
-                    
-                    var subscriptions = new Subscription[]
-                    {
-                        new RmqSubscription<GreetingMade>(
-                            new SubscriptionName("paramore.sample.salutationanalytics"),
-                            new ChannelName("SalutationAnalytics"),
-                            new RoutingKey("GreetingMade"),
-                            runAsync: true,
-                            timeoutInMilliseconds: 200,
-                            isDurable: true,
-                            makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
-                    };
-
-                    var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
-
-                    var rmqConnection = new RmqMessagingGatewayConnection
-                    {
-                        AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
-                        Exchange = new Exchange("paramore.brighter.exchange")
-                    };
-
-                    var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-                    services.AddServiceActivator(options =>
-                        {
-                            options.Subscriptions = subscriptions;
-                            options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
-                            options.UseScoped = true;
-                            options.HandlerLifetime = ServiceLifetime.Scoped;
-                            options.MapperLifetime = ServiceLifetime.Singleton;
-                            options.CommandProcessorLifetime = ServiceLifetime.Scoped;
-                            options.PolicyRegistry = new SalutationPolicy();
-                        })
-                        .UseExternalBus(new RmqProducerRegistryFactory(
-                                new RmqMessagingGatewayConnection
-                                {
-                                    AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
-                                    Exchange = new Exchange("paramore.brighter.exchange"),
-                                },
-                                new RmqPublication[] {
-                                    new RmqPublication
-                                    {
-                                        Topic = new RoutingKey("SalutationReceived"),
-                                        MaxOutStandingMessages = 5,
-                                        MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                        MakeChannels = OnMissingChannel.Create
-                                    }}
-                            ).Create()
-                        )
-                        .AutoFromAssemblies()
-                        .UseExternalInbox(
-                            ConfigureInbox(hostContext),
-                            new InboxConfiguration(
-                                scope: InboxScope.All,
-                                onceOnly: true,
-                                actionOnExists: OnceOnlyAction.Warn
-                                )
-                            );
-
-                    services.AddHostedService<ServiceActivatorHostedService>();
+                    ConfigureBrighter(hostContext, services);
                 })
                 .UseConsoleLifetime();
+
+        private static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
+        {
+            var subscriptions = new Subscription[]
+            {
+                new RmqSubscription<GreetingMade>(
+                    new SubscriptionName("paramore.sample.salutationanalytics"),
+                    new ChannelName("SalutationAnalytics"),
+                    new RoutingKey("GreetingMade"),
+                    runAsync: true,
+                    timeoutInMilliseconds: 200,
+                    isDurable: true,
+                    makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+            };
+
+            var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
+
+            var rmqConnection = new RmqMessagingGatewayConnection
+            {
+                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
+                Exchange = new Exchange("paramore.brighter.exchange")
+            };
+
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
+
+            services.AddServiceActivator(options =>
+                {
+                    options.Subscriptions = subscriptions;
+                    options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                    options.UseScoped = true;
+                    options.HandlerLifetime = ServiceLifetime.Scoped;
+                    options.MapperLifetime = ServiceLifetime.Singleton;
+                    options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+                    options.PolicyRegistry = new SalutationPolicy();
+                })
+                .UseExternalBus(new RmqProducerRegistryFactory(
+                        new RmqMessagingGatewayConnection
+                        {
+                            AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
+                            Exchange = new Exchange("paramore.brighter.exchange"),
+                        },
+                        new RmqPublication[]
+                        {
+                            new RmqPublication
+                            {
+                                Topic = new RoutingKey("SalutationReceived"),
+                                MaxOutStandingMessages = 5,
+                                MaxOutStandingCheckIntervalMilliSeconds = 500,
+                                WaitForConfirmsTimeOutInMilliseconds = 1000,
+                                MakeChannels = OnMissingChannel.Create
+                            }
+                        }
+                    ).Create()
+                )
+                .AutoFromAssemblies()
+                .UseExternalInbox(
+                    ConfigureInbox(hostContext),
+                    new InboxConfiguration(
+                        scope: InboxScope.All,
+                        onceOnly: true,
+                        actionOnExists: OnceOnlyAction.Warn
+                    )
+                );
+
+            services.AddHostedService<ServiceActivatorHostedService>();
+        }
 
         private static string GetEnvironment()
         {

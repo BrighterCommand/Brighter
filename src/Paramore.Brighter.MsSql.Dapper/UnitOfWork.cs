@@ -3,20 +3,19 @@ using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
+using Microsoft.Data.SqlClient;
 using Paramore.Brighter.Dapper;
-using SQLitePCL;
 
-namespace Paramore.Brighter.Sqlite.Dapper
+namespace Paramore.Brighter.MySql.Dapper
 {
     public class UnitOfWork : IUnitOfWork
     {
-        private readonly SqliteConnection _connection;
-        private SqliteTransaction _transaction;
+        private readonly SqlConnection _connection;
+        private SqlTransaction _transaction;
 
         public UnitOfWork(DbConnectionStringProvider dbConnectionStringProvider)
-        {                     
-            _connection = new SqliteConnection(dbConnectionStringProvider.ConnectionString);
+        {
+            _connection = new SqlConnection(dbConnectionStringProvider.ConnectionString);
         }
 
         public void Commit()
@@ -35,6 +34,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
 
         public DbTransaction BeginOrGetTransaction()
         {
+            //ToDo: make this thread safe
             if (!HasTransaction())
             {
                 if (_connection.State != ConnectionState.Open)
@@ -46,12 +46,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
 
             return _transaction;
         }
-        
-        /// <summary>
-        /// Begins a transaction, if one not already started. Closes connection if required
-        /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+
         public async Task<DbTransaction> BeginOrGetTransactionAsync(CancellationToken cancellationToken)
         {
             if (!HasTransaction())
@@ -73,13 +68,12 @@ namespace Paramore.Brighter.Sqlite.Dapper
 
         public void Dispose()
         {
-            if (HasTransaction())
+            if (_transaction != null)
             {
-                //will throw if transaction completed, but no way to check transaction state via api
-                try { _transaction.Rollback(); } catch (Exception) { }
+                try { _transaction.Rollback(); } catch (Exception) { /*can't check transaction status, so it will throw if already committed*/ }
             }
-
-            if (_connection is { State: ConnectionState.Open })
+            
+            if (_connection.State == ConnectionState.Open)
             {
                 _connection.Close();
             }
