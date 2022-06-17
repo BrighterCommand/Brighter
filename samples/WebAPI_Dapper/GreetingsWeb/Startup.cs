@@ -194,7 +194,6 @@ namespace GreetingsWeb
             };
 
             services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
-            services.AddScoped(typeof(IUnitOfWork), typeof(Paramore.Brighter.Sqlite.Dapper.UnitOfWork));
             
             services.AddBrighter(options =>
              {
