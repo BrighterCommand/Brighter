@@ -30,7 +30,7 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
-using Paramore.Brighter.DynamoDb.Extensions;
+using Paramore.Brighter.DynamoDb;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// We will default both throughput on tables and GSI to on demand if you don't provide them
         /// We will default projections to all, if you don't provide them
         /// </summary>
-        /// <param name="provisonedThroughput">What is the provisioned throughput for the table. Defaults to 10 read and write units</param>
+        /// <param name="provisionedThroughput">What is the provisioned throughput for the table. Defaults to 10 read and write units</param>
         /// <param name="gsiProjections">How are global secondary indexes projected; defaults to all</param>
         /// <param name="billingMode">What billing mode (provisioned or request)</param>
         /// <param name="sseSpecification"></param>
@@ -59,8 +59,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="tags"></param>
         /// <typeparam name="T"></typeparam>
         /// <returns></returns>
-        public CreateTableRequest GenerateCreateTableMapper<T>(
-            DynamoDbCreateProvisionedThroughput provisonedThroughput,
+        public CreateTableRequest GenerateCreateTableRequest<T>(
+            DynamoDbCreateProvisionedThroughput provisionedThroughput,
             DynamoGSIProjections gsiProjections = null,
             BillingMode billingMode = null,
             SSESpecification sseSpecification = null,
@@ -71,10 +71,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             string tableName = GetTableName<T>(docType);
 
             var createTableRequest = new CreateTableRequest(tableName, GetPrimaryKey<T>(docType).ToList());
-            AddTableProvisionedThrougput<T>(provisonedThroughput, createTableRequest);
+            AddTableProvisionedThrougput<T>(provisionedThroughput, createTableRequest);
             createTableRequest.AttributeDefinitions.AddRange(GetAttributeDefinitions<T>(docType));
             createTableRequest.GlobalSecondaryIndexes.AddRange(GetGlobalSecondaryIndices<T>(docType).Select(entry => entry.Value));
-            AddGSIProvisionedThroughput<T>(provisonedThroughput, createTableRequest);
+            AddGSIProvisionedThroughput<T>(provisionedThroughput, createTableRequest);
             AddGSIProjections(gsiProjections, createTableRequest);
             createTableRequest.LocalSecondaryIndexes.AddRange(GetLocalSecondaryIndices<T>(docType));
             createTableRequest.BillingMode = billingMode ?? BillingMode.PROVISIONED;

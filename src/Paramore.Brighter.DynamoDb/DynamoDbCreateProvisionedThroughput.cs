@@ -23,7 +23,7 @@ THE SOFTWARE. */
 using System.Collections.Generic;
 using Amazon.DynamoDBv2.Model;
 
-namespace Paramore.Brighter.DynamoDb.Extensions
+namespace Paramore.Brighter.DynamoDb
 {
     public class DynamoDbCreateProvisionedThroughput
     {

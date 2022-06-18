@@ -1,5 +1,4 @@
 using System.IO;
-using FluentMigrator.Runner;
 using GreetingsWeb.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;

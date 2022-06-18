@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 
-namespace Paramore.Brighter.DynamoDb.Extensions
+namespace Paramore.Brighter.DynamoDb
 {
     public class DynamoDbTableBuilder
     {

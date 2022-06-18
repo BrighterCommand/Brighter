@@ -1,12 +1,5 @@
 using System;
-using DapperExtensions;
-using DapperExtensions.Sql;
-using FluentMigrator.Runner;
-using Greetings_MySqlMigrations.Migrations;
-using Greetings_SqliteMigrations.Migrations;
-using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
-using GreetingsWeb.Database;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -72,7 +65,6 @@ namespace GreetingsWeb
             });
 
             ConfigureMigration(services);
-            ConfigureDapper(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
@@ -98,8 +90,6 @@ namespace GreetingsWeb
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
 
-            services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
-            
             services.AddBrighter(options =>
              {
                  //we want to use scoped, so make sure everything understands that which needs to
@@ -125,8 +115,8 @@ namespace GreetingsWeb
                         }}
                  ).Create()
              )
-             .UseDynamoDbOutbox(awsConnection, dynamoDbConfiguration, ServiceLifetime.Singleton)
-             .UseDynamoTransactionProvider(ServiceLifetime.Scoped)
+             //.UseDynamoDbOutbox(awsConnection, dynamoDbConfiguration, ServiceLifetime.Singleton)
+             //.UseDynamoTransactionProvider(ServiceLifetime.Scoped)
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
@@ -140,24 +130,5 @@ namespace GreetingsWeb
                 .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly);
         }
 
-        private string DbConnectionString()
-        {
-            //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return _env.IsDevelopment() ? GetDevDbConnectionString() : GetConnectionString(GetDatabaseType());
-        }
-
-        private static string GetDevDbConnectionString()
-        {
-            return "Filename=Greetings.db;Cache=Shared";
-        }
-
-        private string GetConnectionString(DatabaseType databaseType)
-        {
-            return databaseType switch
-            { 
-                DatabaseType.MySql => Configuration.GetConnectionString("GreetingsMySql"),
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
-        }
     }
 }

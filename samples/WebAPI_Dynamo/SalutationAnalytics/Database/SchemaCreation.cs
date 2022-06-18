@@ -1,17 +1,4 @@
-﻿using System;
-using System.Data;
-using FluentMigrator.Runner;
-using Microsoft.Data.Sqlite;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
-using MySqlConnector;
-using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Inbox.Sqlite;
-using Paramore.Brighter.Outbox.MySql;
-using Paramore.Brighter.Outbox.Sqlite;
-using Polly;
+﻿using Microsoft.Extensions.Hosting;
 
 namespace SalutationAnalytics.Database
 {

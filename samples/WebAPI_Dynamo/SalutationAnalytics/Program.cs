@@ -1,9 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Sql;
-using FluentMigrator.Runner;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -12,16 +9,13 @@ using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
-using Paramore.Brighter.Inbox.MySql;
-using Paramore.Brighter.Inbox.Sqlite;
+using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using SalutationAnalytics.Database;
-using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
 using SalutationPorts.Requests;
-using Salutations_SqliteMigrations.Migrations;
 
 namespace SalutationAnalytics
 {
@@ -33,7 +27,6 @@ namespace SalutationAnalytics
             host.CheckDbIsUp();
             host.MigrateDatabase();
             host.CreateInbox();
-            host.CreateOutbox();
             await host.RunAsync();
         }
 
@@ -56,7 +49,6 @@ namespace SalutationAnalytics
                 .ConfigureServices((hostContext, services) =>
                 {      
                     ConfigureMigration(hostContext, services);
-                    ConfigureDapper(hostContext, services);
                     ConfigureBrighter(hostContext, services);
                 })
                 .UseConsoleLifetime();
@@ -129,64 +121,14 @@ namespace SalutationAnalytics
 
         private static void ConfigureMigration(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
-            if (hostBuilderContext.HostingEnvironment.IsDevelopment())
-            {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c =>
-                    {
-                        c.AddSQLite()
-                            .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-                            .ScanIn(typeof(Salutations_SqliteMigrations.Migrations.SqliteInitialCreate).Assembly).For.Migrations();
-                    });
-            }
-            else
-            {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c => c.AddMySql5()
-                        .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-                        .ScanIn(typeof(Salutations_mySqlMigrations.Migrations.MySqlInitialCreate).Assembly).For.Migrations()
-                    ); 
-            }
-             
+            
         }
 
-        private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
-        {
-            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString(hostBuilderContext)));
-                
-            if (hostBuilderContext.HostingEnvironment.IsDevelopment())
-            {
-                DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-                DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-                services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
-            }
-            else
-            {
-                DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-                DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-                services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
-            }
-
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(SalutationMapper).Assembly});
-        }
-        
         private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
         {
-            if (hostContext.HostingEnvironment.IsDevelopment())
-            {
-                return new SqliteInbox(new SqliteInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
-            }
-
-            return new MySqlInbox(new MySqlInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
-        }
-        
-        private static string DbConnectionString(HostBuilderContext hostContext)
-        {
-            //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return hostContext.HostingEnvironment.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : hostContext.Configuration.GetConnectionString("Salutations");
+            //TODO: Set up an Inbox
+            //return new DynamoDbInbox();
+            return null;
         }
         
         private static string GetEnvironment()

@@ -32,25 +32,28 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 {
     [Trait("Category", "DynamoDB")]
-    public class DynamoDbOutboxEmptyStoreAsyncTests : DynamoDBOutboxBaseTest
-    {
+    public class DynamoDbOutboxMessageAlreadyExistsAsyncTests : DynamoDBOutboxBaseTest
+    {        
         private readonly Message _messageEarliest;
-        private Message _storedMessage;
-        private DynamoDbOutboxSync _dynamoDbOutboxSync;
 
-        public DynamoDbOutboxEmptyStoreAsyncTests()
-        {
+        private Exception _exception;
+        private DynamoDbOutbox _dynamoDbOutbox;
+
+        public DynamoDbOutboxMessageAlreadyExistsAsyncTests()
+        {                                  
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _dynamoDbOutboxSync = new DynamoDbOutboxSync(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
         }
 
         [Fact]
-        public async Task When_there_is_no_message_in_the_dynamo_db_outbox()
+        public async Task When_the_message_is_already_in_the_outbox_async()
         {
-            _storedMessage = await _dynamoDbOutboxSync.GetAsync(_messageEarliest.Id);
+            await _dynamoDbOutbox.AddAsync(_messageEarliest);
 
-            //_should_return_a_empty_message
-            _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
+            _exception = await Catch.ExceptionAsync(() => _dynamoDbOutbox.AddAsync(_messageEarliest));            
+
+            //_should_ignore_the_duplicate_key_and_still_succeed
+            _exception.Should().BeNull();
         }
     }
 }

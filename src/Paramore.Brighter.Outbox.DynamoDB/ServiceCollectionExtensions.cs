@@ -19,12 +19,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return brighterBuilder;
         }
 
-        private static DynamoDbOutboxSync BuildDynamoDbOutbox(IServiceProvider provider)
+        private static DynamoDbOutbox BuildDynamoDbOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<DynamoDbConfiguration>();
             var connection = provider.GetService<IAmazonDynamoDB>();
 
-            return new DynamoDbOutboxSync(connection, config);
+            return new DynamoDbOutbox(connection, config);
         }
     }
 }

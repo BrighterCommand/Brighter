@@ -34,7 +34,7 @@ using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
-    public class DynamoDbOutboxSync :
+    public class DynamoDbOutbox :
         IAmAnOutboxSync<Message>,
         IAmAnOutboxAsync<Message>
     {
@@ -44,14 +44,25 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
-        ///     Initialises a new instance of the <see cref="DynamoDbOutboxSync"/> class.
+        ///  Initialises a new instance of the <see cref="DynamoDbOutbox"/> class.
         /// </summary>
         /// <param name="client">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
-        public DynamoDbOutboxSync(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
+        public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
         {
             _configuration = configuration;
             _context = new DynamoDBContext(client); 
+        }
+
+        /// <summary>
+        /// Initialises a new instance of the <see cref="DynamoDbOutbox"/> class. 
+        /// </summary>
+        /// <param name="context">An existing Dynamo Db Context</param>
+        /// <param name="configuration">The Configuration from the context - the config is internal, so we can't grab the settings from it.</param>
+        public DynamoDbOutbox(DynamoDBContext context, DynamoDbConfiguration configuration)
+        {
+            _context = context;
+            _configuration = configuration;
         }
 
         /// <inheritdoc />

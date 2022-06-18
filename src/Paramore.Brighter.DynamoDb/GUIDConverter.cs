@@ -2,7 +2,7 @@ using System;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
 
-namespace Paramore.Brighter.DynamoDb.Extensions
+namespace Paramore.Brighter.DynamoDb
 {
     public class GUIDConverter : IPropertyConverter
     {
