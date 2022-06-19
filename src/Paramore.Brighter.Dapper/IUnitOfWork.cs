@@ -32,6 +32,11 @@ namespace Paramore.Brighter.Dapper
         /// The .NET DbConnection to the Database
         /// </summary>
         DbConnection Database { get; }
+        
+        /// <summary>
+        /// Is there an extant transaction
+        /// </summary>
+        /// <returns>True if a transaction is already open on this unit of work, false otherwise</returns>
         bool HasTransaction();
     }
 }

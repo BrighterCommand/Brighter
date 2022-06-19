@@ -26,11 +26,14 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.DocumentModel;
+using Amazon.DynamoDBv2.Model;
+using Paramore.Brighter.DynamoDb;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -87,14 +90,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var messageToStore = new MessageItem(message);
 
-            await _context.SaveAsync(
-                    messageToStore, 
-                    new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName}, 
-                    cancellationToken)
-                .ConfigureAwait(ContinueOnCapturedContext);
+            if (transactionConnectionProvider != null)
+            {
+                await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionConnectionProvider);
+            }
+            else
+            {
+                await WriteMessageToOutbox(cancellationToken, messageToStore);
+            }
         }
 
-        /// <summary>
+       /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
@@ -324,7 +330,18 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
         
-        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
+       private async Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+       {
+           var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
+           var attributes = _context.ToDocument(messageToStore).ToAttributeMap();
+           
+           var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
+           transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
+           tcs.SetResult(transaction);
+           return tcs.Task.Result;
+       }
+       
+       private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
             MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
@@ -342,5 +359,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return messages;
         }
-    }
+        private async Task WriteMessageToOutbox(CancellationToken cancellationToken, MessageItem messageToStore)
+        {
+            await _context.SaveAsync(
+                    messageToStore,
+                    new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName },
+                    cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+        }
+     }
 }

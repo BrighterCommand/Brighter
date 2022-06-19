@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using Amazon;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
@@ -47,7 +48,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
     public async void When_There_Is_A_Transaction_Between_Outbox_And_Entity()
     {
         var context = new DynamoDBContext(Client);
-        var myItem = new MyEntity { Value = "Test Value for Transaction Checking" };
+        var myItem = new MyEntity { Id = Guid.NewGuid().ToString(), Value = "Test Value for Transaction Checking" };
         var attributes = context.ToDocument(myItem).ToAttributeMap();
         var myMessageHeader = new MessageHeader(
             messageId: Guid.NewGuid(),
@@ -64,15 +65,24 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
         var myMessage = new MessageItem(new Message(myMessageHeader, body));
         var messageAttributes = context.ToDocument(myMessage).ToAttributeMap();
 
-        var transaction = new TransactWriteItemsRequest
-        { 
-            TransactItems= new List<TransactWriteItem>
-            {
-                new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = attributes, } },
-                new TransactWriteItem { Put = new Put { TableName = OutboxTableName } }
-            }
-        };
+        var uow = new DynamoDbUnitOfWork(Client);
+        TransactWriteItemsResponse response = null;
+        try
+        {
+            var transaction = uow.BeginOrGetTransaction();
+            transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = attributes, } });
+            transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = OutboxTableName, Item = messageAttributes}});
+            
+            response = await uow.CommitAsync();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
 
-        Client.TransactWriteItemsAsync(transaction);
+        Assert.NotNull(response); 
+        Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
+        Assert.Equal(2, response.ContentLength);    //number of tables in the transaction
     }
 }

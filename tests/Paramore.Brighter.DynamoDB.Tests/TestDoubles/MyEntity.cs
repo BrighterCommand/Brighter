@@ -8,6 +8,7 @@ public class MyEntity
 {
     //Required
     [DynamoDBHashKey]
+    [DynamoDBProperty]
     public string Id { get; set; }
     [DynamoDBProperty]
     public string Value { get; set; }
