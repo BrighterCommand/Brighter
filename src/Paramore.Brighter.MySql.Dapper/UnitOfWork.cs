@@ -32,6 +32,10 @@ namespace Paramore.Brighter.MySql.Dapper
             get { return _connection; }
         }
 
+        /// <summary>
+        /// Begins a new transaction against the database. Will open the connection if it is not already open,
+        /// </summary>
+        /// <returns>A transaction</returns>
         public DbTransaction BeginOrGetTransaction()
         {
             //ToDo: make this thread safe
@@ -47,6 +51,11 @@ namespace Paramore.Brighter.MySql.Dapper
             return _transaction;
         }
 
+        /// <summary>
+        /// Begins a new transaction asynchronously against the database. Will open the connection if it is not already open,
+        /// </summary>
+        /// <param name="cancellationToken"></param>
+        /// <returns>A transaction</returns>
         public async Task<DbTransaction> BeginOrGetTransactionAsync(CancellationToken cancellationToken)
         {
             if (!HasTransaction())
@@ -61,11 +70,18 @@ namespace Paramore.Brighter.MySql.Dapper
             return _transaction;
         }
 
+        /// <summary>
+        /// Is there an extant transaction
+        /// </summary>
+        /// <returns>True if a transaction is already open on this unit of work, false otherwise</returns>
         public bool HasTransaction()
         {
             return _transaction != null;
         }
 
+        /// <summary>
+        /// Rolls back a transaction if one is open; closes any connection to the Db
+        /// </summary>
         public void Dispose()
         {
             if (_transaction != null)

@@ -11,7 +11,7 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Paramore.Brighter.DynamoDb.Extensions\Paramore.Brighter.DynamoDb.Extensions.csproj" />
+    <ProjectReference Include="..\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
