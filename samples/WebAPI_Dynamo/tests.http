@@ -17,6 +17,7 @@ GET http://localhost:5000/People/Tyrion HTTP/1.1
 
 
 ### Now add some more greetings
+### Note that in the DynamoDb sample, Greetings are unique, so repeated attempts to add the same greeting will fail to write any new greetings
 
 POST http://localhost:5000/Greetings/Tyrion/new HTTP/1.1
 Content-Type: application/json

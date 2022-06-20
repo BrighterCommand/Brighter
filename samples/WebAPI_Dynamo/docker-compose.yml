@@ -1,27 +1,14 @@
 version: '3.1'
 services:
-  web:
-    build: ./GreetingsAdapters
-    hostname: greetingsapi
+ dynamo:
+    image: dwmkerr/dynamodb
+    command: "-inMemory"
+    hostname: dynamo
+    volumes:
+      - dynamodb:/data
     ports:
-      - "5000:5000"
-    environment:
-      - BRIGHTER_ConnectionStrings__Greetings=server=greetings_db; port=3306; uid=root; pwd=root; database=Greetings
-      - BRIGHTER_ConnectionStrings__GreetingsDb=server=greetings_db; port=3306; uid=root; pwd=root
-      - ASPNETCORE_ENVIRONMENT=Production
-    links:
-      - mysql:greetings_db
-    depends_on:
-      - mysql
-      - rabbitmq
-  worker:
-    build: ./GreetingsWatcher
-    hostname: greetingsworker
-    environment:
-      - ASPNETCORE_ENVIRONMENT=Production
-    depends_on:
-      - rabbitmq
-  rabbitmq:
+      - "8000:8000"
+ rabbitmq:
     image: brightercommand/rabbitmq:3.8-management-delay
     ports:
       - "5672:5672"
@@ -32,7 +19,6 @@ services:
 volumes:
     rabbitmq-home:
       driver: local
-    my-db:
+    dynamodb:
       driver: local
-
-
+ 
