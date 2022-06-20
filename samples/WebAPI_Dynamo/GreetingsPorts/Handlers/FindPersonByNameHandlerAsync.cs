@@ -5,6 +5,7 @@ using Amazon.DynamoDBv2.DataModel;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
+using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Darker;
 
@@ -14,9 +15,9 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _unitOfWork;
 
-        public FindPersonByNameHandlerAsync(DynamoDbUnitOfWork unitOfWork)
+        public FindPersonByNameHandlerAsync(IAmABoxTransactionConnectionProvider  unitOfWork)
         {
-            _unitOfWork = unitOfWork;
+            _unitOfWork = (DynamoDbUnitOfWork ) unitOfWork;
         }
         
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())

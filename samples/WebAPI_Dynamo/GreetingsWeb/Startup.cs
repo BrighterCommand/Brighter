@@ -1,4 +1,10 @@
 using System;
+using System.Collections.Generic;
+using Amazon;
+using Amazon.DynamoDBv2;
+using Amazon.DynamoDBv2.Model;
+using Amazon.Runtime;
+using GreetingsEntities;
 using GreetingsPorts.Handlers;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
@@ -8,7 +14,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
+using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -64,14 +70,93 @@ namespace GreetingsWeb
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
 
-            ConfigureMigration(services);
+            ConfigureDynamo(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
 
-        private void ConfigureMigration(IServiceCollection services)
+        private void ConfigureDynamo(IServiceCollection services)
         {
+            IAmazonDynamoDB client = CreateAndRegisterClient(services);
+            CreateEntityStore(client);
+            CreateOutbox(client, services);
+        }
+
+       private IAmazonDynamoDB CreateAndRegisterClient(IServiceCollection services)
+        {
+            if (_env.IsDevelopment())
+            {
+                return CreateAndRegisterLocalClient(services);
+            }
+
+            return CreateAndRegisterRemoteClient(services);
+        }
+        private IAmazonDynamoDB CreateAndRegisterLocalClient(IServiceCollection services)
+        {
+            var credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
             
+            var clientConfig = new AmazonDynamoDBConfig
+            {
+                ServiceURL = "http://localhost:8000"
+
+            };
+
+            var dynamoDb = new AmazonDynamoDBClient(credentials, clientConfig);
+            services.Add(new ServiceDescriptor(typeof(IAmazonDynamoDB), dynamoDb));
+
+            var dynamoDbConfiguration = new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1);
+            services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
+            
+            return dynamoDb;
+        }     
+        
+        private IAmazonDynamoDB CreateAndRegisterRemoteClient(IServiceCollection services)
+        {
+            throw new NotImplementedException();
+        }
+
+         private void CreateEntityStore(IAmazonDynamoDB client)
+        {
+            var tableRequestFactory = new DynamoDbTableFactory();
+            var dbTableBuilder = new DynamoDbTableBuilder(client);
+    
+            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<Person>(
+                new DynamoDbCreateProvisionedThroughput
+                (
+                    new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 }
+                )
+            );
+    
+            var entityTableName = tableRequest.TableName;
+            (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] { entityTableName }).Result;
+            if (!hasTables.exist)
+            {
+                var buildTable = dbTableBuilder.Build(tableRequest).Result;
+                dbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
+            }
+        }
+            
+        private void CreateOutbox(IAmazonDynamoDB client, IServiceCollection services)
+        {
+            var tableRequestFactory = new DynamoDbTableFactory();
+            var dbTableBuilder = new DynamoDbTableBuilder(client);
+            
+            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
+                    new DynamoDbCreateProvisionedThroughput(
+                    new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                    new Dictionary<string, ProvisionedThroughput>
+                    {
+                        {"Outstanding", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}},
+                        {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
+                    }
+                ));
+            var outboxTableName = createTableRequest.TableName;
+            (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] {outboxTableName}).Result;
+            if (!hasTables.exist)
+            {
+                var buildTable = dbTableBuilder.Build(createTableRequest).Result;
+                dbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
+            }
         }
 
         private void ConfigureBrighter(IServiceCollection services)
@@ -115,8 +200,8 @@ namespace GreetingsWeb
                         }}
                  ).Create()
              )
-             //.UseDynamoDbOutbox(awsConnection, dynamoDbConfiguration, ServiceLifetime.Singleton)
-             //.UseDynamoTransactionProvider(ServiceLifetime.Scoped)
+             .UseDynamoDbOutbox(ServiceLifetime.Singleton)
+             .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped)
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 

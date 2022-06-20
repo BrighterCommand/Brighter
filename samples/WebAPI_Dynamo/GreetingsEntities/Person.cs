@@ -4,17 +4,16 @@ using Amazon.DynamoDBv2.DataModel;
 
 namespace GreetingsEntities
 {
-    [DynamoDBTable("People", LowerCamelCaseProperties = true)]
+    [DynamoDBTable("People")]
     public class Person
     {
         [DynamoDBHashKey]
         [DynamoDBProperty]
         public string Name { get; set; }
         
-        [DynamoDBProperty]
-        public IList<string> Greetings { get; set; } = new List<string>();
+        public List<string> Greetings { get; set; } = new List<string>();
 
-        [DynamoDBVersion]
-        public int? VersionNumber { get; set; }
+        //[DynamoDBVersion]
+        //public int? VersionNumber { get; set; }
     }
 }

@@ -5,7 +5,6 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj" />

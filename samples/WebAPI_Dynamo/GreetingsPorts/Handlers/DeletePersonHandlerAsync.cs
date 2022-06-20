@@ -14,9 +14,9 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _unitOfWork;
 
-        public DeletePersonHandlerAsync(DynamoDbUnitOfWork unitOfWork)
+        public DeletePersonHandlerAsync(IAmABoxTransactionConnectionProvider unitOfWork)
         {
-            _unitOfWork = unitOfWork;
+            _unitOfWork = (DynamoDbUnitOfWork)unitOfWork;
         }
         public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
         {

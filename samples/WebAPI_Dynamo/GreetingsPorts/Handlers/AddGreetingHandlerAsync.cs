@@ -20,9 +20,9 @@ namespace GreetingsPorts.Handlers
         private readonly ILogger<AddGreetingHandlerAsync> _logger;
 
 
-        public AddGreetingHandlerAsync(DynamoDbUnitOfWork uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
-            _unitOfWork = uow;
+            _unitOfWork = (DynamoDbUnitOfWork)uow;
             _postBox = postBox;
             _logger = logger;
         }

@@ -12,9 +12,9 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _dynamoDbUnitOfWork;
 
-        public AddPersonHandlerAsync(DynamoDbUnitOfWork dynamoDbUnitOfWork )
+        public AddPersonHandlerAsync(IAmABoxTransactionConnectionProvider  dynamoDbUnitOfWork)
         {
-            _dynamoDbUnitOfWork = dynamoDbUnitOfWork;
+            _dynamoDbUnitOfWork = (DynamoDbUnitOfWork )dynamoDbUnitOfWork;
         }
 
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
