@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -13,11 +16,13 @@ namespace SalutationPorts.Handlers
 {
     public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     {
+        private readonly DynamoDbUnitOfWork  _uow;
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandlerAsync> _logger;
 
-        public GreetingMadeHandlerAsync(IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
         {
+            _uow = (DynamoDbUnitOfWork)uow;
             _postBox = postBox;
             _logger = logger;
         }
@@ -28,30 +33,28 @@ namespace SalutationPorts.Handlers
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
-           /* 
-            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
+            var context = new DynamoDBContext(_uow.DynamoDb);
+            var tx = _uow.BeginOrGetTransaction();
             try
             {
-                var salutation = new Salutation(@event.Greeting);
+                var salutation = new Salutation{ Greeting = @event.Greeting};
+                var attributes = context.ToDocument(salutation).ToAttributeMap();
                 
-                await _uow.Database.InsertAsync<Salutation>(salutation, tx);
+                tx.TransactItems.Add(new TransactWriteItem{Put = new Put{ TableName = "Salutations", Item = attributes}});
                 
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
                 
-                await tx.CommitAsync(cancellationToken);
+                await _uow.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
-                
-                //if it went wrong rollback entity write and Outbox write
-                await tx.RollbackAsync(cancellationToken);
+                _uow.Rollback();
                 
                 return await base.HandleAsync(@event, cancellationToken);
             }
 
             await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
-            */
             
             return await base.HandleAsync(@event, cancellationToken);
         }

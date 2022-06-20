@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -25,6 +26,11 @@ namespace GreetingsPorts.Handlers
             var context = new DynamoDBContext(_unitOfWork.DynamoDb);
 
             var person = await context.LoadAsync<Person>(query.Name);
+
+            if (person == null)
+            {
+                throw new InvalidOperationException($"There is no person called {query.Name} registered");
+            }
 
             return new FindPersonResult(person);
         }

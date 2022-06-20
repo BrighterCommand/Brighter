@@ -40,9 +40,13 @@ namespace GreetingsPorts.Handlers
                 var person = await context.LoadAsync<Person>(addGreeting.Name);
                 
                 person.Greetings.Add(addGreeting.Greeting);
-                
-               //write the added child entity to the Db
-               transaction.TransactItems.Add(new TransactWriteItem{Update = new Update{}});
+
+                var document = context.ToDocument(person);
+                var attributeValues = document.ToAttributeMap();
+               
+               //write the added child entity to the Db - just replace the whole entity as we grabbed the original
+               //in production code, an update expression would be faster
+               transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = "People", Item = attributeValues}});
 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(addGreeting.Greeting), cancellationToken: cancellationToken));
@@ -54,7 +58,7 @@ namespace GreetingsPorts.Handlers
             {   
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
-                //await tx.RollbackAsync(cancellationToken);
+                _unitOfWork.Rollback();
                 return await base.HandleAsync(addGreeting, cancellationToken);
             }
 

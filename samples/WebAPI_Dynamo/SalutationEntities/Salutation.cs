@@ -1,16 +1,12 @@
-﻿namespace SalutationEntities
+﻿using Amazon.DynamoDBv2.DataModel;
+
+namespace SalutationEntities
 {
+    [DynamoDBTable("Salutations")]
     public class Salutation
-    {
-        public long Id { get; set; }
-        public byte[] TimeStamp { get; set; }
+    { 
+        [DynamoDBHashKey]
+        [DynamoDBProperty]
         public string Greeting { get; set; }
-
-        public Salutation() { /* ORM needs to create */ }
-
-        public Salutation(string greeting)
-        {
-            Greeting = greeting;
-        }
     }
 }

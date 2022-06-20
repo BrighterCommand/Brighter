@@ -218,7 +218,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            var message = await _context.LoadAsync<MessageItem>(id, cancellationToken);
+            var message = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);
             message.MarkMessageDelivered(dispatchedAt.HasValue ? dispatchedAt.Value : DateTime.UtcNow);
 
             await _context.SaveAsync(
@@ -243,7 +243,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            var message = _context.LoadAsync<MessageItem>(id).Result;
+            var message = _context.LoadAsync<MessageItem>(id.ToString()).Result;
             message.DeliveryTime = $"{dispatchedAt:yyyy-MM-dd}";
 
             _context.SaveAsync(
