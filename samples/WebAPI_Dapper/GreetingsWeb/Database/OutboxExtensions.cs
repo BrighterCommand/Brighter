@@ -10,6 +10,7 @@ using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
 using Paramore.Brighter.Sqlite.Dapper;
+using UnitOfWork = Paramore.Brighter.MySql.Dapper.UnitOfWork;
 
 namespace GreetingsWeb.Database;
 
@@ -42,7 +43,7 @@ public static class OutboxExtensions
                 new MySqlConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseMySqTransactionConnectionProvider(typeof(MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
+            .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.UnitOfWork), ServiceLifetime.Scoped)
             .UseOutboxSweeper();
     }
 
@@ -52,7 +53,7 @@ public static class OutboxExtensions
                 new SqliteConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseSqliteTransactionConnectionProvider(typeof(SqliteDapperConnectionProvider), ServiceLifetime.Scoped)
+            .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.UnitOfWork), ServiceLifetime.Scoped)
             .UseOutboxSweeper(options =>
             {
                 options.TimerInterval = 5;

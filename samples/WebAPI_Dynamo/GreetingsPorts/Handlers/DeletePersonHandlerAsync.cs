@@ -2,40 +2,26 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.DynamoDBv2.DataModel;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
+using Paramore.Brighter.DynamoDb;
 
 namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
-        public DeletePersonHandlerAsync()
+        private readonly DynamoDbUnitOfWork _unitOfWork;
+
+        public DeletePersonHandlerAsync(DynamoDbUnitOfWork unitOfWork)
         {
+            _unitOfWork = unitOfWork;
         }
         public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
         {
-            /*
-            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
-            try
-            {
-
-                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, deletePerson.Name);
-                var people = await _uow.Database.GetListAsync<Person>(searchbyName, transaction: tx);
-                var person = people.Single();
-
-                var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
-                await _uow.Database.DeleteAsync(deleteById, tx);
-                
-                await tx.CommitAsync(cancellationToken);
-            }
-            catch (Exception)
-            {
-                //it went wrong, rollback the entity change and the downstream message
-                await tx.RollbackAsync(cancellationToken);
-                return await base.HandleAsync(deletePerson, cancellationToken);
-            }
-            */
+            var context = new DynamoDBContext(_unitOfWork.DynamoDb);
+            await context.DeleteAsync(deletePerson.Name, cancellationToken);
 
             return await base.HandleAsync(deletePerson, cancellationToken);
         }

@@ -20,9 +20,9 @@ namespace GreetingsPorts.Handlers
         private readonly IUnitOfWork _uow;
 
 
-        public AddGreetingHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
-            _uow = uow;
+            _uow = (IUnitOfWork)uow;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
             _postBox = postBox;
             _logger = logger;
         }

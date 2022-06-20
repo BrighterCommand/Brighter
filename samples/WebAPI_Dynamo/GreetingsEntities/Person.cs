@@ -1,26 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using Amazon.DynamoDBv2.DataModel;
 
 namespace GreetingsEntities
 {
+    [DynamoDBTable("People", LowerCamelCaseProperties = true)]
     public class Person
     {
-        public byte[] TimeStamp { get; set; }
-        public long Id { get; set; }
+        [DynamoDBHashKey]
+        [DynamoDBProperty]
         public string Name { get; set; }
-        public IList<Greeting> Greetings { get; set; } = new List<Greeting>();
         
-        public Person(){ /*Required for DapperExtensions*/}
+        [DynamoDBProperty]
+        public IList<string> Greetings { get; set; } = new List<string>();
 
-        public Person(string name)
-        {
-            Name = name;
-        }
-
-        public Person(int id, string name)
-        {
-            Id = id;
-            Name = name;
-        }
+        [DynamoDBVersion]
+        public int? VersionNumber { get; set; }
     }
 }

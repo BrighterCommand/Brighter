@@ -103,6 +103,7 @@ namespace GreetingsWeb
                 DatabaseGlobals.MYSQL => DatabaseType.MySql,
                 DatabaseGlobals.MSSQL => DatabaseType.MsSql,
                 DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
