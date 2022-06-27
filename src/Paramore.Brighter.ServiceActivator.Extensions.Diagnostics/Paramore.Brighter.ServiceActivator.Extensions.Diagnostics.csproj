@@ -13,7 +13,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Update="MinVer" Version="4.0.0" />
+    <PackageReference Update="MinVer" Version="4.1.0" />
   </ItemGroup>
 
   <ItemGroup>
