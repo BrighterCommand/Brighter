@@ -22,4 +22,4 @@ When you create a release in GitHub is also tags the code so we generally use th
 - If all has worked, delete the current draft release, a new one will be created on the next pull request
 
 
-If you are thinking why don't we just convert the pre-release draft to a proper release? Yes that would be nice, but due to a bug in github github actions do not trigger when you do that ¯\_(ツ)_/¯. 
+If you are thinking why don't we just convert the pre-release draft to a proper release? Yes that would be nice, but due to a bug in github github actions do not trigger when you do that  ¯\_(ツ)_/¯. 
