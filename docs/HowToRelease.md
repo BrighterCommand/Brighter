@@ -19,6 +19,8 @@ When you create a release in GitHub is also tags the code so we generally use th
 - Don't click "This is a pre-release"
 - Click "Create a discussion for this release"
 - Click "Publish release"
+- Check the github action you should see the "release" step go green.
+- Check nuget https://www.nuget.org/profiles/BrighterCommand to see if the packages are there can take a while.
 - If all has worked, delete the current draft release, a new one will be created on the next pull request
 
 
