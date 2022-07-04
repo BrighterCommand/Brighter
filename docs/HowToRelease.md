@@ -10,6 +10,7 @@ When you create a release in GitHub is also tags the code so we generally use th
 
 - Click on "Releases" https://github.com/BrighterCommand/Brighter/releases
 - Edit the current draft release notes and copy the release notes to use in the new release
+- Delete the draft release
 - Click "Draft a new release"
 - Click "Choose a tag"
 - Create a new tag `9.1.3`
