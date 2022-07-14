@@ -7,7 +7,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
-## Release 9.1.15 ##
+## Release 9.1.14 ##
  - Fixed missing negation operator when checking for AWS resources 
 
 ## Release 9.1.14 ##
