@@ -6,6 +6,11 @@ When we push a collection of functionality it is available via [nuget.org](http:
 This section lists features in master, available by [AppVeyor](https://ci.appveyor.com/project/BrighterCommand/paramore-brighter), but not yet deployed to [nuget.org](http://www.nuget.org).
 
 ## Master ##
+
+## Release 9.1.15 ##
+ - Fixed missing negation operator when checking for AWS resources 
+
+## Release 9.1.14 ##
  - Renamed MessageStore to Outbox and CommandStore to Inbox for clarity with well-known pattern names outside this team
  --- Impact is wide, namespaces, class names and project names, so this is a ***BREAKING CHANGE***
  --- Mostly you can search and replace to fix
@@ -38,7 +43,6 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  - Changed IsAsync to RunAsync on a Subscription for clarity
  - Supports an async pipeline: callbacks should happen on the same thread as the handler (and the pump), avoiding thread pool threads
  - Fixed issue in SQlite with SQL to mark a message as dispatched
- - Fixed missing negation operator when checking for AWS resources 
  
 ## Release 8.1.1399 ##
  - Update nuget libs
