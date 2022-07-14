@@ -38,6 +38,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
  - Changed IsAsync to RunAsync on a Subscription for clarity
  - Supports an async pipeline: callbacks should happen on the same thread as the handler (and the pump), avoiding thread pool threads
  - Fixed issue in SQlite with SQL to mark a message as dispatched
+ - Fixed missing negation operator when checking for AWS resources 
  
 ## Release 8.1.1399 ##
  - Update nuget libs
