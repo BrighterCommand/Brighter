@@ -17,10 +17,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.6" />
-    </ItemGroup>
-
-    <ItemGroup>
       <Content Include="appsettings.Development.json">
         <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
