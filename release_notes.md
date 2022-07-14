@@ -12,33 +12,30 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Release 9.1.14 ##
  - Renamed MessageStore to Outbox and CommandStore to Inbox for clarity with well-known pattern names outside this team
- --- Impact is wide, namespaces, class names and project names, so this is a ***BREAKING CHANGE***
- --- Mostly you can search and replace to fix
- --- Added support for a global inbox via a UseInbox configuration parameter to the Command Processor
- ------ Will insert an Inbox in all pipelines
- ------ Can be overriden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
- --- The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
- -- The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages
- ---- that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is seperate and mainly
- ---- intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
+     - Impact is wide, namespaces, class names and project names, so this is a ***BREAKING CHANGE***
+     - Mostly you can search and replace to fix
+ - Added support for a global inbox via a UseInbox configuration parameter to the Command Processor
+    - Will insert an Inbox in all pipelines
+    - Can be overriden by a NoGlobalInbox attribute for don't add to pipeline, or an alternative UseInbox attribute to vary config
+ - The goal here is to be clearer than our own internal names, which don't help folks who were not part of this team
+ - The Outbox now fills up if a producer fails to send. You can set an upper limit on your producer, which is the maximum outstanding messages that you want in the Outbox before we throw an exception. This is not the same as Outbox size limits or sweeper, which is seperate and mainly intended if you don't want the Outbox limit to fail-fast on hitting a limit but keep accumulating results  
  - Added caching of attributes on target handlers in the pipeline build step
- --- This means we don't do reflection every time we build the pipeline for a request
- --- We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
- --- We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
+     - This means we don't do reflection every time we build the pipeline for a request
+     - We do still always call the handler factory to instantiate as we don't own handler lifetime, implementer does
+     - We added a method to clear the pipeline cache, particularly for testing where you want to test configuration scenarios
  - Added ability to persist RabbitMQ messages
  - Added subscription to blocked/unblocked RMQ channel events. A warning log is created when a channel becomes blocked and an info log is generated when the channel becomes unblocked.
  - Improved the Kafka Client. It now uses the publisher/creator model to ensure that a message is in Brighter format i.e. headers as well as body; updated configuration values; generally improved reliability. This is a breaking change with previous versions of the Kafka client.
  - The class BrighterMessaging now only has a default constructor and now has setters on properties. Use the initializer syntax instead - new BrighterMessage{} to avoid having redundant constructor arguments.
  - Changes to how we configure transports - renaming classes and extending their functionality
- --- Connection is renamed to Subscription
- --- Added a matching Publication for producers
- --- Base class includes the attributes that Brighter Core (Brighter & ServiceActivator) need
- --- Derived classes contain transport specific details
- --- On SQSConnection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose 
- --- Seperated from GatewayConfiguration, that now has a marker interface, used to connect to the Gateway and not about how we publish or subscribe
- --- We now have the option to declare infastructure separately and Validate or Assume it exists, still have an option to Create which is the default
- --- We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)  
- --- Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
+     - Connection is renamed to Subscription
+     - Added a matching Publication for producers
+     - Base class includes the attributes that Brighter Core (Brighter & ServiceActivator) need
+     - Derived classes contain transport specific details
+     - On SQSConnection, renamed VisibilityTimeout to LockTimeout to more generically describe its purpose seperated from GatewayConfiguration, that now has a marker interface, used to connect to the Gateway and not about how we publish or subscribe
+     - We now have the option to declare infastructure separately and Validate or Assume it exists, still have an option to Create which is the default
+     - We think it will be most useful for environments like AWS where there is a price to checking (HTTP call, and often looping through results)  
+     - Added support for a range of parameters that we did not have before such as dead letter queues, security etc via these platform specific configuration files  
  - Provided a short form of the BrighterMessaging constructor, that queries object provided for async versions of interfaces
  - Changed IsAsync to RunAsync on a Subscription for clarity
  - Supports an async pipeline: callbacks should happen on the same thread as the handler (and the pump), avoiding thread pool threads
