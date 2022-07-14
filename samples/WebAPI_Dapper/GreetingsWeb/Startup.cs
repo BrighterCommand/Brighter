@@ -28,7 +28,7 @@ namespace GreetingsWeb
     {
         private const string _outBoxTableName = "Outbox";
         private IWebHostEnvironment _env;
-        
+
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
@@ -93,19 +93,6 @@ namespace GreetingsWeb
             {
                 ConfigureProductionDatabase(GetDatabaseType(), services);
             }
-             
-        }
-
-        private DatabaseType GetDatabaseType()
-        {
-            return Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
-            {
-                DatabaseGlobals.MYSQL => DatabaseType.MySql,
-                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
-                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
-                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
-                _ => throw new InvalidOperationException("Could not determine the database type")
-            };
         }
 
         private void ConfigureProductionDatabase(DatabaseType databaseType, IServiceCollection services)
@@ -133,23 +120,26 @@ namespace GreetingsWeb
         private void ConfigureDapper(IServiceCollection services)
         {
             services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString()));
-                
-            if (_env.IsDevelopment())
-            {
-                ConfigureDevelopmentDapper(services);
-            }
-            else
-            {
-                ConfigureProductionDapper(GetDatabaseType(), services);
-            }
+
+            ConfigureDapperByHost(GetDatabaseType(), services);
 
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(PersonMapper).Assembly});
+            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
         }
 
-        private static void ConfigureDevelopmentDapper(IServiceCollection services)
+        private static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
         {
-            ConfigureDapperSqlite(services);
+            switch (databaseType)
+            {
+                case DatabaseType.Sqlite:
+                    ConfigureDapperSqlite(services);
+                    break;
+                case DatabaseType.MySql:
+                    ConfigureDapperMySql(services);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+            }
         }
 
         private static void ConfigureDapperSqlite(IServiceCollection services)
@@ -157,18 +147,6 @@ namespace GreetingsWeb
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
             services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
-        }
-
-        private static void ConfigureProductionDapper(DatabaseType databaseType, IServiceCollection services)
-        {
-            switch (databaseType)
-            {
-               case DatabaseType.MySql: 
-                    ConfigureDapperMySql(services);
-                    break;
-               default:
-                  throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
-             }
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
@@ -195,38 +173,40 @@ namespace GreetingsWeb
             };
 
             services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
-            
+
             services.AddBrighter(options =>
-             {
-                 //we want to use scoped, so make sure everything understands that which needs to
-                 options.HandlerLifetime = ServiceLifetime.Scoped;
-                 options.CommandProcessorLifetime = ServiceLifetime.Scoped;
-                 options.MapperLifetime = ServiceLifetime.Singleton;
-                 options.PolicyRegistry = policyRegistry;
-             })
-             .UseExternalBus(new RmqProducerRegistryFactory(
-                     new RmqMessagingGatewayConnection
-                     {
-                         AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                         Exchange = new Exchange("paramore.brighter.exchange"),
-                     },
-                     new RmqPublication[]{
-                         new RmqPublication
+                {
+                    //we want to use scoped, so make sure everything understands that which needs to
+                    options.HandlerLifetime = ServiceLifetime.Scoped;
+                    options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+                    options.MapperLifetime = ServiceLifetime.Singleton;
+                    options.PolicyRegistry = policyRegistry;
+                })
+                .UseExternalBus(new RmqProducerRegistryFactory(
+                        new RmqMessagingGatewayConnection
                         {
-                            Topic = new RoutingKey("GreetingMade"),
-                            MaxOutStandingMessages = 5,
-                            MaxOutStandingCheckIntervalMilliSeconds = 500,
-                            WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            MakeChannels = OnMissingChannel.Create
-                        }}
-                 ).Create()
-             )
-             //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
-             //types easily. You may just choose to call the methods directly if you do not need to support multiple
-             //db types (which we just need to allow you to see how to configure your outbox type).
-             //It's also an example of how you can extend the DSL here easily if you have this kind of variability
-             .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName)
-             .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
+                            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                            Exchange = new Exchange("paramore.brighter.exchange"),
+                        },
+                        new RmqPublication[]
+                        {
+                            new RmqPublication
+                            {
+                                Topic = new RoutingKey("GreetingMade"),
+                                MaxOutStandingMessages = 5,
+                                MaxOutStandingCheckIntervalMilliSeconds = 500,
+                                WaitForConfirmsTimeOutInMilliseconds = 1000,
+                                MakeChannels = OnMissingChannel.Create
+                            }
+                        }
+                    ).Create()
+                )
+                //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
+                //types easily. You may just choose to call the methods directly if you do not need to support multiple
+                //db types (which we just need to allow you to see how to configure your outbox type).
+                //It's also an example of how you can extend the DSL here easily if you have this kind of variability
+                .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName)
+                .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
         private void ConfigureDarker(IServiceCollection services)
@@ -245,6 +225,18 @@ namespace GreetingsWeb
             return _env.IsDevelopment() ? GetDevDbConnectionString() : GetConnectionString(GetDatabaseType());
         }
 
+        private DatabaseType GetDatabaseType()
+        {
+            return Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+            {
+                DatabaseGlobals.MYSQL => DatabaseType.MySql,
+                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
+                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+
         private static string GetDevDbConnectionString()
         {
             return "Filename=Greetings.db;Cache=Shared";
@@ -253,7 +245,7 @@ namespace GreetingsWeb
         private string GetConnectionString(DatabaseType databaseType)
         {
             return databaseType switch
-            { 
+            {
                 DatabaseType.MySql => Configuration.GetConnectionString("GreetingsMySql"),
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };

@@ -44,7 +44,7 @@ namespace SalutationAnalytics
                     configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
                     configurationBuilder.AddJsonFile("appsettings.json", optional: true);
                     configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
-                    configurationBuilder.AddEnvironmentVariables(prefix: "ASPNETCORE_");  //NOTE: Although not web, we use this to grab the environment
+                    configurationBuilder.AddEnvironmentVariables(prefix: "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
                     configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
                     configurationBuilder.AddCommandLine(args);
                 })
@@ -54,7 +54,7 @@ namespace SalutationAnalytics
                     builder.AddDebug();
                 })
                 .ConfigureServices((hostContext, services) =>
-                {      
+                {
                     ConfigureMigration(hostContext, services);
                     ConfigureDapper(hostContext, services);
                     ConfigureBrighter(hostContext, services);
@@ -79,8 +79,7 @@ namespace SalutationAnalytics
 
             var rmqConnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
-                Exchange = new Exchange("paramore.brighter.exchange")
+                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")), Exchange = new Exchange("paramore.brighter.exchange")
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
@@ -147,32 +146,48 @@ namespace SalutationAnalytics
                     .ConfigureRunner(c => c.AddMySql5()
                         .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
                         .ScanIn(typeof(Salutations_mySqlMigrations.Migrations.MySqlInitialCreate).Assembly).For.Migrations()
-                    ); 
+                    );
             }
-             
         }
 
         private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
             services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString(hostBuilderContext)));
-                
-            if (hostBuilderContext.HostingEnvironment.IsDevelopment())
-            {
-                DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-                DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-                services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
-            }
-            else
-            {
-                DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-                DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-                services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
-            }
-
+            ConfigureDapperByHost(GetDatabaseType(hostBuilderContext), services);
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] {typeof(SalutationMapper).Assembly});
+            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
         }
-        
+
+        private static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
+        {
+            switch (databaseType)
+            {
+                case DatabaseType.Sqlite:
+                    ConfigureDapperSqlite(services);
+                    break;
+                case DatabaseType.MySql:
+                    ConfigureDapperMySql(services);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
+            }
+        }
+
+        private static void ConfigureDapperSqlite(IServiceCollection services)
+        {
+            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
+            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
+            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+        }
+
+        private static void ConfigureDapperMySql(IServiceCollection services)
+        {
+            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
+            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+        }
+
+
         private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
         {
             if (hostContext.HostingEnvironment.IsDevelopment())
@@ -182,13 +197,29 @@ namespace SalutationAnalytics
 
             return new MySqlInbox(new MySqlInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
         }
-        
+
         private static string DbConnectionString(HostBuilderContext hostContext)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return hostContext.HostingEnvironment.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : hostContext.Configuration.GetConnectionString("Salutations");
+            return hostContext.HostingEnvironment.IsDevelopment()
+                ? "Filename=Salutations.db;Cache=Shared"
+                : hostContext.Configuration.GetConnectionString("Salutations");
         }
-        
+
+        private static DatabaseType GetDatabaseType(HostBuilderContext hostContext)
+        {
+            return hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+
+            {
+                DatabaseGlobals.MYSQL => DatabaseType.MySql,
+                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
+                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+
+
         private static string GetEnvironment()
         {
             //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
