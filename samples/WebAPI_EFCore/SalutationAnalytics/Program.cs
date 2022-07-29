@@ -114,9 +114,9 @@ namespace SalutationAnalytics
                 .UseExternalInbox(
                     ConfigureInbox(hostContext),
                     new InboxConfiguration(
-                        scope: InboxScope.All,
+                        scope: InboxScope.Commands,
                         onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Warn
+                        actionOnExists: OnceOnlyAction.Throw
                     )
                 );
 

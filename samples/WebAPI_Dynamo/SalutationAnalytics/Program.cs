@@ -117,9 +117,9 @@ namespace SalutationAnalytics
                 .UseExternalInbox(
                     ConfigureInbox(dynamoDb),
                     new InboxConfiguration(
-                        scope: InboxScope.All,
+                        scope: InboxScope.Commands,
                         onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Warn
+                        actionOnExists: OnceOnlyAction.Throw
                     )
                 )
                 .UseExternalOutbox(ConfigureOutbox(awsCredentials, dynamoDb))
