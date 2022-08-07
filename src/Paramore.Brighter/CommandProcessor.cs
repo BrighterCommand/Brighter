@@ -114,8 +114,8 @@ namespace Paramore.Brighter
         {
             _subscriberRegistry = subscriberRegistry;
             
-            if (handlerFactory is not IAmAHandlerFactorySync 
-                && handlerFactory is not IAmAHandlerFactoryAsync)
+            if (typeof(IAmAHandlerFactorySync) != handlerFactory?.GetType() 
+                &&  typeof(IAmAHandlerFactoryAsync) != handlerFactory?.GetType())
                 throw new ArgumentException(
                     "No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
             

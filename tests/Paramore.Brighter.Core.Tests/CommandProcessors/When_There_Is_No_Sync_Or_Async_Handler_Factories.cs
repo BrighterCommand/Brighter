@@ -29,11 +29,36 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
         
         //_should_have_an_error_message_that_tells_you_why
         _exception.Should().NotBeNull();
-        _exception.Message.Should().Contain("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryASync needs to be set");
+        _exception.Message.Should().Contain("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
+    }    
+    
+    [Fact]
+    public void When_using_IAmAHandlerFactory()
+    {
+        var container = new ServiceCollection();
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+
+        _exception = Catch.Exception(() => new CommandProcessor(
+            new SubscriberRegistry(),
+            new DummyHandlerFactory(),
+            new InMemoryRequestContextFactory(),
+            new PolicyRegistry()));
+
+        //_should_fail_because_no_handler_factories_have_been_set
+        _exception.Should().BeOfType<ArgumentException>();
+        
+        //_should_have_an_error_message_that_tells_you_why
+        _exception.Should().NotBeNull();
+        _exception.Message.Should().Contain("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
     }
     
     public void Dispose()
     {
         CommandProcessor.ClearExtServiceBus();
+    }
+
+    class DummyHandlerFactory : IAmAHandlerFactory
+    {
+        
     }
 }
