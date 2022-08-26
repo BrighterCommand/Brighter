@@ -373,7 +373,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
            
             if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow))
             {
                 if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -395,10 +395,8 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
+            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow))
             {
-                if (_connectionProvider.HasOpenTransaction)
-                    command.Transaction = _connectionProvider.GetTransaction();
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             if (!_connectionProvider.IsSharedConnection)
@@ -416,7 +414,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var connection = _connectionProvider.GetConnection();
             if(connection.State!= ConnectionState.Open) connection.Open();
-            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
+            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow))
             {
                 if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();
                 command.ExecuteNonQuery();
@@ -501,7 +499,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         
         private void CreatePagedDispatchedCommand(SqlCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),
@@ -532,7 +530,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         
         private void CreatePagedOutstandingCommand(SqlCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
+            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
             var parameters = new[]
             {
                 CreateSqlParameter("PageNumber", pageNumber),
@@ -622,7 +620,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreateSqlParameter("MessageId", message.Id),
                 CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
                 CreateSqlParameter("Topic", message.Header.Topic),
-                CreateSqlParameter("Timestamp", message.Header.TimeStamp),
+                CreateSqlParameter("Timestamp", message.Header.TimeStamp.ToUniversalTime()), //always store in UTC, as this is how we query messages
                 CreateSqlParameter("CorrelationId", message.Header.CorrelationId),
                 CreateSqlParameter("ReplyTo", message.Header.ReplyTo),
                 CreateSqlParameter("ContentType", message.Header.ContentType),
@@ -638,7 +636,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
             command.CommandText = sql;
             command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
             return command;
          }
         private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
@@ -648,7 +646,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId in ( {inClause} )";
 
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
 
             return command;
         }

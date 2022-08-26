@@ -373,10 +373,8 @@ namespace Paramore.Brighter.Outbox.MySql
             
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
+            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow))
             {
-                if (_connectionProvider.HasOpenTransaction)
-                    command.Transaction = _connectionProvider.GetTransaction();
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             if (!_connectionProvider.IsSharedConnection)
@@ -394,7 +392,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var connection = _connectionProvider.GetConnection();
             if (connection.State != ConnectionState.Open) connection.Open();
-            using (var command = InitMarkDispatchedCommand(connection, new [] {id}, dispatchedAt))
+            using (var command = InitMarkDispatchedCommand(connection, new [] {id}, dispatchedAt ?? DateTime.UtcNow))
             {
                 command.ExecuteNonQuery();
             }
@@ -488,11 +486,11 @@ namespace Paramore.Brighter.Outbox.MySql
         private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+                "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATE_ADD(UTC_TIMESTAMP(), INTERVAL -@OutstandingSince MICROSECOND) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
                 CreateSqlParameter("@PageNumber", pageNumber), CreateSqlParameter("@PageSize", pageSize),
-                CreateSqlParameter("@OutstandingSince", -1 * millisecondsDispatchedSince)
+                CreateSqlParameter("@OutstandingSince", millisecondsDispatchedSince * 1000) //we need to add microseconds
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
@@ -526,7 +524,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var offset = (pageNumber - 1) * pageSize;
             var pagingSqlFormat =
-                "SELECT * FROM {0} WHERE DISPATCHED IS NULL AND Timestamp < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @OffsetValue";
+                "SELECT * FROM {0} WHERE DISPATCHED IS NULL AND Timestamp < DATE_ADD(UTC_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @OffsetValue";
             var seconds = TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds > 0 ? TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds : 1;
             var parameters = new[]
             {
@@ -600,7 +598,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 new MySqlParameter { ParameterName = "@MessageId", DbType = DbType.String, Value = message.Id.ToString() },
                 new MySqlParameter { ParameterName = "@MessageType", DbType = DbType.String, Value = message.Header.MessageType.ToString() },
                 new MySqlParameter { ParameterName = "@Topic", DbType = DbType.String, Value = message.Header.Topic, },
-                new MySqlParameter { ParameterName = "@Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp },
+                new MySqlParameter { ParameterName = "@Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp.ToUniversalTime() }, //always store in UTC, as this is how we query messages
                 new MySqlParameter { ParameterName = "@CorrelationId", DbType = DbType.String, Value = message.Header.CorrelationId.ToString() },
                 new MySqlParameter { ParameterName = "@ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo },
                 new MySqlParameter { ParameterName = "@ContentType", DbType = DbType.String, Value = message.Header.ContentType },
@@ -616,7 +614,7 @@ namespace Paramore.Brighter.Outbox.MySql
             var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId IN ( {inClause} )";
 
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt));
+            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
             return command;
         }
 

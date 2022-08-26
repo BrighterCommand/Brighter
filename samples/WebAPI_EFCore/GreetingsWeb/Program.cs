@@ -1,11 +1,11 @@
 using System.IO;
-using Greetingsweb.Database;
+using GreetingsWeb.Database;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace Greetingsweb
+namespace GreetingsWeb
 {
     public class Program
     {

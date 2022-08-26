@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Dapper
     /// <summary>
     /// Creates a unit of work, so that Brighter can access the active transaction for the Outbox
     /// </summary>
-    public interface IUnitOfWork : IDisposable
+    public interface IUnitOfWork : IAmABoxTransactionConnectionProvider, IDisposable
     {
         /// <summary>
         /// Begins a new transaction against the database. Will open the connection if it is not already open,
@@ -32,6 +32,11 @@ namespace Paramore.Brighter.Dapper
         /// The .NET DbConnection to the Database
         /// </summary>
         DbConnection Database { get; }
+        
+        /// <summary>
+        /// Is there an extant transaction
+        /// </summary>
+        /// <returns>True if a transaction is already open on this unit of work, false otherwise</returns>
         bool HasTransaction();
     }
 }

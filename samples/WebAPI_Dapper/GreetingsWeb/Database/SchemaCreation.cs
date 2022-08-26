@@ -14,7 +14,7 @@ using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 
-namespace Greetingsweb.Database
+namespace GreetingsWeb.Database
 {
     public static class SchemaCreation
     {
@@ -33,7 +33,7 @@ namespace Greetingsweb.Database
             if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(connectionString);
-            CreateDatabaseIfNotExists(new MySqlConnection(connectionString));
+            CreateDatabaseIfNotExists(GetDbConnection(GetDatabaseType(config), connectionString));
 
             return webHost;
         }
@@ -94,7 +94,7 @@ namespace Greetingsweb.Database
                 if (env.IsDevelopment())
                     CreateOutboxDevelopment(connectionString);
                 else
-                    CreateOutboxProduction(connectionString);
+                    CreateOutboxProduction(GetDatabaseType(config), connectionString);
             }
             catch (System.Exception e)
             {
@@ -105,6 +105,11 @@ namespace Greetingsweb.Database
         }
 
         private static void CreateOutboxDevelopment(string connectionString)
+        {
+            CreateOutboxSqlite(connectionString);
+        }
+
+        private static void CreateOutboxSqlite(string connectionString)
         {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
@@ -120,7 +125,19 @@ namespace Greetingsweb.Database
             command.ExecuteScalar();
         }
 
-        private static void CreateOutboxProduction(string connectionString)
+        private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString)
+        {
+            switch (databaseType)
+            {
+                case DatabaseType.MySql:
+                    CreateOutboxMySql(connectionString);
+                    break;
+                default:
+                    throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
+            }
+        }
+
+        private static void CreateOutboxMySql(string connectionString)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -139,12 +156,61 @@ namespace Greetingsweb.Database
         private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("Greetings");
+            return env.IsDevelopment() ? GetDevDbConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
+        }
+
+        private static string GetDevDbConnectionString()
+        {
+            return "Filename=Greetings.db;Cache=Shared";
         }
 
         private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
-            return env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : config.GetConnectionString("GreetingsDb");
+            return env.IsDevelopment() ? GetDevConnectionString() : GetProductionConnectionString(config, GetDatabaseType(config));
+        }
+
+        private static string GetDevConnectionString()
+        {
+            return "Filename=Greetings.db;Cache=Shared";
+        }
+
+        private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)
+        {
+            return databaseType switch
+            {
+                DatabaseType.MySql => new MySqlConnection(connectionString),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+        
+        private static string GetProductionConnectionString(IConfiguration config, DatabaseType databaseType)
+        {
+            return databaseType switch
+            { 
+                DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+
+        private static string GetProductionDbConnectionString(IConfiguration config, DatabaseType databaseType)
+        {
+            return databaseType switch
+            {
+                DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+             };
+        }
+
+        private static DatabaseType GetDatabaseType(IConfiguration config)
+        {
+            return config[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+            {
+                DatabaseGlobals.MYSQL => DatabaseType.MySql,
+                DatabaseGlobals.MSSQL => DatabaseType.MsSql,
+                DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
+                DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
         }
 
         private static void WaitToConnect(string connectionString)

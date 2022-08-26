@@ -18,11 +18,12 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
       <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
+      <ProjectReference Include="..\Salutations_mySqlMigrations\Salutations_mySqlMigrations.csproj" />
       <ProjectReference Include="..\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.5" />
+      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="6.0.8" />
       <PackageReference Include="FluentMigrator" Version="3.3.2" />
       <PackageReference Include="FluentMigrator.Runner" Version="3.3.2" />
     </ItemGroup>

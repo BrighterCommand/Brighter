@@ -5,11 +5,10 @@ namespace GreetingsEntities
 {
     public class Person
     {
-        private readonly List<Greeting> _greetings = new List<Greeting>();
         public byte[] TimeStamp { get; set; }
         public long Id { get; set; }
         public string Name { get; set; }
-        public IEnumerable<Greeting> Greetings => _greetings;
+        public IList<Greeting> Greetings { get; set; } = new List<Greeting>();
         
         public Person(){ /*Required for DapperExtensions*/}
 

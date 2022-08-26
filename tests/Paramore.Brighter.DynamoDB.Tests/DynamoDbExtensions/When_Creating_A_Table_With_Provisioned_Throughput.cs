@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
-using Paramore.Brighter.DynamoDb.Extensions;
+using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
            );
             
             //act
-            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(provisonedThroughput);
+            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(provisonedThroughput);
             
             //assert
             Assert.Equal(10, tableRequest.ProvisionedThroughput.ReadCapacityUnits);

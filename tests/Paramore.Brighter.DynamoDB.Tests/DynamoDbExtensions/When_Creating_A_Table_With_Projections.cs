@@ -3,7 +3,7 @@ using System.Linq;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.DataModel;
 using Amazon.DynamoDBv2.Model;
-using Paramore.Brighter.DynamoDb.Extensions;
+using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Xunit;
 
@@ -24,7 +24,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             );
            
             //act
-            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableMapper<DynamoDbEntity>(
+            CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                     new Dictionary<string, ProvisionedThroughput>

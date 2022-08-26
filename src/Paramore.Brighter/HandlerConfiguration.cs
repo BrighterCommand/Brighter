@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         /// The default constructor is used when we want to create an empty handler configuration.
         /// Normally this is only useful for a ControlBusSender command processor, which posts
         /// all of its requests and does not have a local handler.
-        /// As you cannot se the HandlerFactory and SubscriberRegistry post-creation, don't use
+        /// As you cannot see the HandlerFactory and SubscriberRegistry post-creation, don't use
         /// this constructor in uses cases where you want anything other than an empty configuration.
         /// </summary>
         public HandlerConfiguration() {}

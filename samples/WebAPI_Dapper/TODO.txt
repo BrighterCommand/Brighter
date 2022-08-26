@@ -1,0 +1,6 @@
+# TO DO List
+
+ - Implement for MySQL 
+ - Consider if we need to implement migrations etc for MSSQL & Postgres? Would need a different flag from isdev to pick the db we wanted to use
+ - Anything else?
+ - Delete this file
