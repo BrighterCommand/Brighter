@@ -215,6 +215,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
+            var loggerFactory = provider.GetService<ILoggerFactory>();
+            ApplicationLogging.LoggerFactory = loggerFactory;
+
             var options = provider.GetService<IBrighterOptions>();
             var subscriberRegistry = provider.GetService<ServiceCollectionSubscriberRegistry>();
             var useRequestResponse = provider.GetService<IUseRpc>();
@@ -247,9 +250,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var messagingBuilder = options.PolicyRegistry == null
                 ? policyBuilder.DefaultPolicy()
                 : policyBuilder.Policies(options.PolicyRegistry);
-
-            var loggerFactory = provider.GetService<ILoggerFactory>();
-            ApplicationLogging.LoggerFactory = loggerFactory;
 
             var commandProcessor = AddExternalBusMaybe(
                     options, 
