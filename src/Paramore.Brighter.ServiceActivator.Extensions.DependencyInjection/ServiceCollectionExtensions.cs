@@ -1,6 +1,8 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
@@ -38,6 +40,9 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
+            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            ApplicationLogging.LoggerFactory = loggerFactory;
+
             var options = serviceProvider.GetService<ServiceActivatorOptions>();
 
             Func<IAmACommandProcessorProvider> providerFactory;
