@@ -494,6 +494,24 @@ namespace Paramore.Brighter
             return await DepositPostAsync(request, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
         }
         
+        /// <summary>
+        /// Adds a message into the outbox, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// </summary>
+        /// <param name="requests">The requests to save to the outbox</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns></returns>
+        public Task<Guid[]> DepositPostAsync<T>(T[] requests, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            return DepositPostAsync(requests, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
+        }
+        
         private async Task<Guid> DepositPostAsync<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
@@ -511,6 +529,31 @@ namespace Paramore.Brighter
             await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
             return message.Id;
+        }
+        
+        private async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            //s_logger.LogInformation("Save requests: {RequestType} {Id}", requests.GetType(), requests.Id);
+
+            if (!_bus.HasAsyncOutbox())
+                throw new InvalidOperationException("No async outbox defined.");
+
+            var messages = new List<Message>();
+            
+            foreach (var request in requests)
+            {
+                var messageMapper = _mapperRegistry.Get<T>();
+                if (messageMapper == null)
+                    throw new ArgumentOutOfRangeException(
+                        $"No message mapper registered for messages of type: {typeof(T)}");
+
+                messages.Add(messageMapper.MapToMessage(request));
+            }
+
+            await _bus.AddToOutboxAsync(messages, continueOnCapturedContext, cancellationToken, connectionProvider);
+
+            return messages.Select(m => m.Id).ToArray();
         }
 
 

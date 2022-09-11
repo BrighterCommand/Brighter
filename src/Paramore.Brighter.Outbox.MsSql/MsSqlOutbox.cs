@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// </summary>
     public class MsSqlOutbox :
         IAmAnOutboxSync<Message>, 
-        IAmAnOutboxAsync<Message>
+        IAmABulkOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlOutbox>();
 
@@ -172,6 +172,52 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
             }
             
+        }
+
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        /// <returns><see cref="Task"/>.</returns>
+        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken),
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlConnectionProvider provider)
+                connectionProvider = provider;
+            
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
+
+            if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            using (var command = InitBulkAddDbCommand(messages.ToList(), connection))
+            {
+                try
+                {
+                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+                catch (SqlException sqlException)
+                {
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    {
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: At least one message already exists in the outbox");
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
+                }
+            }
         }
 
         /// <summary>
@@ -612,24 +658,46 @@ namespace Paramore.Brighter.Outbox.MsSql
             return command;
         }
 
-        private SqlParameter[] InitAddDbParameters(Message message)
+        private SqlCommand InitBulkAddDbCommand(List<Message> messages, SqlConnection connection)
         {
+            var messageParams = new List<string>();
+            var parameters = new List<SqlParameter>();
+            
+            for (int i = 0; i < messages.Count(); i++)
+            {
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                parameters.AddRange(InitAddDbParameters(messages[i], i));
+                
+            }
+            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
+            
+            var command = connection.CreateCommand();
+            
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters.ToArray());
+            return command;
+            
+        }
+
+        private SqlParameter[] InitAddDbParameters(Message message, int? position = null)
+        {
+            var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             var parameters = new[]
             {
-                CreateSqlParameter("MessageId", message.Id),
-                CreateSqlParameter("MessageType", message.Header.MessageType.ToString()),
-                CreateSqlParameter("Topic", message.Header.Topic),
-                CreateSqlParameter("Timestamp", message.Header.TimeStamp.ToUniversalTime()), //always store in UTC, as this is how we query messages
-                CreateSqlParameter("CorrelationId", message.Header.CorrelationId),
-                CreateSqlParameter("ReplyTo", message.Header.ReplyTo),
-                CreateSqlParameter("ContentType", message.Header.ContentType),
-                CreateSqlParameter("HeaderBag", bagJson),
-                CreateSqlParameter("Body", message.Body.Value)
+                CreateSqlParameter($"{prefix}MessageId", message.Id),
+                CreateSqlParameter($"{prefix}MessageType", message.Header.MessageType.ToString()),
+                CreateSqlParameter($"{prefix}Topic", message.Header.Topic),
+                CreateSqlParameter($"{prefix}Timestamp", message.Header.TimeStamp.ToUniversalTime()), //always store in UTC, as this is how we query messages
+                CreateSqlParameter($"{prefix}CorrelationId", message.Header.CorrelationId),
+                CreateSqlParameter($"{prefix}ReplyTo", message.Header.ReplyTo),
+                CreateSqlParameter($"{prefix}ContentType", message.Header.ContentType),
+                CreateSqlParameter($"{prefix}HeaderBag", bagJson),
+                CreateSqlParameter($"{prefix}Body", message.Body.Value)
             };
             return parameters;
         }
-
+        
         private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, Guid messageId, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();

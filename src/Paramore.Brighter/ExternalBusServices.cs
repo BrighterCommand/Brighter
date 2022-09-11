@@ -69,7 +69,29 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
         }            
-            
+          
+        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
+        {
+            CheckOutboxOutstandingLimit();
+
+            if (AsyncOutbox is IAmABulkOutboxAsync<Message> box)
+            {
+                var written = await RetryAsync(
+                    async ct =>
+                    {
+                        await box.AddAsync(messages, OutboxTimeout, ct, overridingTransactionConnectionProvider)
+                            .ConfigureAwait(continueOnCapturedContext);
+                    },
+                    continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+
+                if (!written)
+                    throw new ChannelFailureException($"Could not write {messages.Count()} requests to the outbox");
+            }
+            else
+            {
+                throw new InvalidOperationException($"{AsyncOutbox.GetType()} does not implement IAmABulkOutboxAsync");
+            }
+        } 
             
         internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
         {
