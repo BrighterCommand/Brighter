@@ -458,6 +458,21 @@ namespace Paramore.Brighter
             return DepositPost(request, _boxTransactionConnectionProvider);
         }
         
+        /// <summary>
+        /// Adds a messages into the outbox, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// </summary>
+        /// <param name="request">The request to save to the outbox</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns>The Id of the Message that has been deposited.</returns>
+        public Guid[] DepositPost<T>(T[] request) where T : class, IRequest
+        {
+            return DepositPost(request, _boxTransactionConnectionProvider);
+        }
+        
         private Guid DepositPost<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
@@ -474,6 +489,24 @@ namespace Paramore.Brighter
             _bus.AddToOutbox(request, message, connectionProvider);
 
             return message.Id;
+        }
+        
+        private Guid[] DepositPost<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
+        {
+            // s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
+
+            if (!_bus.HasBulkOutbox())
+                throw new InvalidOperationException("No Bulk outbox defined.");
+
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+
+            var messages = BulkMapMessages(requests);
+
+            _bus.AddToOutbox(messages, connectionProvider);
+
+            return messages.Select(m => m.Id).ToArray();
         }
 
         /// <summary>
@@ -517,7 +550,7 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            if (!_bus.HasAsyncOutbox())
+            if (!_bus.HasAsyncBulkOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
@@ -534,26 +567,26 @@ namespace Paramore.Brighter
         private async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            //s_logger.LogInformation("Save requests: {RequestType} {Id}", requests.GetType(), requests.Id);
+            // s_logger.LogInformation("Save requests: {RequestType} {Id}", requests.GetType(), requests.Id);
 
             if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            var messages = new List<Message>();
-            
-            foreach (var request in requests)
-            {
-                var messageMapper = _mapperRegistry.Get<T>();
-                if (messageMapper == null)
-                    throw new ArgumentOutOfRangeException(
-                        $"No message mapper registered for messages of type: {typeof(T)}");
-
-                messages.Add(messageMapper.MapToMessage(request));
-            }
+            var messages = BulkMapMessages(requests);
 
             await _bus.AddToOutboxAsync(messages, continueOnCapturedContext, cancellationToken, connectionProvider);
 
             return messages.Select(m => m.Id).ToArray();
+        }
+
+        private List<Message> BulkMapMessages<T>(IEnumerable<T> requests) where T : class, IRequest
+        {
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException(
+                    $"No message mapper registered for messages of type: {typeof(T)}");
+
+            return requests.Select(r => messageMapper.MapToMessage(r)).ToList();
         }
 
 

@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     ///     Class MsSqlOutbox.
     /// </summary>
     public class MsSqlOutbox :
-        IAmAnOutboxSync<Message>, 
+        IAmABulkOutboxSync<Message>, 
         IAmABulkOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlOutbox>();
@@ -113,6 +113,49 @@ namespace Paramore.Brighter.Outbox.MsSql
                         s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
+                }
+            }
+        }
+        
+        /// <summary>
+        ///     Adds the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout"></param>
+        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
+        /// <returns>Task.</returns>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
+                connectionProvider = provider;
+            
+            var connection = connectionProvider.GetConnection();
+            
+            if(connection.State!= ConnectionState.Open) connection.Open();
+            using (var command = InitBulkAddDbCommand(messages.ToList(), connection))
+            {
+                try
+                {
+                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction(); 
+                    command.ExecuteNonQuery();
+                }
+                catch (SqlException sqlException)
+                {
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    {
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: At least one message already exists in the outbox");
                         return;
                     }
 

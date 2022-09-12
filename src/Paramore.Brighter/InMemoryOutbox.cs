@@ -80,7 +80,7 @@ namespace Paramore.Brighter
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well
     /// </summary>
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message>, IAmABulkOutboxAsync<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -109,6 +109,23 @@ namespace Paramore.Brighter
                 {
                     throw new Exception($"Could not add message with Id: {message.Id} to outbox");
                 }
+            }
+        }
+        
+        /// <summary>
+        /// Adds the specified message
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="outBoxTimeout"></param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            ClearExpiredMessages();
+            EnforceCapacityLimit();
+
+            foreach (Message message in messages)
+            {
+                Add(message, outBoxTimeout, transactionConnectionProvider);
             }
         }
 

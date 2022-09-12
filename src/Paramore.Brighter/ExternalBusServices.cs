@@ -102,6 +102,24 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
         }
+        
+        internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) 
+        {
+            CheckOutboxOutstandingLimit();
+
+            if (OutBox is IAmABulkOutboxSync<Message> box)
+            {
+                var written =
+                    Retry(() => { box.Add(messages, OutboxTimeout, overridingTransactionConnectionProvider); });
+
+                if (!written)
+                    throw new ChannelFailureException($"Could not write {messages.Count()} messages to the outbox");
+            }
+            else
+            {
+                throw new InvalidOperationException($"{OutBox.GetType()} does not implement IAmABulkOutboxSync");
+            }
+        }
 
         private void CheckOutboxOutstandingLimit()
         {
@@ -428,10 +446,19 @@ namespace Paramore.Brighter
         {
             return AsyncOutbox != null;
         }
+        internal bool HasAsyncBulkOutbox()
+        {
+            return AsyncOutbox is IAmABulkOutboxAsync<Message>;
+        }
 
         internal bool HasOutbox()
         {
             return OutBox != null;
+        }
+        
+        internal bool HasBulkOutbox()
+        {
+            return OutBox is IAmABulkOutboxSync<Message>;
         }
 
         private void OutstandingMessagesCheck()
