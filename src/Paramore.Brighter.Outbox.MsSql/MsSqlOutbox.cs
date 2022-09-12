@@ -719,7 +719,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             command.CommandText = sql;
             command.Parameters.AddRange(parameters.ToArray());
             return command;
-            
         }
 
         private SqlParameter[] InitAddDbParameters(Message message, int? position = null)

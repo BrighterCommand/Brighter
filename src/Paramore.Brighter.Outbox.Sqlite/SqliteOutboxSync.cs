@@ -41,8 +41,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// Implements an outbox using Sqlite as a backing store
     /// </summary>
     public class SqliteOutboxSync :
-        IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>
+        IAmABulkOutboxSync<Message>,
+        IAmABulkOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutboxSync>();
 
@@ -162,6 +162,104 @@ namespace Paramore.Brighter.Outbox.Sqlite
                         s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) await connection.CloseAsync();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open) connection.Open();
+            var sql = GetBulkAddSql(messages.ToList());
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql.sql;
+                AddParamtersParamArrayToCollection(sql.parameters, command);
+
+                try
+                {
+                    if (connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+                catch (SqliteException sqlException)
+                {
+                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
+                    {
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate Message was detected in the batch");
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Interface IAmABulkOutboxAsync
+        /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
+        /// store the message into an OutBox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
+        /// We provide implementations of <see cref="IAmAnOutboxAsync{T}"/> for various databases. Users using unsupported databases should consider a Pull
+        /// request
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken),
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
+
+            if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+            var sql = GetBulkAddSql(messages.ToList());
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql.sql;
+                AddParamtersParamArrayToCollection(sql.parameters, command);
+
+                try
+                {
+                    if (connectionProvider.IsSharedConnection)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+                catch (SqliteException sqlException)
+                {
+                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
+                    {
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate Message was detected in the batch");
                         return;
                     }
 
@@ -577,20 +675,38 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
             return sql;
         }
-
-        private SqliteParameter[] InitAddDbParameters(Message message)
+        
+        private (string sql, SqliteParameter[] parameters) GetBulkAddSql(List<Message> messages)
         {
+            var messageParams = new List<string>();
+            var parameters = new List<SqliteParameter>();
+            
+            for (int i = 0; i < messages.Count(); i++)
+            {
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                parameters.AddRange(InitAddDbParameters(messages[i], i));
+                
+            }
+            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
+            
+            return (sql, parameters.ToArray());
+        }
+
+        private SqliteParameter[] InitAddDbParameters(Message message, int? position = null)
+        {
+            var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                new SqliteParameter("@MessageId", SqliteType.Text) { Value = message.Id.ToString() },
-                new SqliteParameter("@MessageType", SqliteType.Text) { Value = message.Header.MessageType.ToString() },
-                new SqliteParameter("@Topic", SqliteType.Text) { Value = message.Header.Topic },
-                new SqliteParameter("@Timestamp", SqliteType.Text) { Value = message.Header.TimeStamp.ToString("s") },
-                new SqliteParameter("CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId },
-                new SqliteParameter("ReplyTo", message.Header.ReplyTo), new SqliteParameter("ContentType", message.Header.ContentType),
-                new SqliteParameter("@HeaderBag", SqliteType.Text) { Value = bagJson },
-                new SqliteParameter("@Body", SqliteType.Text) { Value = message.Body.Value }
+                new SqliteParameter($"@{prefix}MessageId", SqliteType.Text) { Value = message.Id.ToString() },
+                new SqliteParameter($"@{prefix}MessageType", SqliteType.Text) { Value = message.Header.MessageType.ToString() },
+                new SqliteParameter($"@{prefix}Topic", SqliteType.Text) { Value = message.Header.Topic },
+                new SqliteParameter($"@{prefix}Timestamp", SqliteType.Text) { Value = message.Header.TimeStamp.ToString("s") },
+                new SqliteParameter($"@{prefix}CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId },
+                new SqliteParameter($"@{prefix}ReplyTo", message.Header.ReplyTo), 
+                new SqliteParameter($"@{prefix}ContentType", message.Header.ContentType),
+                new SqliteParameter($"@{prefix}HeaderBag", SqliteType.Text) { Value = bagJson },
+                new SqliteParameter($"@{prefix}Body", SqliteType.Text) { Value = message.Body.Value }
             };
         }
 

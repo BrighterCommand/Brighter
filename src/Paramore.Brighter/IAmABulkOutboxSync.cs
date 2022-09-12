@@ -43,7 +43,6 @@ namespace Paramore.Brighter
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        /// <returns><see cref="Task"/>.</returns>
         void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
     }
 }
