@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Outbox.MySql
     ///     Class MySqlOutbox.
     /// </summary>
     public class MySqlOutboxSync :
-        IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>
+        IAmABulkOutboxSync<Message>,
+        IAmABulkOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutboxSync>();
 
@@ -135,7 +135,7 @@ namespace Paramore.Brighter.Outbox.MySql
             if (transactionConnectionProvider != null && transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
-            var connection = connectionProvider.GetConnection();
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
 
 
             if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -166,7 +166,108 @@ namespace Paramore.Brighter.Outbox.MySql
                 finally
                 {
                     if (!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) await connection.CloseAsync();
+                }
+            }
+        }
+        
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open) connection.Open();
+
+            var sql = GetBulkAddSql(messages.ToList());
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql.sql;
+                AddParamtersParamArrayToCollection(sql.parameters, command);
+
+                try
+                {
+                    if (connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+                catch (MySqlException sqlException)
+                {
+                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
+                    {
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate was detected in the batch");
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
                     else if (!connectionProvider.HasOpenTransaction) connection.Close();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        /// <returns><see cref="Task"/>.</returns>
+        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken),
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = _connectionProvider;
+
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
+
+
+            if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+            var sql = GetBulkAddSql(messages.ToList());
+            using (var command = connection.CreateCommand())
+            {
+                command.CommandText = sql.sql;
+                AddParamtersParamArrayToCollection(sql.parameters, command);
+
+                try
+                {
+                    if (connectionProvider.IsSharedConnection)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                }
+                catch (MySqlException sqlException)
+                {
+                    if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
+                    {
+                        s_logger.LogWarning(
+                            "MsSqlOutbox: A duplicate was detected in the batch");
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if (!connectionProvider.IsSharedConnection) connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction) await connection.CloseAsync();
                 }
             }
         }
@@ -590,20 +691,37 @@ namespace Paramore.Brighter.Outbox.MySql
             return sql;
         }
 
-        private MySqlParameter[] InitAddDbParameters(Message message)
+        private (string sql, MySqlParameter[] parameters) GetBulkAddSql(List<Message> messages)
         {
+            var messageParams = new List<string>();
+            var parameters = new List<MySqlParameter>();
+            
+            for (int i = 0; i < messages.Count(); i++)
+            {
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                parameters.AddRange(InitAddDbParameters(messages[i], i));
+                
+            }
+            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
+            
+            return (sql, parameters.ToArray());
+        }
+
+        private MySqlParameter[] InitAddDbParameters(Message message, int? position = null)
+        {
+            var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                new MySqlParameter { ParameterName = "@MessageId", DbType = DbType.String, Value = message.Id.ToString() },
-                new MySqlParameter { ParameterName = "@MessageType", DbType = DbType.String, Value = message.Header.MessageType.ToString() },
-                new MySqlParameter { ParameterName = "@Topic", DbType = DbType.String, Value = message.Header.Topic, },
-                new MySqlParameter { ParameterName = "@Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp.ToUniversalTime() }, //always store in UTC, as this is how we query messages
-                new MySqlParameter { ParameterName = "@CorrelationId", DbType = DbType.String, Value = message.Header.CorrelationId.ToString() },
-                new MySqlParameter { ParameterName = "@ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo },
-                new MySqlParameter { ParameterName = "@ContentType", DbType = DbType.String, Value = message.Header.ContentType },
-                new MySqlParameter { ParameterName = "@HeaderBag", DbType = DbType.String, Value = bagJson },
-                new MySqlParameter { ParameterName = "@Body", DbType = DbType.String, Value = message.Body.Value }
+                new MySqlParameter { ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.ToString() },
+                new MySqlParameter { ParameterName = $"@{prefix}MessageType", DbType = DbType.String, Value = message.Header.MessageType.ToString() },
+                new MySqlParameter { ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic, },
+                new MySqlParameter { ParameterName = $"@{prefix}Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp.ToUniversalTime() }, //always store in UTC, as this is how we query messages
+                new MySqlParameter { ParameterName = $"@{prefix}CorrelationId", DbType = DbType.String, Value = message.Header.CorrelationId.ToString() },
+                new MySqlParameter { ParameterName = $"@{prefix}ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo },
+                new MySqlParameter { ParameterName = $"@{prefix}ContentType", DbType = DbType.String, Value = message.Header.ContentType },
+                new MySqlParameter { ParameterName = $"@{prefix}HeaderBag", DbType = DbType.String, Value = bagJson },
+                new MySqlParameter { ParameterName = $"@{prefix}Body", DbType = DbType.String, Value = message.Body.Value }
             };
         }
 

@@ -38,6 +38,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutboxSync _mySqlOutboxSync;
         private readonly Message _messageEarliest;
+        private readonly Message _message2;
         private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
 
@@ -48,18 +49,33 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
 
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _mySqlOutboxSync.Add(_messageEarliest);
-
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _mySqlOutboxSync.Add(message2);
-
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            _mySqlOutboxSync.Add(_messageLatest);
+            
         }
 
         [Fact]
         public void When_Writing_Messages_To_The_Outbox()
         {
+            _mySqlOutboxSync.Add(_messageEarliest);
+            _mySqlOutboxSync.Add(_message2);
+            _mySqlOutboxSync.Add(_messageLatest);
+            
+            _retrievedMessages = _mySqlOutboxSync.Get();
+
+            //should read first message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //should read last message first from the outbox
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //should read the messages from the outbox
+            _retrievedMessages.Should().HaveCount(3);
+        }
+        
+        [Fact]
+        public void When_Writing_Messages_To_The_Outbox_Bulk()
+        {
+            var messages = new List<Message>() { _messageEarliest, _message2, _messageLatest };
+            _mySqlOutboxSync.Add(messages);
             _retrievedMessages = _mySqlOutboxSync.Get();
 
             //should read first message last from the outbox
