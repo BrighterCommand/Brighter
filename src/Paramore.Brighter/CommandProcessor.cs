@@ -550,7 +550,7 @@ namespace Paramore.Brighter
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
-            if (!_bus.HasAsyncBulkOutbox())
+            if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
             var messageMapper = _mapperRegistry.Get<T>();
@@ -569,7 +569,7 @@ namespace Paramore.Brighter
         {
             // s_logger.LogInformation("Save requests: {RequestType} {Id}", requests.GetType(), requests.Id);
 
-            if (!_bus.HasAsyncOutbox())
+            if (!_bus.HasAsyncBulkOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
             var messages = BulkMapMessages(requests);
