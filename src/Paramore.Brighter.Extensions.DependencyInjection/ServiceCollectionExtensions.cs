@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
@@ -30,11 +31,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var options = new BrighterOptions();
             configure?.Invoke(options);
-            services.AddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton<IBrighterOptions>(options);
 
             return BrighterHandlerBuilder(services, options);
         }
-        
+
         /// <summary>
         /// Normally you want to call AddBrighter from client code, and not this method. Public only to support Service Activator extensions
         /// Registers singletons with the service collection :-
@@ -47,12 +48,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder BrighterHandlerBuilder(IServiceCollection services, BrighterOptions options)
         {
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
-            services.AddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
+            services.TryAddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
-            services.Add(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
+            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
-            services.AddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
+            services.TryAddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
 
             return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
         }
@@ -77,12 +78,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             if (outbox is IAmAnOutboxSync<Message>)
             {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => outbox, ServiceLifetime.Singleton));
+                brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => outbox, ServiceLifetime.Singleton));
             }
 
             if (outbox is IAmAnOutboxAsync<Message>)
             {
-                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
+                brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
             }
 
             _outboxBulkChunkSize = outboxBulkChunkSize;
@@ -110,17 +111,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
          {
              if (inbox is IAmAnInboxSync)
              {
-                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => inbox, serviceLifetime));
+                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => inbox, serviceLifetime));
              }
 
              if (inbox is IAmAnInboxAsync)
              {
-                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => inbox, serviceLifetime));
+                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => inbox, serviceLifetime));
              }
 
              if (inboxConfiguration != null)
              {
-                 brighterBuilder.Services.AddSingleton<InboxConfiguration>(inboxConfiguration);
+                 brighterBuilder.Services.TryAddSingleton<InboxConfiguration>(inboxConfiguration);
              }
 
              return brighterBuilder;
@@ -138,8 +139,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseInMemoryOutbox(this IBrighterBuilder brighterBuilder)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => new InMemoryOutbox(), ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
@@ -157,8 +158,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns></returns>
         public static IBrighterBuilder UseInMemoryInbox(this IBrighterBuilder brighterBuilder)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
+            brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxAsync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
 
             return brighterBuilder;
         }
@@ -178,9 +179,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAProducerRegistry producerRegistry, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
             
-            brighterBuilder.Services.AddSingleton<IAmAProducerRegistry>(producerRegistry);
+            brighterBuilder.Services.TryAddSingleton<IAmAProducerRegistry>(producerRegistry);
             
-            brighterBuilder.Services.AddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
+            brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
             
             return brighterBuilder;
         }
@@ -193,7 +194,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseFeatureSwitches(this IBrighterBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
-            brighterBuilder.Services.AddSingleton(featureSwitchRegistry);
+            brighterBuilder.Services.TryAddSingleton(featureSwitchRegistry);
             return brighterBuilder;
         }
         
