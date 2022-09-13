@@ -84,7 +84,8 @@ namespace Paramore.Brighter
         private bool _useRequestReplyQueues = false;
         private IEnumerable<Subscription> _replySubscriptions;
         private IAmABoxTransactionConnectionProvider _overridingBoxTransactionConnectionProvider = null;
-        
+        private int _outboxBulkChunkSize;
+
         private CommandProcessorBuilder()
         {
             DefaultPolicy();
@@ -170,6 +171,7 @@ namespace Paramore.Brighter
             _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
+            _outboxBulkChunkSize = configuration.OutboxBulkChunkSize;
             return this;
         }
 
@@ -242,7 +244,8 @@ namespace Paramore.Brighter
                     producerRegistry: _producers,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry,
-                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
+                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider,
+                    outboxBulkChunkSize: _outboxBulkChunkSize
                 );
             }
             else if (_useRequestReplyQueues)

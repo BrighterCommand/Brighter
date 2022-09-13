@@ -24,13 +24,16 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// -- IAmAnOutboxViewer<Message>: Lets us read the entries in the outbox
         /// -- IAmAnOutboxViewerAsync<Message>: Lets us read the entries in the outbox
         public static IBrighterBuilder UseMsSqlOutbox(
-            this IBrighterBuilder brighterBuilder, MsSqlConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+            this IBrighterBuilder brighterBuilder, MsSqlConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton, int outboxBulkChunkSize = 100)
         {
             brighterBuilder.Services.AddSingleton<MsSqlConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMsSqlConnectionProvider), connectionProvider, serviceLifetime));
             
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMsSqlOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMsSqlOutbox, serviceLifetime));
+            
+            //Set chunk size - TODO: Bring this inline
+            brighterBuilder.UseExternalOutbox(null, outboxBulkChunkSize);
  
             return brighterBuilder;
         }

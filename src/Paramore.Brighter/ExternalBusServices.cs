@@ -24,8 +24,10 @@ namespace Paramore.Brighter
 
         internal int OutboxTimeout { get; set; } = 300;
 
+        internal int OutboxBulkChunkSize { get; set; } = 100;
+
         internal IAmAProducerRegistry ProducerRegistry { get; set; }
-        
+
         private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
 
@@ -76,16 +78,19 @@ namespace Paramore.Brighter
 
             if (AsyncOutbox is IAmABulkOutboxAsync<Message> box)
             {
-                var written = await RetryAsync(
-                    async ct =>
-                    {
-                        await box.AddAsync(messages, OutboxTimeout, ct, overridingTransactionConnectionProvider)
-                            .ConfigureAwait(continueOnCapturedContext);
-                    },
-                    continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                foreach (var chunk in ChunkMessages(messages))
+                {
+                    var written = await RetryAsync(
+                        async ct =>
+                        {
+                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingTransactionConnectionProvider)
+                                .ConfigureAwait(continueOnCapturedContext);
+                        },
+                        continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
-                if (!written)
-                    throw new ChannelFailureException($"Could not write {messages.Count()} requests to the outbox");
+                    if (!written)
+                        throw new ChannelFailureException($"Could not write {chunk.Count()} requests to the outbox");
+                }
             }
             else
             {
@@ -109,16 +114,28 @@ namespace Paramore.Brighter
 
             if (OutBox is IAmABulkOutboxSync<Message> box)
             {
-                var written =
-                    Retry(() => { box.Add(messages, OutboxTimeout, overridingTransactionConnectionProvider); });
+                foreach (var chunk in ChunkMessages(messages))
+                {
+                    var written =
+                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingTransactionConnectionProvider); });
 
-                if (!written)
-                    throw new ChannelFailureException($"Could not write {messages.Count()} messages to the outbox");
+                    if (!written)
+                        throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");
+                }
             }
             else
             {
                 throw new InvalidOperationException($"{OutBox.GetType()} does not implement IAmABulkOutboxSync");
             }
+        }
+
+        private IEnumerable<List<Message>> ChunkMessages(IEnumerable<Message> messages)
+        {
+            return Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)OutboxBulkChunkSize)))
+                .Select(i => new List<Message>(messages
+                    .Skip(i * OutboxBulkChunkSize)
+                    .Take(OutboxBulkChunkSize)
+                    .ToArray()));
         }
 
         private void CheckOutboxOutstandingLimit()
