@@ -499,20 +499,23 @@ namespace Paramore.Brighter
         
         private Guid[] DepositPost<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
         {
-            // s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
-
             if (!_bus.HasBulkOutbox())
                 throw new InvalidOperationException("No Bulk outbox defined.");
 
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
+            var successfullySentMessage = new List<Guid>();
+            
+            foreach (var batch in SplitRequestBatchIntoTypes(requests))
+            {
+                var messages = BulkMapMessages(requests);
+                
+                s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
-            var messages = BulkMapMessages(requests);
+                _bus.AddToOutbox(messages, connectionProvider);
+                
+                successfullySentMessage.AddRange(messages.Select(m => m.Id));
+            }
 
-            _bus.AddToOutbox(messages, connectionProvider);
-
-            return messages.Select(m => m.Id).ToArray();
+            return successfullySentMessage.ToArray();
         }
 
         /// <summary>
@@ -573,16 +576,28 @@ namespace Paramore.Brighter
         private async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-            // s_logger.LogInformation("Save requests: {RequestType} {Id}", requests.GetType(), requests.Id);
-
             if (!_bus.HasAsyncBulkOutbox())
-                throw new InvalidOperationException("No async outbox defined.");
+                throw new InvalidOperationException("No bulk async outbox defined.");
 
-            var messages = BulkMapMessages(requests);
+            var successfullySentMessage = new List<Guid>();
+            
+            foreach (var batch in SplitRequestBatchIntoTypes(requests))
+            {
+                var messages = BulkMapMessages(batch.ToArray());
 
-            await _bus.AddToOutboxAsync(messages, continueOnCapturedContext, cancellationToken, connectionProvider);
+                s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
-            return messages.Select(m => m.Id).ToArray();
+                await _bus.AddToOutboxAsync(messages, continueOnCapturedContext, cancellationToken, connectionProvider);
+                
+                successfullySentMessage.AddRange(messages.Select(m => m.Id));
+            }
+
+            return successfullySentMessage.ToArray();
+        }
+
+        private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
+        {
+            return requests.GroupBy(r => r.GetType());
         }
 
         private List<Message> BulkMapMessages<T>(IEnumerable<T> requests) where T : class, IRequest
