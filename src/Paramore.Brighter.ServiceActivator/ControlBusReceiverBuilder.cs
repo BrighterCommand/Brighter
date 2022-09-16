@@ -159,7 +159,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
             // a base naming scheme to allow centralized management.
-            var connectionsConfiguration = new Subscription[]
+            var subscriptions = new Subscription[]
             {
                 new Subscription<ConfigurationCommand>(
                     new SubscriptionName($"{hostName}.{CONFIGURATION}"),
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
                 .MessageMappers(incomingMessageMapperRegistry)
                 .DefaultChannelFactory(_channelFactory)
-                .Subscriptions(connectionsConfiguration)
+                .Subscriptions(subscriptions)
                 .Build();
         }
 
