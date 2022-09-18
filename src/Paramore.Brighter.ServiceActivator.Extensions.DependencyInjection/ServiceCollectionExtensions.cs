@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Logging;
@@ -30,10 +31,10 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var options = new ServiceActivatorOptions();
             configure?.Invoke(options);
-            services.AddSingleton(options);
-            services.AddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton(options);
+            services.TryAddSingleton<IBrighterOptions>(options);
 
-            services.AddSingleton<IDispatcher>(BuildDispatcher);
+            services.TryAddSingleton<IDispatcher>(BuildDispatcher);
 
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
