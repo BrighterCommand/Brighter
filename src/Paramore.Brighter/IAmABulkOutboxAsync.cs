@@ -37,6 +37,7 @@ namespace Paramore.Brighter
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
+    [Obsolete("Deprecated in favour of Bulk, wil be merged into IAmAnOutboxAsync in v10")]
     public interface IAmABulkOutboxAsync<in T> : IAmAnOutboxAsync<T> where T : Message
     {
         /// <summary>
