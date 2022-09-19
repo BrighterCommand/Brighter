@@ -6,7 +6,7 @@
 
     <ItemGroup>
         <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.8">
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.9">
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
           <PrivateAssets>all</PrivateAssets>
         </PackageReference>
