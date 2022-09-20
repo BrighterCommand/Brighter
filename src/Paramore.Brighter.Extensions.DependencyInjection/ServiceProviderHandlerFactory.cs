@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     public class ServiceProviderHandlerFactory : IAmAHandlerFactorySync, IAmAHandlerFactoryAsync
     {
         private readonly IServiceProvider _serviceProvider;
-        private bool _isTransient;
+        private readonly bool _isTransient;
 
         /// <summary>
         /// Constructs a factory that uses the .NET IoC container as the factory
