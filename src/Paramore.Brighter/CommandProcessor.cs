@@ -24,7 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -43,6 +45,7 @@ namespace Paramore.Brighter
     public class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
+        private static readonly ActivitySource _activitySource = new ActivitySource("Brighter", Assembly.GetAssembly(typeof(CommandProcessor)).ImageRuntimeVersion);
 
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
@@ -60,6 +63,7 @@ namespace Paramore.Brighter
         // the following are not readonly to allow setting them to null on dispose
         private readonly IAmAChannelFactory _responseChannelFactory;
 
+        private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
         
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -630,7 +634,8 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, false, false); 
+            using var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Producer);
+            _bus.ClearOutbox(amountToClear, minimumAge, false, false, activity); 
         }
 
         /// <summary>
@@ -659,7 +664,8 @@ namespace Paramore.Brighter
             int minimumAge = 5000,
             bool useBulk = false)
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk); 
+            using var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX,  ActivityKind.Producer);
+            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, activity); 
         }
 
         /// <summary>

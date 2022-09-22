@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -234,8 +235,13 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
         /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
-        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk)
+        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Activity activity)
         {
+            activity?.AddTag("amountToClear", amountToClear);
+            activity?.AddTag("minimumAge", minimumAge);
+            activity?.AddTag("async", useAsync);
+            activity?.AddTag("bulk", useBulk);
+            
             if (useAsync)
             {
                 if (!HasAsyncOutbox())
