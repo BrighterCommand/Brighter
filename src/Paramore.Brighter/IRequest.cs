@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 
 namespace Paramore.Brighter
 {
@@ -37,5 +38,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The identifier.</value>
         Guid Id { get; set; }
+
+        /// <summary>
+        /// Gets or sets the span that this operation live within
+        /// </summary>
+        Activity Span { get; set; }
     }
 }

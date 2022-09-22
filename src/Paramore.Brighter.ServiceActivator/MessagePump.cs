@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -19,7 +21,9 @@ namespace Paramore.Brighter.ServiceActivator
     public abstract class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
-        
+
+        private static readonly ActivitySource _activitySource = new ActivitySource("Brighter.ServiceActivator",
+            Assembly.GetAssembly(typeof(CommandProcessor)).ImageRuntimeVersion);
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
@@ -119,11 +123,25 @@ namespace Paramore.Brighter.ServiceActivator
                 }
 
                 // Serviceable message
+                Activity span = null;
                 try
                 {
                     var request = TranslateMessage(message);
+                    if (message.CloudEvents.Populated)
+                    {
+                        span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer,
+                            message.CloudEvents.EventId);
+                    }
+                    else
+                    {
+                        span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer);
+                    }
+                    request.Span = span;
+                    
                     CommandProcessorProvider.CreateScope();
                     DispatchRequest(message.Header, request);
+
+                    span?.SetStatus(ActivityStatusCode.Ok);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -132,17 +150,21 @@ namespace Paramore.Brighter.ServiceActivator
                         Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     RejectMessage(message);
+                    span?.SetStatus(ActivityStatusCode.Error,
+                        $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                     Channel.Dispose();
                     break;
                 }
                 catch (DeferMessageAction)
                 {
+                    span?.SetStatus(ActivityStatusCode.Error, "Deferring message for later action");
                     if (RequeueMessage(message)) continue;
                 }
                 catch (AggregateException aggregateException)
                 {
                     var (stop, requeue) = HandleProcessingException(aggregateException);
 
+                    span?.SetStatus(ActivityStatusCode.Error, $"Error while dispatching, Stopping {stop}, re-queueing {requeue}");
                     if (requeue)
                     {
                         if (RequeueMessage(message)) continue;
@@ -162,15 +184,22 @@ namespace Paramore.Brighter.ServiceActivator
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageLimit();
+                    
+                    span.SetStatus(ActivityStatusCode.Error,
+                        $"MessagePump: Failed to map message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 catch (Exception e)
                 {
                     s_logger.LogError(e,
                         "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+
+                    span.SetStatus(ActivityStatusCode.Error,
+                        $"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 finally
                 {
+                    span.Dispose();
                     CommandProcessorProvider.ReleaseScope();
                 }
 

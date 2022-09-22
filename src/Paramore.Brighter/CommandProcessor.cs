@@ -64,6 +64,8 @@ namespace Paramore.Brighter
         private readonly IAmAChannelFactory _responseChannelFactory;
 
         private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
+        private const string PROCESSCOMMAND = "Process Command";
+        private const string PROCESSEVENT = "Process Event";
         
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -267,6 +269,7 @@ namespace Paramore.Brighter
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
+            using var activity = _activitySource.StartActivity(PROCESSCOMMAND, ActivityKind.Consumer);
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
