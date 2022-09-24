@@ -108,7 +108,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public void Init()
         {
             _producer = new ProducerBuilder<string, string>(_producerConfig)
-                .SetErrorHandler((_, error) =>
+                .SetErrorHandler((consumer, error) =>
                 {
                     s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason,
                         error.IsFatal);
@@ -174,7 +174,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 s_logger.LogError(kafkaException, $"KafkaMessageProducer: There was an error sending to topic {Topic})");
                 
-                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
+                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
                     throw;
                 
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);

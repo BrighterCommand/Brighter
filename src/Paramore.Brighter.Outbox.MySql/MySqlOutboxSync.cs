@@ -101,26 +101,19 @@ namespace Paramore.Brighter.Outbox.MySql
 
                 try
                 {
-                    if (connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
                 catch (MySqlException sqlException)
                 {
                     if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                     {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                        s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
                         return;
                     }
 
                     throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
         }
@@ -147,26 +140,19 @@ namespace Paramore.Brighter.Outbox.MySql
 
                 try
                 {
-                    if (connectionProvider.IsSharedConnection)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (MySqlException sqlException)
                 {
                     if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                     {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                        s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
                         return;
                     }
 
                     throw;
-                }
-                finally
-                {
-                    if (!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
         }
@@ -202,10 +188,6 @@ namespace Paramore.Brighter.Outbox.MySql
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
 
                 return messages;
             }
@@ -252,7 +234,7 @@ namespace Paramore.Brighter.Outbox.MySql
         public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = _connectionProvider.GetConnection();
 
             using (var command = connection.CreateCommand())
             {
@@ -261,21 +243,14 @@ namespace Paramore.Brighter.Outbox.MySql
                 if (connection.State != ConnectionState.Open)
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-                
                 var messages = new List<Message>();
-
-                while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                 {
-                    messages.Add(MapAMessage(dbDataReader));
+                    while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
                 }
-                dbDataReader.Close();
-
-                if (!_connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
-                    await connection.CloseAsync();
 
                 return messages;
             }
@@ -292,26 +267,23 @@ namespace Paramore.Brighter.Outbox.MySql
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             var connection = _connectionProvider.GetConnection();
-
+            
             using (var command = connection.CreateCommand())
             {
                 CreatePagedReadCommand(command, pageSize, pageNumber);
 
                 if (connection.State != ConnectionState.Open) connection.Open();
 
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
+                using (var dbDataReader = command.ExecuteReader())
                 {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+                    var messages = new List<Message>();
+                    while (dbDataReader.Read())
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
 
-                return messages;
+                    return messages;
+                }
             }
         }
 
@@ -329,7 +301,7 @@ namespace Paramore.Brighter.Outbox.MySql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = _connectionProvider.GetConnection();
             
             using (var command = connection.CreateCommand())
             {
@@ -337,18 +309,14 @@ namespace Paramore.Brighter.Outbox.MySql
 
                 if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-                
                 var messages = new List<Message>();
-                while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                 {
-                    messages.Add(MapAMessage(dbDataReader));
+                    while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
 
                 return messages;
             }
@@ -369,18 +337,13 @@ namespace Paramore.Brighter.Outbox.MySql
         public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            
+            var connection = _connectionProvider.GetConnection();
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow))
+            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
             {
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            if (!_connectionProvider.IsSharedConnection)
-                connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction)
-                await connection.CloseAsync();
         }
 
         /// <summary>
@@ -392,12 +355,10 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var connection = _connectionProvider.GetConnection();
             if (connection.State != ConnectionState.Open) connection.Open();
-            using (var command = InitMarkDispatchedCommand(connection, new [] {id}, dispatchedAt ?? DateTime.UtcNow))
+            using (var command = InitMarkDispatchedCommand(connection, new [] {id}, dispatchedAt))
             {
                 command.ExecuteNonQuery();
             }
-            if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction) connection.Close();
         }
 
         /// <summary>
@@ -426,10 +387,6 @@ namespace Paramore.Brighter.Outbox.MySql
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
 
                 return messages;
             }
@@ -455,7 +412,7 @@ namespace Paramore.Brighter.Outbox.MySql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
@@ -469,11 +426,6 @@ namespace Paramore.Brighter.Outbox.MySql
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
-                
                 return messages;
             }
         }
@@ -486,11 +438,11 @@ namespace Paramore.Brighter.Outbox.MySql
         private void CreatePagedDispatchedCommand(DbCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
         {
             var pagingSqlFormat =
-                "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATE_ADD(UTC_TIMESTAMP(), INTERVAL -@OutstandingSince MICROSECOND) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+                "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
                 CreateSqlParameter("@PageNumber", pageNumber), CreateSqlParameter("@PageSize", pageSize),
-                CreateSqlParameter("@OutstandingSince", millisecondsDispatchedSince * 1000) //we need to add microseconds
+                CreateSqlParameter("@OutstandingSince", -1 * millisecondsDispatchedSince)
             };
 
             var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
@@ -524,7 +476,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var offset = (pageNumber - 1) * pageSize;
             var pagingSqlFormat =
-                "SELECT * FROM {0} WHERE DISPATCHED IS NULL AND Timestamp < DATE_ADD(UTC_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @OffsetValue";
+                "SELECT * FROM {0} WHERE DISPATCHED IS NULL AND Timestamp < DATE_ADD(CURRENT_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @OffsetValue";
             var seconds = TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds > 0 ? TimeSpan.FromMilliseconds(milliSecondsSinceAdded).Seconds : 1;
             var parameters = new[]
             {
@@ -549,10 +501,6 @@ namespace Paramore.Brighter.Outbox.MySql
 
                 if (connection.State != ConnectionState.Open) connection.Open();
                 var item = execute(command);
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
                 return item;
             }
         }
@@ -564,7 +512,7 @@ namespace Paramore.Brighter.Outbox.MySql
             CancellationToken cancellationToken = default(CancellationToken),
             params MySqlParameter[] parameters)
         {
-            var connection = await _connectionProvider.GetConnectionAsync();
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
@@ -573,10 +521,6 @@ namespace Paramore.Brighter.Outbox.MySql
 
                 if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
-                
                 return item;
             }
         }
@@ -598,7 +542,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 new MySqlParameter { ParameterName = "@MessageId", DbType = DbType.String, Value = message.Id.ToString() },
                 new MySqlParameter { ParameterName = "@MessageType", DbType = DbType.String, Value = message.Header.MessageType.ToString() },
                 new MySqlParameter { ParameterName = "@Topic", DbType = DbType.String, Value = message.Header.Topic, },
-                new MySqlParameter { ParameterName = "@Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp.ToUniversalTime() }, //always store in UTC, as this is how we query messages
+                new MySqlParameter { ParameterName = "@Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp },
                 new MySqlParameter { ParameterName = "@CorrelationId", DbType = DbType.String, Value = message.Header.CorrelationId.ToString() },
                 new MySqlParameter { ParameterName = "@ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo },
                 new MySqlParameter { ParameterName = "@ContentType", DbType = DbType.String, Value = message.Header.ContentType },
@@ -614,7 +558,7 @@ namespace Paramore.Brighter.Outbox.MySql
             var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId IN ( {inClause} )";
 
             command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
+            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt));
             return command;
         }
 

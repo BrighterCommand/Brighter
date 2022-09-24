@@ -1,4 +1,4 @@
-﻿namespace GreetingsWeb.Models
+﻿namespace Greetingsweb.Models
 {
     public class NewPerson
     {

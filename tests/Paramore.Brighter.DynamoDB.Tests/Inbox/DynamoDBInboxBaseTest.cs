@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.DynamoDB.Tests.TestDoubles;
 using Paramore.Brighter.Inbox.DynamoDB;
 using Paramore.Brighter.Outbox.DynamoDB;
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             Client = CreateClient();
             _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
-            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<CommandItem<MyCommand>>(
+            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<CommandItem<MyCommand>>(
                 new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                     new Dictionary<string, ProvisionedThroughput>()

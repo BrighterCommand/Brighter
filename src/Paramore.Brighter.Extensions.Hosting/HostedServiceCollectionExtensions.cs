@@ -1,6 +1,5 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.Hosting
@@ -19,7 +18,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             var options = new TimedOutboxSweeperOptions();
             timedOutboxSweeperOptionsAction?.Invoke(options);
             
-            brighterBuilder.Services.TryAddSingleton<TimedOutboxSweeperOptions>(options);
+            brighterBuilder.Services.AddSingleton<TimedOutboxSweeperOptions>(options);
             brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
             return brighterBuilder;
         }

@@ -34,12 +34,12 @@ namespace Paramore.Brighter.ServiceActivator
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
-    public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfSubcriptions, IAmADispatchBuilder
+    public class DispatchBuilder : INeedACommandProcessorFactory, INeedAChannelFactory, INeedAMessageMapper, INeedAListOfConnections, IAmADispatchBuilder
     {
         private Func<IAmACommandProcessorProvider> _commandProcessorFactory;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmAChannelFactory _defaultChannelFactory;
-        private IEnumerable<Subscription> _subscriptions;
+        private IEnumerable<Subscription> _connections;
 
         private DispatchBuilder() { }
 
@@ -80,42 +80,23 @@ namespace Paramore.Brighter.ServiceActivator
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
-        /// <returns>INeedAListOfSubcriptions.</returns>
-        public INeedAListOfSubcriptions DefaultChannelFactory(IAmAChannelFactory channelFactory)
+        /// <returns>INeedAListOfConnections.</returns>
+        public INeedAListOfConnections DefaultChannelFactory(IAmAChannelFactory channelFactory)
         {
             _defaultChannelFactory = channelFactory;
             return this;
         }
 
         /// <summary>
-        /// A list of subscriptions i.e. mappings of channels to commands or events
-        /// </summary>
-        /// <param name="connections">The connections.</param>
-        /// <returns>IAmADispatchBuilder.</returns>
-        public IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subscriptions)
-        {
-            _subscriptions = subscriptions;
-
-            foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
-            {
-                connection.ChannelFactory = _defaultChannelFactory;
-            }
-
-            return this;
-        }
-        
-        
-        /// <summary>
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
         /// <param name="connections">The connections.</param>
         /// <returns>IAmADispatchBuilder.</returns>
-        [Obsolete("This will be replaced in v10. Please use Subscriptions, which is functionally equivalent")]
         public IAmADispatchBuilder Connections(IEnumerable<Subscription> connections)
         {
-            _subscriptions = connections;
+            _connections = connections;
 
-            foreach (var connection in _subscriptions.Where(c => c.ChannelFactory == null))
+            foreach (var connection in _connections.Where(c => c.ChannelFactory == null))
             {
                 connection.ChannelFactory = _defaultChannelFactory;
             }
@@ -129,7 +110,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _subscriptions);
+            return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _connections);
         }
     }
 
@@ -171,24 +152,20 @@ namespace Paramore.Brighter.ServiceActivator
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
-        /// <returns>INeedAListOfSubcriptions.</returns>
-        INeedAListOfSubcriptions DefaultChannelFactory(IAmAChannelFactory channelFactory);
+        /// <returns>INeedAListOfConnections.</returns>
+        INeedAListOfConnections DefaultChannelFactory(IAmAChannelFactory channelFactory);
     }
 
     /// <summary>
-    /// Interface INeedAListOfSubcriptions
+    /// Interface INeedAListOfConnections
     /// </summary>
-    public interface INeedAListOfSubcriptions
-    { 
-        ///// <summary>
+    public interface INeedAListOfConnections
+    {
+           ///// <summary>
         ///// A list of connections i.e. mappings of channels to commands or events
         ///// </summary>
         ///// <param name="connections"></param>
         ///// <returns>IAmADispatchBuilder.</returns>
-        IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subsriptions);
-       
-        // TODO: Remove in V10
-        [Obsolete("Will be removed in V10, use Subscriptions instead")]
         IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);
     }
 

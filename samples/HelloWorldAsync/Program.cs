@@ -23,34 +23,36 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Serilog;
 
 namespace HelloWorldAsync
 {
-    public class Program
+    internal class Program
     {
         private static async Task Main(string[] args)
         {
-            var host = Host.CreateDefaultBuilder()
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
+
+            var host = new HostBuilder()
                 .ConfigureServices((hostContext, services) =>
 
                     {
-                        services.AddBrighter()
-                            .AutoFromAssemblies();
+                        services.AddBrighter().AutoFromAssemblies();
+                        services.AddHostedService<RunCommandProcessor>();
+                        
                     }
                 )
+                .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
-            
-            var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
-            
-            await commandProcessor.SendAsync(new GreetingCommand("Ian"));
 
             await host.RunAsync();
         }

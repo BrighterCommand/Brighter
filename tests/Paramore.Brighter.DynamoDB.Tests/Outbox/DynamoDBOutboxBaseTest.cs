@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using Amazon.DynamoDBv2;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
-using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.DynamoDb.Extensions;
 using Paramore.Brighter.Outbox.DynamoDB;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox
@@ -11,19 +11,17 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
     public class DynamoDBOutboxBaseTest : IDisposable
     {
         private bool _disposed;
-        protected DynamoDbTableBuilder DbTableBuilder { get; }
-        protected string OutboxTableName { get; }
-
+        private DynamoDbTableBuilder _dynamoDbTableBuilder;
+        protected string TableName { get; }
         protected AWSCredentials Credentials { get; set; }
-
-        protected IAmazonDynamoDB Client { get; }
+        public IAmazonDynamoDB Client { get; }
         
         protected DynamoDBOutboxBaseTest ()
         {
             Client = CreateClient();
-            DbTableBuilder = new DynamoDbTableBuilder(Client);
+            _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
-            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
+            var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableMapper<MessageItem>(
                     new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                     new Dictionary<string, ProvisionedThroughput>
@@ -32,17 +30,17 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                         {"Delivered", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}}
                     }
                 ));
-            OutboxTableName = createTableRequest.TableName;
-            (bool exist, IEnumerable<string> tables) hasTables = DbTableBuilder.HasTables(new string[] {OutboxTableName}).Result;
+            TableName = createTableRequest.TableName;
+            (bool exist, IEnumerable<string> tables) hasTables = _dynamoDbTableBuilder.HasTables(new string[] {TableName}).Result;
             if (!hasTables.exist)
             {
-                var buildTable = DbTableBuilder.Build(createTableRequest).Result;
-                DbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
+                var buildTable = _dynamoDbTableBuilder.Build(createTableRequest).Result;
+                _dynamoDbTableBuilder.EnsureTablesReady(new[] {createTableRequest.TableName}, TableStatus.ACTIVE).Wait();
             }
         }
 
 
-        private IAmazonDynamoDB CreateClient()
+        protected IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
             
@@ -78,7 +76,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 // IDisposable only
             }
 
-            var tableNames = new string[] {OutboxTableName};
+            var tableNames = new string[] {TableName};
             //var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
            // _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
  

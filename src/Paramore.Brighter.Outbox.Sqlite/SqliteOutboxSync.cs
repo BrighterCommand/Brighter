@@ -106,8 +106,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
                 try
                 {
-                    if (connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
                 catch (SqliteException sqlException)
@@ -121,11 +120,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     }
 
                     throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
                 }
             }
         }
@@ -151,26 +145,19 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
                 try
                 {
-                    if (connectionProvider.IsSharedConnection)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
                     await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 }
                 catch (SqliteException sqlException)
                 {
                     if (IsExceptionUnqiueOrDuplicateIssue(sqlException))
                     {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
+                        s_logger.LogWarning("MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
                         return;
                     }
 
                     throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) await connection.CloseAsync();
                 }
             }
         }
@@ -205,10 +192,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
 
                 return messages;
             }
@@ -253,10 +236,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync();
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
-                var inClause = string.Join(",", messageIds.ToList().Select((s, i) => "'" + s + "'").ToArray());
+                var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
                 var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
 
                 command.CommandText = sql;
@@ -265,18 +248,16 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
-                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-                
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
+                           .ConfigureAwait(ContinueOnCapturedContext))
+                {
                     while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
                     {
                         messages.Add(MapAMessage(dbDataReader));
                     }
-                    dbDataReader.Close();
-                
-                    if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
-                    
+                }
+
+                ;
                 return messages;
             }
         }
@@ -297,20 +278,16 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
                 if (connection.State != ConnectionState.Open) connection.Open();
 
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
+                using (var dbDataReader = command.ExecuteReader())
                 {
-                    messages.Add(MapAMessage(dbDataReader));
+                    var messages = new List<Message>();
+                    while (dbDataReader.Read())
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
+
+                    return messages;
                 }
-
-                dbDataReader.Close();
-
-                if (!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-
-                return messages;
             }
         }
 
@@ -333,21 +310,17 @@ namespace Paramore.Brighter.Outbox.Sqlite
             {
                 CreatePagedRead(command, pageSize, pageNumber);
 
-                if (connection.State != ConnectionState.Open)
-                    await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
                 var messages = new List<Message>();
-                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-
-                while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                using (var dbDataReader = await command.ExecuteReaderAsync(cancellationToken)
+                    .ConfigureAwait(ContinueOnCapturedContext))
                 {
-                    messages.Add(MapAMessage(dbDataReader));
+                    while (await dbDataReader.ReadAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext))
+                    {
+                        messages.Add(MapAMessage(dbDataReader));
+                    }
                 }
-                dbDataReader.Close();
-
-                if (!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
 
                 return messages;
             }
@@ -370,15 +343,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = _connectionProvider.GetConnection();
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
             {
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
-            if (!_connectionProvider.IsSharedConnection) connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
         }
 
         /// <summary>
@@ -394,8 +365,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
             {
                 command.ExecuteNonQuery();
             }
-            if (!_connectionProvider.IsSharedConnection) connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction) connection.Close();
         }
 
         /// <summary>
@@ -427,10 +396,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
 
                 return messages;
             }
@@ -453,7 +418,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = _connectionProvider.GetConnection();
             using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
@@ -467,10 +432,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
                 return messages;
             }
         }
@@ -525,6 +486,18 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return new SqliteParameter(parameterName, value);
         }
 
+        private string GenerateInClauseAndAddParameters(SqliteCommand command, List<Guid> messageIds)
+        {
+            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+
+            for (int i = 0; i < paramNames.Count(); i++)
+            {
+                command.Parameters.Add(CreateSqlParameter(paramNames[i], messageIds[i]));
+            }
+
+            return string.Join(",", paramNames);
+        }
+
         private T ExecuteCommand<T>(Func<SqliteCommand, T> execute, string sql, int outboxTimeout,
             params SqliteParameter[] parameters)
         {
@@ -539,10 +512,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
 
                 var item = execute(command);
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
                 return item;
             }
         }
@@ -554,7 +523,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             CancellationToken cancellationToken = default(CancellationToken),
             params SqliteParameter[] parameters)
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            var connection = _connectionProvider.GetConnection();
             
             using (var command = connection.CreateCommand())
             {
@@ -565,10 +534,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 AddParamtersParamArrayToCollection(parameters, command);
 
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) await connection.CloseAsync();
-                
                 return item;
             }
         }
@@ -597,10 +562,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private SqliteCommand InitMarkDispatchedCommand(SqliteConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
         {
             var command = connection.CreateCommand();
-            var inClause = string.Join(",", messageIds.ToList().Select((s, i) => "'" + s + "'").ToArray());
-            var dispatchTime = dispatchedAt.HasValue ? "datetime('" + dispatchedAt.Value.ToString("yyyy-MM-dd HH:mm:ss") + "')" : "datetime('now')"; 
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched =  {dispatchTime} WHERE MessageId IN ( {inClause} )";
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId IN ( {inClause} )";
             command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("@DispatchedAt", dispatchedAt.HasValue ? dispatchedAt.Value.ToString("s"): DateTime.UtcNow.ToString("s")));
             return command;
         }
 

@@ -478,10 +478,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             if (_maxQueueLength.HasValue)
             {
                 arguments.Add("x-max-length",_maxQueueLength.Value);
-                if (_hasDlq)
-                {
-                    arguments.Add("x-overflow", "reject-publish-dlx");
-                }
                 arguments.Add("x-overflow", "reject-publish");
             }
 

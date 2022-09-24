@@ -32,12 +32,6 @@ namespace Paramore.Brighter
     public class Publication
     {
         /// <summary>
-        /// What do we do with infrastructure dependencies for the producer?
-        /// </summary>
-        public OnMissingChannel MakeChannels { get; set; }
-        
-        
-        /// <summary>
         /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
         /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
         /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
@@ -52,7 +46,14 @@ namespace Paramore.Brighter
         /// </summary>
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         
-         /// <summary>
+        
+        /// <summary>
+        /// What do we do with infrastructure dependencies for the producer?
+        /// </summary>
+        public OnMissingChannel MakeChannels { get; set; }
+        
+        
+        /// <summary>
         /// The topic this publication is for
         /// </summary>
         public RoutingKey Topic { get; set; }
