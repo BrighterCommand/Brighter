@@ -52,6 +52,7 @@ namespace GreetingsPorts.Handlers
             {
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
+                return await base.HandleAsync(addGreeting, cancellationToken);
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

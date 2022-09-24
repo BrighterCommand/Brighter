@@ -113,10 +113,16 @@ namespace Paramore.Brighter
         )
         {
             _subscriberRegistry = subscriberRegistry;
+            
+            if (HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(handlerFactory))
+                throw new ArgumentException(
+                    "No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
+            
             if (handlerFactory is IAmAHandlerFactorySync handlerFactorySync)
                 _handlerFactorySync = handlerFactorySync;
             if (handlerFactory is IAmAHandlerFactoryAsync handlerFactoryAsync)
                 _handlerFactoryAsync = handlerFactoryAsync;
+
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -709,5 +715,21 @@ namespace Paramore.Brighter
             }
         }
 
+        private bool HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(IAmAHandlerFactory handlerFactory)
+        {
+            // If we do not have a subscriber registry and we do not have a handler factory 
+            // then we're creating a control bus sender and we don't need them
+            if (_subscriberRegistry is null && handlerFactory is null)
+                return false;
+
+            switch (handlerFactory)
+            {
+                case IAmAHandlerFactorySync _:
+                case IAmAHandlerFactoryAsync _:
+                    return false;
+                default:
+                    return true;
+            }
+        }
     }
 }

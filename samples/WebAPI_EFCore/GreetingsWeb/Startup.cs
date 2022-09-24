@@ -27,7 +27,7 @@ using Paramore.Darker.AspNetCore;
 using Polly;
 using Polly.Registry;
 
-namespace Greetingsweb
+namespace GreetingsWeb
 {
     public class Startup
     {

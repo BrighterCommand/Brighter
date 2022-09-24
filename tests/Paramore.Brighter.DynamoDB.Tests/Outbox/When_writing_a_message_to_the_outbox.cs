@@ -45,7 +45,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly DateTime _value4 = DateTime.UtcNow;
         private readonly Guid _value5 = new Guid();
         private Message _storedMessage;
-        private DynamoDbOutboxSync _dynamoDbOutboxSync;
+        private readonly DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxWritingMessageTests()
         {
@@ -67,15 +67,15 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
             
-            _dynamoDbOutboxSync = new DynamoDbOutboxSync(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
  
-           _dynamoDbOutboxSync.Add(_messageEarliest);
+           _dynamoDbOutbox.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_writing_a_message_to_the_dynamo_db_outbox()
         {
-            _storedMessage = _dynamoDbOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
