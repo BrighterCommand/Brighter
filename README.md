@@ -4,7 +4,7 @@
 ||Brighter is a framework for building messaging app with .NET and C#. It can be used with an in-memory bus, or for interoperability in a microservices architecture, out of process via a wider range of middleware transports. |
 | Version  | [![NuGet Version](http://img.shields.io/nuget/v/paramore.brighter.svg)](https://www.nuget.org/packages/paramore.brighter/)  |
 | Download | [![NuGet Downloads](http://img.shields.io/nuget/dt/paramore.brighter.svg)](https://www.nuget.org/packages/Paramore.Brighter/) |
-| Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://brightercommand.gitbook.io/paramore-brighter-documentation/)  |
+| Documentation  |  [Introduction](https://www.goparamore.io); [Technical Documentation](https://paramore.readthedocs.io)  |
 | Source  |https://github.com/BrighterCommand/Brighter |
 | Keywords  |task queue, job queue, asynchronous, async, rabbitmq, amqp, sqs, sns, kakfa, redis, c#, command, command dispatcher, command  processor, queue, distributed |
 
@@ -31,7 +31,7 @@
   
 
 ## Documentation
-* More detailed documentation on the project can be found on the ReadTheDocs pages for the project here: [Paramore](https://brightercommand.gitbook.io/paramore-brighter-documentation/)
+* More detailed documentation on the project can be found on the ReadTheDocs pages for the project here: [Paramore](https://paramore.readthedocs.io/en/latest/)
 
 
 ## What are the different branches?

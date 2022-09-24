@@ -1,0 +1,36 @@
+﻿using GreetingsPorts.EntityGateway.Interfaces;
+using GreetingsPorts.Requests;
+using GreetingsPorts.Responses;
+using Paramore.Darker;
+
+namespace GreetingsPorts.Handlers
+{
+    public class FindPersonGreetingsHandlerAsync : QueryHandlerAsync<FindPersonGreetings, FindPersonGreetingsResult>
+    {
+        private readonly IGreetingsEntityGateway unitOfWork;
+
+        public FindPersonGreetingsHandlerAsync(IGreetingsEntityGateway unitOfWork)
+        {
+            this.unitOfWork = unitOfWork;
+        }
+
+        public override async Task<FindPersonGreetingsResult> ExecuteAsync(FindPersonGreetings query, CancellationToken cancellationToken = default)
+        {
+            using (unitOfWork)
+            {
+                var person = await unitOfWork.GetPersonByName(query.PersonName);
+
+                if (person is null)
+                {
+                    return null;
+                }
+
+                return new FindPersonGreetingsResult
+                {
+                    PersonName = person.Name,
+                    Greetings = person.Greetings.Select(greeting => new Salutation($"{person.Name}, {greeting.Message}!")),
+                };
+            }
+        }
+    }
+}

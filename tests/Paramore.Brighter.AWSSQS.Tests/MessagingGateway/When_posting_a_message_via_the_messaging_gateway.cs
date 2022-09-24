@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
@@ -61,8 +60,6 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
         {
             //arrange
             _messageProducer.Send(_message);
-            
-            Task.Delay(1000).Wait();
             
             var message =_channel.Receive(5000);
             

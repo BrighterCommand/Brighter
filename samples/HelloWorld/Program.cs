@@ -32,23 +32,55 @@ using Serilog;
 
 namespace HelloWorld
 {
-    public class Program
+    internal class Program
     {
-        private static void Main()
+        private static int Main(string[] args)
         {
-            var host = Host.CreateDefaultBuilder()
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Debug()
+                .Enrich.FromLogContext()
+                .WriteTo.Console()
+                .CreateLogger();
+            
+            try
+            {
+                Log.Information("Starting host");
+                var host = CreateHostBuilder(args)
+                    .UseSerilog()
+                    .UseConsoleLifetime()
+                    .Build();
+                
+                
+                DoWork(host);
+
+                host.WaitForShutdown();
+                
+                return 0;
+            }
+            catch (Exception ex)
+            {
+                Log.Fatal(ex, "Host terminated unexpectedly");
+                return 1;
+            }
+            finally
+            {
+                Log.CloseAndFlush();
+            }
+ 
+        }
+
+        private static void DoWork(IHost host)
+        {
+            var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
+
+            commandProcessor?.Send(new GreetingCommand("Ian"));
+        }
+
+        private static IHostBuilder CreateHostBuilder(string[] args) =>
+            new HostBuilder()
                 .ConfigureServices((context, collection) =>
                 {
                     collection.AddBrighter().AutoFromAssemblies();
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
-
-            commandProcessor.Send(new GreetingCommand("Ian"));
-
-            host.WaitForShutdown();
-        }
-   }
+                });
+    }
 }

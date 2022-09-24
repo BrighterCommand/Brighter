@@ -1,7 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -12,7 +11,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceCollection _services;
         private readonly SubscriberRegistry _registry;
-        private readonly ServiceLifetime _lifetime;
+        private ServiceLifetime _lifetime;
 
         /// <summary>
         /// Constructs an instance of the subscriber registry
@@ -50,7 +49,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             where TRequest : class, IRequest
             where TImplementation : class, IHandleRequests<TRequest>
         {
-            _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
+            _services.Add(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
             _registry.Register<TRequest, TImplementation>();
         }
 
@@ -65,7 +64,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             where TRequest : class, IRequest
             where TImplementation : class, IHandleRequestsAsync<TRequest>
         {
-            _services.TryAdd(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
+            _services.Add(new ServiceDescriptor(typeof(TImplementation), typeof(TImplementation), _lifetime));
             _registry.RegisterAsync<TRequest, TImplementation>();
         }
 
@@ -78,7 +77,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="handlerType">The type of the handler for this request type</param>
         public void Add(Type requestType, Type handlerType)
         {
-            _services.TryAdd(new ServiceDescriptor(handlerType, handlerType, _lifetime));
+            _services.Add(new ServiceDescriptor(handlerType, handlerType, _lifetime));
             _registry.Add(requestType, handlerType);
         }
     }

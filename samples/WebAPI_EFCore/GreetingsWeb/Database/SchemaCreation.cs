@@ -14,7 +14,7 @@ using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 
-namespace GreetingsWeb.Database
+namespace Greetingsweb.Database
 {
     public static class SchemaCreation
     {

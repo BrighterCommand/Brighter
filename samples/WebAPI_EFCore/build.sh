@@ -5,7 +5,7 @@ dotnet build
 dotnet publish -c Release -o out
 docker build .
 popd || exit
-pushd SalutationAnalytics || exit
+pushd GreetingsWatcher || exit
 rm -rf out
 dotnet restore
 dotnet build

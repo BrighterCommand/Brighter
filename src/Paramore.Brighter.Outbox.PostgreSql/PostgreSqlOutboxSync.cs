@@ -72,8 +72,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 using (var command = InitAddDbCommand(connection, parameters))
                 {
-                    if (connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
             }

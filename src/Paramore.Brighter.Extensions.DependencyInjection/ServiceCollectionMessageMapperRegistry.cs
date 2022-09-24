@@ -2,7 +2,6 @@
 using System.Collections;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -14,7 +13,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
     {
         private readonly IServiceCollection _serviceCollection;
         private readonly Dictionary<Type, Type> _mapperCollection = new Dictionary<Type, Type>();
-        private readonly ServiceLifetime _lifetime;
+        private ServiceLifetime _lifetime;
 
         public ServiceCollectionMessageMapperRegistry(IServiceCollection serviceCollection, ServiceLifetime lifetime = ServiceLifetime.Singleton)
         {
@@ -39,7 +38,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="mapper">The type of the mapper</param>
         public void Add(Type message, Type mapper)
         {
-            _serviceCollection.TryAdd(new ServiceDescriptor(mapper, mapper, _lifetime));
+            _serviceCollection.Add(new ServiceDescriptor(mapper, mapper, _lifetime));
             _mapperCollection.Add(message, mapper);
         }
 

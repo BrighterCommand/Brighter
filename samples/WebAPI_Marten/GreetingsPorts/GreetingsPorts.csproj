@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Marten" Version="5.0.0" />
+    <PackageReference Include="Paramore.Darker" Version="2.0.78" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -36,18 +36,18 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly Message _messageEarliest;
 
         private Message _storedMessage;
-        private DynamoDbOutbox _dynamoDbOutbox;
+        private DynamoDbOutboxSync _dynamoDbOutboxSync;
 
         public DynamoDbOutboxEmptyStoreTests()
         {
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
+            _dynamoDbOutboxSync = new DynamoDbOutboxSync(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
         }
 
         [Fact]
         public void When_there_is_no_message_in_the_dynamo_db_outbox()
         {
-            _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
+            _storedMessage = _dynamoDbOutboxSync.Get(_messageEarliest.Id);
 
             //_should_return_a_empty_message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

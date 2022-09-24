@@ -85,7 +85,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
-        /// <returns>INeedAListOfSubcriptions.</returns>
+        /// <returns>INeedAListOfConnections.</returns>
         public IAmADispatchBuilder ChannelFactory(IAmAChannelFactory channelFactory)
         {
             _channelFactory = channelFactory;
@@ -159,7 +159,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
             // a base naming scheme to allow centralized management.
-            var subscriptions = new Subscription[]
+            var connectionsConfiguration = new Subscription[]
             {
                 new Subscription<ConfigurationCommand>(
                     new SubscriptionName($"{hostName}.{CONFIGURATION}"),
@@ -175,7 +175,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
                 .MessageMappers(incomingMessageMapperRegistry)
                 .DefaultChannelFactory(_channelFactory)
-                .Subscriptions(subscriptions)
+                .Connections(connectionsConfiguration)
                 .Build();
         }
 
@@ -254,7 +254,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
         /// <param name="channelFactory">The channel factory.</param>
-        /// <returns>INeedAListOfSubcriptions.</returns>
+        /// <returns>INeedAListOfConnections.</returns>
         IAmADispatchBuilder ChannelFactory(IAmAChannelFactory channelFactory);
     }
 

@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                    _publication.MakeChannels);
            }
 
-           return !string.IsNullOrEmpty(ChannelTopicArn);
+           return string.IsNullOrEmpty(ChannelTopicArn);
        }
 
        /// <summary>
