@@ -17,7 +17,7 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
-    <PackageReference Include="Npgsql" Version="6.0.6" />
+    <PackageReference Include="Npgsql" Version="6.0.7" />
   </ItemGroup>
 
 </Project>
