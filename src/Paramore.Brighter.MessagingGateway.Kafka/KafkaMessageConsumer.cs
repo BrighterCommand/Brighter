@@ -476,7 +476,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 
                 var committedOffsets = _consumer.Committed(_partitions, TimeSpan.FromMilliseconds(_readCommittedOffsetsTimeoutMs));
                 foreach (var committedOffset in committedOffsets)
-                    s_logger.LogInformation("Committed offset: {Offset)} on partition: {ChannelName} for topic: {Topic}", committedOffset.Offset.Value.ToString(), committedOffset.Partition.Value.ToString(), committedOffset.Topic);
+                    s_logger.LogInformation("Committed offset: {Offset} on partition: {ChannelName} for topic: {Topic}", committedOffset.Offset.Value.ToString(), committedOffset.Partition.Value.ToString(), committedOffset.Topic);
 
             }
             catch (Exception ex)
