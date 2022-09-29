@@ -67,7 +67,7 @@ namespace GreetingsReceiverConsole
                             timeoutInMilliseconds: 100,
                             offsetDefault: AutoOffsetReset.Earliest,
                             commitBatchSize: 5,
-                            sweepUncommittedOffsetsIntervalMs: 1000)
+                            sweepUncommittedOffsetsIntervalMs: 10000)
                     };
 
                     //create the gateway
