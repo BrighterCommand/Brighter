@@ -247,7 +247,7 @@ namespace Paramore.Brighter
                 if (!HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk), CancellationToken.None);
+                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, activity), CancellationToken.None);
             }
 
             else
@@ -255,11 +255,11 @@ namespace Paramore.Brighter
                 if (!HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge));
+                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, activity));
             }
         }
 
-        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge)
+        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge, Activity activity)
         {
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
@@ -267,13 +267,16 @@ namespace Paramore.Brighter
                 try
                 {
                     var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
+                    activity?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox"));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
                     Dispatch(messages);
                     s_logger.LogInformation("Messages have been cleared");
+                    activity?.SetStatus(ActivityStatusCode.Ok);
                 }
                 catch (Exception e)
                 {
+                    activity?.SetStatus(ActivityStatusCode.Error);
                     s_logger.LogError(e, "Error while dispatching from outbox");
                 }
                 finally
@@ -290,7 +293,7 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk)
+        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk, Activity activity)
         {
             
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
@@ -298,22 +301,32 @@ namespace Paramore.Brighter
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
+                    
                     var messages =
                         await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
+                    activity?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox"));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
 
                     if (useBulk)
+                    {
                         await BulkDispatchAsync(messages, CancellationToken.None);
+                        activity?.AddEvent(new ActivityEvent("Bulk Dispatching Messages"));
+                    }
                     else
+                    {
                         await DispatchAsync(messages, false, CancellationToken.None);
+                        activity?.AddEvent(new ActivityEvent("Dispatching Messages"));
+                    }
 
+                    activity?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
                 {
                     s_logger.LogError(e, "Error while dispatching from outbox");
+                    activity?.SetStatus(ActivityStatusCode.Error);
                 }
                 finally
                 {

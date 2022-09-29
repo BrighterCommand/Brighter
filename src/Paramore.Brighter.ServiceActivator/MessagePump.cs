@@ -23,7 +23,7 @@ namespace Paramore.Brighter.ServiceActivator
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
 
         private static readonly ActivitySource _activitySource = new ActivitySource("Brighter.ServiceActivator",
-            Assembly.GetAssembly(typeof(CommandProcessor)).ImageRuntimeVersion);
+            Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private readonly IAmAMessageMapper<TRequest> _messageMapper;
