@@ -471,7 +471,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,
                     scheduler: TaskScheduler.Default);
-            } 
+            }
+            else
+            {
+                s_logger.LogInformation("Skipped committing offsets, as another commit or sweep was running");
+            }
         }
 
         //If it is has been too long since we flushed, flush now to prevent offsets accumulating 
@@ -499,6 +503,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,
                     scheduler: TaskScheduler.Default);
+            }
+            else
+            {
+                s_logger.LogInformation("Skipped sweeping offsets, as another commit or sweep was running");
             }
         }
 
