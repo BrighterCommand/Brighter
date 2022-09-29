@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 
-namespace GreetingsSender.Adapters
+namespace GreetingsSender
 {
     public class TimedMessageGenerator : IHostedService, IDisposable
     {
