@@ -7,6 +7,7 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
+## Release 9.1.20 ##
 - Bug with Kafka Consumer failing to commit offsets fixed. Caused by Monitor being used for a lock on one thread and released on another, which does not work. Replaced with SemaphoreSlim.
 - Behavior of Kafka Consumer offset sweep changed. It now runs every x seconds, and not every x seconds since a flush. This will cause it to run more frequently, but it is easier to reason about.
 
