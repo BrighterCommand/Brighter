@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private readonly int _readCommittedOffsetsTimeoutMs;
         private DateTime _lastFlushAt = DateTime.UtcNow;
         private readonly TimeSpan _sweepUncommittedInterval;
-        private readonly object _flushLock = new object();
+        private readonly SemaphoreSlim _flushToken = new SemaphoreSlim(1, 1);
         private bool _disposedValue;
 
         /// <summary>
@@ -407,15 +407,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// loop endlessly over the offset list as new items are added, which will trigger a commit anyway. So we limit
         /// the trigger to only commit a batch size worth
         /// </summary>
-        private void CommitOffsets(DateTime flushTime)
+        private void CommitOffsets()
         {
-           if (s_logger.IsEnabled(LogLevel.Debug))
-           {
-               var offsets = _offsetStorage.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-               var offsetAsString = string.Join(Environment.NewLine, offsets);
-               s_logger.LogDebug("Commiting all offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
-           }
-            
+           
            var listOffsets = new List<TopicPartitionOffset>();
            for (int i = 0; i < _maxBatchSize; i++)
            {
@@ -426,25 +420,62 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                    break;
 
            }
+           
+           if (s_logger.IsEnabled(LogLevel.Information))
+           {
+               var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+               var offsetAsString = string.Join(Environment.NewLine, offsets);
+               s_logger.LogInformation("Commiting offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+           }
+           
            _consumer.Commit(listOffsets);
-           _lastFlushAt = flushTime;
-           Monitor.Exit(_flushLock);
+           _flushToken.Release(1);
+        }
+        
+        private void CommitAllOffsets(DateTime flushTime)
+        {
+            var listOffsets = new List<TopicPartitionOffset>();
+            var currentOffsetsInBag = _offsetStorage.Count; 
+            for (int i = 0; i < currentOffsetsInBag; i++)
+            {
+                bool hasOffsets = _offsetStorage.TryTake(out var offset);
+                if (hasOffsets)
+                    listOffsets.Add(offset);
+                else
+                    break;
+
+            }
+           
+            if (s_logger.IsEnabled(LogLevel.Information))
+            {
+                var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                var offsetAsString = string.Join(Environment.NewLine, offsets);
+                s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+            }
+           
+            _consumer.Commit(listOffsets);
+            _lastFlushAt = flushTime;
+            _flushToken.Release(1);
         }
 
         // The batch size has been exceeded, so flush our offsets
         private void FlushOffsets()
         {
             var now = DateTime.UtcNow;
-            if (Monitor.TryEnter(_flushLock))
+            if (_flushToken.Wait(TimeSpan.Zero))
             {
                 //This is expensive, so use a background thread
                 Task.Factory.StartNew(
-                    action: state => CommitOffsets((DateTime)state),
+                    action: state => CommitOffsets(),
                     state: now,
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,
                     scheduler: TaskScheduler.Default);
-            } 
+            }
+            else
+            {
+                s_logger.LogInformation("Skipped committing offsets, as another commit or sweep was running");
+            }
         }
 
         //If it is has been too long since we flushed, flush now to prevent offsets accumulating 
@@ -452,19 +483,30 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var now = DateTime.UtcNow;
 
-            if (Monitor.TryEnter(_flushLock))
+            if (now - _lastFlushAt < _sweepUncommittedInterval)
             {
-
+                return;
+            }
+                
+            if (_flushToken.Wait(TimeSpan.Zero))
+            {
                 if (now - _lastFlushAt < _sweepUncommittedInterval)
+                {
+                    _flushToken.Release(1);
                     return;
-
+                }
+                
                 //This is expensive, so use a background thread
                 Task.Factory.StartNew(
-                    action: state => CommitOffsets((DateTime)state),
+                    action: state => CommitAllOffsets((DateTime)state),
                     state: now,
                     cancellationToken: CancellationToken.None,
                     creationOptions: TaskCreationOptions.DenyChildAttach,
                     scheduler: TaskScheduler.Default);
+            }
+            else
+            {
+                s_logger.LogInformation("Skipped sweeping offsets, as another commit or sweep was running");
             }
         }
 

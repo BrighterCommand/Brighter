@@ -25,7 +25,7 @@ namespace GreetingsSender
         {
             _logger.LogInformation("Kafka Message Generator is starting.");
 
-            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
 
             return Task.CompletedTask;
         }
