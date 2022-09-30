@@ -71,6 +71,8 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+            Activity.Current?.AddEvent(new ActivityEvent("Add message to outbox",
+                tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
         }            
           
         internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
@@ -107,6 +109,8 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+            Activity.Current?.AddEvent(new ActivityEvent("Add message to outbox",
+                tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
         }
         
         internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) 
@@ -190,7 +194,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    Dispatch(new[] {message});
+                    Dispatch(new[] {message}, Activity.Current);
                 }
             }
             finally
@@ -217,7 +221,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    await DispatchAsync(new[] {message}, continueOnCapturedContext, cancellationToken);
+                    await DispatchAsync(new[] {message}, continueOnCapturedContext, cancellationToken, Activity.Current);
                 }
             }
             finally
@@ -267,10 +271,11 @@ namespace Paramore.Brighter
                 try
                 {
                     var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
-                    activity?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox"));
+                    activity?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox",
+                        tags: new ActivityTagsCollection() {{"Outstanding Messages", messages.Count()}}));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
-                    Dispatch(messages);
+                    Dispatch(messages, activity);
                     s_logger.LogInformation("Messages have been cleared");
                     activity?.SetStatus(ActivityStatusCode.Ok);
                 }
@@ -281,6 +286,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
+                    activity?.Dispose();
                     _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
@@ -289,6 +295,8 @@ namespace Paramore.Brighter
             }
             else
             {
+                activity?.SetStatus(ActivityStatusCode.Error)
+                    .Dispose();
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
@@ -311,13 +319,11 @@ namespace Paramore.Brighter
 
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, CancellationToken.None);
-                        activity?.AddEvent(new ActivityEvent("Bulk Dispatching Messages"));
+                        await BulkDispatchAsync(messages, CancellationToken.None, activity);
                     }
                     else
                     {
-                        await DispatchAsync(messages, false, CancellationToken.None);
-                        activity?.AddEvent(new ActivityEvent("Dispatching Messages"));
+                        await DispatchAsync(messages, false, CancellationToken.None, activity);
                     }
 
                     activity?.SetStatus(ActivityStatusCode.Ok);
@@ -330,6 +336,7 @@ namespace Paramore.Brighter
                 }
                 finally
                 {
+                    activity?.Dispose();
                     _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
@@ -338,14 +345,18 @@ namespace Paramore.Brighter
             }
             else
             {
+                activity?.SetStatus(ActivityStatusCode.Error)
+                    .Dispose();
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
 
-        private void Dispatch(IEnumerable<Message> posts)
+        private void Dispatch(IEnumerable<Message> posts, Activity activity)
         {
             foreach (var message in posts)
             {
+                activity?.AddEvent(new ActivityEvent("Dispatching Message",
+                    tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
 
                 var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
@@ -369,10 +380,12 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task DispatchAsync(IEnumerable<Message> posts, bool continueOnCapturedContext, CancellationToken cancellationToken)
+        private async Task DispatchAsync(IEnumerable<Message> posts, bool continueOnCapturedContext, CancellationToken cancellationToken, Activity activity)
         {
             foreach (var message in posts)
             {
+                activity?.AddEvent(new ActivityEvent("Dispatching Message",
+                    tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
                 
                 var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
@@ -409,7 +422,7 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken)
+        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken, Activity activity)
         {
             //Chunk into Topics
             var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
@@ -422,6 +435,8 @@ namespace Paramore.Brighter
                 {
                     var messages = topicBatch.ToArray();
                     s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
+                    activity?.AddEvent(new ActivityEvent("Bulk Dispatching Message",
+                        tags: new ActivityTagsCollection() {{"Topic", topicBatch.Key}, {"Number Of Messages", messages.Length}}));
                     var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 
                     await foreach (var successfulMessage in dispatchesMessages.WithCancellation(cancellationToken))

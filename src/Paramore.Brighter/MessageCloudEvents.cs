@@ -45,18 +45,6 @@ namespace Paramore.Brighter
         public string Subject { get;}
 
         /// <summary>
-        /// Have the cloud events been populated
-        /// </summary>
-        public bool Populated
-        {
-            get =>
-                string.IsNullOrEmpty(EventId) &&
-                string.IsNullOrEmpty(Source) &&
-                string.IsNullOrEmpty(EventType) &&
-                string.IsNullOrEmpty(EventSpecVersion);
-        }
-
-        /// <summary>
         /// Cloud event properties
         /// </summary>
         /// <param name="eventId">The event_id uniquely identifies the event.</param>

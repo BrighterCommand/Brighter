@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
@@ -53,7 +54,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The body.</value>
         public MessageBody Body { get; private set; }
-        
+
         /// <summary>
         /// Gets the details for the Cloud Events specification
         /// </summary>
@@ -113,6 +114,16 @@ namespace Paramore.Brighter
                 CloudEvents = new MessageCloudEvents(eventId.ToString(), source.ToString(), eventType.ToString(),
                     subject?.ToString(), specVersion.ToString());
             }
+        }
+
+        public void AddCloudEventInformation(Activity activity, string eventType)
+        {
+            Header.Bag[EventIdHeaderName] = activity.Id;
+            Header.Bag[SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
+            Header.Bag[SpecVersionHeaderName] = "1.0";
+            Header.Bag[EventTypeHeaderName] = eventType;
+
+            UpdateCloudEventsFromHeaders();
         }
 
         public ulong DeliveryTag

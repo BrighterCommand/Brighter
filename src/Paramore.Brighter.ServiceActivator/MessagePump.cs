@@ -126,8 +126,9 @@ namespace Paramore.Brighter.ServiceActivator
                 Activity span = null;
                 try
                 {
+                    message.UpdateCloudEventsFromHeaders();//ToDo: Discuss this as a temp measure
                     var request = TranslateMessage(message);
-                    if (message.CloudEvents.Populated)
+                    if (message.CloudEvents != null)
                     {
                         span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer,
                             message.CloudEvents.EventId);
@@ -185,7 +186,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     IncrementUnacceptableMessageLimit();
                     
-                    span.SetStatus(ActivityStatusCode.Error,
+                    span?.SetStatus(ActivityStatusCode.Error,
                         $"MessagePump: Failed to map message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 catch (Exception e)
@@ -194,12 +195,12 @@ namespace Paramore.Brighter.ServiceActivator
                         "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
-                    span.SetStatus(ActivityStatusCode.Error,
+                    span?.SetStatus(ActivityStatusCode.Error,
                         $"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 finally
                 {
-                    span.Dispose();
+                    span?.Dispose();
                     CommandProcessorProvider.ReleaseScope();
                 }
 

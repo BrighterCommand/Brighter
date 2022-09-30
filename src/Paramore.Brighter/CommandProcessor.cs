@@ -66,6 +66,7 @@ namespace Paramore.Brighter
         private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
         private const string PROCESSCOMMAND = "Process Command";
         private const string PROCESSEVENT = "Process Event";
+        private const string DEPOSITPOST = "Deposit Post";
         
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -269,9 +270,11 @@ namespace Paramore.Brighter
         /// </exception>
         public void Send<T>(T command) where T : class, IRequest
         {
-            using var activity = _activitySource.StartActivity(PROCESSCOMMAND, ActivityKind.Consumer);
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
+            
+            var span = GetSpan(PROCESSCOMMAND);
+            command.Span = span.span;
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
@@ -279,12 +282,28 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
-                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
-                var handlerChain = builder.Build(requestContext);
+                bool success = false;
+                try
+                {
+                    s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
+                        command.Id);
+                    var handlerChain = builder.Build(requestContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                    AssertValidSendPipeline(command, handlerChain.Count());
 
-                handlerChain.First().Handle(command);
+                    handlerChain.First().Handle(command);
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    success = false;
+                    throw;
+                }
+                finally
+                {
+                    EndSpan(span.span, success);
+                }
+                
             }
         }
 
@@ -302,18 +321,35 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
+            var span = GetSpan(PROCESSCOMMAND);
+            command.Span = span.span;
+            
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
-                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
+                bool success = false;
+                try
+                {
+                    s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
                 await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                success = true;
+                }
+                catch (Exception e)
+                {
+                    success = false;
+                    throw;
+                }
+                finally
+                {
+                    EndSpan(span.span, success);
+                }
             }
         }
 
@@ -331,6 +367,9 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
+            var span = GetSpan(PROCESSEVENT);
+            @event.Span = span.span;
+            
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
@@ -357,6 +396,9 @@ namespace Paramore.Brighter
                     }
                 }
 
+                if (span.created)
+                    EndSpan(span.span, exceptions.Any());
+
                 if (exceptions.Any())
                 {
                     throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
@@ -382,6 +424,9 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
+            var span = GetSpan(PROCESSEVENT);
+            @event.Span = span.span;
+            
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
@@ -407,12 +452,32 @@ namespace Paramore.Brighter
                         exceptions.Add(e);
                     }
                 }
+                
+                if (span.created)
+                    EndSpan(span.span, exceptions.Any());
 
                 if (exceptions.Count > 0)
                 {
                     throw new AggregateException("Failed to async publish to one more handlers successfully, see inner exceptions for details", exceptions);
                 }
             }
+        }
+
+        private (Activity span, bool created) GetSpan(string activityName)
+        {
+            bool create = Activity.Current == null;
+            
+            if(create)
+                return (_activitySource.StartActivity(activityName, ActivityKind.Internal), create);
+            else
+                return (Activity.Current, create);
+        }
+
+        private void EndSpan(Activity span, bool success)
+        {
+            var status = success ? ActivityStatusCode.Error : ActivityStatusCode.Ok;
+            span.SetStatus(status);
+            span.Dispose();
         }
 
         /// <summary>
@@ -499,6 +564,8 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
+            AddCloudEventsToMessage<T>(message);
+
             _bus.AddToOutbox(request, message, connectionProvider);
 
             return message.Id;
@@ -575,6 +642,8 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
+            AddCloudEventsToMessage<T>(message);
+
             await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
             return message.Id;
@@ -617,6 +686,16 @@ namespace Paramore.Brighter
             return requests.Select(r => messageMapper.MapToMessage(r)).ToList();
         }
 
+        private void AddCloudEventsToMessage<T>(Message message)
+        {
+            var activity = Activity.Current ?? _activitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
+
+            if (activity != null)
+            {
+                message.AddCloudEventInformation(activity, typeof(T).ToString());
+            }
+        }
+
 
         /// <summary>
         /// Flushes the message box message given by <param name="posts"> to the broker.
@@ -637,7 +716,7 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
         {
-            using var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Producer);
+            var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Producer);
             _bus.ClearOutbox(amountToClear, minimumAge, false, false, activity); 
         }
 
@@ -667,7 +746,7 @@ namespace Paramore.Brighter
             int minimumAge = 5000,
             bool useBulk = false)
         {
-            using var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX,  ActivityKind.Producer);
+            var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX,  ActivityKind.Producer);
             _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, activity); 
         }
 
