@@ -9,7 +9,7 @@
     </ItemGroup>
   
    <ItemGroup>
-     <PackageReference Update="MinVer" Version="4.1.0" />
+     <PackageReference Update="MinVer" Version="4.2.0" />
      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1">
        <PrivateAssets>all</PrivateAssets>
        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -23,9 +23,9 @@
   </ItemGroup>
 
   <ItemGroup Condition=" '$(TargetFramework)' == 'net6.0' ">
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="6.0.9" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.8" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="6.0.9" />
   </ItemGroup>
 
 </Project>
