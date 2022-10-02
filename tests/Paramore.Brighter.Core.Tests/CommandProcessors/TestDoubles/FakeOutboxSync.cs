@@ -31,7 +31,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>
+    public class FakeOutboxSync : IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
     {
         private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
 
@@ -163,6 +163,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             public DateTime? TimeDeposited { get; set; }
             public DateTime? TimeFlushed { get; set; }
             public Message Message { get; set; }
+        }
+
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            foreach (Message message in messages)
+            {
+                Add(message,outBoxTimeout, transactionConnectionProvider);
+            }
+        }
+
+        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default(CancellationToken),
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            foreach (var message in messages)
+            {
+                await AddAsync(message, outBoxTimeout, cancellationToken, transactionConnectionProvider);
+            }
         }
     }
 }

@@ -38,6 +38,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteOutboxSync _sqlOutboxSync;
         private readonly Message _messageEarliest;
+        private readonly Message _message2;
         private readonly Message _messageLatest;
         private IEnumerable<Message> _retrievedMessages;
 
@@ -48,20 +49,35 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            _sqlOutboxSync.Add(_messageEarliest);
-
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            _sqlOutboxSync.Add(message2);
-
+            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            _sqlOutboxSync.Add(_messageLatest);
         }
 
         [Fact]
         public void When_Writing_Messages_To_The_Outbox()
         {
-            _retrievedMessages = _sqlOutboxSync.Get();
+            _sqlOutboxSync.Add(_messageEarliest);
+            _sqlOutboxSync.Add(_message2);
+            _sqlOutboxSync.Add(_messageLatest);
 
+            _retrievedMessages = _sqlOutboxSync.Get();
+            
+
+            //should read first message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //should read last message first from the outbox
+            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //should read the messages from the outbox
+            _retrievedMessages.Should().HaveCount(3);
+        }
+        
+        [Fact]
+        public void When_Writing_Messages_To_The_Outbox_Bulk()
+        {
+            _sqlOutboxSync.Add(new List<Message>(){_messageEarliest, _message2, _messageLatest});
+
+            _retrievedMessages = _sqlOutboxSync.Get();
+            
             //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
             //should read last message first from the outbox

@@ -58,8 +58,14 @@ namespace Paramore.Brighter
         /// <summary>
         /// The configuration of our inbox
         /// </summary>
-         public InboxConfiguration UseInbox { get;}
+        public InboxConfiguration UseInbox { get;}
         
+        /// <summary>
+        /// The maximum amount of messages to deposit into the outbox in one transmissions.
+        /// This is to stop insert statements getting too big
+        /// </summary>
+        public int OutboxBulkChunkSize { get; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
@@ -69,12 +75,14 @@ namespace Paramore.Brighter
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipelie</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
+        /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
         public ExternalBusConfiguration(
             IAmAProducerRegistry producerRegistry,
             IAmAMessageMapperRegistry messageMapperRegistry,
             int outboxWriteTimeout = 300,
             IAmAChannelFactory responseChannelFactory = null,
-            InboxConfiguration useInbox = null
+            InboxConfiguration useInbox = null,
+            int outboxBulkChunkSize = 100
             )
         {
             ProducerRegistry = producerRegistry;
@@ -82,6 +90,7 @@ namespace Paramore.Brighter
             OutboxWriteTimeout = outboxWriteTimeout;
             ResponseChannelFactory = responseChannelFactory;
             UseInbox = useInbox;
+            OutboxBulkChunkSize = outboxBulkChunkSize;
         }
     }
 }
