@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter;
@@ -37,10 +38,18 @@ namespace HelloWorldAsync
         {
             var api = new IpFyApi(new Uri("https://api.ipify.org"));
 
-            var result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            IpFyApiResult result;
+            try
+            {
+                result = await api.GetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (HttpRequestException httpRequestException)
+            {
+                Console.WriteLine("Your call to IpFy API failed : {0}", httpRequestException.Message);
+                return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
 
-            Console.WriteLine("Hello {0}", command.Name);
-            Console.WriteLine(result.Success ? "Your public IP address is {0}" : "Call to IpFy API failed : {0}", result.Message);
+            Console.WriteLine("Hello {0}, your IP address is: {1}", command.Name, result.Message);
 
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

@@ -24,17 +24,18 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Greetings.Ports.Commands;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Serilog;
 
 namespace GreetingsReceiverConsole
 {
@@ -42,11 +43,18 @@ namespace GreetingsReceiverConsole
     {
         public static async Task Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .WriteTo.Console()
-                .CreateLogger();
-
-            var host = new HostBuilder()
+            var host = Host.CreateDefaultBuilder(args)
+                .ConfigureHostConfiguration(configurationBuilder =>
+                {
+                    configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+                    configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+                    configurationBuilder.AddCommandLine(args);
+                })
+                .ConfigureLogging((context, builder) =>
+                {
+                    builder.AddConsole();
+                    builder.AddDebug();
+                })
                 .ConfigureServices((hostContext, services) =>
                 {
                     var subscriptions = new KafkaSubscription[]
@@ -58,13 +66,14 @@ namespace GreetingsReceiverConsole
                             groupId: "kafka-GreetingsReceiverConsole-Sample",
                             timeoutInMilliseconds: 100,
                             offsetDefault: AutoOffsetReset.Earliest,
-                            commitBatchSize:5)
+                            commitBatchSize: 5,
+                            sweepUncommittedOffsetsIntervalMs: 10000)
                     };
-                    
+
                     //create the gateway
                     var consumerFactory = new KafkaMessageConsumerFactory(
-                        new KafkaMessagingGatewayConfiguration {Name = "paramore.brighter", BootStrapServers = new[] {"localhost:9092"}}
-                   );
+                        new KafkaMessagingGatewayConfiguration { Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" } }
+                    );
 
                     services.AddServiceActivator(options =>
                     {
@@ -76,7 +85,6 @@ namespace GreetingsReceiverConsole
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
                 .UseConsoleLifetime()
-                .UseSerilog()
                 .Build();
 
             await host.RunAsync();
