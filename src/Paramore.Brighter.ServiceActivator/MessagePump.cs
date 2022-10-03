@@ -126,12 +126,12 @@ namespace Paramore.Brighter.ServiceActivator
                 Activity span = null;
                 try
                 {
-                    message.UpdateCloudEventsFromHeaders();//ToDo: Discuss this as a temp measure
+                    message.Header.UpdateTelemetryFromHeaders();//ToDo: Discuss this as a temp measure
                     var request = TranslateMessage(message);
-                    if (message.CloudEvents != null)
+                    if (message.Header.Telemetry != null)
                     {
                         span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer,
-                            message.CloudEvents.EventId);
+                            message.Header.Telemetry.EventId);
                     }
                     else
                     {

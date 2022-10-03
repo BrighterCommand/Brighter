@@ -564,7 +564,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            AddCloudEventsToMessage<T>(message);
+            AddTelemetryToMessage<T>(message);
 
             _bus.AddToOutbox(request, message, connectionProvider);
 
@@ -642,7 +642,7 @@ namespace Paramore.Brighter
 
             var message = messageMapper.MapToMessage(request);
 
-            AddCloudEventsToMessage<T>(message);
+            AddTelemetryToMessage<T>(message);
 
             await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
@@ -686,13 +686,13 @@ namespace Paramore.Brighter
             return requests.Select(r => messageMapper.MapToMessage(r)).ToList();
         }
 
-        private void AddCloudEventsToMessage<T>(Message message)
+        private void AddTelemetryToMessage<T>(Message message)
         {
             var activity = Activity.Current ?? _activitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
 
             if (activity != null)
             {
-                message.AddCloudEventInformation(activity, typeof(T).ToString());
+                message.AddTelemetryInformation(activity, typeof(T).ToString());
             }
         }
 

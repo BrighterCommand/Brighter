@@ -2,8 +2,13 @@
 
 namespace Paramore.Brighter
 {
-    public class MessageCloudEvents
+    public class MessageTelemetry
     {
+        public const string EventIdHeaderName = "cloudevents.event_id";
+        public const string SourceHeaderName = "cloudevents.event_source";
+        public const string EventTypeHeaderName = "cloudevents.event_type";
+        public const string SubjectHeaderName = "cloudevents.event_subject";
+
         /// <summary>
         /// The event_id uniquely identifies the event.
         /// </summary>
@@ -21,14 +26,6 @@ namespace Paramore.Brighter
         public string Source { get;}
 
         /// <summary>
-        /// The version of the CloudEvents specification which the event uses.
-        /// </summary>
-        /// <example>
-        /// 1.0
-        /// </example>
-        public string EventSpecVersion { get;}
-        
-        /// <summary>
         /// The event_type contains a value describing the type of event related to the originating occurrence.
         /// </summary>
         /// <example>
@@ -45,20 +42,18 @@ namespace Paramore.Brighter
         public string Subject { get;}
 
         /// <summary>
-        /// Cloud event properties
+        /// Telemetry properties
         /// </summary>
         /// <param name="eventId">The event_id uniquely identifies the event.</param>
         /// <param name="source">The source identifies the context in which an event happened.</param>
         /// <param name="eventType">The event_type contains a value describing the type of event related to the originating occurrence.</param>
         /// <param name="subject">The subject of the event in the context of the event producer (identified by source).</param>
-        /// <param name="version">The version of the CloudEvents specification which the event uses.</param>
-        public MessageCloudEvents(string eventId, string source, string eventType, string subject = null, string version = "1.0")
+        public MessageTelemetry(string eventId, string source, string eventType, string subject = null)
         {
             EventId = eventId;
             Source = source;
             EventType = eventType;
             Subject = subject;
-            EventSpecVersion = version;
         }
     }
 }

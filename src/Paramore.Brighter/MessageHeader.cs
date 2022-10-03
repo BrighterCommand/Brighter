@@ -129,6 +129,11 @@ namespace Paramore.Brighter
         /// </summary>
         public string PartitionKey { get; set; }
 
+        /// <summary>
+        /// Gets the details for the Cloud Events specification
+        /// </summary>
+        public MessageTelemetry Telemetry { get; private set; }
+        
         /// Intended for serialization, prefer a parameterized constructor in application code as a better 'pit of success'
         /// </summary>
         public MessageHeader() {}
@@ -322,6 +327,28 @@ namespace Paramore.Brighter
         public void UpdateHandledCount()
         {
             HandledCount++;
+        }
+        
+        /// <summary>
+        /// Populate the Cloud Events from the HeaderBag
+        /// </summary>
+        [Obsolete("Looking to remove this in v10 in favour of storing the Cloud Events in their own property in the outbox")]
+        public void UpdateTelemetryFromHeaders()
+        {
+            object eventId;
+            object source;
+            object eventType;
+            object subject;
+
+            if (Bag.TryGetValue(MessageTelemetry.EventIdHeaderName, out eventId) && 
+                Bag.TryGetValue(MessageTelemetry.SourceHeaderName, out source) &&
+                Bag.TryGetValue(MessageTelemetry.EventTypeHeaderName, out eventType))
+            {
+                Bag.TryGetValue(MessageTelemetry.SubjectHeaderName, out subject);
+
+                Telemetry = new MessageTelemetry(eventId.ToString(), source.ToString(), eventType.ToString(),
+                    subject?.ToString());
+            }
         }
     }
 }

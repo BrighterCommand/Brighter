@@ -37,12 +37,6 @@ namespace Paramore.Brighter
         public const string OriginalMessageIdHeaderName = "x-original-message-id";
         public const string DeliveryTagHeaderName = "DeliveryTag";
         public const string RedeliveredHeaderName = "Redelivered";
-        
-        public const string EventIdHeaderName = "cloudevents.event_id";
-        public const string SourceHeaderName = "cloudevents.event_source";
-        public const string SpecVersionHeaderName = "cloudevents.event_spec_version";
-        public const string EventTypeHeaderName = "cloudevents.event_type";
-        public const string SubjectHeaderName = "cloudevents.event_subject";
 
         /// <summary>
         /// Gets the header.
@@ -54,11 +48,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The body.</value>
         public MessageBody Body { get; private set; }
-
-        /// <summary>
-        /// Gets the details for the Cloud Events specification
-        /// </summary>
-        public MessageCloudEvents CloudEvents { get; private set; }
 
         /// <summary>
         /// Gets the identifier.
@@ -89,41 +78,16 @@ namespace Paramore.Brighter
             Header = header;
             Body = body;
             
-            UpdateCloudEventsFromHeaders();
+            Header.UpdateTelemetryFromHeaders();
         }
 
-        /// <summary>
-        /// Populate the Cloud Events from the HeaderBag
-        /// </summary>
-        [Obsolete("Looking to remove this in v10 in favour of storing the Cloud Events in their own property in the outbox")]
-        public void UpdateCloudEventsFromHeaders()
+        public void AddTelemetryInformation(Activity activity, string eventType)
         {
-            object eventId;
-            object source;
-            object specVersion;
-            object eventType;
-            object subject;
+            Header.Bag[MessageTelemetry.EventIdHeaderName] = activity.Id;
+            Header.Bag[MessageTelemetry.SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
+            Header.Bag[MessageTelemetry.EventTypeHeaderName] = eventType;
 
-            if (Header.Bag.TryGetValue(EventIdHeaderName, out eventId) &&
-                Header.Bag.TryGetValue(SourceHeaderName, out source) &&
-                Header.Bag.TryGetValue(SpecVersionHeaderName, out specVersion) &&
-                Header.Bag.TryGetValue(EventTypeHeaderName, out eventType))
-            {
-                Header.Bag.TryGetValue(SubjectHeaderName, out subject);
-
-                CloudEvents = new MessageCloudEvents(eventId.ToString(), source.ToString(), eventType.ToString(),
-                    subject?.ToString(), specVersion.ToString());
-            }
-        }
-
-        public void AddCloudEventInformation(Activity activity, string eventType)
-        {
-            Header.Bag[EventIdHeaderName] = activity.Id;
-            Header.Bag[SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
-            Header.Bag[SpecVersionHeaderName] = "1.0";
-            Header.Bag[EventTypeHeaderName] = eventType;
-
-            UpdateCloudEventsFromHeaders();
+            Header.UpdateTelemetryFromHeaders();
         }
 
         public ulong DeliveryTag
