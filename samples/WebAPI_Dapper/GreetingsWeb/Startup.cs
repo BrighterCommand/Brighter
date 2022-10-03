@@ -6,6 +6,7 @@ using Greetings_MySqlMigrations.Migrations;
 using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
+using GreetingsPorts.Policies;
 using GreetingsWeb.Database;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
@@ -158,20 +159,6 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            var retryPolicy = Policy.Handle<Exception>()
-                .WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
-            var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-            var retryPolicyAsync = Policy.Handle<Exception>()
-                .WaitAndRetryAsync(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
-            var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-            var policyRegistry = new PolicyRegistry()
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
-                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
-            };
-
             services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
 
             services.AddBrighter(options =>
@@ -180,7 +167,7 @@ namespace GreetingsWeb
                     options.HandlerLifetime = ServiceLifetime.Scoped;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
-                    options.PolicyRegistry = policyRegistry;
+                    options.PolicyRegistry = new GreetingsPolicy();
                 })
                 .UseExternalBus(new RmqProducerRegistryFactory(
                         new RmqMessagingGatewayConnection

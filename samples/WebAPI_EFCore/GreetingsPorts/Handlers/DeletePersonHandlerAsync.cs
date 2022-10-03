@@ -5,6 +5,8 @@ using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
@@ -16,7 +18,10 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
-        public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
+        
+        [RequestLogging(0, HandlerTiming.Before)]
+        [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
+        public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
         {
             var person = await _uow.People
                 .Include(p => p.Greetings)

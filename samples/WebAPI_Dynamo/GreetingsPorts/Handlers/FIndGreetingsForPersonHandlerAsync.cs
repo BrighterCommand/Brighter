@@ -8,6 +8,7 @@ using GreetingsPorts.Responses;
 using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Darker;
+using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
@@ -20,6 +21,7 @@ namespace GreetingsPorts.Handlers
             _unitOfWork = (DynamoDbUnitOfWork ) unitOfWork;
         }
         
+        [QueryLogging(0)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
             var context = new DynamoDBContext(_unitOfWork.DynamoDb);

@@ -2,13 +2,12 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
-using DapperExtensions;
-using DapperExtensions.Predicate;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
 using Paramore.Brighter.Dapper;
 using Paramore.Darker;
+using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
@@ -20,7 +19,8 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
-        
+       
+        [QueryLogging(0)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
             //Retrieving parent and child is a bit tricky with Dapper. From raw SQL We wget back a set that has a row-per-child. We need to turn that

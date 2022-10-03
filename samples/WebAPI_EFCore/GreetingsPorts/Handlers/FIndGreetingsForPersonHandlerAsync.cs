@@ -6,6 +6,7 @@ using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Darker;
+using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
@@ -17,7 +18,8 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
-        
+       
+        [QueryLogging(0)] 
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
             var person = await _uow.People
