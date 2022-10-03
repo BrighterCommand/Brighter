@@ -20,8 +20,7 @@ using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
-using Polly;
-using Polly.Registry;
+using Paramore.Darker.Policies;
 
 namespace GreetingsWeb
 {
@@ -203,7 +202,8 @@ namespace GreetingsWeb
                     options.HandlerLifetime = ServiceLifetime.Scoped;
                     options.QueryProcessorLifetime = ServiceLifetime.Scoped;
                 })
-                .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly);
+                .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
+                .AddPolicies(new GreetingsPolicy());
         }
 
         private string DbConnectionString()
