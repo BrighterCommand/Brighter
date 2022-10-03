@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Paramore.Brighter.Serialization;
 
@@ -349,6 +350,15 @@ namespace Paramore.Brighter
                 Telemetry = new MessageTelemetry(eventId.ToString(), source.ToString(), eventType.ToString(),
                     subject?.ToString());
             }
+        }
+        
+        public void AddTelemetryInformation(Activity activity, string eventType)
+        {
+            Bag[MessageTelemetry.EventIdHeaderName] = activity.Id;
+            Bag[MessageTelemetry.SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
+            Bag[MessageTelemetry.EventTypeHeaderName] = eventType;
+
+            UpdateTelemetryFromHeaders();
         }
     }
 }

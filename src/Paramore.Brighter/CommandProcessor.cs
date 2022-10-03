@@ -683,7 +683,12 @@ namespace Paramore.Brighter
                 throw new ArgumentOutOfRangeException(
                     $"No message mapper registered for messages of type: {typeof(T)}");
 
-            return requests.Select(r => messageMapper.MapToMessage(r)).ToList();
+            return requests.Select(r =>
+            {
+                var message = messageMapper.MapToMessage(r);
+                AddTelemetryToMessage<T>(message);
+                return message;
+            }).ToList();
         }
 
         private void AddTelemetryToMessage<T>(Message message)
@@ -692,7 +697,7 @@ namespace Paramore.Brighter
 
             if (activity != null)
             {
-                message.AddTelemetryInformation(activity, typeof(T).ToString());
+                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
             }
         }
 

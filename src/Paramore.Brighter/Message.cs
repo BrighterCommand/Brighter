@@ -81,15 +81,6 @@ namespace Paramore.Brighter
             Header.UpdateTelemetryFromHeaders();
         }
 
-        public void AddTelemetryInformation(Activity activity, string eventType)
-        {
-            Header.Bag[MessageTelemetry.EventIdHeaderName] = activity.Id;
-            Header.Bag[MessageTelemetry.SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
-            Header.Bag[MessageTelemetry.EventTypeHeaderName] = eventType;
-
-            Header.UpdateTelemetryFromHeaders();
-        }
-
         public ulong DeliveryTag
         {
             get
