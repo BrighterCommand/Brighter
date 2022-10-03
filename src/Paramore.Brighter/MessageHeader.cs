@@ -131,7 +131,7 @@ namespace Paramore.Brighter
         public string PartitionKey { get; set; }
 
         /// <summary>
-        /// Gets the details for the Cloud Events specification
+        /// Gets the telemetry information for the message
         /// </summary>
         public MessageTelemetry Telemetry { get; private set; }
         
@@ -331,7 +331,7 @@ namespace Paramore.Brighter
         }
         
         /// <summary>
-        /// Populate the Cloud Events from the HeaderBag
+        /// Populate the Telemetry from the HeaderBag
         /// </summary>
         [Obsolete("Looking to remove this in v10 in favour of storing the Cloud Events in their own property in the outbox")]
         public void UpdateTelemetryFromHeaders()
