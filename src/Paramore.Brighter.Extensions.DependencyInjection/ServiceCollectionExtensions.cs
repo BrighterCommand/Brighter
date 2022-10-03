@@ -10,7 +10,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     public static class ServiceCollectionExtensions
     {
-        
+        private static int _outboxBulkChunkSize = 100;
+
         /// <summary>
         /// Will add Brighter into the .NET IoC Contaner - ServiceCollection
         /// Registers singletons with the service collection :-
@@ -71,8 +72,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="outbox">The outbox provider - if your outbox supports both sync and async options, just provide this and we will register both</param>
+        /// <param name="outboxBulkChunkSize"></param>
         /// <returns></returns>
-        public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null)
+        public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null, int outboxBulkChunkSize = 100)
         {
             if (outbox is IAmAnOutboxSync<Message>)
             {
@@ -84,6 +86,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), _ => outbox, ServiceLifetime.Singleton));
             }
 
+            _outboxBulkChunkSize = outboxBulkChunkSize;
+            
             return brighterBuilder;
              
         }
@@ -260,7 +264,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     inboxConfiguration, 
                     outbox, 
                     overridingConnectionProvider, 
-                    useRequestResponse)
+                    useRequestResponse,
+                    _outboxBulkChunkSize)
                 .RequestContextFactory(options.RequestContextFactory)
                 .Build();
 
@@ -282,7 +287,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             InboxConfiguration inboxConfiguration, 
             IAmAnOutboxSync<Message> outbox,
             IAmABoxTransactionConnectionProvider overridingConnectionProvider, 
-            IUseRpc useRequestResponse)
+            IUseRpc useRequestResponse,
+            int outboxBulkChunkSize)
         {
             ExternalBusType externalBusType = GetExternalBusType(producerRegistry, useRequestResponse);
 
@@ -290,7 +296,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return messagingBuilder.NoExternalBus();
             else if (externalBusType == ExternalBusType.FireAndForget)
                 return messagingBuilder.ExternalBus(
-                    new ExternalBusConfiguration(producerRegistry, messageMapperRegistry, useInbox: inboxConfiguration),
+                    new ExternalBusConfiguration(producerRegistry, messageMapperRegistry, useInbox: inboxConfiguration, outboxBulkChunkSize: outboxBulkChunkSize),
                     outbox,
                     overridingConnectionProvider);
             else if (externalBusType == ExternalBusType.RPC)
