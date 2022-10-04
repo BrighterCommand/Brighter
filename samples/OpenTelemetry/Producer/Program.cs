@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http.HttpResults;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Shared.Commands;
@@ -8,7 +7,6 @@ using OpenTelemetry.Shared.Mappers;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 
 var builder = WebApplication.CreateBuilder(args);
