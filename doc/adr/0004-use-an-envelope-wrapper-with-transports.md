@@ -41,7 +41,7 @@ On producing to a publication, we convert from the request type to a brighter me
 The [Envelope Wrapper](https://www.enterpriseintegrationpatterns.com/patterns/messaging/EnvelopeWrapper.html) pattern provides for middleware that transforms the message between source and messaging system or messaging system and recipient. 
 Although the diagram below shows one wrapper, in principle the pattern allows for a pipeline of transformations where, in effect each middleware step provides translation required to pass it over the platform.
 
-![Claim Check](images/Wrapper.gif)
+![Wrapper](images/Wrapper.gif)
 
 ### Points of Interception
 
