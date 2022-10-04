@@ -58,7 +58,8 @@ builder.Services.AddServiceActivator(options =>
             new RmqSubscription<ProductUpdatedEvent>(
                 new SubscriptionName("Consumer"),
                 new ChannelName("ProductUpdatedEvent"),
-                new RoutingKey("ProductUpdatedEvent")
+                new RoutingKey("ProductUpdatedEvent"),
+                requeueCount: 5
             )
         };
         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);

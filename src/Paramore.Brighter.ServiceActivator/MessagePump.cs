@@ -165,7 +165,7 @@ namespace Paramore.Brighter.ServiceActivator
                 {
                     var (stop, requeue) = HandleProcessingException(aggregateException);
 
-                    span?.SetStatus(ActivityStatusCode.Error, $"Error while dispatching, Stopping {stop}, re-queueing {requeue}");
+                    span?.SetStatus(ActivityStatusCode.Error, $"Error while dispatching, re-queueing {requeue}, rejecting {stop}");
                     if (requeue)
                     {
                         if (RequeueMessage(message)) continue;
