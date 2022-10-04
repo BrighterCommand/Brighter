@@ -289,7 +289,7 @@ namespace Paramore.Brighter
                 }
                 catch (Exception e)
                 {
-                    span?.SetStatus(ActivityStatusCode.Error);
+                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     s_logger.LogError(e, "Error while dispatching from outbox");
                 }
                 finally
@@ -340,7 +340,7 @@ namespace Paramore.Brighter
                 catch (Exception e)
                 {
                     s_logger.LogError(e, "Error while dispatching from outbox");
-                    span?.SetStatus(ActivityStatusCode.Error);
+                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                 }
                 finally
                 {

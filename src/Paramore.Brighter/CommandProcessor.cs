@@ -46,7 +46,6 @@ namespace Paramore.Brighter
     public class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
-        private static readonly ActivitySource _activitySource = new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
 
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
@@ -64,7 +63,6 @@ namespace Paramore.Brighter
         // the following are not readonly to allow setting them to null on dispose
         private readonly IAmAChannelFactory _responseChannelFactory;
 
-        private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
         private const string PROCESSCOMMAND = "Process Command";
         private const string PROCESSEVENT = "Process Event";
         private const string DEPOSITPOST = "Deposit Post";
@@ -469,7 +467,7 @@ namespace Paramore.Brighter
             bool create = Activity.Current == null;
             
             if(create)
-                return (_activitySource.StartActivity(activityName, ActivityKind.Internal), create);
+                return (ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server), create);
             else
                 return (Activity.Current, create);
         }
@@ -694,7 +692,7 @@ namespace Paramore.Brighter
 
         private void AddTelemetryToMessage<T>(Message message)
         {
-            var activity = Activity.Current ?? _activitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
+            var activity = Activity.Current ?? ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
 
             if (activity != null)
             {
@@ -722,7 +720,6 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
         {
-            _activitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Producer);
             _bus.ClearOutbox(amountToClear, minimumAge, false, false); 
         }
 
@@ -752,7 +749,6 @@ namespace Paramore.Brighter
             int minimumAge = 5000,
             bool useBulk = false)
         {
-            _activitySource.StartActivity(IMPLICITCLEAROUTBOX,  ActivityKind.Producer);
             _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk); 
         }
 

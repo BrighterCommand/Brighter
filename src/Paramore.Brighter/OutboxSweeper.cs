@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter
+﻿using System.Diagnostics;
+
+namespace Paramore.Brighter
 {
     public class OutboxSweeper
     {
@@ -7,6 +9,8 @@
         private readonly int _batchSize;
         private readonly bool _useBulk;
 
+        private const string IMPLICITCLEAROUTBOX = "Implicit Clear Outbox";
+        
         /// <summary>
         /// This sweeper clears an outbox of any outstanding messages within the time interval
         /// </summary>
@@ -28,6 +32,7 @@
         /// </summary>
         public void Sweep()
         {
+            ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
             _commandProcessor.ClearOutbox(_batchSize, _millisecondsSinceSent);
         }
 
@@ -36,6 +41,7 @@
         /// </summary>
         public void SweepAsyncOutbox()
         {
+            ApplicationTelemetry.ActivitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Server);
             _commandProcessor.ClearAsyncOutbox(_batchSize, _millisecondsSinceSent, _useBulk);
         }
     }
