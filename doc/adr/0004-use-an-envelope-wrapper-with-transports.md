@@ -60,7 +60,7 @@ We or our customers could create a base class to try and get re-use of bespoke s
 
 #### Wrap-Unwrap Pipeline for Message Mapper
 
-In this option we create a pipeline that allows transformations of a brighter message
+In this option we create build a pipeline on top of Message Mapper that allows transformations of a brighter message. We define an interface for the pipeline steps:
 
 ```csharp
 
@@ -73,7 +73,7 @@ public interface IMessageTransform
 
 You implement this interface to provide your behavior, such as using a claim check for a large message.
 
-We signal that we are using one of these mixins via an attribute as this is consistent with the approach elsewhere
+We signal that we are using one of these mixins via an attribute on the mapper, as this is consistent with the approach elsewhere
 
 ```csharp
 
