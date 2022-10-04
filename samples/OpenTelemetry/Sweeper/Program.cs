@@ -22,7 +22,7 @@ Paramore.Brighter.Logging.ApplicationLogging.LoggerFactory = LoggerFactory.Creat
 
 using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("Brighter Sweeper Sample"))
-    .AddSource("Brighter")
+    .AddSource("Paramore.Brighter")
     // .AddZipkinExporter(o => o.HttpClientFactory = () =>
     // {
     //     HttpClient client = new HttpClient();

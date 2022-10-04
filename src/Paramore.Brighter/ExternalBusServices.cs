@@ -31,6 +31,11 @@ namespace Paramore.Brighter
 
         private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
+        
+        private const string ADDMESSAGETOOUTBOX = "Add message to outbox";
+        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the outbox";
+        private const string DISPATCHMESSAGE = "Dispatching message";
+        private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         
@@ -71,10 +76,10 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
-            Activity.Current?.AddEvent(new ActivityEvent("Add message to outbox",
+            Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
                 tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
-        }            
-          
+        }
+
         internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
         {
             CheckOutboxOutstandingLimit();
@@ -109,7 +114,7 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
-            Activity.Current?.AddEvent(new ActivityEvent("Add message to outbox",
+            Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
                 tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
         }
         
@@ -274,7 +279,7 @@ namespace Paramore.Brighter
                 {
                     
                     var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
-                    span?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox",
+                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
                         tags: new ActivityTagsCollection() {{"Outstanding Messages", messages.Count()}}));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
@@ -315,7 +320,7 @@ namespace Paramore.Brighter
                     
                     var messages =
                         await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
-                    span?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox"));
+                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
@@ -358,7 +363,7 @@ namespace Paramore.Brighter
         {
             foreach (var message in posts)
             {
-                Activity.Current?.AddEvent(new ActivityEvent("Dispatching Message",
+                Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
                     tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
 
@@ -387,7 +392,7 @@ namespace Paramore.Brighter
         {
             foreach (var message in posts)
             {
-                Activity.Current?.AddEvent(new ActivityEvent("Dispatching Message",
+                Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
                     tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
                 
@@ -439,7 +444,7 @@ namespace Paramore.Brighter
                 {
                     var messages = topicBatch.ToArray();
                     s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
-                    span?.AddEvent(new ActivityEvent("Bulk Dispatching Message",
+                    span?.AddEvent(new ActivityEvent(BULKDISPATCHMESSAGE,
                         tags: new ActivityTagsCollection() {{"Topic", topicBatch.Key}, {"Number Of Messages", messages.Length}}));
                     var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 

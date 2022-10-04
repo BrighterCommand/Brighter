@@ -41,7 +41,7 @@ public class ImplicitClearingObservabilityTests
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
         
-        _traceProvider = builder.AddSource("Brighter")
+        _traceProvider = builder.AddSource("Paramore.Brighter")
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
@@ -75,7 +75,7 @@ public class ImplicitClearingObservabilityTests
         
         Assert.NotEmpty(_exportedActivities);
 
-        var act = _exportedActivities.First(a => a.Source.Name == "Brighter");
+        var act = _exportedActivities.First(a => a.Source.Name == "Paramore.Brighter");
 
         Assert.NotNull(act);
         Assert.Equal(false,act.TagObjects.First(a => a.Key == "bulk").Value);
@@ -95,7 +95,7 @@ public class ImplicitClearingObservabilityTests
         
         Assert.NotEmpty(_exportedActivities);
 
-        var act = _exportedActivities.First(a => a.Source.Name == "Brighter");
+        var act = _exportedActivities.First(a => a.Source.Name == "Paramore.Brighter");
 
         Assert.NotNull(act);
         Assert.Equal(false ,act.TagObjects.First(a => a.Key == "bulk").Value);

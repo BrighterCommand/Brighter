@@ -29,7 +29,7 @@ Paramore.Brighter.Logging.ApplicationLogging.LoggerFactory = LoggerFactory.Creat
 
 using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ConsumerService"))
-    .AddSource("Brighter.ServiceActivator", "Brighter")
+    .AddSource("Paramore.Brighter.ServiceActivator", "Brighter")
     .AddJaegerExporter()
     .Build();
 

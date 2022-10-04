@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -35,7 +36,7 @@ namespace Paramore.Brighter
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    /// [Obsolete("Deprecated in favour of Bulk, wil be merged into IAmAnOutboxSync in v10")]
+    [Obsolete("Deprecated in favour of Bulk, wil be merged into IAmAnOutboxSync in v10")]
     public interface IAmABulkOutboxSync<in T> : IAmAnOutboxSync<T> where T : Message
     {
         /// <summary>

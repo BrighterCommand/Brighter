@@ -14,7 +14,7 @@ var builder = WebApplication.CreateBuilder(args);
 using var tracerProvider = 
     Sdk.CreateTracerProviderBuilder()
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProducerService"))
-    .AddSource("Brighter*", "Microsoft.*")
+    .AddSource("Paramore.Brighter*", "Microsoft.*")
     .AddJaegerExporter(o =>
     {
         o.Endpoint = new Uri("http://localhost:9411/api/v2/spans");

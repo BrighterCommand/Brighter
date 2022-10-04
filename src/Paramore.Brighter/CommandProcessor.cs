@@ -46,7 +46,7 @@ namespace Paramore.Brighter
     public class CommandProcessor : IAmACommandProcessor
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
-        private static readonly ActivitySource _activitySource = new ActivitySource("Brighter", Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
+        private static readonly ActivitySource _activitySource = new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
 
         private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
