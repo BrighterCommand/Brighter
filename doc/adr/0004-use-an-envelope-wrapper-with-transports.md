@@ -66,12 +66,13 @@ In this option we create build a pipeline on top of Message Mapper that allows t
 
 public interface IMessageTransform
 {
-    Message Transform(Message);
+    Message MapTo(Message);
+    Message MapFrom(Message);
 
 }
 ```
 
-You implement this interface to provide your behavior, such as using a claim check for a large message.
+You implement this interface to provide your behavior, such as using a claim check for a large message. The MapTo method transforms messages that you are posting, and the MapFrom method transforms messages you are receiving.
 
 We signal that we are using one of these mixins via an attribute on the mapper, as this is consistent with the approach elsewhere
 
