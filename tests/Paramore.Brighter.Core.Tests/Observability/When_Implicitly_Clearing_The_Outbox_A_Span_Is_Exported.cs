@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Exporter;
@@ -66,6 +67,9 @@ public class ImplicitClearingObservabilityTests
     {
         _commandProcessor.DepositPost(_event);
         _commandProcessor.ClearOutbox(10, 0);
+        
+        //wait for Background Process
+        Task.Delay(100).Wait();
 
         _traceProvider.ForceFlush();
         
@@ -84,6 +88,9 @@ public class ImplicitClearingObservabilityTests
         _commandProcessor.DepositPost(_event);
         _commandProcessor.ClearAsyncOutbox(10, 0);
 
+        //wait for Background Process
+        Task.Delay(100).Wait();
+        
         _traceProvider.ForceFlush();
         
         Assert.NotEmpty(_exportedActivities);

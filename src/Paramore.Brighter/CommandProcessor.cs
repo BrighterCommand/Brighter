@@ -34,6 +34,7 @@ using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Polly;
 using Polly.Registry;
+using Exception = System.Exception;
 
 namespace Paramore.Brighter
 {
@@ -294,7 +295,7 @@ namespace Paramore.Brighter
                     handlerChain.First().Handle(command);
                     success = true;
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
                     success = false;
                     throw;
@@ -476,8 +477,8 @@ namespace Paramore.Brighter
         private void EndSpan(Activity span, bool success)
         {
             var status = success ? ActivityStatusCode.Error : ActivityStatusCode.Ok;
-            span.SetStatus(status);
-            span.Dispose();
+            span?.SetStatus(status);
+            span?.Dispose();
         }
 
         /// <summary>
@@ -721,8 +722,8 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
         {
-            var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Producer);
-            _bus.ClearOutbox(amountToClear, minimumAge, false, false, activity); 
+            _activitySource.StartActivity(IMPLICITCLEAROUTBOX, ActivityKind.Producer);
+            _bus.ClearOutbox(amountToClear, minimumAge, false, false); 
         }
 
         /// <summary>
@@ -751,8 +752,8 @@ namespace Paramore.Brighter
             int minimumAge = 5000,
             bool useBulk = false)
         {
-            var activity = _activitySource.StartActivity(IMPLICITCLEAROUTBOX,  ActivityKind.Producer);
-            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, activity); 
+            _activitySource.StartActivity(IMPLICITCLEAROUTBOX,  ActivityKind.Producer);
+            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk); 
         }
 
         /// <summary>

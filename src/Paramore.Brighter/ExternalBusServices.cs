@@ -194,7 +194,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    Dispatch(new[] {message}, Activity.Current);
+                    Dispatch(new[] {message});
                 }
             }
             finally
@@ -221,7 +221,7 @@ namespace Paramore.Brighter
                     if (message == null || message.Header.MessageType == MessageType.MT_NONE)
                         throw new NullReferenceException($"Message with Id {messageId} not found in the Outbox");
 
-                    await DispatchAsync(new[] {message}, continueOnCapturedContext, cancellationToken, Activity.Current);
+                    await DispatchAsync(new[] {message}, continueOnCapturedContext, cancellationToken);
                 }
             }
             finally
@@ -239,19 +239,20 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
         /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
-        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Activity activity)
+        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk)
         {
-            activity?.AddTag("amountToClear", amountToClear);
-            activity?.AddTag("minimumAge", minimumAge);
-            activity?.AddTag("async", useAsync);
-            activity?.AddTag("bulk", useBulk);
+            var span = Activity.Current;
+            span?.AddTag("amountToClear", amountToClear);
+            span?.AddTag("minimumAge", minimumAge);
+            span?.AddTag("async", useAsync);
+            span?.AddTag("bulk", useBulk);
             
             if (useAsync)
             {
                 if (!HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, activity), CancellationToken.None);
+                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk), CancellationToken.None);
             }
 
             else
@@ -259,34 +260,36 @@ namespace Paramore.Brighter
                 if (!HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, activity));
+                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge));
             }
         }
 
-        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge, Activity activity)
+        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge)
         {
+            var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
+                    
                     var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
-                    activity?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox",
+                    span?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox",
                         tags: new ActivityTagsCollection() {{"Outstanding Messages", messages.Count()}}));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
-                    Dispatch(messages, activity);
+                    Dispatch(messages);
                     s_logger.LogInformation("Messages have been cleared");
-                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    span?.SetStatus(ActivityStatusCode.Ok);
                 }
                 catch (Exception e)
                 {
-                    activity?.SetStatus(ActivityStatusCode.Error);
+                    span?.SetStatus(ActivityStatusCode.Error);
                     s_logger.LogError(e, "Error while dispatching from outbox");
                 }
                 finally
                 {
-                    activity?.Dispose();
+                    span?.Dispose();
                     _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
@@ -295,15 +298,15 @@ namespace Paramore.Brighter
             }
             else
             {
-                activity?.SetStatus(ActivityStatusCode.Error)
+                span?.SetStatus(ActivityStatusCode.Error)
                     .Dispose();
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
         
-        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk, Activity activity)
+        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk)
         {
-            
+            var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
@@ -312,31 +315,31 @@ namespace Paramore.Brighter
                     
                     var messages =
                         await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
-                    activity?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox"));
+                    span?.AddEvent(new ActivityEvent("Get Outstanding Messages from the Outbox"));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
 
                     if (useBulk)
                     {
-                        await BulkDispatchAsync(messages, CancellationToken.None, activity);
+                        await BulkDispatchAsync(messages, CancellationToken.None);
                     }
                     else
                     {
-                        await DispatchAsync(messages, false, CancellationToken.None, activity);
+                        await DispatchAsync(messages, false, CancellationToken.None);
                     }
 
-                    activity?.SetStatus(ActivityStatusCode.Ok);
+                    span?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
                 {
                     s_logger.LogError(e, "Error while dispatching from outbox");
-                    activity?.SetStatus(ActivityStatusCode.Error);
+                    span?.SetStatus(ActivityStatusCode.Error);
                 }
                 finally
                 {
-                    activity?.Dispose();
+                    span?.Dispose();
                     _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
@@ -345,17 +348,17 @@ namespace Paramore.Brighter
             }
             else
             {
-                activity?.SetStatus(ActivityStatusCode.Error)
+                span?.SetStatus(ActivityStatusCode.Error)
                     .Dispose();
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
 
-        private void Dispatch(IEnumerable<Message> posts, Activity activity)
+        private void Dispatch(IEnumerable<Message> posts)
         {
             foreach (var message in posts)
             {
-                activity?.AddEvent(new ActivityEvent("Dispatching Message",
+                Activity.Current?.AddEvent(new ActivityEvent("Dispatching Message",
                     tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
 
@@ -380,11 +383,11 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task DispatchAsync(IEnumerable<Message> posts, bool continueOnCapturedContext, CancellationToken cancellationToken, Activity activity)
+        private async Task DispatchAsync(IEnumerable<Message> posts, bool continueOnCapturedContext, CancellationToken cancellationToken)
         {
             foreach (var message in posts)
             {
-                activity?.AddEvent(new ActivityEvent("Dispatching Message",
+                Activity.Current?.AddEvent(new ActivityEvent("Dispatching Message",
                     tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
                 
@@ -422,8 +425,9 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken, Activity activity)
+        private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken)
         {
+            var span = Activity.Current;
             //Chunk into Topics
             var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
 
@@ -435,7 +439,7 @@ namespace Paramore.Brighter
                 {
                     var messages = topicBatch.ToArray();
                     s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
-                    activity?.AddEvent(new ActivityEvent("Bulk Dispatching Message",
+                    span?.AddEvent(new ActivityEvent("Bulk Dispatching Message",
                         tags: new ActivityTagsCollection() {{"Topic", topicBatch.Key}, {"Number Of Messages", messages.Length}}));
                     var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 

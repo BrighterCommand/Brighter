@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -52,6 +53,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Gets or sets the span that this operation live within
         /// </summary>
+        [JsonIgnore]
         public Activity Span { get; set; }
     }
 }
