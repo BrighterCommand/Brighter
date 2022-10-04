@@ -1,6 +1,6 @@
-# 2. Use A Claim Check For Large or Sensitive Messages 
+# 4. Use An Envelope Wrapper with Transports
 
-Date: 2022-07-18
+Date: 2022-10-04
 
 ## Status
 

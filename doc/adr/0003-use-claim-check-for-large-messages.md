@@ -1,4 +1,4 @@
-# 2. Use A Claim Check For Large or Sensitive Messages 
+# 3. Use A Claim Check For Large or Sensitive Messages 
 
 Date: 2022-07-18
 
