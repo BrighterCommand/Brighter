@@ -10,6 +10,8 @@ using Paramore.Brighter.Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
@@ -27,6 +29,8 @@ namespace GreetingsPorts.Handlers
             _logger = logger;
         }
 
+        [RequestLogging(0, HandlerTiming.Before)]
+        [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();

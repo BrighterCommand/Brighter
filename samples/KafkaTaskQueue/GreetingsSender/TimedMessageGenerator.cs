@@ -6,7 +6,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 
-namespace GreetingsSender.Adapters
+namespace GreetingsSender
 {
     public class TimedMessageGenerator : IHostedService, IDisposable
     {
@@ -25,7 +25,7 @@ namespace GreetingsSender.Adapters
         {
             _logger.LogInformation("Kafka Message Generator is starting.");
 
-            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
 
             return Task.CompletedTask;
         }

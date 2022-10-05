@@ -80,7 +80,7 @@ namespace Paramore.Brighter
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well
     /// </summary>
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -111,6 +111,23 @@ namespace Paramore.Brighter
                 }
             }
         }
+        
+        /// <summary>
+        /// Adds the specified message
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="outBoxTimeout"></param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            ClearExpiredMessages();
+            EnforceCapacityLimit();
+
+            foreach (Message message in messages)
+            {
+                Add(message, outBoxTimeout, transactionConnectionProvider);
+            }
+        }
 
         /// <summary>
         /// Adds the specified message
@@ -132,6 +149,33 @@ namespace Paramore.Brighter
 
             Add(message, outBoxTimeout);
             
+            tcs.SetResult(new object());
+            return tcs.Task;
+        }
+        
+        /// <summary>
+        /// Adds the specified message
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="outBoxTimeout"></param>
+        /// <param name="cancellationToken"></param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        /// <returns></returns>
+        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+
+            foreach (Message message in messages)
+            {
+                Add(message, outBoxTimeout);
+            }
+
             tcs.SetResult(new object());
             return tcs.Task;
         }
