@@ -24,8 +24,10 @@ namespace Paramore.Brighter
 
         internal int OutboxTimeout { get; set; } = 300;
 
+        internal int OutboxBulkChunkSize { get; set; } = 100;
+
         internal IAmAProducerRegistry ProducerRegistry { get; set; }
-        
+
         private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
 
@@ -69,7 +71,32 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
         }            
-            
+          
+        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
+        {
+            CheckOutboxOutstandingLimit();
+
+            if (AsyncOutbox is IAmABulkOutboxAsync<Message> box)
+            {
+                foreach (var chunk in ChunkMessages(messages))
+                {
+                    var written = await RetryAsync(
+                        async ct =>
+                        {
+                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingTransactionConnectionProvider)
+                                .ConfigureAwait(continueOnCapturedContext);
+                        },
+                        continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+
+                    if (!written)
+                        throw new ChannelFailureException($"Could not write {chunk.Count()} requests to the outbox");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"{AsyncOutbox.GetType()} does not implement IAmABulkOutboxAsync");
+            }
+        } 
             
         internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
         {
@@ -79,6 +106,36 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+        }
+        
+        internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) 
+        {
+            CheckOutboxOutstandingLimit();
+
+            if (OutBox is IAmABulkOutboxSync<Message> box)
+            {
+                foreach (var chunk in ChunkMessages(messages))
+                {
+                    var written =
+                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingTransactionConnectionProvider); });
+
+                    if (!written)
+                        throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"{OutBox.GetType()} does not implement IAmABulkOutboxSync");
+            }
+        }
+
+        private IEnumerable<List<Message>> ChunkMessages(IEnumerable<Message> messages)
+        {
+            return Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)OutboxBulkChunkSize)))
+                .Select(i => new List<Message>(messages
+                    .Skip(i * OutboxBulkChunkSize)
+                    .Take(OutboxBulkChunkSize)
+                    .ToArray()));
         }
 
         private void CheckOutboxOutstandingLimit()
@@ -406,10 +463,19 @@ namespace Paramore.Brighter
         {
             return AsyncOutbox != null;
         }
+        internal bool HasAsyncBulkOutbox()
+        {
+            return AsyncOutbox is IAmABulkOutboxAsync<Message>;
+        }
 
         internal bool HasOutbox()
         {
             return OutBox != null;
+        }
+        
+        internal bool HasBulkOutbox()
+        {
+            return OutBox is IAmABulkOutboxSync<Message>;
         }
 
         private void OutstandingMessagesCheck()

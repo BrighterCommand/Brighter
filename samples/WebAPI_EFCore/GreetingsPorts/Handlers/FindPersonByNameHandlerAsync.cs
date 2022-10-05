@@ -2,10 +2,13 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using GreetingsPorts.EntityGateway;
+using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Darker;
+using Paramore.Darker.Policies;
+using Paramore.Darker.QueryLogging;
 
 namespace GreetingsPorts.Handlers
 {
@@ -18,6 +21,8 @@ namespace GreetingsPorts.Handlers
             _uow = uow;
         }
         
+        [QueryLogging(0)]
+        [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
             return await _uow.People

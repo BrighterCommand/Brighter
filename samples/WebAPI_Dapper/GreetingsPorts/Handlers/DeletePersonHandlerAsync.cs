@@ -8,6 +8,8 @@ using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
+using Paramore.Brighter.Logging.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
@@ -19,6 +21,9 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
+        
+        [RequestLogging(0, HandlerTiming.Before)]
+        [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);

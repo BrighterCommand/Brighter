@@ -27,19 +27,6 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// What action do we take for infrastructure dependencies?
-    /// -- Create: Make the required infrastructure via SDK calls
-    /// -- Validate: Check if the infrastructure requested exists, and raise an error if not
-    /// -- Assume: Don't check or create, assume it is there, and fail fast if not. Use to removes the cost of checks for existence on platforms where this is expensive
-    /// </summary>
-    public enum OnMissingChannel
-    {
-        Create = 0,
-        Validate = 1,
-        Assume = 2
-    }
-
-    /// <summary>
     /// Class Subscription.
     /// A <see cref="Subscription"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
     /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s
@@ -67,22 +54,28 @@ namespace Paramore.Brighter
         /// <value>The name.</value>
         public ChannelName ChannelName { get; set; }
 
-        /// <summary>
+       /// <summary>
+       /// How long to pause when there is a channel failure in milliseconds
+       /// </summary>
+       public int ChannelFailureDelay { get; set; }
+       
+     /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
         /// </summary>
         /// <value>The type of the data.</value>
         public Type DataType { get; }
 
-        /// <summary>
-        /// Gets a value indicating whether this subscription should use an asynchronous pipeline
-        /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
-        /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
+       /// <summary>
+        /// How long to pause when a channel is empty in milliseconds
         /// </summary>
-        /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
-        public bool RunAsync { get; }
+        public int EmptyChannelDelay { get; set; }
+       
+    /// <summary>
+        /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
+        /// </summary>
+        public OnMissingChannel MakeChannels { get; }
 
-
-        /// <summary>
+         /// <summary>
         /// Gets or sets the name of the subscription, for identification.
         /// </summary>
         /// <value>The name.</value>
@@ -112,6 +105,14 @@ namespace Paramore.Brighter
         public RoutingKey RoutingKey { get; set; }
 
         /// <summary>
+        /// Gets a value indicating whether this subscription should use an asynchronous pipeline
+        /// If it does it will process new messages from the queue whilst awaiting in prior messages' pipelines
+        /// This increases throughput (although it will no longer throttle use of the resources on the host machine).
+        /// </summary>
+        /// <value><c>true</c> if this instance should use an asynchronous pipeline; otherwise, <c>false</c></value>
+        public bool RunAsync { get; }
+
+        /// <summary>
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
         /// or busy
         /// </summary>
@@ -123,21 +124,6 @@ namespace Paramore.Brighter
         /// </summary>
         public int UnacceptableMessageLimit { get; }
 
-
-        /// <summary>
-        /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
-        /// </summary>
-        public OnMissingChannel MakeChannels { get; }
-
-        /// <summary>
-        /// How long to pause when a channel is empty in milliseconds
-        /// </summary>
-        public int EmptyChannelDelay { get; set; }
-
-        /// <summary>
-        /// How long to pause when there is a channel failure in milliseconds
-        /// </summary>
-        public int ChannelFailureDelay { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.

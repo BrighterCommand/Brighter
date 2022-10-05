@@ -113,10 +113,16 @@ namespace Paramore.Brighter
         )
         {
             _subscriberRegistry = subscriberRegistry;
+            
+            if (HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(handlerFactory))
+                throw new ArgumentException(
+                    "No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
+            
             if (handlerFactory is IAmAHandlerFactorySync handlerFactorySync)
                 _handlerFactorySync = handlerFactorySync;
             if (handlerFactory is IAmAHandlerFactoryAsync handlerFactoryAsync)
                 _handlerFactoryAsync = handlerFactoryAsync;
+
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -136,6 +142,7 @@ namespace Paramore.Brighter
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
         public CommandProcessor(
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -145,7 +152,8 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
+            int outboxBulkChunkSize = 100)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
@@ -154,7 +162,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             
-            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
             ConfigureCallbacks(producerRegistry);
         }
@@ -176,6 +184,7 @@ namespace Paramore.Brighter
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -189,7 +198,8 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             IAmAChannelFactory responseChannelFactory = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
+            int outboxBulkChunkSize = 100)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _mapperRegistry = mapperRegistry;
@@ -199,7 +209,7 @@ namespace Paramore.Brighter
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _replySubscriptions = replySubscriptions;
 
-            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
               
             ConfigureCallbacks(producerRegistry);
         }
@@ -219,6 +229,7 @@ namespace Paramore.Brighter
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
+        /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
         public CommandProcessor(
             IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
@@ -230,14 +241,15 @@ namespace Paramore.Brighter
             int outboxTimeout = 300,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
+            IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
+            int outboxBulkChunkSize = 100)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _mapperRegistry = mapperRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
 
-            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry);
+            InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
             ConfigureCallbacks(producerRegistry);
         }
@@ -452,6 +464,21 @@ namespace Paramore.Brighter
             return DepositPost(request, _boxTransactionConnectionProvider);
         }
         
+        /// <summary>
+        /// Adds a messages into the outbox, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// </summary>
+        /// <param name="request">The request to save to the outbox</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns>The Id of the Message that has been deposited.</returns>
+        public Guid[] DepositPost<T>(T[] request) where T : class, IRequest
+        {
+            return DepositPost(request, _boxTransactionConnectionProvider);
+        }
+        
         private Guid DepositPost<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
@@ -468,6 +495,27 @@ namespace Paramore.Brighter
             _bus.AddToOutbox(request, message, connectionProvider);
 
             return message.Id;
+        }
+        
+        private Guid[] DepositPost<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
+        {
+            if (!_bus.HasBulkOutbox())
+                throw new InvalidOperationException("No Bulk outbox defined.");
+
+            var successfullySentMessage = new List<Guid>();
+            
+            foreach (var batch in SplitRequestBatchIntoTypes(requests))
+            {
+                var messages = BulkMapMessages(requests);
+                
+                s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
+
+                _bus.AddToOutbox(messages, connectionProvider);
+                
+                successfullySentMessage.AddRange(messages.Select(m => m.Id));
+            }
+
+            return successfullySentMessage.ToArray();
         }
 
         /// <summary>
@@ -488,6 +536,24 @@ namespace Paramore.Brighter
             return await DepositPostAsync(request, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
         }
         
+        /// <summary>
+        /// Adds a message into the outbox, and returns the id of the saved message.
+        /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
+        /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
+        /// database, that you want to signal via the request to downstream consumers
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// </summary>
+        /// <param name="requests">The requests to save to the outbox</param>
+        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
+        /// <param name="cancellationToken">The Cancellation Token.</param>
+        /// <typeparam name="T">The type of the request</typeparam>
+        /// <returns></returns>
+        public Task<Guid[]> DepositPostAsync<T>(T[] requests, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            return DepositPostAsync(requests, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
+        }
+        
         private async Task<Guid> DepositPostAsync<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
@@ -505,6 +571,43 @@ namespace Paramore.Brighter
             await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
             return message.Id;
+        }
+        
+        private async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, IAmABoxTransactionConnectionProvider connectionProvider,  bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            if (!_bus.HasAsyncBulkOutbox())
+                throw new InvalidOperationException("No bulk async outbox defined.");
+
+            var successfullySentMessage = new List<Guid>();
+            
+            foreach (var batch in SplitRequestBatchIntoTypes(requests))
+            {
+                var messages = BulkMapMessages(batch.ToArray());
+
+                s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
+
+                await _bus.AddToOutboxAsync(messages, continueOnCapturedContext, cancellationToken, connectionProvider);
+                
+                successfullySentMessage.AddRange(messages.Select(m => m.Id));
+            }
+
+            return successfullySentMessage.ToArray();
+        }
+
+        private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)
+        {
+            return requests.GroupBy(r => r.GetType());
+        }
+
+        private List<Message> BulkMapMessages<T>(IEnumerable<T> requests) where T : class, IRequest
+        {
+            var messageMapper = _mapperRegistry.Get<T>();
+            if (messageMapper == null)
+                throw new ArgumentOutOfRangeException(
+                    $"No message mapper registered for messages of type: {typeof(T)}");
+
+            return requests.Select(r => messageMapper.MapToMessage(r)).ToList();
         }
 
 
@@ -687,7 +790,8 @@ namespace Paramore.Brighter
         private void InitExtServiceBus(IPolicyRegistry<string> policyRegistry,
             IAmAnOutbox<Message> outbox,
             int outboxTimeout,
-            IAmAProducerRegistry producerRegistry)
+            IAmAProducerRegistry producerRegistry,
+            int outboxBulkChunkSize)
         {
             if (_bus == null)
             {
@@ -704,10 +808,27 @@ namespace Paramore.Brighter
                         _bus.OutboxTimeout = outboxTimeout;
                         _bus.PolicyRegistry = policyRegistry;
                         _bus.ProducerRegistry = producerRegistry;
+                        _bus.OutboxBulkChunkSize = outboxBulkChunkSize;
                     }
                 }
             }
         }
 
+        private bool HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(IAmAHandlerFactory handlerFactory)
+        {
+            // If we do not have a subscriber registry and we do not have a handler factory 
+            // then we're creating a control bus sender and we don't need them
+            if (_subscriberRegistry is null && handlerFactory is null)
+                return false;
+
+            switch (handlerFactory)
+            {
+                case IAmAHandlerFactorySync _:
+                case IAmAHandlerFactoryAsync _:
+                    return false;
+                default:
+                    return true;
+            }
+        }
     }
 }

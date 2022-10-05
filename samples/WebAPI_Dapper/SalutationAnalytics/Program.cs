@@ -95,11 +95,7 @@ namespace SalutationAnalytics
                     options.PolicyRegistry = new SalutationPolicy();
                 })
                 .UseExternalBus(new RmqProducerRegistryFactory(
-                        new RmqMessagingGatewayConnection
-                        {
-                            AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
-                            Exchange = new Exchange("paramore.brighter.exchange"),
-                        },
+                        rmqConnection,
                         new RmqPublication[]
                         {
                             new RmqPublication
@@ -117,9 +113,9 @@ namespace SalutationAnalytics
                 .UseExternalInbox(
                     ConfigureInbox(hostContext),
                     new InboxConfiguration(
-                        scope: InboxScope.All,
+                        scope: InboxScope.Commands,
                         onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Warn
+                        actionOnExists: OnceOnlyAction.Throw
                     )
                 );
 

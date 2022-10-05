@@ -21,7 +21,7 @@
 
         public static RoutingKey ToValidSNSTopicName(this RoutingKey routingKey)
         {
-            //SNS only opic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
+            //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
             //underscores (_) are allowed. Topic names must be unique within an AWS account.
             var topic = routingKey.Value;
             topic = topic.Replace(".", "_");
@@ -33,7 +33,7 @@
         
         public static string ToValidSNSTopicName(this string topic)
         {
-            //SNS only opic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
+            //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and
             //underscores (_) are allowed. Topic names must be unique within an AWS account.
             topic = topic.Replace(".", "_");
             if (topic.Length > 256)

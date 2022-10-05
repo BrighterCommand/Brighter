@@ -25,52 +25,38 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Polly;
 using Polly.Registry;
-using Serilog;
-using Serilog.Events;
 
-namespace GreetingsSender.Adapters
+namespace GreetingsSender
 {
     internal static class Program
     {
-        static async Task<int> Main(string[] args)
+        static async Task Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .MinimumLevel.Debug()
-                .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
-                .Enrich.FromLogContext()
-                .WriteTo.Console()
-                .CreateLogger();
-
-            var host = BuildHost();
-
-            try
-            {
-                await host.RunAsync();
-                return 0;
-            }
-            catch (Exception ex)
-            {
-                Log.Fatal(ex, "Host terminated unexpectedly");
-                return 1;
-            }
-            finally
-            {
-                Log.CloseAndFlush();
-            }
-        }
-
-        private static IHost BuildHost()
-        {
-            return new HostBuilder()
+            var host = (IHost)Host.CreateDefaultBuilder(args)
+                .ConfigureHostConfiguration(configurationBuilder =>
+                {
+                    configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+                    configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+                    configurationBuilder.AddCommandLine(args);
+                })
+                .ConfigureLogging((context, builder) =>
+                {
+                    builder.ClearProviders();
+                    builder.AddConsole();
+                    builder.AddDebug();
+                })
                 .ConfigureServices((hostContext, services) =>
                 {
                     var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
@@ -100,35 +86,36 @@ namespace GreetingsSender.Adapters
                     };
 
                     services.AddBrighter(options =>
-                    {
-                        options.PolicyRegistry = policyRegistry;
-                    })
+                        {
+                            options.PolicyRegistry = policyRegistry;
+                        })
                         .UseInMemoryOutbox()
                         .UseExternalBus(
-                        new KafkaProducerRegistryFactory(
-                            new KafkaMessagingGatewayConfiguration()
-                            {
-                                Name = "paramore.brighter.greetingsender",
-                                BootStrapServers = new[] {"localhost:9092"}
-                            },
-                            new KafkaPublication[]
-                            {
-                                new KafkaPublication()
-                                {
-                                    Topic = new RoutingKey("greeting.event"),
-                                    MessageSendMaxRetries = 3,
-                                    MessageTimeoutMs = 1000,
-                                    MaxInFlightRequestsPerConnection = 1
-                                }
-                            })
-                        .Create())
+                            new KafkaProducerRegistryFactory(
+                                    new KafkaMessagingGatewayConfiguration()
+                                    {
+                                        Name = "paramore.brighter.greetingsender",
+                                        BootStrapServers = new[] {"localhost:9092"}
+                                    },
+                                    new KafkaPublication[]
+                                    {
+                                        new KafkaPublication()
+                                        {
+                                            Topic = new RoutingKey("greeting.event"),
+                                            MessageSendMaxRetries = 3,
+                                            MessageTimeoutMs = 1000,
+                                            MaxInFlightRequestsPerConnection = 1
+                                        }
+                                    })
+                                .Create())
                         .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
                     services.AddHostedService<TimedMessageGenerator>();
                 })
-                .UseSerilog()
                 .UseConsoleLifetime()
                 .Build();
+
+                await host.RunAsync();
         }
     }
 }
