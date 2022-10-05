@@ -15,7 +15,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability;
 [Collection("Observability")]
-public class ImplicitClearingObservabilityTests
+public class ImplicitClearingAsyncObservabilityTests
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly IAmAnOutboxSync<Message> _outbox;
@@ -23,7 +23,7 @@ public class ImplicitClearingObservabilityTests
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
 
-    public ImplicitClearingObservabilityTests()
+    public ImplicitClearingAsyncObservabilityTests()
     {
         _outbox = new InMemoryOutbox();
         _event = new MyEvent("TestEvent");
@@ -61,16 +61,16 @@ public class ImplicitClearingObservabilityTests
         _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
             policyRegistry, messageMapperRegistry,_outbox,producerRegistry);
     }
-
+    
     [Fact]
-    public void When_Clearing_Implicitly()
+    public void When_Clearing_Implicitly_async()
     {
         _commandProcessor.DepositPost(_event);
-        _commandProcessor.ClearOutbox(10, 0);
-        
+        _commandProcessor.ClearAsyncOutbox(10, 0);
+
         //wait for Background Process
         Task.Delay(100).Wait();
-
+        
         _traceProvider.ForceFlush();
         
         Assert.NotEmpty(_exportedActivities);
@@ -78,7 +78,7 @@ public class ImplicitClearingObservabilityTests
         var act = _exportedActivities.First(a => a.Source.Name == "Paramore.Brighter");
 
         Assert.NotNull(act);
-        Assert.Equal(false,act.TagObjects.First(a => a.Key == "bulk").Value);
-        Assert.Equal(false,act.TagObjects.First(a => a.Key == "async").Value);
+        Assert.Equal(false ,act.TagObjects.First(a => a.Key == "bulk").Value);
+        Assert.Equal(true ,act.TagObjects.First(a => a.Key == "async").Value);
     }
 }
