@@ -64,10 +64,10 @@ In this option we create build a pipeline on top of Message Mapper that allows t
 
 ```csharp
 
-public interface IMessageTransform
+public interface IAmAMessageTransform
 {
-    Message Wrap(Message);
-    Message Unwrap(Message);
+    Message Wrap(Message message);
+    Message Unwrap(Message message);
 
 }
 ```
