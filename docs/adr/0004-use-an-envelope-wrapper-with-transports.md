@@ -66,8 +66,8 @@ In this option we create build a pipeline on top of Message Mapper that allows t
 
 public interface IMessageTransform
 {
-    Message MapTo(Message);
-    Message MapFrom(Message);
+    Message Wrap(Message);
+    Message Unwrap(Message);
 
 }
 ```
