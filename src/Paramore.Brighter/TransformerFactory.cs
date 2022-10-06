@@ -24,38 +24,25 @@ THE SOFTWARE. */
 using System;
 
 namespace Paramore.Brighter
-{         
-    /// <summary>
-    /// class UnwrapWithAttribute
-    /// Indicates that you want to run a <see cref="IAmAMessageTransformAsync"/> before the <see cref="Message"/> has
-    /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/> 
-    /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
-    /// </summary>
-    public abstract class UnwrapWithAttribute
+{
+    internal class TransformerFactory<TRequest> where TRequest: class, IRequest, new()
     {
-        private int _step;
+        private readonly WrapWithAttribute _attribute;
+        private readonly IAmAMessageTransformerFactory _factory;
+        private readonly Type _messageType;
 
-        protected UnwrapWithAttribute(int step)
+        public TransformerFactory(WrapWithAttribute attribute, IAmAMessageTransformerFactory factory)
         {
-            _step = step;
+            _attribute = attribute;
+            _factory = factory;
+            _messageType = typeof(TRequest);
         }
-        
-        //In which order should we run this
-        /// <summary>
-        /// Gets the step.
-        /// </summary>
-        /// <value>The step.</value>
-        public int Step
+
+        public IAmAMessageTransformAsync CreateMessageTransformer()
         {
-            get { return _step; }
-            set { _step = value; }
-        }    
-        
-        //What type do we implement for the Transform in the Message Mapper Pipeline
-        /// <summary>
-        /// Gets the type of the handler.
-        /// </summary>
-        /// <returns>Type.</returns>
-        public abstract Type GetHandlerType();
+            var transformerType = _attribute.GetHandlerType();
+            var transformer = (IAmAMessageTransformAsync)_factory.Create(transformerType);
+            return transformer;
+        }
     }
 }

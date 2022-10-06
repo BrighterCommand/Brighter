@@ -21,41 +21,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
+using System.Collections.Generic;
+using System.Text;
 
 namespace Paramore.Brighter
-{         
+{
     /// <summary>
-    /// class UnwrapWithAttribute
-    /// Indicates that you want to run a <see cref="IAmAMessageTransformAsync"/> before the <see cref="Message"/> has
-    /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/> 
-    /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
+    /// class TransformPipelineTracer
+    /// Used to determine the pipeline of transformations that would be applied to a request becoming a message or 
     /// </summary>
-    public abstract class UnwrapWithAttribute
+    public class TransformPipelineTracer
     {
-        private int _step;
-
-        protected UnwrapWithAttribute(int step)
+        private List<string> _transforms = new List<string>();
+        public override string ToString()
         {
-            _step = step;
+            return string.Join("|", _transforms);
         }
-        
-        //In which order should we run this
-        /// <summary>
-        /// Gets the step.
-        /// </summary>
-        /// <value>The step.</value>
-        public int Step
+
+        public void AddTransform(string transformName)
         {
-            get { return _step; }
-            set { _step = value; }
-        }    
-        
-        //What type do we implement for the Transform in the Message Mapper Pipeline
-        /// <summary>
-        /// Gets the type of the handler.
-        /// </summary>
-        /// <returns>Type.</returns>
-        public abstract Type GetHandlerType();
+            _transforms.Add(transformName);    
+        }
     }
 }

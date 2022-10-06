@@ -1,6 +1,6 @@
 ﻿#region Licence
 /* The MIT License (MIT)
-Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -19,43 +19,35 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
 
 namespace Paramore.Brighter
-{         
+{
     /// <summary>
-    /// class UnwrapWithAttribute
-    /// Indicates that you want to run a <see cref="IAmAMessageTransformAsync"/> before the <see cref="Message"/> has
-    /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/> 
-    /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
+    /// Class SimpleMessageTransformerFactory.
+    /// This class allows you to return a simple function that finds a transformer. Intended for lightweight transformer pipelines.
+    /// We recommend you wrap your IoC container for heavyweight mapping.
     /// </summary>
-    public abstract class UnwrapWithAttribute
+    public class SimpleMessageTransformerFactory : IAmAMessageTransformerFactory
     {
-        private int _step;
+        private readonly Func<Type, IAmAMessageTransformAsync> _factoryMethod;
 
-        protected UnwrapWithAttribute(int step)
+        public SimpleMessageTransformerFactory(Func<Type, IAmAMessageTransformAsync> factoryMethod)
         {
-            _step = step;
+            _factoryMethod = factoryMethod;
         }
-        
-        //In which order should we run this
-        /// <summary>
-        /// Gets the step.
-        /// </summary>
-        /// <value>The step.</value>
-        public int Step
+
+        public IAmAMessageTransformAsync Create(Type transformerType)
         {
-            get { return _step; }
-            set { _step = value; }
-        }    
-        
-        //What type do we implement for the Transform in the Message Mapper Pipeline
-        /// <summary>
-        /// Gets the type of the handler.
-        /// </summary>
-        /// <returns>Type.</returns>
-        public abstract Type GetHandlerType();
+            return _factoryMethod(transformerType);
+        }
+
+        public void Release(IAmAMessageTransformAsync transformer)
+        {
+            return;
+        }
     }
 }

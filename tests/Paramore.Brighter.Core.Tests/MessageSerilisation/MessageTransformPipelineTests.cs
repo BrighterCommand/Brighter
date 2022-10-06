@@ -6,22 +6,32 @@ namespace Paramore.Brighter.Core.Tests.MessageSerilisation;
 
 public class MessageTransformPipelineTests
 {
-    private WrapPipeline _transformPipeline;
+    private WrapPipeline<MyTransformableCommand> _transformPipeline;
+    private readonly MessageTransformPipelineBuilder _pipelineBuilder;
+    private readonly MyTransformableCommand _myCommand;
+
+    public MessageTransformPipelineTests()
+    {
+        //arrange
+        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
+            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
+
+        _myCommand = new MyTransformableCommand();
+        
+        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
+
+        _pipelineBuilder = new MessageTransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        
+    }
     
     [Fact]
     public void When_A_Message_Mapper_Map_To_Request_Has_A_Transform()
     {
-        //arrange
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyTransformableCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
-
-        var pipelineBuilder = new MessageTransformPipelineBuilder(mapperRegistry);
-
         //act
-        _transformPipeline = pipelineBuilder.BuildWrapPipeline();
+        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
         
         //assert
-        TraceFilters().ToString().Should().Be("MySimpleTransform | MyTransformableCommandMessageMapper");
+        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper|MySimpleTransformAsync");
     }
     
     private TransformPipelineTracer TraceFilters()
@@ -29,40 +39,5 @@ public class MessageTransformPipelineTests
         var pipelineTracer = new TransformPipelineTracer();
         _transformPipeline.DescribePath(pipelineTracer);
         return pipelineTracer;
-    }
-}
-
-public class TransformPipelineTracer
-{
-    public override string ToString()
-    {
-        return string.Empty;
-    }
-
-    public void AddTransform(string empty)
-    {
-    }
-}
-
-public class WrapPipeline
-{
-    public void DescribePath(TransformPipelineTracer pipelineTracer)
-    {
-        pipelineTracer.AddTransform("");
-    }
-}
-
-public class MessageTransformPipelineBuilder
-{
-    private readonly MessageMapperRegistry _mapperRegistry;
-
-    public MessageTransformPipelineBuilder(MessageMapperRegistry mapperRegistry)
-    {
-        _mapperRegistry = mapperRegistry;
-    }
-
-    public WrapPipeline BuildWrapPipeline()
-    {
-        return new WrapPipeline();
     }
 }

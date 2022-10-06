@@ -10,6 +10,6 @@ public class MySimpleWrapWith: WrapWithAttribute
 
     public override Type GetHandlerType()
     {
-        throw new NotImplementedException();
+        return typeof(MySimpleTransformAsync);
     }
 }

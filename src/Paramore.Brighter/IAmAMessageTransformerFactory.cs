@@ -24,38 +24,27 @@ THE SOFTWARE. */
 using System;
 
 namespace Paramore.Brighter
-{         
+{
     /// <summary>
-    /// class UnwrapWithAttribute
-    /// Indicates that you want to run a <see cref="IAmAMessageTransformAsync"/> before the <see cref="Message"/> has
-    /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/> 
-    /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
+    /// Interface IAmAMessageTransformerFactory
+    /// We do not know how to create instances of <see cref="IAmAMessageTransformAsync"/> implemented by your application, but need to create instances to instantiate a pipeline.
+    /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAMessageTransformerFactory"/> to provide 
+    /// instances of their <see cref="IAmAMessageTransformAsync"/> types. You need to provide a Handler Factory to support all <see cref="IAmAMessageTransformAsync"/>
+    /// referred to by a <see cref="WrapWithAttribute"/> or a <see cref="UnwrapWithAttribute"/>.
+    /// Typically you would use an IoC container to implement the Transformer Factory.
     /// </summary>
-    public abstract class UnwrapWithAttribute
+    public interface IAmAMessageTransformerFactory
     {
-        private int _step;
-
-        protected UnwrapWithAttribute(int step)
-        {
-            _step = step;
-        }
-        
-        //In which order should we run this
         /// <summary>
-        /// Gets the step.
+        /// Creates the specified transformer type.
         /// </summary>
-        /// <value>The step.</value>
-        public int Step
-        {
-            get { return _step; }
-            set { _step = value; }
-        }    
-        
-        //What type do we implement for the Transform in the Message Mapper Pipeline
+        /// <param name="transformerType">Type of the handler.</param>
+        /// <returns>IAmAMessageTransformAsync</returns>
+        IAmAMessageTransformAsync Create(Type transformerType);
         /// <summary>
-        /// Gets the type of the handler.
+        /// Releases the specified transformer.
         /// </summary>
-        /// <returns>Type.</returns>
-        public abstract Type GetHandlerType();
+        /// <param name="transformerType">The transformer</param>
+        void Release(IAmAMessageTransformAsync transformer); 
     }
 }
