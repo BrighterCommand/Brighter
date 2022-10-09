@@ -75,11 +75,18 @@ namespace Paramore.Brighter
 
          public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
          {
-             var messageMapper = _mapperRegistry.Get<TRequest>();
+             try
+             {
+                 var messageMapper = _mapperRegistry.Get<TRequest>();
 
-             var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
+                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-             return new UnwrapPipeline<TRequest>(transforms, messageMapper);
+                 return new UnwrapPipeline<TRequest>(transforms, messageMapper);
+             }
+             catch (Exception e)
+             {
+                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
+             }
          }
          
          private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
