@@ -34,7 +34,7 @@ public class MessageUnwrapRequestTests
     }
     
     [Fact]
-    public void When_Wrapping_A_Message_Mapper()
+    public void When_Unwrapping_A_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
