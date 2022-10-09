@@ -59,11 +59,18 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>(TRequest message) where TRequest : class, IRequest, new()
         {
-            var messageMapper = _mapperRegistry.Get<TRequest>();
+            try
+            {
+                var messageMapper = _mapperRegistry.Get<TRequest>();
 
-            var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
+                var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-            return new WrapPipeline<TRequest>(messageMapper, transforms);
+                return new WrapPipeline<TRequest>(messageMapper, transforms);
+            }
+            catch (Exception e)
+            {
+                throw new ConfigurationException("Error building wrap pipeline for outgoing message, see inner exception for details", e);
+            }
         }
 
          public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
