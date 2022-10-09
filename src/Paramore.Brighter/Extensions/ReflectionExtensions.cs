@@ -52,6 +52,16 @@ namespace Paramore.Brighter.Extensions
                 .ToList();
         }
         
+        internal static IEnumerable<UnwrapWithAttribute> GetOtherUnwrapsInPipeline(this MethodInfo targetMethod)
+        {
+            var customAttributes = targetMethod.GetCustomAttributes(true);
+            return customAttributes
+                .Select(attr => (Attribute) attr)
+                .Where(a => a.GetType().GetTypeInfo().BaseType == typeof (UnwrapWithAttribute))
+                .Cast<UnwrapWithAttribute>()
+                .ToList();
+        } 
+        
         internal static bool HasNoInboxAttributesInPipeline(this MethodInfo targetMethod)
         {
              var customAttributes = targetMethod.GetCustomAttributes(true);

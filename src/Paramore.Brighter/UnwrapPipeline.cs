@@ -29,47 +29,47 @@ using Paramore.Brighter.Extensions;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// class WrapPipeline
-    /// A pipeline with a source of a <see cref="MessageMapper"/> that:
-    /// Takes a request and maps it to a message
+    /// class UnwrapPipeline
+    /// A pipeline with a sink of a <see cref="MessageMapper"/> that:
+    /// Takes a message and maps it to a request
     /// Runs transforms on that message
     /// </summary>
-    public class WrapPipeline<TRequest> where TRequest: class, IRequest, new()
+    public class UnwrapPipeline<TRequest> where TRequest: class, IRequest, new()
     {
         private readonly IAmAMessageMapper _messageMapper;
         private readonly IEnumerable<IAmAMessageTransformAsync> _transforms;
 
         /// <summary>
-        /// Constructs an instance of a wrap pipeline
+        /// Constructs an instance of an Unwrap pipeline
         /// </summary>
-        /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
-        /// <param name="transforms">The transforms applied after the message mapper</param>
-        public WrapPipeline(IAmAMessageMapper messageMapper, IEnumerable<IAmAMessageTransformAsync> transforms)
+        /// <param name="transforms">The transforms that run before the mapper</param>
+        /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
+        public UnwrapPipeline(IEnumerable<IAmAMessageTransformAsync> transforms, IAmAMessageMapper messageMapper)
         {
             _messageMapper = messageMapper;
             _transforms = transforms;
         }
 
         /// <summary>        
-        /// Lists the wrap pipeline: message mapper and filter transforms that will be executed
+        /// Lists the unwrap pipeline: filter transforms and message mapper that will be executed
         /// Used for pipeline verification
         /// </summary>
         /// <param name="pipelineTracer"></param>
         public void DescribePath(TransformPipelineTracer pipelineTracer)
         {
-            pipelineTracer.AddTransform(_messageMapper.GetType().Name);
             _transforms.Each(t => pipelineTracer.AddTransform(t.GetType().Name));
+            pipelineTracer.AddTransform(_messageMapper.GetType().Name);
         }
 
         /// <summary>
-        /// Transforms a <see cref="IRequest"/> into a <see cref="Message"/>
+        /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/> 
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
-        /// <param name="request"></param>
-        /// <returns></returns>
-        public async Task<Message> Wrap(TRequest request)
+        /// <param name="message"></param>
+        /// <returns>a request</returns>
+        public async Task<TRequest> Unwrap(Message message)
         {
-            return new Message();
+            return null;
         }
     }
 }

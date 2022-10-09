@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -60,16 +61,25 @@ namespace Paramore.Brighter
         {
             var messageMapper = _mapperRegistry.Get<TRequest>();
 
-            var transforms = BuildWrapWithPipeline<TRequest>(FindWrapTransforms(messageMapper));
+            var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
             return new WrapPipeline<TRequest>(messageMapper, transforms);
         }
 
-        private IEnumerable<IAmAMessageTransformAsync> BuildWrapWithPipeline<TRequest>(IEnumerable<WrapWithAttribute> wrapAttributes)
+         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
+         {
+             var messageMapper = _mapperRegistry.Get<TRequest>();
+
+             var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
+
+             return new UnwrapPipeline<TRequest>(transforms, messageMapper);
+         }
+         
+         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest: class, IRequest, new() 
         {
             var transforms = new List<IAmAMessageTransformAsync>();
-            wrapAttributes.Each((attribute) =>
+            transformAttributes.Each((attribute) =>
             {
                 var transformType = attribute.GetHandlerType();
                 var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
@@ -85,12 +95,33 @@ namespace Paramore.Brighter
                 .GetOtherWrapsInPipeline()
                 .OrderByDescending(attribute => attribute.Step);
         }
-
-        private MethodInfo FindMapToMessage<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
+        
+        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
         {
-            return messageMapper.GetType().GetTypeInfo().GetMethods()
-                .Where(method => method.Name == nameof(IAmAMessageMapper<T>.MapToMessage))
-                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(T));
+            return FindMapToRequest(messageMapper)
+                .GetOtherUnwrapsInPipeline()
+                .OrderByDescending(attribute => attribute.Step);
+        }
+
+
+        private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest, new()
+        {
+            return FindMethods(messageMapper)
+                .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToMessage))
+                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(TRequest));
+        }
+
+
+        private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest, new()
+        {
+            return FindMethods(messageMapper)
+                .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToRequest))
+                .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(Message));
+        }
+
+        private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest, new()
+        {
+            return messageMapper.GetType().GetTypeInfo().GetMethods();
         }
     }
 }

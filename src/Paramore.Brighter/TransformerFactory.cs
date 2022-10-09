@@ -27,11 +27,11 @@ namespace Paramore.Brighter
 {
     internal class TransformerFactory<TRequest> where TRequest: class, IRequest, new()
     {
-        private readonly WrapWithAttribute _attribute;
+        private readonly TransformAttribute _attribute;
         private readonly IAmAMessageTransformerFactory _factory;
         private readonly Type _messageType;
 
-        public TransformerFactory(WrapWithAttribute attribute, IAmAMessageTransformerFactory factory)
+        public TransformerFactory(TransformAttribute attribute, IAmAMessageTransformerFactory factory)
         {
             _attribute = attribute;
             _factory = factory;

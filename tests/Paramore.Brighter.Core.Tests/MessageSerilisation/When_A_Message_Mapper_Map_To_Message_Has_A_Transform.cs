@@ -4,13 +4,13 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerilisation;
 
-public class MessageTransformPipelineTests
+public class MessageUnwrapPathPipelineTests
 {
-    private WrapPipeline<MyTransformableCommand> _transformPipeline;
+    private UnwrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly MessageTransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
 
-    public MessageTransformPipelineTests()
+    public MessageUnwrapPathPipelineTests()
     {
         //arrange
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
@@ -25,13 +25,13 @@ public class MessageTransformPipelineTests
     }
     
     [Fact]
-    public void When_A_Message_Mapper_Map_To_Request_Has_A_Transform()
+    public void When_A_Message_Mapper_Map_To_Message_Has_A_Transform()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline(_myCommand);
         
         //assert
-        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper|MySimpleTransformAsync");
+        TraceFilters().ToString().Should().Be("MySimpleTransformAsync|MyTransformableCommandMessageMapper");
     }
     
     private TransformPipelineTracer TraceFilters()

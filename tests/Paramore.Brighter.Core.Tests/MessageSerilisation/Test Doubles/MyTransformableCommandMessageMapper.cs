@@ -14,6 +14,7 @@ public class MyTransformableCommandMessageMapper : IAmAMessageMapper<MyTransform
             );
     }
 
+    [MySimpleUnwrapWith(0)]
     public MyTransformableCommand MapToRequest(Message message)
     {
         return JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);

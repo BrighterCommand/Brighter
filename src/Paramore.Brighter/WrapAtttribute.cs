@@ -21,8 +21,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
-using System;
-
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -31,31 +29,11 @@ namespace Paramore.Brighter
     /// mapped the <see cref="IRequest"/> to a <see cref="Message"/>.
     /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToMessage"/> method
     /// </summary>
-    public abstract class WrapWithAttribute : Attribute
-    {           
-        private int _step;
-
+    public abstract class WrapWithAttribute : TransformAttribute
+    {
         protected WrapWithAttribute(int step)
         {
-            _step = step;
+            Step = step;
         }
-        
-        //In which order should we run this
-        /// <summary>
-        /// Gets the step.
-        /// </summary>
-        /// <value>The step.</value>
-        public int Step
-        {
-            get { return _step; }
-            set { _step = value; }
-        }    
-        
-        //What type do we implement for the Transform in the Message Mapper Pipeline
-        /// <summary>
-        /// Gets the type of the handler.
-        /// </summary>
-        /// <returns>Type.</returns>
-        public abstract Type GetHandlerType();
     }
 }

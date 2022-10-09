@@ -31,7 +31,7 @@ namespace Paramore.Brighter
     /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/> 
     /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
     /// </summary>
-    public abstract class UnwrapWithAttribute
+    public abstract class UnwrapWithAttribute : TransformAttribute
     {
         private int _step;
 
@@ -39,23 +39,5 @@ namespace Paramore.Brighter
         {
             _step = step;
         }
-        
-        //In which order should we run this
-        /// <summary>
-        /// Gets the step.
-        /// </summary>
-        /// <value>The step.</value>
-        public int Step
-        {
-            get { return _step; }
-            set { _step = value; }
-        }    
-        
-        //What type do we implement for the Transform in the Message Mapper Pipeline
-        /// <summary>
-        /// Gets the type of the handler.
-        /// </summary>
-        /// <returns>Type.</returns>
-        public abstract Type GetHandlerType();
     }
 }
