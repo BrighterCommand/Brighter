@@ -1,17 +1,19 @@
-﻿using System.Text.Json;
+﻿using System;
+using System.Text.Json;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerilisation.Test_Doubles;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerilisation;
 
-public class MessageWrapRequestTests
+public class MessageUnwrapRequestTests
 {
     private WrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly MessageTransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
+    private readonly Message _message;
 
-    public MessageWrapRequestTests()
+    public MessageUnwrapRequestTests()
     {
         //arrange
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
@@ -22,6 +24,13 @@ public class MessageWrapRequestTests
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
         _pipelineBuilder = new MessageTransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+
+        _message = new Message(
+            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
+        );
+
+        _message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
     
     [Fact]
@@ -29,10 +38,9 @@ public class MessageWrapRequestTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
-        var message = _transformPipeline.Wrap(_myCommand).Result;
+        var request = _transformPipeline.Unwrap(_message).Result;
         
         //assert
-        message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());
-        message.Header.Bag[MySimpleTransformAsync.HEADER_KEY].Should().Be("I am a transformed value");
+        request.Value = MySimpleTransformAsync.HEADER_KEY;
     }
 }

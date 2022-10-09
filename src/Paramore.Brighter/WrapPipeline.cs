@@ -73,5 +73,12 @@ namespace Paramore.Brighter
             await _transforms.EachAsync(async transform => await transform.Wrap(message));
             return message;
         }
+
+        public async Task<TRequest> Unwrap(Message message)
+        {
+            await _transforms.EachAsync(async transform => await transform.Unwrap(message));
+            var request = _messageMapper.MapToRequest(message);
+            return request;
+        }
     }
 }

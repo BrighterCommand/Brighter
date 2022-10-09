@@ -5,12 +5,13 @@ namespace Paramore.Brighter.Core.Tests.MessageSerilisation.Test_Doubles;
 
 public class MySimpleTransformAsync : IAmAMessageTransformAsync
 {
-    public static readonly string HEADER_KEY = "MySimpleTransformTest"; 
-    
+    public static readonly string HEADER_KEY = "MySimpleTransformTest";
+    public static readonly string TRANSFORM_VALUE = "I am a transformed value";
+
     public Task<Message> Wrap(Message message)
     {
         var tcs = new TaskCompletionSource<Message>();
-        message.Header.Bag.Add(HEADER_KEY, "I am a transformed value");
+        message.Header.Bag.Add(HEADER_KEY, TRANSFORM_VALUE);
         tcs.SetResult(message);
         return tcs.Task;
     }
