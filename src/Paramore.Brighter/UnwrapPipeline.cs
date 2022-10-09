@@ -36,7 +36,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class UnwrapPipeline<TRequest> where TRequest: class, IRequest, new()
     {
-        private readonly IAmAMessageMapper _messageMapper;
+        private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private readonly IEnumerable<IAmAMessageTransformAsync> _transforms;
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="transforms">The transforms that run before the mapper</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
-        public UnwrapPipeline(IEnumerable<IAmAMessageTransformAsync> transforms, IAmAMessageMapper messageMapper)
+        public UnwrapPipeline(IEnumerable<IAmAMessageTransformAsync> transforms, IAmAMessageMapper<TRequest> messageMapper)
         {
             _messageMapper = messageMapper;
             _transforms = transforms;

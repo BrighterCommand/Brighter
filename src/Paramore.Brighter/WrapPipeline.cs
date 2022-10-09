@@ -36,7 +36,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class WrapPipeline<TRequest> where TRequest: class, IRequest, new()
     {
-        private readonly IAmAMessageMapper _messageMapper;
+        private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private readonly IEnumerable<IAmAMessageTransformAsync> _transforms;
 
         /// <summary>
@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messageMapper">The message mapper that forms the pipeline source</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
-        public WrapPipeline(IAmAMessageMapper messageMapper, IEnumerable<IAmAMessageTransformAsync> transforms)
+        public WrapPipeline(IAmAMessageMapper<TRequest> messageMapper, IEnumerable<IAmAMessageTransformAsync> transforms)
         {
             _messageMapper = messageMapper;
             _transforms = transforms;
@@ -69,7 +69,9 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public async Task<Message> Wrap(TRequest request)
         {
-            return new Message();
+            var message = _messageMapper.MapToMessage(request);
+            await _transforms.EachAsync(async transform => await transform.Wrap(message));
+            return message;
         }
     }
 }
