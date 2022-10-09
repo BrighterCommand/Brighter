@@ -70,16 +70,8 @@ namespace Paramore.Brighter
         public async Task<Message> Wrap(TRequest request)
         {
             var message = _messageMapper.MapToMessage(request);
-            await _transforms.EachAsync(async transform => await transform.Wrap(message));
+            await _transforms.EachAsync(async transform => message = await transform.Wrap(message));
             return message;
-        }
-
-        public async Task<TRequest> Unwrap(Message message)
-        {
-            var msg = message;
-            await _transforms.EachAsync(async transform => msg = await transform.Unwrap(msg));
-            var request = _messageMapper.MapToRequest(msg);
-            return request;
         }
     }
 }
