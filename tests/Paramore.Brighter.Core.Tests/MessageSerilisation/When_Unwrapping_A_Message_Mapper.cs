@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerilisation;
 
 public class MessageUnwrapRequestTests
 {
-    private WrapPipeline<MyTransformableCommand> _transformPipeline;
+    private UnwrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly MessageTransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
     private readonly Message _message;
@@ -37,7 +37,7 @@ public class MessageUnwrapRequestTests
     public void When_Unwrapping_A_Message_Mapper()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline(_myCommand);
         var request = _transformPipeline.Unwrap(_message).Result;
         
         //assert
