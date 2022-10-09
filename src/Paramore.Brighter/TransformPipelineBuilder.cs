@@ -38,12 +38,12 @@ namespace Paramore.Brighter
     /// We run a <see cref="UnwrapWithAttribute"/> before the message mapper converts to a <see cref="IRequest"/>.
     /// You handle translation between <see cref="IRequest"/> and <see cref="Message"/> in your <see cref="IAmAMessageMapper{TRequest}"/>
     /// </summary>
-    public class MessageTransformPipelineBuilder
+    public class TransformPipelineBuilder
     {
         private readonly MessageMapperRegistry _mapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
 
-        public MessageTransformPipelineBuilder(MessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
+        public TransformPipelineBuilder(MessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
         {
             _mapperRegistry = mapperRegistry;
             _messageTransformerFactory = messageTransformerFactory;

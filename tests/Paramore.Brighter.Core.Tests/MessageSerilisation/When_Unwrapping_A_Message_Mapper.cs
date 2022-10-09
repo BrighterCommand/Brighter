@@ -9,7 +9,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerilisation;
 public class MessageUnwrapRequestTests
 {
     private UnwrapPipeline<MyTransformableCommand> _transformPipeline;
-    private readonly MessageTransformPipelineBuilder _pipelineBuilder;
+    private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
     private readonly Message _message;
 
@@ -23,7 +23,7 @@ public class MessageUnwrapRequestTests
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
-        _pipelineBuilder = new MessageTransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
             new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
