@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -19,6 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
+
 #endregion
 
 using System;
@@ -61,7 +63,7 @@ namespace Paramore.Brighter
         {
             try
             {
-                var messageMapper = _mapperRegistry.Get<TRequest>();
+                var messageMapper = FindMessageMapper<TRequest>();
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
@@ -73,24 +75,24 @@ namespace Paramore.Brighter
             }
         }
 
-         public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
-         {
-             try
-             {
-                 var messageMapper = _mapperRegistry.Get<TRequest>();
+        public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
+        {
+            try
+            {
+                var messageMapper = FindMessageMapper<TRequest>();
 
-                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
+                var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                 return new UnwrapPipeline<TRequest>(transforms, messageMapper);
-             }
-             catch (Exception e)
-             {
-                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
-             }
-         }
-         
-         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
-            where TRequest: class, IRequest, new() 
+                return new UnwrapPipeline<TRequest>(transforms, messageMapper);
+            }
+            catch (Exception e)
+            {
+                throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
+            }
+        }
+
+        private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
+            where TRequest : class, IRequest, new()
         {
             var transforms = new List<IAmAMessageTransformAsync>();
             transformAttributes.Each((attribute) =>
@@ -103,13 +105,20 @@ namespace Paramore.Brighter
             return transforms;
         }
 
+        private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest, new()
+        {
+            var messageMapper = _mapperRegistry.Get<TRequest>();
+            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {request type}", nameof(TRequest)));
+            return messageMapper;
+        }
+
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
         {
             return FindMapToMessage(messageMapper)
                 .GetOtherWrapsInPipeline()
                 .OrderByDescending(attribute => attribute.Step);
         }
-        
+
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
         {
             return FindMapToRequest(messageMapper)
