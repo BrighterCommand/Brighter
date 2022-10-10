@@ -5,7 +5,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Trace;
 using Paramore.Brighter.Core.Tests.Observability.TestDoubles;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -15,7 +14,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Observability;
 [Collection("Observability")]
-public class ImplicitClearingObservabilityTests
+public class ImplicitClearingObservabilityTests : IDisposable
 {
     private readonly CommandProcessor _commandProcessor;
     private readonly IAmAnOutboxSync<Message> _outbox;
@@ -41,7 +40,7 @@ public class ImplicitClearingObservabilityTests
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
         
-        _traceProvider = builder.AddSource("Paramore.Brighter")
+        _traceProvider = builder.AddSource("Paramore.Brighter.*")
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
@@ -65,9 +64,12 @@ public class ImplicitClearingObservabilityTests
     [Fact]
     public void When_Clearing_Implicitly()
     {
-        _commandProcessor.DepositPost(_event);
-        _commandProcessor.ClearOutbox(10, 0);
-        
+        using (var activity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("RunTest"))
+        {
+            _commandProcessor.DepositPost(_event);
+            _commandProcessor.ClearOutbox(10, 0);
+        }
+
         //wait for Background Process
         Task.Delay(100).Wait();
 
@@ -75,10 +77,16 @@ public class ImplicitClearingObservabilityTests
         
         Assert.NotEmpty(_exportedActivities);
 
-        var act = _exportedActivities.First(a => a.Source.Name == "Paramore.Brighter");
+        var act = _exportedActivities.First(a => a.Source.Name == "Paramore.Brighter.Tests");
 
         Assert.NotNull(act);
         Assert.Equal(false,act.TagObjects.First(a => a.Key == "bulk").Value);
         Assert.Equal(false,act.TagObjects.First(a => a.Key == "async").Value);
+    }
+
+    public void Dispose()
+    {
+        CommandProcessor.ClearExtServiceBus();
+        _traceProvider?.Dispose();
     }
 }
