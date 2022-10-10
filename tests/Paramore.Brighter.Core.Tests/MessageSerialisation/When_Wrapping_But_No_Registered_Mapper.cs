@@ -1,9 +1,9 @@
-﻿using System.Text.Json;
+﻿using System;
 using FluentAssertions;
-using Paramore.Brighter.Core.Tests.MessageSerilisation.Test_Doubles;
+using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageSerilisation;
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
 public class MessageWrapRequestMissingMapperTests
 {
@@ -31,5 +31,6 @@ public class MessageWrapRequestMissingMapperTests
         var exception = Catch.Exception(() => _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand));
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ConfigurationException>();
+        exception.InnerException.Should().BeOfType<InvalidOperationException>();
     }
 }

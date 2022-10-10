@@ -3,9 +3,8 @@ using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
-public class MyTransformableCommandMessageMapper : IAmAMessageMapper<MyTransformableCommand>
+public class MyVanillaCommandMessageMapper : IAmAMessageMapper<MyTransformableCommand>
 {
-    [MySimpleWrapWith(0)]
     public Message MapToMessage(MyTransformableCommand request)
     {
         return new Message(
@@ -14,7 +13,6 @@ public class MyTransformableCommandMessageMapper : IAmAMessageMapper<MyTransform
             );
     }
 
-    [MySimpleUnwrapWith(0)]
     public MyTransformableCommand MapToRequest(Message message)
     {
         return JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);

@@ -1,18 +1,17 @@
 ﻿using System;
 using System.Text.Json;
+using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-public class MessageUnwrapRequestTests
+public class MessageUnwrapRequestMissingTransformTests
 {
-    private UnwrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
-    private readonly Message _message;
 
-    public MessageUnwrapRequestTests()
+    public MessageUnwrapRequestMissingTransformTests()
     {
         //arrange
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
@@ -20,26 +19,24 @@ public class MessageUnwrapRequestTests
 
         _myCommand = new MyTransformableCommand();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
-        _message = new Message(
+        Message message = new(
             new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
+        message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
     
     [Fact]
-    public void When_Unwrapping_A_Message_Mapper()
+    public void When_Unwrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline(_myCommand);
-        var request = _transformPipeline.Unwrap(_message).Result;
-        
-        //assert
-        request.Value = MySimpleTransformAsync.HEADER_KEY;
+        var exception = Catch.Exception(() =>  _pipelineBuilder.BuildUnwrapPipeline(_myCommand));
+        exception.Should().NotBeNull();
+        exception.Should().BeOfType<ConfigurationException>();
     }
 }

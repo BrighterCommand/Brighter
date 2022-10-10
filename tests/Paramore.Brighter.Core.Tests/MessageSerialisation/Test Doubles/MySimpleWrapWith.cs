@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Brighter.Core.Tests.MessageSerilisation.Test_Doubles;
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 public class MySimpleWrapWith: WrapWithAttribute
 {

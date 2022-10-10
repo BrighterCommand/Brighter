@@ -4,13 +4,12 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-public class MessageWrapPathPipelineTests
+public class MessageWrapRequestMissingTransformTests
 {
-    private WrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyTransformableCommand _myCommand;
 
-    public MessageWrapPathPipelineTests()
+    public MessageWrapRequestMissingTransformTests()
     {
         //arrange
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
@@ -18,26 +17,18 @@ public class MessageWrapPathPipelineTests
 
         _myCommand = new MyTransformableCommand();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-        
     }
     
     [Fact]
-    public void When_A_Message_Mapper_Map_To_Request_Has_A_Transform()
+    public void When_Wrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline(_myCommand));
+        exception.Should().NotBeNull();
+        exception.Should().BeOfType<ConfigurationException>();
         
-        //assert
-        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper|MySimpleTransformAsync");
-    }
-
-    private TransformPipelineTracer TraceFilters()
-    {
-        var pipelineTracer = new TransformPipelineTracer();
-        _transformPipeline.DescribePath(pipelineTracer);
-        return pipelineTracer;
     }
 }

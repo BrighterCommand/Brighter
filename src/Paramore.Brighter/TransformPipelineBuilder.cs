@@ -99,7 +99,14 @@ namespace Paramore.Brighter
             {
                 var transformType = attribute.GetHandlerType();
                 var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();
-                transforms.Add(transformer);
+                if (transformer == null)
+                {
+                    throw new InvalidOperationException(string.Format("Message Transformer Factory could not create a transform of type {0}", transformType.Name));
+                }
+                else
+                {
+                    transforms.Add(transformer);
+                }
             });
 
             return transforms;
@@ -108,7 +115,7 @@ namespace Paramore.Brighter
         private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest, new()
         {
             var messageMapper = _mapperRegistry.Get<TRequest>();
-            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {request type}", nameof(TRequest)));
+            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}", typeof(TRequest).Name));
             return messageMapper;
         }
 

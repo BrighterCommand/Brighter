@@ -1,7 +1,7 @@
 ﻿using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Core.Tests.MessageSerilisation.Test_Doubles;
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
 public class MySimpleTransformAsync : IAmAMessageTransformAsync
 {
