@@ -1,0 +1,10 @@
+Cache pipeline once built
+Call pipeline from command processor depositpost
+Call pipeline from message pump - async vs sync (should sync pipeline await results)?
+Configure
+ - service collection derived transform factory
+ - find all transforms && register
+CLaim Check
+ - Use local file store, for testing but provide as service?
+ S3 component in own assembly
+ 

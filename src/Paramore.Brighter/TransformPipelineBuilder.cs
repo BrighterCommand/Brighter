@@ -27,7 +27,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
@@ -42,14 +44,25 @@ namespace Paramore.Brighter
     /// </summary>
     public class TransformPipelineBuilder
     {
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
         private readonly MessageMapperRegistry _mapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
 
+        /// <summary>
+        /// Creates an instance of a transform pipeline builder.
+        /// To avoid introducing a breaking interface for v9 we allow the transform factory to be optional,
+        /// so that it can be optional in a CommandProcessor constructor, and not make a breaking change to the interface.
+        /// In this case, transform pipelines mimic v9 behaviour and just run the mapper  and not any transforms
+        /// To avoid silent failure, we warn on this.
+        /// </summary>
+        /// <param name="mapperRegistry">The message mapper registry, cannot be null</param>
+        /// <param name="messageTransformerFactory">The transform factory, can be null</param>
+        /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
         public TransformPipelineBuilder(MessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
         {
             _mapperRegistry = mapperRegistry ?? throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
-            
-            _messageTransformerFactory =  messageTransformerFactory ?? throw new ConfigurationException("TransformPipelineBuilder expected Transform Factory but none supplied");
+
+            _messageTransformerFactory = messageTransformerFactory;
         }
 
         /// <summary>
@@ -57,10 +70,10 @@ namespace Paramore.Brighter
         /// Anything marked with <see cref=""/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
         /// Anything marked with
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="request"></param>
         /// <typeparam name="TRequest"></typeparam>
         /// <returns></returns>
-        public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>(TRequest message) where TRequest : class, IRequest, new()
+        public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
         {
             try
             {
@@ -68,7 +81,14 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                return new WrapPipeline<TRequest>(messageMapper, transforms);
+                var pipeline = new WrapPipeline<TRequest>(messageMapper, transforms);
+                
+                s_logger.LogDebug(
+                    "New wrap pipeline created for: {message} of {pipeline}", nameof(request), 
+                    TraceWrapPipeline(pipeline)
+                    );
+
+                return pipeline;
             }
             catch (Exception e)
             {
@@ -84,7 +104,14 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                return new UnwrapPipeline<TRequest>(transforms, messageMapper);
+                var pipeline = new UnwrapPipeline<TRequest>(transforms, messageMapper);
+                
+                s_logger.LogDebug(
+                    "New unwrap pipeline created for: {message} of {pipeline}", nameof(request), 
+                    TraceUnwrapPipeline(pipeline)
+                    );
+                
+                return pipeline;
             }
             catch (Exception e)
             {
@@ -96,6 +123,10 @@ namespace Paramore.Brighter
             where TRequest : class, IRequest, new()
         {
             var transforms = new List<IAmAMessageTransformAsync>();
+            
+            //Allowed to be null to avoid breaking v9 interfaces
+            if (_messageTransformerFactory == null) return transforms;
+            
             transformAttributes.Each((attribute) =>
             {
                 var transformType = attribute.GetHandlerType();
@@ -154,5 +185,18 @@ namespace Paramore.Brighter
         {
             return messageMapper.GetType().GetTypeInfo().GetMethods();
         }
-    }
+        
+        private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest, new()
+        {
+            var pipelineTracer = new TransformPipelineTracer();
+            pipeline.DescribePath(pipelineTracer);
+            return pipelineTracer;
+        }
+        
+        private TransformPipelineTracer TraceUnwrapPipeline<TRequest>(UnwrapPipeline<TRequest> pipeline) where TRequest : class, IRequest, new()
+        {
+            var pipelineTracer = new TransformPipelineTracer();
+            pipeline.DescribePath(pipelineTracer);
+            return pipelineTracer;
+        }    }
 }
