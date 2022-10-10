@@ -47,8 +47,9 @@ namespace Paramore.Brighter
 
         public TransformPipelineBuilder(MessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
         {
-            _mapperRegistry = mapperRegistry;
-            _messageTransformerFactory = messageTransformerFactory;
+            _mapperRegistry = mapperRegistry ?? throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
+            
+            _messageTransformerFactory =  messageTransformerFactory ?? throw new ConfigurationException("TransformPipelineBuilder expected Transform Factory but none supplied");
         }
 
         /// <summary>
