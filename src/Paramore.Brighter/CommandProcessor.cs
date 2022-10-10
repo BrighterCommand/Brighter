@@ -542,10 +542,10 @@ namespace Paramore.Brighter
         /// database, that you want to signal via the request to downstream consumers
         /// Pass deposited Guid to <see cref="ClearOutbox"/> 
         /// </summary>
-        /// <param name="request">The request to save to the outbox</param>
+        /// <param name="request">The requests to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<T>(T[] request) where T : class, IRequest
+        public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
         {
             return DepositPost(request, _boxTransactionConnectionProvider);
         }
@@ -621,7 +621,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
-        public Task<Guid[]> DepositPostAsync<T>(T[] requests, bool continueOnCapturedContext = false,
+        public Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             return DepositPostAsync(requests, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
