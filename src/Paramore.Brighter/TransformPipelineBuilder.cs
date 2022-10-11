@@ -125,8 +125,16 @@ namespace Paramore.Brighter
             var transforms = new List<IAmAMessageTransformAsync>();
             
             //Allowed to be null to avoid breaking v9 interfaces
-            if (_messageTransformerFactory == null) return transforms;
-            
+            if (_messageTransformerFactory == null)
+            {
+                int i = transformAttributes.Count();
+                if (i >= 0)
+                s_logger.LogWarning(
+                    "No message transfomer factory configured, so no transforms will be created but {transformCount} configured",i);
+                
+                return transforms;
+            }
+
             transformAttributes.Each((attribute) =>
             {
                 var transformType = attribute.GetHandlerType();
