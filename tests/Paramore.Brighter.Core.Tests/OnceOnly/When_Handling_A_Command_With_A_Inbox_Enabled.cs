@@ -35,7 +35,7 @@ using Paramore.Brighter.Inbox.Handlers;
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
     [Collection("CommandProcessor")]
-    public class CommandProcessorUsingInboxTests
+    public class CommandProcessorUsingInboxTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxSync _inbox;
@@ -84,6 +84,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail() { Id = id}));
 
             _inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName).Should().BeFalse();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }
