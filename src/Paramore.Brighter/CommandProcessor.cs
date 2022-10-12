@@ -542,12 +542,12 @@ namespace Paramore.Brighter
         /// database, that you want to signal via the request to downstream consumers
         /// Pass deposited Guid to <see cref="ClearOutbox"/> 
         /// </summary>
-        /// <param name="request">The requests to save to the outbox</param>
+        /// <param name="requests">The requests to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
+        public Guid[] DepositPost<T>(IEnumerable<T> requests) where T : class, IRequest
         {
-            return DepositPost(request, _boxTransactionConnectionProvider);
+            return DepositPost(requests, _boxTransactionConnectionProvider);
         }
         
         private Guid DepositPost<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         Call
     }
 
-    internal class SpyCommandProcessor : IAmACommandProcessor
+    internal class SpyCommandProcessor : Paramore.Brighter.IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
         private readonly Dictionary<Guid, IRequest> _postBox = new Dictionary<Guid, IRequest>();
@@ -113,6 +113,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return request.Id;
         }
 
+        public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
+        {
+            var ids = new List<Guid>();
+            foreach (T r in request)
+            {
+                ids.Add(DepositPost(r));
+            }
+
+            return ids.ToArray();
+        }
+
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
@@ -121,6 +132,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
+        }
+
+        public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var ids = new List<Guid>();
+            foreach (T r in requests)
+            {
+                ids.Add(await DepositPostAsync(r, cancellationToken: cancellationToken));
+            }
+
+            return ids.ToArray();
         }
 
         public void ClearOutbox(params Guid[] posts)
