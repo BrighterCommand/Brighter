@@ -30,24 +30,24 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    internal class LifetimeScope : IAmALifetime
+    internal class HandlerLifetimeScope : IAmALifetime
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<LifetimeScope>();
+        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<HandlerLifetimeScope>();
 
         private readonly IAmAHandlerFactorySync _handlerFactorySync;
         private readonly List<IHandleRequests> _trackedObjects = new List<IHandleRequests>();
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        public LifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
             : this(handlerFactorySync, null)
         {}
 
-        public LifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
             : this(null, asyncHandlerFactory)
         {}
 
-        public LifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;

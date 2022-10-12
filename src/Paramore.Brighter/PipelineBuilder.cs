@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         {
             _handlerFactorySync = handlerFactorySync;
             _inboxConfiguration = inboxConfiguration;
-            _instanceScope = new LifetimeScope(handlerFactorySync);
+            _instanceScope = new HandlerLifetimeScope(handlerFactorySync);
             _interpreter = new Interpreter<TRequest>(registry, handlerFactorySync);
         }
 
@@ -73,7 +73,7 @@ namespace Paramore.Brighter
         {
             _asyncHandlerFactory = asyncHandlerFactory;
             _inboxConfiguration = inboxConfiguration;
-            _instanceScope = new LifetimeScope(asyncHandlerFactory);
+            _instanceScope = new HandlerLifetimeScope(asyncHandlerFactory);
             _interpreter = new Interpreter<TRequest>(registry, asyncHandlerFactory);
         }
 

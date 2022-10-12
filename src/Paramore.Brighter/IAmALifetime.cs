@@ -29,7 +29,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmALifetime
     /// Used to manage the lifetime of objects created for the request handling pipeline
-    /// <see cref="LifetimeScope"/> for default implementation.
+    /// <see cref="HandlerLifetimeScope"/> for default implementation.
     /// </summary>
     public interface IAmALifetime : IDisposable
     {
