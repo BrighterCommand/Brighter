@@ -8,7 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.7.0" />
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.10.0" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.11.0" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
     <PackageReference Include="AMQPNetLite" Version="2.4.5" />
     <PackageReference Update="MinVer" Version="4.2.0" />
