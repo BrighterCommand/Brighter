@@ -40,7 +40,7 @@ using System.Text.Json;
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerMustObserveButRethrowTests 
+    public class MonitorHandlerMustObserveButRethrowTests  : IDisposable
     {
         private readonly MyCommand _command;
         private readonly SpyControlBusSender _controlBusSender;
@@ -98,5 +98,10 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //should_post_the_time_of_the_request_after
             _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
         }
-   }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+    }
 }

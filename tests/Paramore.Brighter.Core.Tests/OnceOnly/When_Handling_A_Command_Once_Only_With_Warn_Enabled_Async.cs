@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -36,7 +37,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
     [Trait("Fragile", "CI")]
     [Collection("CommandProcessor")]
-    public class OnceOnlyAttributeWithWarnExceptionAsyncTests
+    public class OnceOnlyAttributeWithWarnExceptionAsyncTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxAsync _inbox;
@@ -69,6 +70,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
             
             MyStoredCommandToWarnHandlerAsync.ReceivedCount.Should().Be(1);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

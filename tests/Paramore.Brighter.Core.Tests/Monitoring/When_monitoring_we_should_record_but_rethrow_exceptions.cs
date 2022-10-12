@@ -38,7 +38,7 @@ using Xunit;
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
     [Trait("Category", "Monitoring")]
-    public class MonitorHandlerTests 
+    public class MonitorHandlerTests : IDisposable
     {
         private readonly MyCommand _command;
         private Exception _thrownException;
@@ -91,5 +91,10 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //should_post_the_time_of_the_request_after
             _afterEvent.EventTime.AsUtc().Should().BeAfter(_at.AsUtc());
         }
-   }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+    }
 }

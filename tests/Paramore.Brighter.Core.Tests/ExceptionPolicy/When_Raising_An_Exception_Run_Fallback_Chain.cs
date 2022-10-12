@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles;
 using Xunit;
@@ -33,7 +34,7 @@ using Paramore.Brighter.Logging.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class FallbackHandlerPipelineRunOnExceptionTests
+    public class FallbackHandlerPipelineRunOnExceptionTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -69,6 +70,11 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyFailsWithFallbackMultipleHandlers.ShouldFallback(_myCommand);
             //_should_set_the_exeception_into_context
             MyFailsWithFallbackMultipleHandlers.ShouldSetException(_myCommand);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

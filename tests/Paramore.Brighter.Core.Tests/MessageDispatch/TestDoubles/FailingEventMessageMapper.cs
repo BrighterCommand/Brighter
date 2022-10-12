@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 {
@@ -33,5 +34,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             Id = new Guid();
         }
+        
+        /// <summary>
+        /// Gets or sets the span that this operation live within
+        /// </summary>
+        public Activity Span { get; set; }
     }
 }
