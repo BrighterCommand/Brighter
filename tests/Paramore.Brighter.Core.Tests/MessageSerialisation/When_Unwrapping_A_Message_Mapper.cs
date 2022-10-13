@@ -10,7 +10,6 @@ public class MessageUnwrapRequestTests
 {
     private UnwrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
-    private readonly MyTransformableCommand _myCommand;
     private readonly Message _message;
 
     public MessageUnwrapRequestTests()
@@ -21,15 +20,15 @@ public class MessageUnwrapRequestTests
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
-        _myCommand = new MyTransformableCommand();
+        MyTransformableCommand myCommand = new();
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         _message = new Message(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
-            new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
         _message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
@@ -39,7 +38,7 @@ public class MessageUnwrapRequestTests
     public void When_Unwrapping_A_Message_Mapper()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         var request = _transformPipeline.Unwrap(_message).Result;
         
         //assert

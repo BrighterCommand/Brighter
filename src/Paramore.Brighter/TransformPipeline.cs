@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Paramore.Brighter
 {
-    public abstract class TransformPipeline<TRequest> : IDisposable where TRequest : class, IRequest, new()
+    public abstract class TransformPipeline<TRequest> : IDisposable where TRequest : class, IRequest
     {
         protected IAmAMessageMapper<TRequest> MessageMapper;
         protected IEnumerable<IAmAMessageTransformAsync> Transforms;

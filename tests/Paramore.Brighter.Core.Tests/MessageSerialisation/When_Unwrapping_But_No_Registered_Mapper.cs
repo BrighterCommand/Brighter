@@ -11,8 +11,6 @@ public class MessageUnwrapRequestMissingMapperTests
 {
     private UnwrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
-    private readonly MyTransformableCommand _myCommand;
-    private readonly Message _message;
 
     public MessageUnwrapRequestMissingMapperTests()
     {
@@ -22,25 +20,25 @@ public class MessageUnwrapRequestMissingMapperTests
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => null))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
-        _myCommand = new MyTransformableCommand();
+        MyTransformableCommand myCommand = new();
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
-        _message = new Message(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
-            new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
+        Message message = new(
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        _message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
+        message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
     
     [Fact]
     public void When_Wrapping_But_No_Registered_Mapper()
     {
         //act
-        var exception = Catch.Exception(() => _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline(_myCommand));
+        var exception = Catch.Exception(() => _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>());
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ConfigurationException>();
         exception.InnerException.Should().BeOfType<InvalidOperationException>();

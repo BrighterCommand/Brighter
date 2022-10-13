@@ -10,7 +10,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 public class MessageUnwrapRequestMissingTransformTests
 {
     private readonly TransformPipelineBuilder _pipelineBuilder;
-    private readonly MyTransformableCommand _myCommand;
 
     public MessageUnwrapRequestMissingTransformTests()
     {
@@ -20,15 +19,15 @@ public class MessageUnwrapRequestMissingTransformTests
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
-        _myCommand = new MyTransformableCommand();
+        MyTransformableCommand myCommand = new();
         
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
         Message message = new(
-            new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
-            new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
+            new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
+            new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
         message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
@@ -38,7 +37,7 @@ public class MessageUnwrapRequestMissingTransformTests
     public void When_Unwrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {
         //act
-        var exception = Catch.Exception(() =>  _pipelineBuilder.BuildUnwrapPipeline(_myCommand));
+        var exception = Catch.Exception(() =>  _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>());
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ConfigurationException>();
     }

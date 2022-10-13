@@ -47,7 +47,6 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
-        private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactorySync _handlerFactorySync;
         private readonly IAmAHandlerFactoryAsync _handlerFactoryAsync;
@@ -57,6 +56,7 @@ namespace Paramore.Brighter
         private readonly IAmABoxTransactionConnectionProvider _boxTransactionConnectionProvider;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
+        private readonly TransformPipelineBuilder _transformPipelineBuilder;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -163,10 +163,10 @@ namespace Paramore.Brighter
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
             
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
@@ -208,13 +208,13 @@ namespace Paramore.Brighter
             int outboxBulkChunkSize = 100)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
-            _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _replySubscriptions = replySubscriptions;
-
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+ 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
               
             ConfigureCallbacks(producerRegistry);
@@ -251,10 +251,10 @@ namespace Paramore.Brighter
             int outboxBulkChunkSize = 100)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
-            _mapperRegistry = mapperRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
-
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+ 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
             ConfigureCallbacks(producerRegistry);
@@ -557,11 +557,7 @@ namespace Paramore.Brighter
             if (!_bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
-
-            var message = messageMapper.MapToMessage(request);
+            var message = _transformPipelineBuilder.BuildWrapPipeline(request).Wrap(request).GetAwaiter().GetResult();
 
             AddTelemetryToMessage<T>(message);
 
@@ -635,11 +631,7 @@ namespace Paramore.Brighter
             if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
-
-            var message = messageMapper.MapToMessage(request);
+            var message = await _transformPipelineBuilder.BuildWrapPipeline(request).Wrap(request);
 
             AddTelemetryToMessage<T>(message);
 
@@ -677,17 +669,27 @@ namespace Paramore.Brighter
 
         private List<Message> BulkMapMessages<T>(IEnumerable<T> requests) where T : class, IRequest
         {
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException(
-                    $"No message mapper registered for messages of type: {typeof(T)}");
-
             return requests.Select(r =>
             {
-                var message = messageMapper.MapToMessage(r);
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline(r); 
+                var message = wrapPipeline.Wrap(r).GetAwaiter().GetResult();
                 AddTelemetryToMessage<T>(message);
                 return message;
             }).ToList();
+        }
+        
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<T> requests) where T : class, IRequest
+        {
+            var messages = new List<Message>();
+            foreach (var request in requests)
+            {
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline(request); 
+                var message = await wrapPipeline.Wrap(request);
+                AddTelemetryToMessage<T>(message);
+                messages.Add(message);
+            }
+
+            return messages;
         }
 
         private void AddTelemetryToMessage<T>(Message message)
@@ -771,15 +773,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var outMessageMapper = _mapperRegistry.Get<T>();
-            if (outMessageMapper == null)
-                throw new ArgumentOutOfRangeException(
-                    $"No message mapper registered for messages of type: {typeof(T)}");
-
-            var inMessageMapper = _mapperRegistry.Get<TResponse>();
-            if (inMessageMapper == null)
-                throw new ArgumentOutOfRangeException(
-                    $"No message mapper registered for messages of type: {typeof(T)}");
+            var outWrapPipeline = _transformPipelineBuilder.BuildWrapPipeline(request);
             
             var subscription = _replySubscriptions.FirstOrDefault(s => s.DataType == typeof(TResponse));
 
@@ -804,7 +798,7 @@ namespace Paramore.Brighter
                 //the channel to create the subscription, but this does not do much on a new queue
                 _bus.Retry(() => responseChannel.Purge());
 
-                var outMessage = outMessageMapper.MapToMessage(request);
+                var outMessage = outWrapPipeline.Wrap(request).GetAwaiter().GetResult(); 
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
@@ -822,7 +816,8 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    response = inMessageMapper.MapToRequest(responseMessage);
+                    var inUnwrapPipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TResponse>();
+                    response = inUnwrapPipeline.Unwrap(responseMessage).GetAwaiter().GetResult();
                     Send(response);
                 }
 

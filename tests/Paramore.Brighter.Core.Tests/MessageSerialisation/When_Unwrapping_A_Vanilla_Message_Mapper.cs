@@ -39,7 +39,7 @@ public class VanillaMessageUnwrapRequestTests
     public void When_Unwrapping_A_Vanilla_Message_Mapper()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         var request = _transformPipeline.Unwrap(_message).Result;
         
         //assert

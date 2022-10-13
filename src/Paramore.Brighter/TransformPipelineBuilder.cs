@@ -46,7 +46,7 @@ namespace Paramore.Brighter
     public class TransformPipelineBuilder 
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
-        private readonly MessageMapperRegistry _mapperRegistry;
+        private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
         private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento = new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
@@ -62,7 +62,7 @@ namespace Paramore.Brighter
         /// <param name="mapperRegistry">The message mapper registry, cannot be null</param>
         /// <param name="messageTransformerFactory">The transform factory, can be null</param>
         /// <exception cref="ConfigurationException">Throws a configuration exception on a null mapperRegistry</exception>
-        public TransformPipelineBuilder(MessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
+        public TransformPipelineBuilder(IAmAMessageMapperRegistry mapperRegistry, IAmAMessageTransformerFactory messageTransformerFactory)
         {
             _mapperRegistry = mapperRegistry ?? throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
 
@@ -78,7 +78,7 @@ namespace Paramore.Brighter
         /// <param name="request"></param>
         /// <typeparam name="TRequest"></typeparam>
         /// <returns></returns>
-        public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
+        public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest
         {
             try
             {
@@ -101,7 +101,7 @@ namespace Paramore.Brighter
             }
         }
 
-        public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest, new()
+        public UnwrapPipeline<TRequest> BuildUnwrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             try
             {
@@ -112,7 +112,7 @@ namespace Paramore.Brighter
                 var pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper);
                 
                 s_logger.LogDebug(
-                    "New unwrap pipeline created for: {message} of {pipeline}", nameof(request), 
+                    "New unwrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name, 
                     TraceUnwrapPipeline(pipeline)
                     );
                 
@@ -125,7 +125,7 @@ namespace Paramore.Brighter
         }
 
         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
-            where TRequest : class, IRequest, new()
+            where TRequest : class, IRequest
         {
             var transforms = new List<IAmAMessageTransformAsync>();
             
@@ -163,14 +163,14 @@ namespace Paramore.Brighter
             s_unWrapTransformsMemento.Clear();
         }
 
-        private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest, new()
+        private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapper = _mapperRegistry.Get<TRequest>();
             if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}", typeof(TRequest).Name));
             return messageMapper;
         }
 
-        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
+        private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
             if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute> transformAttributes))
@@ -185,7 +185,7 @@ namespace Paramore.Brighter
             return transformAttributes;
         }
 
-        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
+        private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest
         {
             var key = messageMapper.GetType().Name;
             if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute> transformAttributes))
@@ -201,7 +201,7 @@ namespace Paramore.Brighter
         }
 
 
-        private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest, new()
+        private MethodInfo FindMapToMessage<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
             return FindMethods(messageMapper)
                 .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToMessage))
@@ -209,26 +209,26 @@ namespace Paramore.Brighter
         }
 
 
-        private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest, new()
+        private MethodInfo FindMapToRequest<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
             return FindMethods(messageMapper)
                 .Where(method => method.Name == nameof(IAmAMessageMapper<TRequest>.MapToRequest))
                 .SingleOrDefault(method => method.GetParameters().Length == 1 && method.GetParameters().Single().ParameterType == typeof(Message));
         }
 
-        private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest, new()
+        private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
             return messageMapper.GetType().GetTypeInfo().GetMethods();
         }
         
-        private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest, new()
+        private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest
         {
             var pipelineTracer = new TransformPipelineTracer();
             pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
         
-        private TransformPipelineTracer TraceUnwrapPipeline<TRequest>(UnwrapPipeline<TRequest> pipeline) where TRequest : class, IRequest, new()
+        private TransformPipelineTracer TraceUnwrapPipeline<TRequest>(UnwrapPipeline<TRequest> pipeline) where TRequest : class, IRequest
         {
             var pipelineTracer = new TransformPipelineTracer();
             pipeline.DescribePath(pipelineTracer);

@@ -35,7 +35,7 @@ namespace Paramore.Brighter
     /// Takes a request and maps it to a message
     /// Runs transforms on that message
     /// </summary>
-    public class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest, new()
+    public class WrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest
     {
         /// <summary>
         /// Constructs an instance of a wrap pipeline
