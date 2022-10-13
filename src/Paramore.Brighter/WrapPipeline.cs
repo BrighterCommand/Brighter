@@ -79,7 +79,6 @@ namespace Paramore.Brighter
         {
             var message = MessageMapper.MapToMessage(request);
             await Transforms.EachAsync(async transform => message = await transform.Wrap(message));
-            InstanceScope?.Dispose();
             return message;
         }
     }

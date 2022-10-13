@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -47,6 +48,9 @@ namespace Paramore.Brighter
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
         private readonly MessageMapperRegistry _mapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
+        //GLOBAL! Cache of message mapper transform attributes. This will not be recalculated post start up. Method to clear cache below (if a broken test brought you here).
+        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>> s_wrapTransformsMemento = new ConcurrentDictionary<string, IOrderedEnumerable<WrapWithAttribute>>();
+        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>> s_unWrapTransformsMemento = new ConcurrentDictionary<string, IOrderedEnumerable<UnwrapWithAttribute>>();
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -153,6 +157,12 @@ namespace Paramore.Brighter
             return transforms;
         }
 
+        public static void ClearPipelineCache()
+        {
+            s_wrapTransformsMemento.Clear();
+            s_unWrapTransformsMemento.Clear();
+        }
+
         private IAmAMessageMapper<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest, new()
         {
             var messageMapper = _mapperRegistry.Get<TRequest>();
@@ -162,16 +172,32 @@ namespace Paramore.Brighter
 
         private IOrderedEnumerable<WrapWithAttribute> FindWrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
         {
-            return FindMapToMessage(messageMapper)
-                .GetOtherWrapsInPipeline()
-                .OrderByDescending(attribute => attribute.Step);
+            var key = messageMapper.GetType().Name;
+            if (!s_wrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<WrapWithAttribute> transformAttributes))
+            {
+                transformAttributes = FindMapToMessage(messageMapper)
+                    .GetOtherWrapsInPipeline()
+                    .OrderByDescending(attribute => attribute.Step);
+
+                s_wrapTransformsMemento.TryAdd(key, transformAttributes);
+            }
+
+            return transformAttributes;
         }
 
         private IOrderedEnumerable<UnwrapWithAttribute> FindUnwrapTransforms<T>(IAmAMessageMapper<T> messageMapper) where T : class, IRequest, new()
         {
-            return FindMapToRequest(messageMapper)
-                .GetOtherUnwrapsInPipeline()
-                .OrderByDescending(attribute => attribute.Step);
+            var key = messageMapper.GetType().Name;
+            if (!s_unWrapTransformsMemento.TryGetValue(key, out IOrderedEnumerable<UnwrapWithAttribute> transformAttributes))
+            {
+                transformAttributes = FindMapToRequest(messageMapper)
+                    .GetOtherUnwrapsInPipeline()
+                    .OrderByDescending(attribute => attribute.Step);
+
+                s_unWrapTransformsMemento.TryAdd(key, transformAttributes);
+            }
+
+            return transformAttributes;
         }
 
 

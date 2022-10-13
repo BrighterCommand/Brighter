@@ -2,26 +2,27 @@
 using System.Text.Json;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.MessageSerialisation
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
+
+[Collection("CommandProcessor")]
+public class MessageSerilisationTests
 {
-    public class MessageSerilisationTests
+
+    [Fact]
+    public void When_I_Serialise_a_Message_I_Can_Deserialise_It()
     {
+        var origionalMessage = new Message(
+            new MessageHeader(Guid.NewGuid(), "TestTopic", MessageType.MT_NONE, DateTime.Now, Guid.NewGuid(),
+                "ReplyTo", partitionKey: "PartitionKey"),
+            new MessageBody("This is a Test Message"));
 
-        [Fact]
-        public void When_I_Serialise_a_Message_I_Can_Deserialise_It()
-        {
-            var origionalMessage = new Message(
-                new MessageHeader(Guid.NewGuid(), "TestTopic", MessageType.MT_NONE, DateTime.Now, Guid.NewGuid(),
-                    "ReplyTo", partitionKey: "PartitionKey"),
-                new MessageBody("This is a Test Message"));
+        var seralisedMessage = JsonSerializer.Serialize(origionalMessage, JsonSerialisationOptions.Options);
 
-            var seralisedMessage = JsonSerializer.Serialize(origionalMessage, JsonSerialisationOptions.Options);
+        var deserialisedMessage =
+            JsonSerializer.Deserialize<Message>(seralisedMessage, JsonSerialisationOptions.Options);
 
-            var deserialisedMessage =
-                JsonSerializer.Deserialize<Message>(seralisedMessage, JsonSerialisationOptions.Options);
-
-            
-            Assert.Equal(origionalMessage, deserialisedMessage);
-        }
+        
+        Assert.Equal(origionalMessage, deserialisedMessage);
     }
 }
+

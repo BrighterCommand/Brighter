@@ -45,8 +45,8 @@ namespace Paramore.Brighter
         private readonly IAmALifetime _instanceScope;
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
         //GLOBAL! cache of handler attributes - won't change post-startup so avoid re-calculation. Method to clear cache below (if a broken test brought you here)
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> _preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
-        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> _postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
+        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_preAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
+        private static readonly ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>> s_postAttributesMemento = new ConcurrentDictionary<string, IOrderedEnumerable<RequestHandlerAttribute>>();
 
         /// <summary>
         /// Used to build a pipeline of handlers from the target handler and the attributes on that
@@ -105,8 +105,8 @@ namespace Paramore.Brighter
         /// </summary>
         public static void ClearPipelineCache()
         {
-            _preAttributesMemento.Clear();
-            _postAttributesMemento.Clear();
+            s_preAttributesMemento.Clear();
+            s_postAttributesMemento.Clear();
         }
 
         public void Dispose()
@@ -123,7 +123,7 @@ namespace Paramore.Brighter
 
             implicitHandler.Context = requestContext;
 
-            if (!_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
+            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
             {
                 preAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -133,14 +133,14 @@ namespace Paramore.Brighter
 
                 AddGlobalInboxAttributes(ref preAttributes, implicitHandler);
 
-                _preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+                s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
 
             }
 
             var firstInPipeline = PushOntoPipeline(preAttributes, implicitHandler, requestContext);
 
 
-            if (!_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
+            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
             {
                 postAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -184,7 +184,7 @@ namespace Paramore.Brighter
             implicitHandler.Context = requestContext;
             implicitHandler.ContinueOnCapturedContext = continueOnCapturedContext;
 
-            if (!_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
+            if (!s_preAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> preAttributes))
             {
                 preAttributes =
                     implicitHandler.FindHandlerMethod()
@@ -194,7 +194,7 @@ namespace Paramore.Brighter
 
                 AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
 
-                _preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
+                s_preAttributesMemento.TryAdd(implicitHandler.Name.ToString(), preAttributes);
 
             }
 
@@ -203,7 +203,7 @@ namespace Paramore.Brighter
             
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
-            if (!_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
+            if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
             {
                 postAttributes =
                     implicitHandler.FindHandlerMethod()

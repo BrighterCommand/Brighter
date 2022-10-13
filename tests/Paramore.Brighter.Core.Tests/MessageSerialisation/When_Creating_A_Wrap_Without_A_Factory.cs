@@ -5,7 +5,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-public class TransformPipelineMissingFactoryWrapTests
+[Collection("CommandProcessor")]
+ public class TransformPipelineMissingFactoryWrapTests
 {
     private WrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
@@ -14,6 +15,8 @@ public class TransformPipelineMissingFactoryWrapTests
     public TransformPipelineMissingFactoryWrapTests()
     {
         //arrange
+        TransformPipelineBuilder.ClearPipelineCache();  
+        
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
