@@ -25,4 +25,6 @@ public class MySimpleTransformAsync : IAmAMessageTransformAsync
         tcs.SetResult(message);
         return tcs.Task;
     }
+
+    public void Dispose() { }
 }

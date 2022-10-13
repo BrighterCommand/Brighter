@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -33,7 +34,7 @@ namespace Paramore.Brighter
     /// On an Unwrap, we assume that you are modifying an incoming message
     /// A typical usage is the Claim Check pattern see https://www.enterpriseintegrationpatterns.com/patterns/messaging/StoreInLibrary.html
     /// </summary>
-    public interface IAmAMessageTransformAsync
+    public interface IAmAMessageTransformAsync : IDisposable
     {
         /// <summary>
         /// A Wrap modifies an outgoing message by altering its header or body

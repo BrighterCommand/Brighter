@@ -34,20 +34,26 @@ namespace Paramore.Brighter
     /// Takes a message and maps it to a request
     /// Runs transforms on that message
     /// </summary>
-    public class UnwrapPipeline<TRequest> where TRequest: class, IRequest, new()
+    public class UnwrapPipeline<TRequest> : TransformPipeline<TRequest> where TRequest: class, IRequest, new()
     {
-        private readonly IAmAMessageMapper<TRequest> _messageMapper;
-        private readonly IEnumerable<IAmAMessageTransformAsync> _transforms;
-
         /// <summary>
         /// Constructs an instance of an Unwrap pipeline
         /// </summary>
         /// <param name="transforms">The transforms that run before the mapper</param>
+        /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
-        public UnwrapPipeline(IEnumerable<IAmAMessageTransformAsync> transforms, IAmAMessageMapper<TRequest> messageMapper)
+        public UnwrapPipeline(
+            IEnumerable<IAmAMessageTransformAsync> transforms, 
+            IAmAMessageTransformerFactory messageTransformerFactory, 
+            IAmAMessageMapper<TRequest> messageMapper)
         {
-            _messageMapper = messageMapper;
-            _transforms = transforms;
+            MessageMapper = messageMapper;
+            Transforms = transforms;
+            if (messageTransformerFactory != null)
+            {
+                InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
+                Transforms.Each(transform => InstanceScope.Add(transform));
+            }
         }
 
         /// <summary>        
@@ -57,8 +63,8 @@ namespace Paramore.Brighter
         /// <param name="pipelineTracer"></param>
         public void DescribePath(TransformPipelineTracer pipelineTracer)
         {
-            _transforms.Each(t => pipelineTracer.AddTransform(t.GetType().Name));
-            pipelineTracer.AddTransform(_messageMapper.GetType().Name);
+            Transforms.Each(t => pipelineTracer.AddTransform(t.GetType().Name));
+            pipelineTracer.AddTransform(MessageMapper.GetType().Name);
         }
 
         /// <summary>
@@ -70,8 +76,9 @@ namespace Paramore.Brighter
         public async Task<TRequest> Unwrap(Message message)
         {
             var msg = message;
-            await _transforms.EachAsync(async transform => msg = await transform.Unwrap(msg));
-            return _messageMapper.MapToRequest(msg);
+            await Transforms.EachAsync(async transform => msg = await transform.Unwrap(msg));
+            InstanceScope?.Dispose();
+            return MessageMapper.MapToRequest(msg);
         }
     }
 }

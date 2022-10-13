@@ -42,12 +42,11 @@ namespace Paramore.Brighter
     /// We run a <see cref="UnwrapWithAttribute"/> before the message mapper converts to a <see cref="IRequest"/>.
     /// You handle translation between <see cref="IRequest"/> and <see cref="Message"/> in your <see cref="IAmAMessageMapper{TRequest}"/>
     /// </summary>
-    public class TransformPipelineBuilder : IDisposable
+    public class TransformPipelineBuilder 
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TransformPipelineBuilder>();
         private readonly MessageMapperRegistry _mapperRegistry;
         private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
-        private readonly TransformLifetimeScope _instanceScope;
 
         /// <summary>
         /// Creates an instance of a transform pipeline builder.
@@ -64,28 +63,10 @@ namespace Paramore.Brighter
             _mapperRegistry = mapperRegistry ?? throw new ConfigurationException("TransformPipelineBuilder expected a Message Mapper Registry but none supplied");
 
             _messageTransformerFactory = messageTransformerFactory;
-
-            _instanceScope = new TransformLifetimeScope(messageTransformerFactory);
-        }
+            
+       }
 
         /// <summary>
-        /// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline 
-        /// </summary>
-        public void Dispose()
-        {
-            ReleaseUnmanagedResources();
-            GC.SuppressFinalize(this);
-        }
-  
-        /// <summary>
-        /// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline 
-        /// </summary>
-        ~TransformPipelineBuilder()
-        {
-            ReleaseUnmanagedResources();
-        }      
-          
-          /// <summary>
         /// Builds a pipeline.
         /// Anything marked with <see cref=""/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
         /// Anything marked with
@@ -101,7 +82,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindWrapTransforms(messageMapper));
 
-                var pipeline = new WrapPipeline<TRequest>(messageMapper, transforms);
+                var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms);
                 
                 s_logger.LogDebug(
                     "New wrap pipeline created for: {message} of {pipeline}", nameof(request), 
@@ -124,7 +105,7 @@ namespace Paramore.Brighter
 
                 var transforms = BuildTransformPipeline<TRequest>(FindUnwrapTransforms(messageMapper));
 
-                var pipeline = new UnwrapPipeline<TRequest>(transforms, messageMapper);
+                var pipeline = new UnwrapPipeline<TRequest>(transforms, _messageTransformerFactory, messageMapper);
                 
                 s_logger.LogDebug(
                     "New unwrap pipeline created for: {message} of {pipeline}", nameof(request), 
@@ -150,7 +131,7 @@ namespace Paramore.Brighter
                 int i = transformAttributes.Count();
                 if (i >= 0)
                 s_logger.LogWarning(
-                    "No message transfomer factory configured, so no transforms will be created but {transformCount} configured",i);
+                    "No message transformer factory configured, so no transforms will be created but {transformCount} configured",i);
                 
                 return transforms;
             }
@@ -227,12 +208,5 @@ namespace Paramore.Brighter
             pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-
-        private void ReleaseUnmanagedResources()
-        {
-            _instanceScope.Dispose();
-        }
-
-
     }
 }
