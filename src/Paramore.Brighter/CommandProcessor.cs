@@ -557,7 +557,7 @@ namespace Paramore.Brighter
             if (!_bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            var message = _transformPipelineBuilder.BuildWrapPipeline(request).Wrap(request).GetAwaiter().GetResult();
+            var message = _transformPipelineBuilder.BuildWrapPipeline<T>().Wrap(request).GetAwaiter().GetResult();
 
             AddTelemetryToMessage<T>(message);
 
@@ -631,7 +631,7 @@ namespace Paramore.Brighter
             if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            var message = await _transformPipelineBuilder.BuildWrapPipeline(request).Wrap(request);
+            var message = await _transformPipelineBuilder.BuildWrapPipeline<T>().Wrap(request);
 
             AddTelemetryToMessage<T>(message);
 
@@ -671,7 +671,7 @@ namespace Paramore.Brighter
         {
             return requests.Select(r =>
             {
-                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline(r); 
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
                 var message = wrapPipeline.Wrap(r).GetAwaiter().GetResult();
                 AddTelemetryToMessage<T>(message);
                 return message;
@@ -683,7 +683,7 @@ namespace Paramore.Brighter
             var messages = new List<Message>();
             foreach (var request in requests)
             {
-                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline(request); 
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
                 var message = await wrapPipeline.Wrap(request);
                 AddTelemetryToMessage<T>(message);
                 messages.Add(message);
@@ -773,7 +773,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var outWrapPipeline = _transformPipelineBuilder.BuildWrapPipeline(request);
+            var outWrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
             
             var subscription = _replySubscriptions.FirstOrDefault(s => s.DataType == typeof(TResponse));
 

@@ -89,9 +89,13 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
                 policyRegistry: new PolicyRegistry()
             );
 
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName))
+                ); 
+            messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
+            
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-            IAmAMessageMapper<MyDeferredCommand> mapper = new MyDeferredCommandMessageMapper(_topicName);
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, mapper)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };

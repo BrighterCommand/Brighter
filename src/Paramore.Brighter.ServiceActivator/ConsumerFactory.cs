@@ -52,7 +52,7 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateBlocking()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry.Get<TRequest>())
+            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry)
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateAsync()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistry.Get<TRequest>())
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistry)
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,

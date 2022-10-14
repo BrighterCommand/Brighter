@@ -8,7 +8,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 public class MessageWrapRequestMissingTransformTests
 {
     private readonly TransformPipelineBuilder _pipelineBuilder;
-    private readonly MyTransformableCommand _myCommand;
 
     public MessageWrapRequestMissingTransformTests()
     {
@@ -18,8 +17,6 @@ public class MessageWrapRequestMissingTransformTests
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
-        _myCommand = new MyTransformableCommand();
-        
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -29,7 +26,7 @@ public class MessageWrapRequestMissingTransformTests
     public void When_Wrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {
         //act
-        var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline(_myCommand));
+        var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ConfigurationException>();
         

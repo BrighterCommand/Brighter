@@ -14,13 +14,13 @@ namespace Paramore.Brighter.ServiceActivator
     {
         public MessagePumpBlocking(
             IAmACommandProcessorProvider commandProcessorProvider, 
-            IAmAMessageMapper<TRequest> messageMapper) 
-            : base(commandProcessorProvider, messageMapper)
+            IAmAMessageMapperRegistry messageMapperRegistry) 
+            : base(commandProcessorProvider, messageMapperRegistry)
         {
         }
         
-        public MessagePumpBlocking(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper) :
-            this(new CommandProcessorProvider(commandProcessor), messageMapper)
+        public MessagePumpBlocking(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry) :
+            this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry)
         {}
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)

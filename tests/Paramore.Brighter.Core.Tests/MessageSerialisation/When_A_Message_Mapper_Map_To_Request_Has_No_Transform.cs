@@ -9,7 +9,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 {
     private WrapPipeline<MyTransformableCommand> _transformPipeline;
     private readonly TransformPipelineBuilder _pipelineBuilder;
-    private readonly MyTransformableCommand _myCommand;
 
     public MessageWrapPathPipelineNoTransformTests()
     {
@@ -19,8 +18,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
          var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
 
-        _myCommand = new MyTransformableCommand();
-        
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -31,7 +28,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     public void When_A_Message_Mapper_Map_To_Request_Has_No_Transform()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         
         //assert
         TraceFilters().ToString().Should().Be("MyVanillaCommandMessageMapper");

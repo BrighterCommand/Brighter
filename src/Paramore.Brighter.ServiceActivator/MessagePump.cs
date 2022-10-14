@@ -26,21 +26,22 @@ namespace Paramore.Brighter.ServiceActivator
             Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
-        private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
+        private readonly UnwrapPipeline<TRequest> _wrapPipeline;
 
         /// <summary>
         /// Message Pump abstract class
         /// </summary>
         /// <param name="commandProcessorProvider"></param>
-        /// <param name="messageMapper"></param>
+        /// <param name="messageMapperRegistry">The registry of mappers</param>
         public MessagePump(
             IAmACommandProcessorProvider commandProcessorProvider, 
-            IAmAMessageMapper<TRequest> messageMapper
+            IAmAMessageMapperRegistry messageMapperRegistry
         )
         {
             CommandProcessorProvider = commandProcessorProvider;
-            _messageMapper = messageMapper;
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
+            _wrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
 
         public int TimeoutInMilliseconds { get; set; }
@@ -316,22 +317,21 @@ namespace Paramore.Brighter.ServiceActivator
 
         private TRequest TranslateMessage(Message message)
         {
-            if (_messageMapper == null)
-            {
-                throw new ConfigurationException($"No message mapper found for type {typeof(TRequest).FullName} for message {message.Id}.");
-            }
-
             s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
 
             TRequest request;
 
             try
             {
-                request = _messageMapper.MapToRequest(message);
+                request = _wrapPipeline.Unwrap(message).GetAwaiter().GetResult();
+            }
+            catch (ConfigurationException ce)
+            {
+                throw;
             }
             catch (Exception exception)
             {
-                throw new MessageMappingException($"Failed to map message {message.Id} using message mapper {_messageMapper.GetType().FullName} for type {typeof(TRequest).FullName} ", exception);
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
             }
 
             return request;

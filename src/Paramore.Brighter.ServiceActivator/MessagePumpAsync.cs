@@ -17,13 +17,13 @@ namespace Paramore.Brighter.ServiceActivator
     {
         public MessagePumpAsync(
             IAmACommandProcessorProvider commandProcessorProvider, 
-            IAmAMessageMapper<TRequest> messageMapper) 
-            : base(commandProcessorProvider, messageMapper)
+            IAmAMessageMapperRegistry messageMapperRegistry) 
+            : base(commandProcessorProvider, messageMapperRegistry)
         {
         }
 
-        public MessagePumpAsync(IAmACommandProcessor commandProcessor, IAmAMessageMapper<TRequest> messageMapper) :
-            this(new CommandProcessorProvider(commandProcessor), messageMapper)
+        public MessagePumpAsync(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry) :
+            this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry)
         {}
 
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)

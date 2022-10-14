@@ -45,8 +45,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
-            var mapper = new MyCommandMessageMapper();
-            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, mapper) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
+            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+             _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, messageMapperRegistry) 
+                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
 
             _command = new MyCommand();
 

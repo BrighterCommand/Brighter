@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     public void When_Creating_A_Wrap_Without_A_Factory()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         
         // If no factory we default to just them mapper
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");

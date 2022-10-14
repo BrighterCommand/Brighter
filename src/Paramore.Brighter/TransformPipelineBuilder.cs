@@ -78,7 +78,7 @@ namespace Paramore.Brighter
         /// <param name="request"></param>
         /// <typeparam name="TRequest"></typeparam>
         /// <returns></returns>
-        public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>(TRequest request) where TRequest : class, IRequest
+        public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             try
             {
@@ -89,7 +89,7 @@ namespace Paramore.Brighter
                 var pipeline = new WrapPipeline<TRequest>(messageMapper, _messageTransformerFactory, transforms);
                 
                 s_logger.LogDebug(
-                    "New wrap pipeline created for: {message} of {pipeline}", nameof(request), 
+                    "New wrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name, 
                     TraceWrapPipeline(pipeline)
                     );
 

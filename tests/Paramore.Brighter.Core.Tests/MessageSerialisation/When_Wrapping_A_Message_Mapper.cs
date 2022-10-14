@@ -31,7 +31,7 @@ public class MessageWrapRequestTests
     public void When_Wrapping_A_Message_Mapper()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.Wrap(_myCommand).Result;
         
         //assert

@@ -31,7 +31,7 @@ public class MessageWrapCleanupTests
     public void When_Wrapping_Clean_Up_The_Pipeline()
     {
         //act
-        _transformPipeline = _pipelineBuilder.BuildWrapPipeline(_myCommand);
+        _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.Wrap(_myCommand).Result;
         _transformPipeline.Dispose();
         
