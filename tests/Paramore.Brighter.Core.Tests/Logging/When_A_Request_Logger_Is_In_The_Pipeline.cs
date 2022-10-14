@@ -1,4 +1,5 @@
-﻿using FluentAssertions;
+﻿using System;
+using FluentAssertions;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.Logging.TestDoubles;
@@ -12,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace Paramore.Brighter.Core.Tests.Logging
 {
-    public class CommandProcessorWithLoggingInPipelineTests
+    public class CommandProcessorWithLoggingInPipelineTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
 
@@ -59,5 +60,9 @@ namespace Paramore.Brighter.Core.Tests.Logging
 
         }
 
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
     }
 }

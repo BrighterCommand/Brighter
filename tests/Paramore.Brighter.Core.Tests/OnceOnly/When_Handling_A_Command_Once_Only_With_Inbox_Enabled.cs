@@ -11,7 +11,7 @@ using Paramore.Brighter.Inbox.Handlers;
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
     [Collection("CommandProcessor")]
-     public class OnceOnlyAttributeTests 
+     public class OnceOnlyAttributeTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxSync _inbox;
@@ -46,6 +46,10 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }
-        
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
     }
 }

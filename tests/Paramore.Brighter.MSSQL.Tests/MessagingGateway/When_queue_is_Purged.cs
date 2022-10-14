@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.MessagingGateway.MsSql;
@@ -108,5 +109,10 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
         {
             Id = new Guid();
         }
+        
+        /// <summary>
+        /// Gets or sets the span that this operation live within
+        /// </summary>
+        public Activity Span { get; set; }
     }
 }

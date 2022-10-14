@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
@@ -34,7 +35,7 @@ using Paramore.Brighter.Inbox.Handlers;
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
     [Collection("CommandProcessor")]
-    public class OnceOnlyAttributeWithWarnExceptionTests
+    public class OnceOnlyAttributeWithWarnExceptionTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxSync _inbox;
@@ -67,6 +68,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);
 
             MyStoredCommandToWarnHandler.ReceivedCount.Should().Be(1);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

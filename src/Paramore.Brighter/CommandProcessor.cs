@@ -24,7 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -32,6 +34,7 @@ using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using Polly;
 using Polly.Registry;
+using Exception = System.Exception;
 
 namespace Paramore.Brighter
 {
@@ -60,6 +63,9 @@ namespace Paramore.Brighter
         // the following are not readonly to allow setting them to null on dispose
         private readonly IAmAChannelFactory _responseChannelFactory;
 
+        private const string PROCESSCOMMAND = "Process Command";
+        private const string PROCESSEVENT = "Process Event";
+        private const string DEPOSITPOST = "Deposit Post";
         
         /// <summary>
         /// Use this as an identifier for your <see cref="Policy"/> that determines for how long to break the circuit when communication with the Work Queue fails.
@@ -265,6 +271,9 @@ namespace Paramore.Brighter
         {
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
+            
+            var span = GetSpan(PROCESSCOMMAND);
+            command.Span = span.span;
 
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
@@ -272,12 +281,28 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
-                s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
-                var handlerChain = builder.Build(requestContext);
+                bool success = false;
+                try
+                {
+                    s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
+                        command.Id);
+                    var handlerChain = builder.Build(requestContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                    AssertValidSendPipeline(command, handlerChain.Count());
 
-                handlerChain.First().Handle(command);
+                    handlerChain.First().Handle(command);
+                    success = true;
+                }
+                catch (Exception)
+                {
+                    success = false;
+                    throw;
+                }
+                finally
+                {
+                    EndSpan(span.span, success);
+                }
+                
             }
         }
 
@@ -295,18 +320,35 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
+            var span = GetSpan(PROCESSCOMMAND);
+            command.Span = span.span;
+            
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
-                s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
+                bool success = false;
+                try
+                {
+                    s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
                 var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
                 AssertValidSendPipeline(command, handlerChain.Count());
 
                 await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+                success = true;
+                }
+                catch (Exception e)
+                {
+                    success = false;
+                    throw;
+                }
+                finally
+                {
+                    EndSpan(span.span, success);
+                }
             }
         }
 
@@ -324,6 +366,9 @@ namespace Paramore.Brighter
             if (_handlerFactorySync == null)
                 throw new InvalidOperationException("No handler factory defined.");
 
+            var span = GetSpan(PROCESSEVENT);
+            @event.Span = span.span;
+            
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
@@ -350,6 +395,9 @@ namespace Paramore.Brighter
                     }
                 }
 
+                if (span.created)
+                    EndSpan(span.span, exceptions.Any());
+
                 if (exceptions.Any())
                 {
                     throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
@@ -375,6 +423,9 @@ namespace Paramore.Brighter
             if (_handlerFactoryAsync == null)
                 throw new InvalidOperationException("No async handler factory defined.");
 
+            var span = GetSpan(PROCESSEVENT);
+            @event.Span = span.span;
+            
             var requestContext = _requestContextFactory.Create();
             requestContext.Policies = _policyRegistry;
             requestContext.FeatureSwitches = _featureSwitchRegistry;
@@ -400,12 +451,32 @@ namespace Paramore.Brighter
                         exceptions.Add(e);
                     }
                 }
+                
+                if (span.created)
+                    EndSpan(span.span, exceptions.Any());
 
                 if (exceptions.Count > 0)
                 {
                     throw new AggregateException("Failed to async publish to one more handlers successfully, see inner exceptions for details", exceptions);
                 }
             }
+        }
+
+        private (Activity span, bool created) GetSpan(string activityName)
+        {
+            bool create = Activity.Current == null;
+            
+            if(create)
+                return (ApplicationTelemetry.ActivitySource.StartActivity(activityName, ActivityKind.Server), create);
+            else
+                return (Activity.Current, create);
+        }
+
+        private void EndSpan(Activity span, bool success)
+        {
+            var status = success ? ActivityStatusCode.Error : ActivityStatusCode.Ok;
+            span?.SetStatus(status);
+            span?.Dispose();
         }
 
         /// <summary>
@@ -471,12 +542,12 @@ namespace Paramore.Brighter
         /// database, that you want to signal via the request to downstream consumers
         /// Pass deposited Guid to <see cref="ClearOutbox"/> 
         /// </summary>
-        /// <param name="request">The request to save to the outbox</param>
+        /// <param name="requests">The requests to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns>The Id of the Message that has been deposited.</returns>
-        public Guid[] DepositPost<T>(T[] request) where T : class, IRequest
+        public Guid[] DepositPost<T>(IEnumerable<T> requests) where T : class, IRequest
         {
-            return DepositPost(request, _boxTransactionConnectionProvider);
+            return DepositPost(requests, _boxTransactionConnectionProvider);
         }
         
         private Guid DepositPost<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider) where T : class, IRequest
@@ -491,6 +562,8 @@ namespace Paramore.Brighter
                 throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
 
             var message = messageMapper.MapToMessage(request);
+
+            AddTelemetryToMessage<T>(message);
 
             _bus.AddToOutbox(request, message, connectionProvider);
 
@@ -548,7 +621,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
-        public Task<Guid[]> DepositPostAsync<T>(T[] requests, bool continueOnCapturedContext = false,
+        public Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             return DepositPostAsync(requests, _boxTransactionConnectionProvider, continueOnCapturedContext, cancellationToken);
@@ -567,6 +640,8 @@ namespace Paramore.Brighter
                 throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
 
             var message = messageMapper.MapToMessage(request);
+
+            AddTelemetryToMessage<T>(message);
 
             await _bus.AddToOutboxAsync(request, continueOnCapturedContext, cancellationToken, message, connectionProvider);
 
@@ -607,7 +682,22 @@ namespace Paramore.Brighter
                 throw new ArgumentOutOfRangeException(
                     $"No message mapper registered for messages of type: {typeof(T)}");
 
-            return requests.Select(r => messageMapper.MapToMessage(r)).ToList();
+            return requests.Select(r =>
+            {
+                var message = messageMapper.MapToMessage(r);
+                AddTelemetryToMessage<T>(message);
+                return message;
+            }).ToList();
+        }
+
+        private void AddTelemetryToMessage<T>(Message message)
+        {
+            var activity = Activity.Current ?? ApplicationTelemetry.ActivitySource.StartActivity(DEPOSITPOST, ActivityKind.Producer);
+
+            if (activity != null)
+            {
+                message.Header.AddTelemetryInformation(activity, typeof(T).ToString());
+            }
         }
 
 

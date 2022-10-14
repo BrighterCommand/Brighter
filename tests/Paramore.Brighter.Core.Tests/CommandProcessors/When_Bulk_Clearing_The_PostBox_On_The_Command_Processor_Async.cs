@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-
+            
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             _commandProcessor.ClearAsyncOutbox(2, 1, true);
 
-            await Task.Delay(1000);
+            await Task.Delay(3000);
 
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
