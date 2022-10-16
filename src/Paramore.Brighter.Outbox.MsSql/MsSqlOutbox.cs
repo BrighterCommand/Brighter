@@ -735,7 +735,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreateSqlParameter($"{prefix}ReplyTo", message.Header.ReplyTo),
                 CreateSqlParameter($"{prefix}ContentType", message.Header.ContentType),
                 CreateSqlParameter($"{prefix}HeaderBag", bagJson),
-                CreateSqlParameter($"{prefix}Body", message.Body.Value)
+                CreateSqlParameter($"{prefix}Body", message.Body?.Value)
             };
             return parameters;
         }
@@ -810,8 +810,12 @@ namespace Paramore.Brighter.Outbox.MsSql
                     }
                 }
             }
-
-            var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+            
+            var bodyOrdinal = dr.GetOrdinal("Body");
+            string messageBody = string.Empty;
+            if(!dr.IsDBNull(bodyOrdinal))
+                messageBody = dr.GetString(bodyOrdinal);
+            var body = new MessageBody(messageBody);
 
             return new Message(header, body);
         }
