@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly string _key3 = "name3";
         private readonly string _key4 = "name4";
         private readonly string _key5 = "name5";
-        private readonly Message _message;
+        private Message _message;
         private readonly MsSqlOutbox _sqlOutbox;
         private Message _storedMessage;
         private readonly string _value1 = "value1";
@@ -47,6 +47,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly MsSqlTestHelper _msSqlTestHelper;
+        private readonly MessageHeader _messageHeader;
 
         public SqlOutboxWritingMessageTests()
         {
@@ -54,7 +55,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            var messageHeader = new MessageHeader(
+            _messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(),
                 topic: "test_topic", 
                 messageType: MessageType.MT_DOCUMENT, 
@@ -64,23 +65,40 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyAddress",
                 contentType: "text/plain");
-            messageHeader.Bag.Add(_key1, _value1);
-            messageHeader.Bag.Add(_key2, _value2);
-            messageHeader.Bag.Add(_key3, _value3);
-            messageHeader.Bag.Add(_key4, _value4);
-            messageHeader.Bag.Add(_key5, _value5);
-
-            _message = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutbox.Add(_message);
+            _messageHeader.Bag.Add(_key1, _value1);
+            _messageHeader.Bag.Add(_key2, _value2);
+            _messageHeader.Bag.Add(_key3, _value3);
+            _messageHeader.Bag.Add(_key4, _value4);
+            _messageHeader.Bag.Add(_key5, _value5);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_MSSQL_Outbox()
         {
+            _message = new Message(_messageHeader, new MessageBody("message body"));
+            _sqlOutbox.Add(_message);
+
+            AssertMessage();
+        }
+
+        [Fact]
+        public void When_Writing_A_Message_With_a_Null_To_The_MSSQL_Outbox()
+        {
+            _message = new Message(_messageHeader, null);
+            _sqlOutbox.Add(_message);
+
+            AssertMessage();
+        }
+
+        private void AssertMessage()
+        {
             _storedMessage = _sqlOutbox.Get(_message.Id);
 
             //should read the message from the sql outbox
-            _storedMessage.Body.Value.Should().Be(_message.Body.Value);
+            if (!string.IsNullOrEmpty(_storedMessage.Body.Value))
+                _storedMessage.Body.Value.Should().Be(_message.Body.Value);
+            else
+                Assert.Null(_message.Body);
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
@@ -90,8 +108,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_message.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_message.Header.ContentType);
-             
-            
+
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
@@ -103,7 +121,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage.Header.Bag[_key4].Should().Be(_value4);
             _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
             _storedMessage.Header.Bag[_key5].Should().Be(_value5);
-       }
+        }
 
         public void Dispose()
         {
