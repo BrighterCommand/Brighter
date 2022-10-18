@@ -3,12 +3,12 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
-public class MySimpleTransformAsync : IAmAMessageTransformAsync
+public class MySimpleTransformAsync : TransformAsync
 {
     public static readonly string HEADER_KEY = "MySimpleTransformTest";
     public static readonly string TRANSFORM_VALUE = "I am a transformed value";
 
-    public Task<Message> Wrap(Message message)
+    public override Task<Message> Wrap(Message message)
     {
         var tcs = new TaskCompletionSource<Message>();
         message.Header.Bag.Add(HEADER_KEY, TRANSFORM_VALUE);
@@ -16,7 +16,7 @@ public class MySimpleTransformAsync : IAmAMessageTransformAsync
         return tcs.Task;
     }
 
-    public Task<Message> Unwrap(Message message)
+    public override Task<Message> Unwrap(Message message)
     {
         var tcs = new TaskCompletionSource<Message>();
         var oldCommand = JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);
@@ -25,6 +25,4 @@ public class MySimpleTransformAsync : IAmAMessageTransformAsync
         tcs.SetResult(message);
         return tcs.Task;
     }
-
-    public void Dispose() { }
 }

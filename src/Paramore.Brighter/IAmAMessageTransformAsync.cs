@@ -37,6 +37,22 @@ namespace Paramore.Brighter
     public interface IAmAMessageTransformAsync : IDisposable
     {
         /// <summary>
+        /// Initializes from the <see cref="TransformAttribute"/> wrap attribute parameters. Use when you need to provide parameter information from the
+        /// attribute to the transform. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
+        /// the attribute itself can only use primitives.
+        /// </summary>
+        /// <param name="initializerList">The initializer list.</param>
+        void InitializeWrapFromAttributeParams(params object[] initializerList);
+        
+        /// <summary>
+        /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters. Use when you need to provide parameter information from the
+        /// attribute to the transform. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
+        /// the attribute itself can only use primitives.
+        /// </summary>
+        /// <param name="initializerList">The initializer list.</param>
+        void InitializeUnwrapFromAttributeParams(params object[] initializerList);
+        
+        /// <summary>
         /// A Wrap modifies an outgoing message by altering its header or body
         /// A Wrap always runs after you map the <see cref="IRequest"/> to a <see cref="Message"/>
         /// </summary>

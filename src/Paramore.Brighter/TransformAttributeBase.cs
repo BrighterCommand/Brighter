@@ -15,5 +15,16 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>Type.</returns>
         public abstract Type GetHandlerType();
+        
+        //We use this to pass params from the attribute into the instance of the handler
+        //if you need to pass additional params to your handler, use this
+        /// <summary>
+        /// Initializers the parameters.
+        /// </summary>
+        /// <returns>System.Object[].</returns>
+        public virtual object[] InitializerParams()
+        {
+            return new object[0];
+        }
     }
 }
