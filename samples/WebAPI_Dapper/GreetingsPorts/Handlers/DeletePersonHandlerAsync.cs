@@ -22,7 +22,7 @@ namespace GreetingsPorts.Handlers
             _uow = uow;
         }
         
-        [RequestLogging(0, HandlerTiming.Before)]
+        [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
         {
