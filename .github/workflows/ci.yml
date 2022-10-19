@@ -52,7 +52,7 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release
       - name: Core Tests
-        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter "Fragile!=CI" -c Release --no-restore --no-build --verbosity d
+        run: dotnet test tests/Paramore.Brighter.Core.Tests/Paramore.Brighter.Core.Tests.csproj --filter Fragile\!=CI -c Release --no-restore --no-build --verbosity d
       - name: Upload packages as artifacts
         uses: actions/upload-artifact@v3
         with:
