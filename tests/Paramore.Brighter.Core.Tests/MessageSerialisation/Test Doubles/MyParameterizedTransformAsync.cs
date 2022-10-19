@@ -32,7 +32,7 @@ public class MyParameterizedTransformAsync : IAmAMessageTransformAsync
     {
         var tcs = new TaskCompletionSource<Message>();
         var oldCommand = JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);
-        oldCommand.Value = message.Header.Bag[HEADER_KEY].ToString();
+        oldCommand.Value = string.Format(_displayFormat, oldCommand.Value);
         message.Body = new MessageBody(JsonSerializer.Serialize(oldCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)));
         tcs.SetResult(message);
         return tcs.Task;

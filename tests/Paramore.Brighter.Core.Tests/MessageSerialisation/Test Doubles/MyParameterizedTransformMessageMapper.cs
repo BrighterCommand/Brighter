@@ -15,11 +15,9 @@ public class MyParameterizedTransformMessageMapper: IAmAMessageMapper<MyTransfor
         );
     }                                                       
 
-    [MyParameterizedUnwrapWith(0, template: "I am a parameterized header template: {0}")]
+    [MyParameterizedUnwrapWith(0, template: "I am a parameterized template: {0}")]
     public MyTransformableCommand MapToRequest(Message message)
     {
-        var command = JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);
-        command.Value = string.Format(message.Header.Bag[MyParameterizedTransformAsync.HEADER_KEY].ToString(), command.Value);
-        return command;
+        return JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);
     }
 }
