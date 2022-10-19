@@ -157,7 +157,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             }
         }
 
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
         {
             throw new NotImplementedException();
         }
@@ -172,7 +172,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false)
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
         {
             throw new NotImplementedException();
         }

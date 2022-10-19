@@ -210,7 +210,9 @@ namespace Paramore.Brighter
             CheckOutstandingMessages();
         }
 
-        internal async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+        internal async Task ClearOutboxAsync(
+            IEnumerable<Guid> posts, 
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken))
         {
 
@@ -244,7 +246,8 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
         /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
-        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk)
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+         internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Dictionary<string, object> args = null)
         {
             var span = Activity.Current;
             span?.AddTag("amountToClear", amountToClear);
@@ -257,7 +260,7 @@ namespace Paramore.Brighter
                 if (!HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk), CancellationToken.None);
+                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, args), CancellationToken.None);
             }
 
             else
@@ -265,11 +268,11 @@ namespace Paramore.Brighter
                 if (!HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge));
+                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, args));
             }
         }
 
-        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge)
+        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge, Dictionary<string, object> args)
         {
             var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
@@ -278,7 +281,7 @@ namespace Paramore.Brighter
                 try
                 {
                     
-                    var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
+                    var messages = OutBox.OutstandingMessages(minimumAge, amountToClear, args:args);
                     span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
                         tags: new ActivityTagsCollection() {{"Outstanding Messages", messages.Count()}}));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
@@ -309,7 +312,7 @@ namespace Paramore.Brighter
             }
         }
         
-        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk)
+        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk, Dictionary<string, object> args)
         {
             var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
@@ -319,7 +322,7 @@ namespace Paramore.Brighter
                 {
                     
                     var messages =
-                        await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
+                        await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear, args: args);
                     span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
