@@ -21,6 +21,7 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
+using Paramore.Darker.QueryLogging;
 
 namespace GreetingsWeb
 {
@@ -199,6 +200,7 @@ namespace GreetingsWeb
                     options.QueryProcessorLifetime = ServiceLifetime.Scoped;
                 })
                 .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
+                .AddJsonQueryLogging()
                 .AddPolicies(new GreetingsPolicy());
         }
 

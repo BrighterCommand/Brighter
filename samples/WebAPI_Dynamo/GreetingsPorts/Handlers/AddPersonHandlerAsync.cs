@@ -19,7 +19,7 @@ namespace GreetingsPorts.Handlers
             _dynamoDbUnitOfWork = (DynamoDbUnitOfWork )dynamoDbUnitOfWork;
         }
 
-        [RequestLogging(0, HandlerTiming.Before)]
+        [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
         {
