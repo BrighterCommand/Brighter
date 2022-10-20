@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
@@ -10,7 +11,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public NoDispatchTimeExpression()
         {
             _expression = new Expression();
-            _expression.ExpressionStatement = "Delivery = NULL";
+            _expression.ExpressionStatement = "DeliveryTime = :null";
+            var values = new Dictionary<string, DynamoDBEntry>();
+            values.Add(":null", "0");
+            _expression.ExpressionAttributeValues = values;
         }
 
 

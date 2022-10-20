@@ -1,16 +1,13 @@
-version: '3'
+version: '3.1'
 
 services:
- dynamo:
-    image: dwmkerr/dynamodb
-    command: "-inMemory"
-    hostname: dynamo
-    volumes:
-      - dynamodb:/data
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
     ports:
       - "8000:8000"
-  
-volumes:
-  dynamodb:
-    driver: local
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
   

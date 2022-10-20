@@ -244,7 +244,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id.ToString()).Result;
-            message.DeliveryTime = $"{dispatchedAt:yyyy-MM-dd}";
+            message.DeliveryTime = dispatchedAt.Value.Ticks;
+            message.DeliveredAt = $"{dispatchedAt:yyyy-MM-dd}";
 
             _context.SaveAsync(
                 message, 
@@ -320,7 +321,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 IndexName = _configuration.OutstandingIndexName,
                 KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
-                FilterExpression = new NoDispatchTimeExpression().Generate(),
+                //FilterExpression = new NoDispatchTimeExpression().Generate(),
                 ConsistentRead = false
             };
            

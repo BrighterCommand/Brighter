@@ -44,7 +44,8 @@ namespace Paramore.Brighter.Extensions.Hosting
                     millisecondsSinceSent: _options.MinimumMessageAge,
                     commandProcessor: commandProcessor,
                     _options.BatchSize,
-                    _options.UseBulk);
+                    _options.UseBulk,
+                    _options.Args);
 
                 if (_options.UseBulk)
                     outBoxSweeper.SweepAsyncOutbox();

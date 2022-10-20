@@ -24,7 +24,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         /// <summary>
         /// An optional 'bag' of arguments that the sweeper needs for a specific flavor of outbox
         /// </summary>
-        public Dictionary<string, object> Args;
+        public readonly Dictionary<string, object> Args = new Dictionary<string, object>();
 
         /// <summary>
         /// Use bulk operations to dispatch messages.

@@ -17,6 +17,7 @@ using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Darker.AspNetCore;
@@ -189,6 +190,7 @@ namespace GreetingsWeb
              )
              .UseDynamoDbOutbox(ServiceLifetime.Singleton)
              .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped)
+             .UseOutboxSweeper(options => { options.Args.Add("Topic", "GreetingMade"); })
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
