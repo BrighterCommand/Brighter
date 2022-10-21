@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
+[Trait("Category", "DynamoDB")]
 public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest 
 {
    private readonly Message _message;
