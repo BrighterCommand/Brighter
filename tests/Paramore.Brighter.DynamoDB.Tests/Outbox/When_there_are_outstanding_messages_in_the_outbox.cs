@@ -26,10 +26,12 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     {
         await _dynamoDbOutbox.AddAsync(_message);
 
+        await Task.Delay(1000);
+
         var args = new Dictionary<string, object>(); 
         args.Add("Topic", "test_topic");
 
-        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(10000, 100, 1, args);
+        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, 100, 1, args);
 
         ///Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
@@ -44,10 +46,12 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     {
         _dynamoDbOutbox.Add(_message);
 
+        Task.Delay(1000).Wait();
+
         var args = new Dictionary<string, object>(); 
         args.Add("Topic", "test_topic");
 
-        var messages =_dynamoDbOutbox.OutstandingMessages(10000, 100, 1, args);
+        var messages =_dynamoDbOutbox.OutstandingMessages(0, 100, 1, args);
 
         ///Other tests may leave messages, so make sure that we grab ours
         var message = messages.Single(m => m.Id == _message.Id);
