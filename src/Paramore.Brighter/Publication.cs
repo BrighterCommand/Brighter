@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+
 namespace Paramore.Brighter
 {
     /// <summary>
@@ -52,9 +54,17 @@ namespace Paramore.Brighter
         /// </summary>
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
         
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+        public Dictionary<string, object> OutBoxBag { get; set; }
+        
          /// <summary>
         /// The topic this publication is for
         /// </summary>
         public RoutingKey Topic { get; set; }
+         
+         
     }
 }

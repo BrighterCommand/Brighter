@@ -85,6 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
              _publication = publication;
              MaxOutStandingMessages = _publication.MaxOutStandingMessages;
              MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
+             OutBoxBag = publication.OutBoxBag;
          }
 
         public void Dispose()

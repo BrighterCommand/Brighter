@@ -107,6 +107,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TopicFindTimeoutMs = publication.TopicFindTimeoutMs;
             MaxOutStandingMessages = publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingCheckIntervalMilliSeconds;
+            OutBoxBag = publication.OutBoxBag;
         }
         
         /// <summary>

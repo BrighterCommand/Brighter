@@ -98,6 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
+            OutBoxBag = _publication.OutBoxBag;
         }
 
         /// <summary>
