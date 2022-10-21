@@ -339,7 +339,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
         
-       private async Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+       private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
        {
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
            var attributes = _context.ToDocument(messageToStore).ToAttributeMap();
@@ -347,7 +347,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
            var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
            transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
            tcs.SetResult(transaction);
-           return tcs.Task.Result;
+           return tcs.Task;
        }
        
        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))

@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             _expression = new Expression();
             _expression.ExpressionStatement = "DeliveryTime = :null";
             var values = new Dictionary<string, DynamoDBEntry>();
-            values.Add(":null", "0");
+            values.Add(":null", 0L);
             _expression.ExpressionAttributeValues = values;
         }
 
