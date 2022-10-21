@@ -532,11 +532,14 @@ namespace Paramore.Brighter
                 s_logger.LogDebug("Begin count of outstanding messages");
                 try
                 {
+                    var producer = ProducerRegistry.GetDefaultProducer();
                     if (OutBox != null)
                     {
                         _outStandingCount = OutBox
-                            .OutstandingMessages(ProducerRegistry.GetDefaultProducer()
-                                .MaxOutStandingCheckIntervalMilliSeconds)
+                            .OutstandingMessages(
+                                producer.MaxOutStandingCheckIntervalMilliSeconds,
+                                args:producer.OutBoxBag 
+                                )
                             .Count();
                         return;
                     }
@@ -544,7 +547,10 @@ namespace Paramore.Brighter
                     // {
                     //     //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
                     //     _outStandingCount = AsyncOutbox
-                    //         .OutstandingMessages(ProducerRegistry.GetDefaultProducer().MaxOutStandingCheckIntervalMilliSeconds)
+                    //          .OutstandingMessages(
+                    //           producer.MaxOutStandingCheckIntervalMilliSeconds,
+                    //          args:producer.OutBoxBag 
+                    //          )
                     //         .Count();
                     //     return;
                     // }

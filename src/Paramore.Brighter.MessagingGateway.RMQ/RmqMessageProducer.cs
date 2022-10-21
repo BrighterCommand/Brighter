@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -42,9 +43,29 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     public class RmqMessageProducer : RmqMessageGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
+
+        /// <summary>
+        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
+        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
+        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
+        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
+        /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
+
+        /// <summary>
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
+        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
+        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// </summary>
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-     
+
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+
+        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageProducer>();
 
         static readonly object _lock = new object();
@@ -58,9 +79,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         /// <param name="connection">The subscription information needed to talk to RMQ</param>
         ///     Make Channels = Create
-        public RmqMessageProducer(RmqMessagingGatewayConnection connection) 
-            : this(connection, new RmqPublication{MakeChannels = OnMissingChannel.Create})
-        { }
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection)
+            : this(connection, new RmqPublication { MakeChannels = OnMissingChannel.Create })
+        {
+        }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RmqMessageGateway" /> class.
@@ -69,10 +91,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="publication">How should we configure this producer. If not provided use default behaviours:
         ///     Make Channels = Create
         /// </param>
-         public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication publication) 
+        public RmqMessageProducer(RmqMessagingGatewayConnection connection, RmqPublication publication)
             : base(connection)
         {
-            _publication = publication ?? new RmqPublication{MakeChannels = OnMissingChannel.Create};
+            _publication = publication ?? new RmqPublication { MakeChannels = OnMissingChannel.Create };
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
             _waitForConfirmsTimeOutInMilliseconds = _publication.WaitForConfirmsTimeOutInMilliseconds;
@@ -101,7 +123,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 {
                     s_logger.LogDebug("RmqMessageProducer: Preparing  to send message via exchange {ExchangeName}", Connection.Exchange.Name);
                     EnsureBroker(makeExchange: _publication.MakeChannels);
-                    
+
                     var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
 
                     message.Persist = Connection.PersistMessages;
@@ -109,13 +131,13 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                     Channel.BasicNacks += OnPublishFailed;
                     Channel.ConfirmSelect();
                     _confirmsSelected = true;
-         
+
 
                     s_logger.LogDebug(
                         "RmqMessageProducer: Publishing message to exchange {ExchangeName} on subscription {URL} with a delay of {Delay} and topic {Topic} and persisted {Persist} and id {Id} and body: {Request}",
                         Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(), delayMilliseconds,
                         message.Header.Topic, message.Persist, message.Id, message.Body.Value);
-                    
+
                     _pendingConfirmations.TryAdd(Channel.NextPublishSeqNo, message.Id);
 
                     if (DelaySupported)
@@ -140,7 +162,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 s_logger.LogError(io,
                     "RmqMessageProducer: Error talking to the socket on {URL}, resetting subscription",
                     Connection.AmpqUri.GetSanitizedUri()
-                    );
+                );
                 ResetConnectionToBroker();
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", io);
             }
@@ -159,8 +181,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             tcs.SetResult(new object());
             return tcs.Task;
         }
-        
-       
+
+
         public sealed override void Dispose()
         {
             Dispose(true);
@@ -183,15 +205,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             base.Dispose(disposing);
         }
-        
+
         private void OnPublishFailed(object sender, BasicNackEventArgs e)
         {
-             if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
-             {
-                 OnMessagePublished?.Invoke(false, messageId);
-                 _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
-                 s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
-             }
+            if (_pendingConfirmations.TryGetValue(e.DeliveryTag, out Guid messageId))
+            {
+                OnMessagePublished?.Invoke(false, messageId);
+                _pendingConfirmations.TryRemove(e.DeliveryTag, out Guid msgId);
+                s_logger.LogDebug("Failed to publish message: {MessageId}", messageId);
+            }
         }
 
         private void OnPublishSucceeded(object sender, BasicAckEventArgs e)

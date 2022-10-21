@@ -99,7 +99,9 @@ namespace Tests
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
- 
+
+        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
         public void Dispose()
         {
             throw new NotImplementedException();

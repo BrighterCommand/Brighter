@@ -11,6 +11,9 @@ public class FakeMessageProducer : IAmAMessageProducerSync
 
     public int MaxOutStandingMessages { get; set; }
     public int MaxOutStandingCheckIntervalMilliSeconds { get; set; }
+
+    public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
     public void Send(Message message)
     {
         Console.WriteLine($"Message: {message.Body}");
