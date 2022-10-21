@@ -22,21 +22,38 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public async Task When_there_are_outstanding_messages_in_the_outbox()
+    public async Task When_there_are_outstanding_messages_in_the_outbox_async()
     {
         await _dynamoDbOutbox.AddAsync(_message);
 
         var args = new Dictionary<string, object>(); 
         args.Add("Topic", "test_topic");
 
-        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(5000, 100, 1, args);
+        var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(10000, 100, 1, args);
 
-        messages.Count().Should().Be(1);
-        var message = messages.Single();
+        ///Other tests may leave messages, so make sure that we grab ours
+        var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
-        message.Id.Should().Be(_message.Id);
-        messages.Single().Body.Should().Be(_message.Body);
+        message.Body.Should().Be(_message.Body);
 
+                     
+    }
+    
+    [Fact]
+    public void When_there_are_outstanding_messages_in_the_outbox()
+    {
+        _dynamoDbOutbox.Add(_message);
 
+        var args = new Dictionary<string, object>(); 
+        args.Add("Topic", "test_topic");
+
+        var messages =_dynamoDbOutbox.OutstandingMessages(10000, 100, 1, args);
+
+        ///Other tests may leave messages, so make sure that we grab ours
+        var message = messages.Single(m => m.Id == _message.Id);
+        message.Should().NotBeNull();
+        message.Body.Should().Be(_message.Body);
+
+                     
     }
 }

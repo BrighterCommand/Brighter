@@ -272,7 +272,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
             
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var createdTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             // We get all the messages for topic, added within a time range
@@ -281,7 +281,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var queryConfig = new QueryOperationConfig
             {
                 IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, createdTime),
                 FilterExpression = new NoDispatchTimeExpression().Generate(),
                 ConsistentRead = false
             };
@@ -306,12 +306,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
+            var now = DateTime.UtcNow;
+            
             if (args == null)
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            var createdTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             // We get all the messages for topic, added within a time range
@@ -320,13 +322,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var queryConfig = new QueryOperationConfig
             {
                 IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
-                //FilterExpression = new NoDispatchTimeExpression().Generate(),
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, createdTime),
+                FilterExpression = new NoDispatchTimeExpression().Generate(),
                 ConsistentRead = false
             };
            
             //block async to make this sync
-            var messages = (await PageAllMessagesAsync(queryConfig)).ToList();
+            var messages = (await PageAllMessagesAsync(queryConfig, cancellationToken)).ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
         
