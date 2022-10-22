@@ -31,6 +31,8 @@ namespace Paramore.Brighter
 
         private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
+        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
+        private static readonly SemaphoreSlim _checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
         
         private const string ADDMESSAGETOOUTBOX = "Add message to outbox";
         private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the outbox";
@@ -39,9 +41,6 @@ namespace Paramore.Brighter
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
-        private readonly object _checkOutStandingMessagesObject = new object();
-
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
         private bool _disposed;
@@ -181,7 +180,6 @@ namespace Paramore.Brighter
             s_logger.LogDebug("Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait", DateTime.UtcNow, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
             Task.Run(() => OutstandingMessagesCheck());
-            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         }
 
         internal void ClearOutbox(params Guid[] posts)
@@ -526,49 +524,36 @@ namespace Paramore.Brighter
 
         private void OutstandingMessagesCheck()
         {
-            if (Monitor.TryEnter(_checkOutStandingMessagesObject))
+            _checkOutstandingSemaphoreToken.Wait();
+            
+            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
+            s_logger.LogDebug("Begin count of outstanding messages");
+            try
             {
-
-                s_logger.LogDebug("Begin count of outstanding messages");
-                try
+                var producer = ProducerRegistry.GetDefaultProducer();
+                if (OutBox != null)
                 {
-                    var producer = ProducerRegistry.GetDefaultProducer();
-                    if (OutBox != null)
-                    {
-                        _outStandingCount = OutBox
-                            .OutstandingMessages(
-                                producer.MaxOutStandingCheckIntervalMilliSeconds,
-                                args:producer.OutBoxBag 
-                                )
-                            .Count();
-                        return;
-                    }
-                    // else if(AsyncOutbox != null)
-                    // {
-                    //     //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
-                    //     _outStandingCount = AsyncOutbox
-                    //          .OutstandingMessages(
-                    //           producer.MaxOutStandingCheckIntervalMilliSeconds,
-                    //          args:producer.OutBoxBag 
-                    //          )
-                    //         .Count();
-                    //     return;
-                    // }
-                    
-                    _outStandingCount = 0;
+                    _outStandingCount = OutBox
+                        .OutstandingMessages(
+                            producer.MaxOutStandingCheckIntervalMilliSeconds,
+                            args:producer.OutBoxBag 
+                            )
+                        .Count();
+                    return;
                 }
-                catch (Exception ex)
-                {
-                    //if we can't talk to the outbox, we would swallow the exception on this thread
-                    //by setting the _outstandingCount to -1, we force an exception
-                    s_logger.LogError(ex,"Error getting outstanding message count, reset count");
-                    _outStandingCount = 0;
-                }
-                finally
-                {
-                    s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
-                    Monitor.Exit(_checkOutStandingMessagesObject);
-                }
+                _outStandingCount = 0;
+            }
+            catch (Exception ex)
+            {
+                //if we can't talk to the outbox, we would swallow the exception on this thread
+                //by setting the _outstandingCount to -1, we force an exception
+                s_logger.LogError(ex,"Error getting outstanding message count, reset count");
+                _outStandingCount = 0;
+            }
+            finally
+            {
+                s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
+                _checkOutstandingSemaphoreToken.Release();
             }
         }
 
