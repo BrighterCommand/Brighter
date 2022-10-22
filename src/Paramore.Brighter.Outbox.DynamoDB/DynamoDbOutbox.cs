@@ -320,7 +320,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
 
-            var dispatchedTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var minimumAge = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             // We get all the messages for topic, added within a time range
@@ -329,7 +329,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var queryConfig = new QueryOperationConfig
             {
                 IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime),
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge),
                 FilterExpression = new NoDispatchTimeExpression().Generate(),
                 ConsistentRead = false
             };
