@@ -35,7 +35,6 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
-    [Trait("Fragile", "CI")]
     [Collection("CommandProcessor")]
     public class CommandProcessorPostBoxClearAsyncTests : IDisposable
     {
@@ -76,8 +75,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
         
-        //NOTE: Ignored here for now as traits not being picked up by GA build
-        //[Fact]
+        [Fact]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
             await _fakeOutboxSync.AddAsync(_message);
