@@ -34,7 +34,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -86,7 +86,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -115,7 +115,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -145,7 +145,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -200,7 +200,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v3
     - name: Setup dotnet 5, 6
-      uses: actions/setup-dotnet@v2
+      uses: actions/setup-dotnet@v3
       with:
         dotnet-version: |
           5.0.x
@@ -230,7 +230,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -264,7 +264,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -290,7 +290,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -318,7 +318,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -349,7 +349,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -372,7 +372,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
@@ -398,7 +398,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Setup dotnet 5, 6
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
             5.0.x
