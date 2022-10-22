@@ -23,11 +23,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Outstanding")]
         [DynamoDBProperty]
-        public string CreatedTime { get; set; }
+        public long CreatedTime { get; set; }
 
         /// <summary>
         /// The time at which the message was delivered, formatted as a string yyyy-MM-dd
         /// </summary>
+        [DynamoDBProperty]
         public string DeliveredAt { get; set; }
 
         /// <summary>
@@ -35,7 +36,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         [DynamoDBGlobalSecondaryIndexRangeKey(indexName: "Delivered")]
         [DynamoDBProperty]
-        public string DeliveryTime { get; set; }
+        public long DeliveryTime { get; set; }
 
         /// <summary>
         /// A JSON object representing a dictionary of additional properties set on the message
@@ -88,7 +89,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 
-            CreatedTime = $"{date.Ticks}";
+            CreatedTime = date.Ticks;
             MessageId = message.Id.ToString();
             Topic = message.Header.Topic;
             MessageType = message.Header.MessageType.ToString();
@@ -98,6 +99,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CreatedAt = $"{date}";
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             Body = message.Body.Value;
+            DeliveryTime = 0;
         }
 
         public Message ConvertToMessage()
@@ -129,7 +131,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         public void MarkMessageDelivered(DateTime deliveredAt)
         {
-            DeliveryTime = $"{deliveredAt.Ticks}";
+            DeliveryTime = deliveredAt.Ticks;
             DeliveredAt = $"{deliveredAt:yyyy-MM-dd}";
         }
     }
