@@ -1,15 +1,20 @@
+using System;
 using Amazon;
 using Amazon.Runtime;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbConfiguration
-    {
-        //What AWS Credentials to use
+    {   
+        /// <summary>
+        /// What AWS Credentials to use
+        /// </summary>
+        [Obsolete("This property is not being used")]
         public AWSCredentials Credentials { get; }
         /// <summary>
         /// Which AWS region
         /// </summary>
+        [Obsolete("This property is not being used")]
         public RegionEndpoint Region { get; }
         /// <summary>
         /// The table that forms the Outbox
@@ -27,7 +32,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Timeout in milliseconds
         /// </summary>
         public int Timeout { get; }
-
+    
+        [Obsolete("Use the DynamoDbConfiguration without AWSCredentials and without RegionEndpoint")]
         public DynamoDbConfiguration(
             AWSCredentials credentials, 
             RegionEndpoint region,
