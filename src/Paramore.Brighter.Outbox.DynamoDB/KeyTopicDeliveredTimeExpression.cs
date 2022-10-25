@@ -6,13 +6,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     internal class KeyTopicDeliveredTimeExpression
     {
-        private Expression _expression;
+        private readonly Expression _expression;
 
         public KeyTopicDeliveredTimeExpression()
         {
-            _expression = new Expression();
-            _expression.ExpressionStatement = "Topic = :v_Topic and DeliveryTime >= :v_SinceTime";
- 
+            _expression = new Expression { ExpressionStatement = "Topic = :v_Topic and DeliveryTime < :v_SinceTime" };
         }
 
         public override string ToString()

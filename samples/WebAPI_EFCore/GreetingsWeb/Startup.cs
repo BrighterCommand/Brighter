@@ -25,6 +25,8 @@ using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
 using Paramore.Brighter.Sqlite.EntityFrameworkCore;
 using Paramore.Darker.AspNetCore;
+using Paramore.Darker.Policies;
+using Paramore.Darker.QueryLogging;
 using Polly;
 using Polly.Registry;
 
@@ -183,7 +185,10 @@ namespace GreetingsWeb
                     options.HandlerLifetime = ServiceLifetime.Scoped;
                     options.QueryProcessorLifetime = ServiceLifetime.Scoped;
                 })
-                .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly);
+                .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
+                .AddJsonQueryLogging()
+                .AddPolicies(new GreetingsPolicy());
+            
         }
 
         private void ConfigureEFCore(IServiceCollection services)

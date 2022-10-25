@@ -219,7 +219,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var message = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);
-            message.MarkMessageDelivered(dispatchedAt.HasValue ? dispatchedAt.Value : DateTime.UtcNow);
+            MarkMessageDispatched(dispatchedAt, message);
 
             await _context.SaveAsync(
                 message, 
@@ -244,13 +244,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             var message = _context.LoadAsync<MessageItem>(id.ToString()).Result;
-            message.DeliveryTime = $"{dispatchedAt:yyyy-MM-dd}";
+            MarkMessageDispatched(dispatchedAt, message);
 
             _context.SaveAsync(
                 message, 
                 new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName})
                 .Wait(_configuration.Timeout);
 
+        }
+
+        private static void MarkMessageDispatched(DateTime? dispatchedAt, MessageItem message)
+        {
+            message.DeliveryTime = dispatchedAt.Value.Ticks;
+            message.DeliveredAt = $"{dispatchedAt:yyyy-MM-dd}";
         }
 
         /// <summary>
@@ -266,12 +272,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
          int pageNumber = 1, 
          Dictionary<string, object> args = null)
         {
+            var now = DateTime.UtcNow;
+            
             if (args == null)
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            var dispatchedTime = now.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             // We get all the messages for topic, added within a time range
@@ -280,7 +288,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var queryConfig = new QueryOperationConfig
             {
                 IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime),
                 FilterExpression = new NoDispatchTimeExpression().Generate(),
                 ConsistentRead = false
             };
@@ -305,12 +313,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default)
         {
+            var now = DateTime.UtcNow;
+            
             if (args == null)
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
-            
-            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+
+            var minimumAge = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             // We get all the messages for topic, added within a time range
@@ -319,17 +329,17 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var queryConfig = new QueryOperationConfig
             {
                 IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, sinceTime),
+                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge),
                 FilterExpression = new NoDispatchTimeExpression().Generate(),
                 ConsistentRead = false
             };
            
             //block async to make this sync
-            var messages = (await PageAllMessagesAsync(queryConfig)).ToList();
+            var messages = (await PageAllMessagesAsync(queryConfig, cancellationToken)).ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
         
-       private async Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+       private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
        {
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
            var attributes = _context.ToDocument(messageToStore).ToAttributeMap();
@@ -337,7 +347,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
            var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
            transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
            tcs.SetResult(transaction);
-           return tcs.Task.Result;
+           return tcs.Task;
        }
        
        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))

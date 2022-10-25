@@ -7,6 +7,13 @@ This section lists features in master, available by [AppVeyor](https://ci.appvey
 
 ## Master ##
 
+## Release 9.3.0 ##
+- Bug with DynamoDb Outbox and the Outbox Sweeper fixed. The Sweeper required a topic argument supplied by a dictionary of args
+  - Required adding a Dictionary<string, object> to various interfaces, which defaults to null, hence the minor version bump as these interfaces have new capabiities
+- Internal change to move outstanding message box to a semaphore slim over a mutex as thread-safe. Not strictly neededm, but follows our policy of moving to semaphore slim
+- Changes to the DynamoDb Outbox implementation as Outstanding Message check was not behaving as expected
+- The interfaces around Outbox configuration will likely change in v10 to avoid current split and need to configure on both publication and outbox
+
 ## Release 9.1.20 ##
 - Bug with Kafka Consumer failing to commit offsets fixed. Caused by Monitor being used for a lock on one thread and released on another, which does not work. Replaced with SemaphoreSlim.
 - Behavior of Kafka Consumer offset sweep changed. It now runs every x seconds, and not every x seconds since a flush. This will cause it to run more frequently, but it is easier to reason about.

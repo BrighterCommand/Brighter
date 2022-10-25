@@ -17,10 +17,12 @@ using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.Outbox.DynamoDB;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
+using Paramore.Darker.QueryLogging;
 
 namespace GreetingsWeb
 {
@@ -182,12 +184,14 @@ namespace GreetingsWeb
                             MaxOutStandingMessages = 5,
                             MaxOutStandingCheckIntervalMilliSeconds = 500,
                             WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            OutBoxBag = new Dictionary<string, object>(){{"Topic", "GreetingMade"}},
                             MakeChannels = OnMissingChannel.Create
                         }}
                  ).Create()
              )
              .UseDynamoDbOutbox(ServiceLifetime.Singleton)
              .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped)
+             .UseOutboxSweeper(options => { options.Args.Add("Topic", "GreetingMade"); })
              .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
@@ -199,6 +203,7 @@ namespace GreetingsWeb
                     options.QueryProcessorLifetime = ServiceLifetime.Scoped;
                 })
                 .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
+                .AddJsonQueryLogging()
                 .AddPolicies(new GreetingsPolicy());
         }
 

@@ -19,14 +19,9 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 ## Environments
 
-*Development* - runs locally on your machine, uses Sqlite as a data store; uses RabbitMQ for messaging, can be launched individually from the docker compose file; it represents a typical setup for development.
+*All* - runs in Docker;uses RabbitMQ for messaging. We use a local dynamo db instance for this sample. The provided docker-compose file sets up both rabbit and dynamo db
 
-*Production* - runs in Docker;uses RabbitMQ for messaging; it emulates a possible production environment. We offer support for a range of common SQL stores in this example. We determine which SQL store to use via an environment 
-variable. The process is: (1) determine we are running in a non-development environment (2) lookup the type of database we want to support (3) initialise an enum to identify that.
-
-We provide launchSetting.json files for all of these, which allows you to run Production with the appropriate db; you should launch your SQL data store and RabbitMQ from the docker compose file. 
-
-In case you are using Command Line Interface for running the project, consider adding --launch-profile:
+We provide launchSetting.json file which allows you to run the code easily from within an IDE. In case you are using Command Line Interface for running the project, consider adding --launch-profile:
 
 ```sh
 dotnet run --launch-profile XXXXXX -d
@@ -50,7 +45,7 @@ The assemblies migrations: **Greetings_MySqlMigrations** and **Greetings_SqliteM
 
 ### SalutationAnalytics
 
-This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator, which work with EFCore. These support writing to an Outbox when this component raises a message in turn.
+This listens for a GreetingMade message and stores it. It demonstrates listening to a queue. It also demonstrates the use of scopes provided by Brighter's ServiceActivator. These support writing to an Outbox when this component raises a message in turn.
 
 We don't listen to that message, and without any listeners the RabbitMQ will drop the message we send, as it has no queues to give it to. We don't listen because we would just be repeating what we have shown here. If you want to see the messages produced, use the RMQ Management Console (localhost:15672) to create a queue and then bind it to the paramore.binding.exchange with the routingkey of SalutationReceived.
 
@@ -84,11 +79,6 @@ docker compose up -d mysql   # will just start mysql
 and so on.
 
 ### Possible issues
-#### Sqlite Database Read-Only Errors
-
-A Sqlite database will only have permissions for the process that created it. This can result in you receiving read-only errors between invocations of the sample. You either need to alter the permissions on your Db, or delete it between runs.
-
-Maintainers, please don't check the Sqlite files into source control.
 
 #### Queue Creation and Dropped Messages
 
@@ -122,3 +112,7 @@ In case you still struggle, consider following these steps: [RabbitMQ Troublesho
 ## Tests
 
 We provide a tests.http file (supported by both JetBrains Rider and VS Code with the REST Client plugin) to allow you to test operations.
+
+## DynamoDb UI
+
+We recommend the use of dynamodb-admin to view the contents of your local DynamoDb instance: https://medium.com/swlh/a-gui-for-local-dynamodb-dynamodb-admin-b16998323f8e

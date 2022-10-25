@@ -720,9 +720,10 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
-        public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000)
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+        public void ClearOutbox( int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, false, false); 
+            _bus.ClearOutbox(amountToClear, minimumAge, false, false, args); 
         }
 
         /// <summary>
@@ -746,12 +747,15 @@ namespace Paramore.Brighter
         /// <param name="amountToClear">The maximum number to clear.</param>
         /// <param name="minimumAge">The minimum age to clear in milliseconds.</param>
         /// <param name="useBulk">Use the bulk send on the producer.</param>
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
         public void ClearAsyncOutbox(
             int amountToClear = 100,
             int minimumAge = 5000,
-            bool useBulk = false)
+            bool useBulk = false,
+            Dictionary<string, object> args = null
+            )
         {
-            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk); 
+            _bus.ClearOutbox(amountToClear, minimumAge, true, useBulk, args); 
         }
 
         /// <summary>
