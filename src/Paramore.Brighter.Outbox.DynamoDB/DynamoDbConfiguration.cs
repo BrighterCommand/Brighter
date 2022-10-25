@@ -41,5 +41,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             DeliveredIndexName = "Delivered";
             Timeout = timeout;
         }
+
+        public DynamoDbConfiguration(string tableName = null, int timeout = 500)
+        {
+            TableName = tableName ?? "brighter_outbox";
+            OutstandingIndexName = "Outstanding";
+            DeliveredIndexName = "Delivered";
+            Timeout = timeout;
+        }
     }
 }
