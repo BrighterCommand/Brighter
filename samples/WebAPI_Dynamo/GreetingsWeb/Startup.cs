@@ -106,7 +106,7 @@ namespace GreetingsWeb
             var dynamoDb = new AmazonDynamoDBClient(credentials, clientConfig);
             services.Add(new ServiceDescriptor(typeof(IAmazonDynamoDB), dynamoDb));
 
-            var dynamoDbConfiguration = new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1);
+            var dynamoDbConfiguration = new DynamoDbConfiguration();
             services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
             
             return dynamoDb;
