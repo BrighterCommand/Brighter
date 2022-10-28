@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,14 +22,31 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Paramore.Brighter.Transforms.Transformers;
 
-using System.Diagnostics;
-using System.Reflection;
-
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Transforms.Attributes
 {
-    internal static class ApplicationTelemetry
+    /// <summary>
+    /// Configures middleware to retrieve a payload from a message store and writes it to the body of the message
+    /// </summary>
+    public class RetrieveLuggage : UnwrapWithAttribute
     {
-        internal static ActivitySource ActivitySource { get; }= new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(ApplicationTelemetry)).GetName().Version.ToString());
+        /// <summary>
+        /// Retrieves a luggage payload from storage
+        /// </summary>
+        /// <param name="step">The order in which transformations are applied</param>
+        public RetrieveLuggage(int step) : base(step)
+        {
+        }
+                                      
+        /// <summary>
+        /// Gets the retrieve luggage transformer type
+        /// </summary>
+        /// <returns>The type of the Claims Check Transformer</returns>
+        public override Type GetHandlerType()
+        {
+            return typeof(ClaimCheckTransformer);
+        }
     }
 }

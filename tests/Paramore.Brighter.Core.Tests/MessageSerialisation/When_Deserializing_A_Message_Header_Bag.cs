@@ -4,7 +4,7 @@ using System.Text.Json;
 using FluentAssertions;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.Serialization
+namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 {
     public class BagHelper 
     {

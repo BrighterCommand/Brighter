@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,14 +22,32 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using Paramore.Brighter.Transforms.Transformers;
 
-using System.Diagnostics;
-using System.Reflection;
-
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Transforms.Attributes
 {
-    internal static class ApplicationTelemetry
+    /// <summary>
+    /// Configures large payloads that may not be possible on certain middleware platforms, or perform badly on others. A claim check allows us to
+    /// offload the message body to distributed storage, from where it can be retrieved later.
+    /// </summary>
+    public class CheckLuggage : WrapWithAttribute
     {
-        internal static ActivitySource ActivitySource { get; }= new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(ApplicationTelemetry)).GetName().Version.ToString());
+        /// <summary>
+        /// Checks large payloads into storage
+        /// </summary>
+        /// <param name="step"></param>
+        public CheckLuggage(int step) : base(step)
+        {
+        }
+
+        /// <summary>
+        /// Get the Claims Check Transformer type 
+        /// </summary>
+        /// <returns>The type of the Claims Check Transformer</returns>
+        public override Type GetHandlerType()
+        {
+            return typeof(ClaimCheckTransformer);
+        }
     }
 }

@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,14 +22,18 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+using System.IO;
+using System.Threading.Tasks;
 
-using System.Diagnostics;
-using System.Reflection;
-
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Transforms.Storage
 {
-    internal static class ApplicationTelemetry
+    /// <summary>
+    /// Provides storage for a message body that is too large to transmit over message-oriented middleware
+    /// </summary>
+    public interface IAmAStorageProviderAsync
     {
-        internal static ActivitySource ActivitySource { get; }= new ActivitySource("Paramore.Brighter", Assembly.GetAssembly(typeof(ApplicationTelemetry)).GetName().Version.ToString());
+        Task<Guid> UploadAsync(Stream stream);
+        Task<Stream> DownloadAsync(Guid claimCheck);
     }
 }
