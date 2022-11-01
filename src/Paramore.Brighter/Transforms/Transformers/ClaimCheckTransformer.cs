@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Transforms.Transformers
     {
         public const string CLAIM_CHECK = "Claim Check Header";
         private readonly IAmAStorageProviderAsync _store;
-        private int _thresholdInKilobytes;
+        private int _thresholdInBytes;
 
         /// <summary>
         /// A claim check moves the payload of a message, which when wrapping checks for a payloads that exceeds a certain threshold size, and inserts those
@@ -51,17 +51,30 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
         }
 
+        /// <summary>
+        /// We assume that the initializer list contains
+        /// [0] - an integer representing the size of the threshold to convert to a string in Kb i.e. 5 would be 5Kb
+        /// </summary>
+        /// <param name="initializerList">The initialization for a claim check</param>
         public void InitializeWrapFromAttributeParams(params object[] initializerList)
         {
-            _thresholdInKilobytes = (int)initializerList[0];
+            _thresholdInBytes = (int)initializerList[0] * 1024;
         }
 
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
         {
         }
 
+        /// <summary>
+        /// If a message exceeds the threshold passed through the initializer list, then put it into storage
+        /// If we place it in storage, set a header property to contain the 'claim' that can be used to retrieve the 'luggage'
+        /// </summary>
+        /// <param name="message">The message whose contents we want to </param>
+        /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
         public async Task<Message> Wrap(Message message)
         {
+            if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes) return message;
+            
             var body = message.Body.Value;
             var stream = new MemoryStream();
             var writer = new StreamWriter(stream);
@@ -73,9 +86,15 @@ namespace Paramore.Brighter.Transforms.Transformers
 
             message.Header.Bag[CLAIM_CHECK] = id;
             message.Body = new MessageBody($"Claim Check {id}");
+
             return message;
         }
 
+        /// <summary>
+        /// If a message has a 'claim' in its header, then retrieve the associated 'luggage' from the store and replace the body
+        /// </summary>
+        /// <param name="message">The message, with luggage retrieved if required</param>
+        /// <returns></returns>
         public async Task<Message> Unwrap(Message message)
         {
             if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
@@ -84,6 +103,8 @@ namespace Paramore.Brighter.Transforms.Transformers
                 var luggage = await new StreamReader(await _store.DownloadAsync(id)).ReadToEndAsync();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;
+                await _store.DeleteAsync(id);
+                message.Header.Bag.Remove(CLAIM_CHECK);
             }
 
             return message;

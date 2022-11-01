@@ -1,6 +1,4 @@
 ﻿using System;
-using System.IO;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Transforms.Storage;
@@ -9,44 +7,37 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ClaimCheck;
 
-public class ClaimCheckLargePayloadTests 
+public class ClaimCheckSmallPayloadTests
 {
     private readonly ClaimCheckTransformer _transformer;
     private readonly Message _message;
     private readonly string _body;
     private readonly InMemoryStorageProviderAsync _store;
 
-    public ClaimCheckLargePayloadTests()
+    public ClaimCheckSmallPayloadTests()
     {
         //arrange
         _store = new InMemoryStorageProviderAsync();
         _transformer = new ClaimCheckTransformer(store: _store);
+        
+        //set the threshold to 5K
         _transformer.InitializeWrapFromAttributeParams(5);
 
-        _body = DataGenerator.CreateString(6000);
+        //but create a string that is just under 5K long - assuming string is 26 + length *2 to allow for 64-bit platform
+        _body = DataGenerator.CreateString(2485);
         _message = new Message(
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody(_body));
     }
-    
+
     [Fact]
-    public async Task When_a_message_wraps_a_large_payload()
+    public async Task When_a_message_is_under_the_threshold()
     {
-        //act
         var luggageCheckedMessage = await _transformer.Wrap(_message);
 
         //assert
-        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object storedData);
+        bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _);
 
-        hasLuggage.Should().BeTrue();
-
-        var claimCheck = (Guid)storedData;
-
-        var luggage = await new StreamReader(await _store.DownloadAsync(claimCheck)).ReadToEndAsync(); 
-        
-        luggage.Should().Be(_body);
+        hasLuggage.Should().BeFalse();
     }
-
-
-
 }

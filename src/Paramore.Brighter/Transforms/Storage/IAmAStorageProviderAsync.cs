@@ -35,5 +35,6 @@ namespace Paramore.Brighter.Transforms.Storage
     {
         Task<Guid> UploadAsync(Stream stream);
         Task<Stream> DownloadAsync(Guid claimCheck);
+        Task DeleteAsync(Guid id);
     }
 }

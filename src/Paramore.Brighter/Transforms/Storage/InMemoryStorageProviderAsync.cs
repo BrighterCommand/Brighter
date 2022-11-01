@@ -58,5 +58,13 @@ namespace Paramore.Brighter.Transforms.Storage
 
             throw new ArgumentOutOfRangeException("claimCheck", claimCheck, "Could not find the claim check in the store");
         }
+
+        public Task DeleteAsync(Guid id)
+        {
+            var tcs = new TaskCompletionSource<Guid>();
+            _contents.Remove(id);
+            tcs.SetResult(id);
+            return tcs.Task;
+        }
     }
 }

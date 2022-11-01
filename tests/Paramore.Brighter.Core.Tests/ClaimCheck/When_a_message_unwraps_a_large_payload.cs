@@ -11,13 +11,13 @@ namespace Paramore.Brighter.Core.Tests.ClaimCheck;
 public class RetrieveClaimLargePayloadTests
 {
     private readonly InMemoryStorageProviderAsync _store;
-    private readonly ClaimCheckTransformer _transfomer;
+    private readonly ClaimCheckTransformer _transformer;
     private readonly string _contents;
 
     public RetrieveClaimLargePayloadTests()
     {
         _store = new InMemoryStorageProviderAsync();
-        _transfomer = new ClaimCheckTransformer(store: _store);
+        _transformer = new ClaimCheckTransformer(store: _store);
         _contents = DataGenerator.CreateString(6000);
     }
 
@@ -39,7 +39,7 @@ public class RetrieveClaimLargePayloadTests
         message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
         
         //act
-        var unwrappedMessage = await _transfomer.Unwrap(message);
+        var unwrappedMessage = await _transformer.Unwrap(message);
         
         //assert
         unwrappedMessage.Body.Value.Should().Be(_contents);
