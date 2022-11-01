@@ -30,11 +30,35 @@ namespace Paramore.Brighter.Transforms.Storage
 {
     /// <summary>
     /// Provides storage for a message body that is too large to transmit over message-oriented middleware
+    /// The stored value is the 'luggage' and the id of the item is the 'claim check'
     /// </summary>
     public interface IAmAStorageProviderAsync
     {
-        Task<Guid> UploadAsync(Stream stream);
-        Task<Stream> DownloadAsync(Guid claimCheck);
+        /// <summary>
+        /// Delete the luggage identified by the claim check
+        /// Used to clean up after luggage is retrieved
+        /// </summary>
+        /// <param name="id">The claim check for the luggage</param>
         Task DeleteAsync(Guid id);
+        
+        /// <summary>
+        /// Downloads the luggage associated with the claim check
+        /// </summary>
+        /// <param name="claimCheck">The claim check for the luggage</param>
+        /// <returns>The luggage as a stream</returns>
+        Task<Stream> DownloadAsync(Guid claimCheck);
+        
+        /// <summary>
+        /// Do we have luggage for this claim check - in case of error or deletion
+        /// </summary>
+        /// <param name="id"></param>
+        Task<bool> HasClaim(Guid id);
+        
+        /// <summary>
+        /// Puts luggage into the store and provides a claim check for that luggage
+        /// </summary>
+        /// <param name="stream">A stream representing the luggage to check</param>
+        /// <returns>A claim check for the luggage stored</returns>
+        Task<Guid> UploadAsync(Stream stream);
     }
 }

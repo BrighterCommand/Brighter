@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -29,11 +30,12 @@ using Paramore.Brighter.Transforms.Storage;
 
 namespace Paramore.Brighter.Transforms.Transformers
 {
-    public class ClaimCheckTransformer: IAmAMessageTransformAsync
+    public class ClaimCheckTransformer : IAmAMessageTransformAsync
     {
         public const string CLAIM_CHECK = "Claim Check Header";
         private readonly IAmAStorageProviderAsync _store;
         private int _thresholdInBytes;
+        private bool _retainLuggage;
 
         /// <summary>
         /// A claim check moves the payload of a message, which when wrapping checks for a payloads that exceeds a certain threshold size, and inserts those
@@ -46,7 +48,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
             _store = store;
         }
-        
+
         public void Dispose()
         {
         }
@@ -58,11 +60,21 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <param name="initializerList">The initialization for a claim check</param>
         public void InitializeWrapFromAttributeParams(params object[] initializerList)
         {
+            if (initializerList.Length != 1) throw new ArgumentException("Missing parameter for threshold size", "initializerList");
+
             _thresholdInBytes = (int)initializerList[0] * 1024;
         }
 
+        /// <summary>
+        /// We assume the initializer list contains
+        /// [0] -a bool, true if we should keep the message contents in storage, false if we should delete it
+        /// </summary>
+        /// <param name="initializerList"></param>
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
         {
+            if (initializerList.Length != 1) throw new ArgumentException("Missing parameter for luggage retention", "initializerList");
+
+            _retainLuggage = (bool)initializerList[0];
         }
 
         /// <summary>
@@ -74,7 +86,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         public async Task<Message> Wrap(Message message)
         {
             if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes) return message;
-            
+
             var body = message.Body.Value;
             var stream = new MemoryStream();
             var writer = new StreamWriter(stream);
@@ -103,8 +115,11 @@ namespace Paramore.Brighter.Transforms.Transformers
                 var luggage = await new StreamReader(await _store.DownloadAsync(id)).ReadToEndAsync();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;
-                await _store.DeleteAsync(id);
-                message.Header.Bag.Remove(CLAIM_CHECK);
+                if (!_retainLuggage)
+                {
+                    await _store.DeleteAsync(id);
+                    message.Header.Bag.Remove(CLAIM_CHECK);
+                }
             }
 
             return message;

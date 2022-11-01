@@ -66,5 +66,13 @@ namespace Paramore.Brighter.Transforms.Storage
             tcs.SetResult(id);
             return tcs.Task;
         }
+
+        public Task<bool> HasClaim(Guid id)
+        {
+            var tcs = new TaskCompletionSource<bool>(); 
+            var hasId = _contents.ContainsKey(id);
+            tcs.SetResult(hasId);
+            return tcs.Task;
+        }
     }
 }

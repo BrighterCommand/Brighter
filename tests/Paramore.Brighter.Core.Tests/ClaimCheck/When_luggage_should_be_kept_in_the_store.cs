@@ -8,23 +8,23 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ClaimCheck;
 
-public class RetrieveClaimLargePayloadTests
+public class RetrieveClaimLeaveLuggage
 {
     private readonly InMemoryStorageProviderAsync _store;
     private readonly ClaimCheckTransformer _transformer;
     private readonly string _contents;
 
-    public RetrieveClaimLargePayloadTests()
+    public RetrieveClaimLeaveLuggage()
     {
         _store = new InMemoryStorageProviderAsync();
         _transformer = new ClaimCheckTransformer(store: _store);
-        //delete the luggage from the store after claiming it
-        _transformer.InitializeUnwrapFromAttributeParams(false);
+        _transformer.InitializeUnwrapFromAttributeParams(true);
+        
         _contents = DataGenerator.CreateString(6000);
     }
 
     [Fact]
-    public async Task When_a_message_unwraps_a_large_payload()
+    public async Task When_luggage_should_be_kept_in_the_store()
     {
         //arrange
         var stream = new MemoryStream();
@@ -32,21 +32,20 @@ public class RetrieveClaimLargePayloadTests
         await writer.WriteAsync(_contents);
         await writer.FlushAsync();
         stream.Position = 0;
-        
+
         var id = await _store.UploadAsync(stream);
-        
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
         message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
-        
+
         //act
         var unwrappedMessage = await _transformer.Unwrap(message);
         
         //assert
-        unwrappedMessage.Body.Value.Should().Be(_contents);
-        //clean up
-        message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeFalse();
-        (await _store.HasClaim(id)).Should().BeFalse();
+        message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeTrue();
+        (await _store.HasClaim(id)).Should().BeTrue();
+        
     }
 }
