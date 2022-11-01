@@ -78,7 +78,15 @@ namespace Paramore.Brighter.Transforms.Transformers
 
         public async Task<Message> Unwrap(Message message)
         {
-            throw new NotImplementedException();
+            if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
+            {
+                var id = (Guid)objId;
+                var luggage = await new StreamReader(await _store.DownloadAsync(id)).ReadToEndAsync();
+                var newBody = new MessageBody(luggage);
+                message.Body = newBody;
+            }
+
+            return message;
         }
     }
 }
