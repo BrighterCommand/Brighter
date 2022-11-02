@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,16 +35,26 @@ namespace Paramore.Brighter.Transforms.Storage
     /// </summary>
     public class InMemoryStorageProviderAsync : IAmAStorageProviderAsync
     {
-        private readonly Dictionary<Guid, string> _contents = new Dictionary<Guid, string>();       
-        
-        public async Task<Guid> UploadAsync(Stream stream)
+        private readonly Dictionary<Guid, string> _contents = new Dictionary<Guid, string>();
+
+        /// <summary>
+        /// Delete the luggage identified by the claim check
+        /// Used to clean up after luggage is retrieved
+        /// </summary>
+        /// <param name="id">The claim check for the luggage</param>
+        public Task DeleteAsync(Guid id)
         {
-            var id = Guid.NewGuid();
-            var reader = new StreamReader(stream);
-            _contents.Add(id, await reader.ReadToEndAsync());
-            return id;
+            var tcs = new TaskCompletionSource<Guid>();
+            _contents.Remove(id);
+            tcs.SetResult(id);
+            return tcs.Task;
         }
 
+        /// <summary>
+        /// Downloads the luggage associated with the claim check
+        /// </summary>
+        /// <param name="claimCheck">The claim check for the luggage</param>
+        /// <returns>The luggage as a stream</returns>
         public async Task<Stream> DownloadAsync(Guid claimCheck)
         {
             if (_contents.TryGetValue(claimCheck, out string value))
@@ -59,20 +70,29 @@ namespace Paramore.Brighter.Transforms.Storage
             throw new ArgumentOutOfRangeException("claimCheck", claimCheck, "Could not find the claim check in the store");
         }
 
-        public Task DeleteAsync(Guid id)
-        {
-            var tcs = new TaskCompletionSource<Guid>();
-            _contents.Remove(id);
-            tcs.SetResult(id);
-            return tcs.Task;
-        }
-
+        /// <summary>
+        /// Do we have luggage for this claim check - in case of error or deletion
+        /// </summary>
+        /// <param name="id"></param>
         public Task<bool> HasClaim(Guid id)
         {
-            var tcs = new TaskCompletionSource<bool>(); 
+            var tcs = new TaskCompletionSource<bool>();
             var hasId = _contents.ContainsKey(id);
             tcs.SetResult(hasId);
             return tcs.Task;
+        }
+
+        /// <summary>
+        /// Puts luggage into the store and provides a claim check for that luggage
+        /// </summary>
+        /// <param name="stream">A stream representing the luggage to check</param>
+        /// <returns>A claim check for the luggage stored</returns>
+        public async Task<Guid> UploadAsync(Stream stream)
+        {
+            var id = Guid.NewGuid();
+            var reader = new StreamReader(stream);
+            _contents.Add(id, await reader.ReadToEndAsync());
+            return id;
         }
     }
 }
