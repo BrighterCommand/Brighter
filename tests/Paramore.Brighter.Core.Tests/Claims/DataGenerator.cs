@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace Paramore.Brighter.Core.Tests.ClaimCheck;
+namespace Paramore.Brighter.Core.Tests.Claims;
 
 public static class DataGenerator
 {

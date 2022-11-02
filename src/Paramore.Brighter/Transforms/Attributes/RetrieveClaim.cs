@@ -28,21 +28,29 @@ using Paramore.Brighter.Transforms.Transformers;
 namespace Paramore.Brighter.Transforms.Attributes
 {
     /// <summary>
-    /// Configures large payloads that may not be possible on certain middleware platforms, or perform badly on others. A claim check allows us to
-    /// offload the message body to distributed storage, from where it can be retrieved later.
+    /// Configures middleware to retrieve a payload from a message store and writes it to the body of the message
     /// </summary>
-    public class CheckLuggage : WrapWithAttribute
+    public class RetrieveClaim : UnwrapWithAttribute
     {
+        private readonly bool _retain;
+
         /// <summary>
-        /// Checks large payloads into storage
+        /// Retrieves 'luggage' matching a claim id from storage
         /// </summary>
-        /// <param name="step"></param>
-        public CheckLuggage(int step) : base(step)
+        /// <param name="step">The order in which transformations are applied</param>
+        /// <param name="retain">Should we retain the 'luggage' in the store once deleted</param>
+        public RetrieveClaim(int step, bool retain = false) : base(step)
         {
+            _retain = retain;
+        }
+
+        public override object[] InitializerParams()
+        {
+            return new object[] { _retain };
         }
 
         /// <summary>
-        /// Get the Claims Check Transformer type 
+        /// Gets the retrieve luggage transformer type
         /// </summary>
         /// <returns>The type of the Claims Check Transformer</returns>
         public override Type GetHandlerType()

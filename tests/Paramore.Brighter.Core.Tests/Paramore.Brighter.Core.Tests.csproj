@@ -37,8 +37,4 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="ClaimCheck\Test Doubles" />
-  </ItemGroup>
 </Project>

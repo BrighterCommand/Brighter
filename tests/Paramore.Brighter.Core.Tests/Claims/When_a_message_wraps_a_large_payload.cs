@@ -1,13 +1,12 @@
 ﻿using System;
 using System.IO;
-using System.Security.Claims;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests.ClaimCheck;
+namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class ClaimCheckLargePayloadTests 
 {
@@ -46,7 +45,4 @@ public class ClaimCheckLargePayloadTests
         
         luggage.Should().Be(_body);
     }
-
-
-
 }

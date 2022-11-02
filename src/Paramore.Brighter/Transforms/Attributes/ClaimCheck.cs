@@ -28,20 +28,30 @@ using Paramore.Brighter.Transforms.Transformers;
 namespace Paramore.Brighter.Transforms.Attributes
 {
     /// <summary>
-    /// Configures middleware to retrieve a payload from a message store and writes it to the body of the message
+    /// Configures large payloads that may not be possible on certain middleware platforms, or perform badly on others. A claim check allows us to
+    /// offload the message body to distributed storage, from where it can be retrieved later.
     /// </summary>
-    public class RetrieveLuggage : UnwrapWithAttribute
+    public class ClaimCheck : WrapWithAttribute
     {
+        private readonly int _thresholdInKb;
+
         /// <summary>
-        /// Retrieves a luggage payload from storage
+        /// Checks large payloads, 'luggage', into storage
         /// </summary>
-        /// <param name="step">The order in which transformations are applied</param>
-        public RetrieveLuggage(int step) : base(step)
+        /// <param name="step">The order to run this in</param>
+        /// <param name="thresholdInKb">The size in Kb over which luggage should be checked, 0 for all. So 256 represents 256Kb</param>
+        public ClaimCheck(int step, int thresholdInKb = 0) : base(step)
         {
+            _thresholdInKb = thresholdInKb;
         }
-                                      
+
+        public override object[] InitializerParams()
+        {
+            return new object[] { _thresholdInKb };
+        }
+
         /// <summary>
-        /// Gets the retrieve luggage transformer type
+        /// Get the Claims Check Transformer type 
         /// </summary>
         /// <returns>The type of the Claims Check Transformer</returns>
         public override Type GetHandlerType()
