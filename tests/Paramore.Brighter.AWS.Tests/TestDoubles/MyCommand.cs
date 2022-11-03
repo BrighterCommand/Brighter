@@ -24,7 +24,7 @@ THE SOFTWARE. */
 
 using System;
 
-namespace Paramore.Brighter.AWSSQS.Tests.TestDoubles
+namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
     internal class MyCommand : Command
     {

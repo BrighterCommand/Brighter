@@ -2,7 +2,7 @@
 using Amazon.Runtime;
 using Amazon.Runtime.CredentialManagement;
 
-namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     public class CredentialsChain
     {

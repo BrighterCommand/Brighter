@@ -1,11 +1,10 @@
-﻿
-using System;
+﻿using System;
 using Amazon;
 using Amazon.Runtime;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")] 
     public class AWSValidateMissingTopicTests 

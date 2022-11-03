@@ -1,6 +1,6 @@
 ﻿using Paramore.Brighter.Actions;
 
-namespace Paramore.Brighter.AWSSQS.Tests.TestDoubles
+namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
     internal class MyDeferredCommandHandler : RequestHandler<MyDeferredCommand>
     {

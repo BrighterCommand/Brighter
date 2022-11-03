@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 
-namespace Paramore.Brighter.AWSSQS.Tests.TestDoubles
+namespace Paramore.Brighter.AWS.Tests.TestDoubles
 {
     internal class MyDeferredCommandMessageMapper : IAmAMessageMapper<MyDeferredCommand>
     {

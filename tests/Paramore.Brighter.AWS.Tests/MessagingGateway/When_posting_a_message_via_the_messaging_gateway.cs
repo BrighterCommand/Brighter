@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
-using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
+using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
     public class SqsMessageProducerSendTests : IDisposable

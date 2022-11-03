@@ -1,25 +1,26 @@
 ﻿using System;
 using System.Linq;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
-using Paramore.Brighter.AWSSQS.Tests.TestDoubles;
+using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 
-namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
     [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
-    public class AWSAssumeInfrastructureTests  : IDisposable
+    public class AWSValidateInfrastructureByConventionTests  : IDisposable
     {     private readonly Message _message;
-        private readonly SqsMessageConsumer _consumer;
+        private readonly IAmAMessageConsumer _consumer;
         private readonly SqsMessageProducer _messageProducer;
         private readonly ChannelFactory _channelFactory;
         private readonly MyCommand _myCommand;
 
-        public AWSAssumeInfrastructureTests()
+        public AWSValidateInfrastructureByConventionTests()
         {
             _myCommand = new MyCommand{Value = "Test"};
             Guid correlationId = Guid.NewGuid();
@@ -51,24 +52,33 @@ namespace Paramore.Brighter.AWSSQS.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
             
-            //Now change the subscription to validate, just check what we made
+            //Now change the subscription to validate, just check what we made - will make the SNS Arn to prevent ListTopics call
             subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: channel.Name,
                 routingKey: routingKey,
-                makeChannels: OnMissingChannel.Assume
+                findTopicBy: TopicFindBy.Convention,
+                makeChannels: OnMissingChannel.Validate
             );
             
-            _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
+            _messageProducer = new SqsMessageProducer(
+                awsConnection, 
+                new SnsPublication{
+                    FindTopicBy = TopicFindBy.Convention,
+                    MakeChannels = OnMissingChannel.Validate 
+                    }
+                );
 
-            _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
+            _consumer = new SqsMessageConsumerFactory(awsConnection).Create(subscription);
         }
 
         [Fact]
-        public void When_infastructure_exists_can_assume()
+        public void When_infrastructure_exists_can_verify()
         {
             //arrange
             _messageProducer.Send(_message);
+
+            Task.Delay(1000).Wait();
             
             var messages = _consumer.Receive(5000);
             

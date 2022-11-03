@@ -145,7 +145,7 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.DynamoDb"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.RMQ.Tests", "tests\Paramore.Brighter.RMQ.Tests\Paramore.Brighter.RMQ.Tests.csproj", "{6494BB0C-728D-43CB-B3DA-E56E8D0E4938}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AWSSQS.Tests", "tests\Paramore.Brighter.AWSSQS.Tests\Paramore.Brighter.AWSSQS.Tests.csproj", "{FDD6E413-2BC4-4450-A9A6-E8BD2EF86052}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.AWS.Tests", "tests\Paramore.Brighter.AWS.Tests\Paramore.Brighter.AWS.Tests.csproj", "{FDD6E413-2BC4-4450-A9A6-E8BD2EF86052}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Kafka.Tests", "tests\Paramore.Brighter.Kafka.Tests\Paramore.Brighter.Kafka.Tests.csproj", "{28BC78DD-0B4E-4C45-957A-85DED8E55AAD}"
 EndProject
