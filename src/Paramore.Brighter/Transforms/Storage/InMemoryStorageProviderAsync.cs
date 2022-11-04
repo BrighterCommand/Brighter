@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
         /// <param name="id"></param>
-        public Task<bool> HasClaim(Guid id)
+        public Task<bool> HasClaimAsync(Guid id)
         {
             var tcs = new TaskCompletionSource<bool>();
             var hasId = _contents.ContainsKey(id);

@@ -65,6 +65,6 @@ public class LargeMessagePaylodUnwrapTests
         //assert
         //contents should be from storage
         transformedMessage.Value.Should().Be(contents);
-        (await _inMemoryStorageProviderAsync.HasClaim(id)).Should().BeFalse();
+        (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeFalse();
     }
 }

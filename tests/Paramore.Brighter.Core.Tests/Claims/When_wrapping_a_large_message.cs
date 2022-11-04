@@ -44,7 +44,7 @@ public class LargeMessagePayloadWrapTests
         message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();
         var id = (Guid) message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         message.Body.Value.Should().Be($"Claim Check {id}");
-        (await _inMemoryStorageProviderAsync.HasClaim(id)).Should().BeTrue();
+        (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeTrue();
 
     }
 }

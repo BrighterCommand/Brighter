@@ -45,7 +45,7 @@ public class RetrieveClaimLeaveLuggage
         
         //assert
         message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeTrue();
-        (await _store.HasClaim(id)).Should().BeTrue();
+        (await _store.HasClaimAsync(id)).Should().BeTrue();
         
     }
 }

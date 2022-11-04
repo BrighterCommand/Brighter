@@ -47,6 +47,6 @@ public class RetrieveClaimLargePayloadTests
         unwrappedMessage.Body.Value.Should().Be(_contents);
         //clean up
         message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeFalse();
-        (await _store.HasClaim(id)).Should().BeFalse();
+        (await _store.HasClaimAsync(id)).Should().BeFalse();
     }
 }

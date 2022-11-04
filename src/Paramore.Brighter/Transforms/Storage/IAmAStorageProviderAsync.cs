@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
         /// <param name="id"></param>
-        Task<bool> HasClaim(Guid id);
+        Task<bool> HasClaimAsync(Guid id);
         
         /// <summary>
         /// Puts luggage into the store and provides a claim check for that luggage

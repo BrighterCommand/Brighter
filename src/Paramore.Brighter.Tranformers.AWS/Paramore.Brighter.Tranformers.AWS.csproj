@@ -8,4 +8,8 @@
       <ProjectReference Include="..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="AWSSDK.S3" Version="3.7.101.8" />
+    </ItemGroup>
+
 </Project>
