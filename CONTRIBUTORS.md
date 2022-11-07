@@ -42,7 +42,10 @@ Brighter contributors (sorted alphabeticaly)
   * Work on Postel's Law (Tolerant Reader) messaging approach
   
 **[Scott Hanselman](https://github.com/shanselman)**
-  * Various fixes
+  * Various fixes 
+
+**[Thijmen Stavenuiter](https://github.com/Thijmen)**
+  * Various fixes 
 
 **[Toby Henderson](https://github.com/holytshirt)**
   * Various fixes
