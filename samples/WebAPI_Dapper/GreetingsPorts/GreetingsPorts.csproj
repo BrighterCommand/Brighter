@@ -15,7 +15,7 @@
       <PackageReference Include="Dapper" Version="2.0.123" />
       <PackageReference Include="DapperExtensions" Version="1.7.0" />
       <PackageReference Include="Paramore.Darker" Version="2.0.79" />
-      <PackageReference Include="Paramore.Darker.Policies" Version="2.0.79" />
+      <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
       <PackageReference Include="Paramore.Darker.QueryLogging" Version="2.0.79" />
       <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     </ItemGroup>
