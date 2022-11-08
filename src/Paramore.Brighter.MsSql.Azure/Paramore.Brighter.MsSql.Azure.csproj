@@ -13,11 +13,7 @@
 
     <ItemGroup>
       <PackageReference Include="Azure.Identity" Version="1.7.0" />
-      <PackageReference Update="MinVer" Version="4.2.0" />
-      <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+
     </ItemGroup>
 
 </Project>
