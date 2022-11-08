@@ -1,9 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Amazon;
 using Amazon.Auth.AccessControlPolicy;
+using Amazon.Runtime;
 using Amazon.S3;
 using FluentAssertions;
+using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.Tranformers.AWS;
 using Polly;
 using Polly.Retry;
@@ -17,15 +20,13 @@ public class S3LuggageUploadTests
 
     public S3LuggageUploadTests()
     {
-        //configure the S3LuggageStore
-        //What is the bucket name do we want to use
-        //What bucket region do we want to use
-        //What tags do we want to use
-        //What Polly policy do you want to use for retry/circuit breaker for the bucket access
-        //What ACLs do you want to set
+        //arrange
+        (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
+ 
+        var client = new AmazonS3Client(credentials, region);       
         
         _luggageStore = new S3LuggageStore(
-            client:   null,
+            client:   client,
             bucketName: "BrighterBucket",
             bucketRegion: S3Region.EUWest1,
             tags: new string[]{"BrighterTests"},

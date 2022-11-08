@@ -2,6 +2,7 @@
 using Amazon;
 using Amazon.Runtime;
 using Amazon.SQS.Model;
+using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;

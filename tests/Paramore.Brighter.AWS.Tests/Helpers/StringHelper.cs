@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Paramore.Brighter.AWS.Tests.MessagingGateway
+namespace Paramore.Brighter.AWS.Tests.Helpers
 {
     public static class StringHelper
     {

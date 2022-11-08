@@ -1,6 +1,7 @@
 ﻿using System;
 using Amazon;
 using Amazon.Runtime;
+using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
 

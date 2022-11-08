@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Amazon;
 using Amazon.Runtime;
 using FluentAssertions;
+using Paramore.Brighter.AWS.Tests.Helpers;
 using Paramore.Brighter.AWS.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Xunit;
