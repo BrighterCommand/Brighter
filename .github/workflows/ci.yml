@@ -33,11 +33,10 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - run: dotnet --info
       - uses: actions/checkout@v3
@@ -85,11 +84,10 @@ jobs:
     
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -114,11 +112,10 @@ jobs:
       
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -144,11 +141,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -199,11 +195,10 @@ jobs:
       run: docker ps -a
     - name: Checkout code
       uses: actions/checkout@v3
-    - name: Setup dotnet 5, 6
+    - name: Setup dotnet 6
       uses: actions/setup-dotnet@v3
       with:
         dotnet-version: |
-          5.0.x
           6.0.x
     - name: Install dependencies
       run: dotnet restore
@@ -229,11 +224,10 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -263,11 +257,10 @@ jobs:
      
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -289,11 +282,10 @@ jobs:
           SA_PASSWORD: Password1!
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -317,11 +309,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -348,11 +339,10 @@ jobs:
       
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -371,11 +361,10 @@ jobs:
       
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
@@ -397,11 +386,10 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v3
-      - name: Setup dotnet 5, 6
+      - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
           dotnet-version: |
-            5.0.x
             6.0.x
       - name: Install dependencies
         run: dotnet restore
