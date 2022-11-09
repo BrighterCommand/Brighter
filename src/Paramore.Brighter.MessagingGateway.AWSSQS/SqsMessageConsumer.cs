@@ -194,11 +194,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         client.DeleteMessageAsync(urlResponse.QueueUrl, receiptHandle).Wait();
                     }
                 }
-
-                s_logger.LogInformation(
-                    "SqsMessageConsumer: Message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName} with requeue parameter {3} has been rejected",
-                    message.Id, receiptHandle, _queueName
-                    );
             }
             catch (Exception exception)
             {

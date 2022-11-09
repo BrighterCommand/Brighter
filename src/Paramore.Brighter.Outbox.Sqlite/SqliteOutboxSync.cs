@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var parameters = InitAddDbParameters(message);
 
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+            if (transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = connectionProvider.GetConnection();
@@ -136,14 +136,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var parameters = InitAddDbParameters(message);
 
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+            if (transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
 
             if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-            using (var command = connection.CreateCommand())
+            await using (var command = connection.CreateCommand())
             {
                 var sql = GetAddSql();
                 command.CommandText = sql;
@@ -185,7 +185,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+            if (transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = connectionProvider.GetConnection();
@@ -235,7 +235,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
+            if (transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
@@ -243,7 +243,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             var sql = GetBulkAddSql(messages.ToList());
-            using (var command = connection.CreateCommand())
+            await using (var command = connection.CreateCommand())
             {
                 command.CommandText = sql.sql;
                 AddParamtersParamArrayToCollection(sql.parameters, command);
@@ -320,7 +320,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
             var parameters = new[] { CreateSqlParameter("@MessageId", messageId.ToString()) };
 
             return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
@@ -335,7 +335,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// <returns>A Message.</returns>
         public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = string.Format("SELECT * FROM {0} WHERE MessageId = @MessageId", _configuration.OutBoxTableName);
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
             var parameters = new[] { CreateSqlParameter("@MessageId", messageId.ToString()) };
 
             return await ExecuteCommandAsync(
@@ -351,8 +351,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
         public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync();
-            using (var command = connection.CreateCommand())
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            await using (var command = connection.CreateCommand())
             {
                 var inClause = string.Join(",", messageIds.ToList().Select((s, i) => "'" + s + "'").ToArray());
                 var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
@@ -426,8 +426,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = _connectionProvider.GetConnection();
-            using (var command = connection.CreateCommand())
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            await using (var command = connection.CreateCommand())
             {
                 CreatePagedRead(command, pageSize, pageNumber);
 
@@ -471,7 +471,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
+            await using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt))
             {
                 await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -552,7 +552,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             CancellationToken cancellationToken = default)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            using (var command = connection.CreateCommand())
+            await using (var command = connection.CreateCommand())
             {
                 CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
 
@@ -561,7 +561,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
 
                 var messages = new List<Message>();
-                while (await dbDataReader.ReadAsync())
+                while (await dbDataReader.ReadAsync(cancellationToken))
                 {
                     messages.Add(MapAMessage(dbDataReader));
                 }
@@ -653,8 +653,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
             params SqliteParameter[] parameters)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            
-            using (var command = connection.CreateCommand())
+
+            await using (var command = connection.CreateCommand())
             {
                 if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 
