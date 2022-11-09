@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
+        private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -53,7 +54,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public DynamoDbOutbox(IAmazonDynamoDB client, DynamoDbConfiguration configuration)
         {
             _configuration = configuration;
-            _context = new DynamoDBContext(client); 
+            _context = new DynamoDBContext(client);
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
         }
 
         /// <summary>
@@ -65,6 +67,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             _context = context;
             _configuration = configuration;
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
         }
 
         /// <inheritdoc />
@@ -218,12 +221,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            var message = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);
+            var message = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
             MarkMessageDispatched(dispatchedAt, message);
 
             await _context.SaveAsync(
                 message, 
-                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName},
+                _dynamoOverwriteTableConfig,
                 cancellationToken);
        }
 
@@ -243,12 +246,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            var message = _context.LoadAsync<MessageItem>(id.ToString()).Result;
+            var message = _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig).Result;
             MarkMessageDispatched(dispatchedAt, message);
 
             _context.SaveAsync(
                 message, 
-                new DynamoDBOperationConfig{OverrideTableName = _configuration.TableName})
+                _dynamoOverwriteTableConfig)
                 .Wait(_configuration.Timeout);
 
         }
@@ -342,7 +345,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
        private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
        {
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
-           var attributes = _context.ToDocument(messageToStore).ToAttributeMap();
+           var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
            
            var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
            transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
@@ -350,15 +353,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
            return tcs.Task;
        }
        
-       private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
-            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), cancellationToken);
+            MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();
         }
         
         private async Task<IEnumerable<MessageItem>> PageAllMessagesAsync(QueryOperationConfig queryConfig, CancellationToken cancellationToken = default)
         {
-            var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig);
+            var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
             
             var messages = new List<MessageItem>();
             do
@@ -372,7 +375,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             await _context.SaveAsync(
                     messageToStore,
-                    new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName },
+                    _dynamoOverwriteTableConfig,
                     cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
