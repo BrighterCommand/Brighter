@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
@@ -32,7 +33,9 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() { { "MyTopic", new FakeProducerSync() }, });
-            
+
+            serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
+
             serviceCollection
                 .AddBrighter()
                 .UseInMemoryOutbox()

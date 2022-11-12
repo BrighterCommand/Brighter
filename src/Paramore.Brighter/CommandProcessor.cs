@@ -26,7 +26,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -876,7 +875,7 @@ namespace Paramore.Brighter
         //Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
         //set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         //if needed as a "get out of gaol" card.
-        private void InitExtServiceBus(IPolicyRegistry<string> policyRegistry,
+        private static void InitExtServiceBus(IPolicyRegistry<string> policyRegistry,
             IAmAnOutbox<Message> outbox,
             int outboxTimeout,
             IAmAProducerRegistry producerRegistry,

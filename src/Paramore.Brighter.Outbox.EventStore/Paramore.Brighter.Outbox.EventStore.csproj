@@ -2,7 +2,7 @@
   <PropertyGroup>
     <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using Event Store</Description>
     <Authors>George Ayris</Authors>
-    <TargetFramework>netstandard2.0</TargetFramework>
+    <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <SignAssembly>false</SignAssembly>
   </PropertyGroup>
@@ -14,10 +14,6 @@
     <PackageReference Include="EventStore.ClientAPI.NetCore" Version="4.1.0.23" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageReference Include="System.Text.Json" Version="7.0.0" />
-    <PackageReference Update="MinVer" Version="4.2.0" />
-    <PackageReference Update="Microsoft.SourceLink.GitHub" Version="1.1.1">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+
   </ItemGroup>
 </Project>

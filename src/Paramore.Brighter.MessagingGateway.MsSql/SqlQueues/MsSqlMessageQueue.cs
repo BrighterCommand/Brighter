@@ -24,6 +24,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         ///     Initializes a new instance of the <see cref="MsSqlMessageQueue{T}" /> class.
         /// </summary>
         /// <param name="configuration"></param>
+        /// <param name="connectionProvider"></param>
         public MsSqlMessageQueue(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
@@ -78,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync())
+            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
@@ -95,13 +96,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         public ReceivedResult<T> TryReceive(string topic, int timeoutInMilliseconds)
         {
             if (s_logger.IsEnabled(LogLevel.Debug))
-                s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout)", typeof(T).FullName, timeoutInMilliseconds);
+                s_logger.LogDebug("TryReceive<{CommandType}>(..., {Timeout})", typeof(T).FullName, timeoutInMilliseconds);
             var rc = TryReceive(topic);
-            var timeleft = timeoutInMilliseconds;
-            while (!rc.IsDataValid && timeleft > 0)
+            var timeLeft = timeoutInMilliseconds;
+            while (!rc.IsDataValid && timeLeft > 0)
             {
                 Task.Delay(RetryDelay).Wait();
-                timeleft -= RetryDelay;
+                timeLeft -= RetryDelay;
                 rc = TryReceive(topic);
             }
 
@@ -147,13 +148,13 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync())
+            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             {
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlCmd = InitRemoveDbCommand(connection, parameters);
                 var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
-                if (!reader.Read())
+                if (!await reader.ReadAsync(cancellationToken))
                     return ReceivedResult<T>.Empty;
                 var json = (string) reader[0];
                 var messageType = (string) reader[1];
