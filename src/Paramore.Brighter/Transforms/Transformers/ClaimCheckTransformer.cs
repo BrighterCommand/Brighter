@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Transforms.Storage;
 
@@ -82,8 +83,9 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// If we place it in storage, set a header property to contain the 'claim' that can be used to retrieve the 'luggage'
         /// </summary>
         /// <param name="message">The message whose contents we want to </param>
+        /// <param name="cancellationToken">Add cancellation token</param>
         /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
-        public async Task<Message> Wrap(Message message)
+        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken= default(CancellationToken))
         {
             if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes) return message;
 
@@ -94,7 +96,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             await writer.FlushAsync();
             stream.Position = 0;
 
-            var id = await _store.UploadAsync(stream);
+            var id = await _store.UploadAsync(stream, cancellationToken);
 
             message.Header.Bag[CLAIM_CHECK] = id;
             message.Body = new MessageBody($"Claim Check {id}");
@@ -106,18 +108,19 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// If a message has a 'claim' in its header, then retrieve the associated 'luggage' from the store and replace the body
         /// </summary>
         /// <param name="message">The message, with luggage retrieved if required</param>
+        /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<Message> Unwrap(Message message)
+        public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
             {
-                var id = (Guid)objId;
-                var luggage = await new StreamReader(await _store.DownloadAsync(id)).ReadToEndAsync();
+                var id = (string)objId;
+                var luggage = await new StreamReader(await _store.DownloadAsync(id, cancellationToken)).ReadToEndAsync();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;
                 if (!_retainLuggage)
                 {
-                    await _store.DeleteAsync(id);
+                    await _store.DeleteAsync(id, cancellationToken);
                     message.Header.Bag.Remove(CLAIM_CHECK);
                 }
             }

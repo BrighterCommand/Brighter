@@ -32,7 +32,7 @@ public class MessageWrapCleanupTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.Wrap(_myCommand).Result;
+        var message = _transformPipeline.WrapAsync(_myCommand).Result;
         _transformPipeline.Dispose();
         
         //assert

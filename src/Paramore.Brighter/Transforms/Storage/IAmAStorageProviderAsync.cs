@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Storage
@@ -39,26 +40,30 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Used to clean up after luggage is retrieved
         /// </summary>
         /// <param name="id">The claim check for the luggage</param>
-        Task DeleteAsync(Guid id);
-        
+        /// <param name="cancellationToken">The cancellation token</param>
+        Task DeleteAsync(string id, CancellationToken cancellationToken);
+
         /// <summary>
         /// Downloads the luggage associated with the claim check
         /// </summary>
         /// <param name="claimCheck">The claim check for the luggage</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The luggage as a stream</returns>
-        Task<Stream> DownloadAsync(Guid claimCheck);
-        
+        Task<Stream> DownloadAsync(string claimCheck, CancellationToken cancellationToken);
+
         /// <summary>
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
         /// <param name="id"></param>
-        Task<bool> HasClaimAsync(Guid id);
-        
+        /// <param name="cancellationToken">The cancellation token</param>
+        Task<bool> HasClaimAsync(string id, CancellationToken cancellationToken);
+
         /// <summary>
         /// Puts luggage into the store and provides a claim check for that luggage
         /// </summary>
         /// <param name="stream">A stream representing the luggage to check</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>A claim check for the luggage stored</returns>
-        Task<Guid> UploadAsync(Stream stream);
+        Task<string> UploadAsync(Stream stream, CancellationToken cancellationToken);
     }
 }

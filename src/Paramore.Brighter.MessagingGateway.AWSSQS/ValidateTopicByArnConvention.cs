@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 )
                 .GetAwaiter().GetResult();
 
-            if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidCastException("Could not find identity of AWS account"); 
+            if (callerIdentityResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException("Could not find identity of AWS account"); 
 
             return new Arn
             {

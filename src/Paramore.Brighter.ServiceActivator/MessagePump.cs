@@ -323,7 +323,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             try
             {
-                request = _wrapPipeline.Unwrap(message).GetAwaiter().GetResult();
+                request = _wrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
             }
             catch (ConfigurationException ce)
             {

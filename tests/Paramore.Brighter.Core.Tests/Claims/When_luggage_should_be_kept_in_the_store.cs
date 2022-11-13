@@ -41,7 +41,7 @@ public class RetrieveClaimLeaveLuggage
         message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
 
         //act
-        var unwrappedMessage = await _transformer.Unwrap(message);
+        var unwrappedMessage = await _transformer.UnwrapAsync(message);
         
         //assert
         message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeTrue();

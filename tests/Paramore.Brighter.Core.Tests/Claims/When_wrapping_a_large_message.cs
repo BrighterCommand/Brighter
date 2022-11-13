@@ -38,11 +38,11 @@ public class LargeMessagePayloadWrapTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = _transformPipeline.Wrap(_myCommand).Result;
+        var message = _transformPipeline.WrapAsync(_myCommand).Result;
         
         //assert
         message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();
-        var id = (Guid) message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
+        var id = (string) message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
         message.Body.Value.Should().Be($"Claim Check {id}");
         (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeTrue();
 

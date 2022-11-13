@@ -32,14 +32,14 @@ public class ClaimCheckLargePayloadTests
     public async Task When_a_message_wraps_a_large_payload()
     {
         //act
-        var luggageCheckedMessage = await _transformer.Wrap(_message);
+        var luggageCheckedMessage = await _transformer.WrapAsync(_message);
 
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object storedData);
 
         hasLuggage.Should().BeTrue();
 
-        var claimCheck = (Guid)storedData;
+        var claimCheck = (string)storedData;
 
         var luggage = await new StreamReader(await _store.DownloadAsync(claimCheck)).ReadToEndAsync(); 
         

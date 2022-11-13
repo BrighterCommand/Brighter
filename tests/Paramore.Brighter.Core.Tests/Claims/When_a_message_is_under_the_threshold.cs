@@ -33,7 +33,7 @@ public class ClaimCheckSmallPayloadTests
     [Fact]
     public async Task When_a_message_is_under_the_threshold()
     {
-        var luggageCheckedMessage = await _transformer.Wrap(_message);
+        var luggageCheckedMessage = await _transformer.WrapAsync(_message);
 
         //assert
         bool hasLuggage = luggageCheckedMessage.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _);

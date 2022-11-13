@@ -41,7 +41,7 @@ public class RetrieveClaimLargePayloadTests
         message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
         
         //act
-        var unwrappedMessage = await _transformer.Unwrap(message);
+        var unwrappedMessage = await _transformer.UnwrapAsync(message);
         
         //assert
         unwrappedMessage.Body.Value.Should().Be(_contents);

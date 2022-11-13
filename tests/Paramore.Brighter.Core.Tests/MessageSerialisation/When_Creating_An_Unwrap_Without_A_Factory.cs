@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
 
         //wrap should just do message mapper                                          
-        var request = _transformPipeline.Unwrap(_message).Result;
+        var request = _transformPipeline.UnwrapAsync(_message).Result;
         
         //assert
         request.Value = _myCommand.Value;

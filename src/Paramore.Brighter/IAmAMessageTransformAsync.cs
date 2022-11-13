@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -51,21 +52,23 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
         void InitializeUnwrapFromAttributeParams(params object[] initializerList);
-        
+
         /// <summary>
         /// A Wrap modifies an outgoing message by altering its header or body
         /// A Wrap always runs after you map the <see cref="IRequest"/> to a <see cref="Message"/>
         /// </summary>
         /// <param name="message">The original message</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The modified message</returns>
-        Task<Message> Wrap(Message message);
-        
+        Task<Message> WrapAsync(Message message, CancellationToken cancellationToken);
+
         /// <summary>
         /// An Unwrap modifies an incoming message by altering its header or body
         /// An Unwrap always runs before you map the <see cref="Message"/> to a <see cref="IRequest"/>
         /// </summary>
         /// <param name="message">The original message</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The modified message</returns>
-        Task<Message> Unwrap(Message message);
+        Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken);
     }
 }

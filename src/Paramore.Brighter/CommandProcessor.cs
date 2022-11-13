@@ -556,7 +556,7 @@ namespace Paramore.Brighter
             if (!_bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            var message = _transformPipelineBuilder.BuildWrapPipeline<T>().Wrap(request).GetAwaiter().GetResult();
+            var message = _transformPipelineBuilder.BuildWrapPipeline<T>().WrapAsync(request).GetAwaiter().GetResult();
 
             AddTelemetryToMessage<T>(message);
 
@@ -630,7 +630,7 @@ namespace Paramore.Brighter
             if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            var message = await _transformPipelineBuilder.BuildWrapPipeline<T>().Wrap(request);
+            var message = await _transformPipelineBuilder.BuildWrapPipeline<T>().WrapAsync(request);
 
             AddTelemetryToMessage<T>(message);
 
@@ -671,7 +671,7 @@ namespace Paramore.Brighter
             return requests.Select(r =>
             {
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
-                var message = wrapPipeline.Wrap(r).GetAwaiter().GetResult();
+                var message = wrapPipeline.WrapAsync(r).GetAwaiter().GetResult();
                 AddTelemetryToMessage<T>(message);
                 return message;
             }).ToList();
@@ -683,7 +683,7 @@ namespace Paramore.Brighter
             foreach (var request in requests)
             {
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
-                var message = await wrapPipeline.Wrap(request);
+                var message = await wrapPipeline.WrapAsync(request);
                 AddTelemetryToMessage<T>(message);
                 messages.Add(message);
             }
@@ -801,7 +801,7 @@ namespace Paramore.Brighter
                 //the channel to create the subscription, but this does not do much on a new queue
                 _bus.Retry(() => responseChannel.Purge());
 
-                var outMessage = outWrapPipeline.Wrap(request).GetAwaiter().GetResult(); 
+                var outMessage = outWrapPipeline.WrapAsync(request).GetAwaiter().GetResult(); 
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
@@ -820,7 +820,7 @@ namespace Paramore.Brighter
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
                     var inUnwrapPipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TResponse>();
-                    response = inUnwrapPipeline.Unwrap(responseMessage).GetAwaiter().GetResult();
+                    response = inUnwrapPipeline.UnwrapAsync(responseMessage).GetAwaiter().GetResult();
                     Send(response);
                 }
 

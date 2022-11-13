@@ -60,7 +60,7 @@ public class LargeMessagePaylodUnwrapTests
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = await transformPipeline.Unwrap(message);
+        var transformedMessage = await transformPipeline.UnwrapAsync(message);
         
         //assert
         //contents should be from storage

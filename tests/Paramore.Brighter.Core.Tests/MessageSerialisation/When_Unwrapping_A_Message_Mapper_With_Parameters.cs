@@ -38,7 +38,7 @@ public class MessageUnwrapRequestWithAttributesTests
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.Unwrap(_message).Result;
+        var request = _transformPipeline.UnwrapAsync(_message).Result;
         
         //assert
         request.Value.Should().Be("I am a parameterized template: Hello World");

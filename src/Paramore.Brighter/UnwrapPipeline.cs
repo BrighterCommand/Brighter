@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 using System.Collections.Generic;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 
@@ -71,12 +72,13 @@ namespace Paramore.Brighter
         /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/> 
         /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
         /// </summary>
-        /// <param name="message"></param>
+        /// <param name="message">The message to unwrap</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>a request</returns>
-        public async Task<TRequest> Unwrap(Message message)
+        public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             var msg = message;
-            await Transforms.EachAsync(async transform => msg = await transform.Unwrap(msg));
+            await Transforms.EachAsync(async transform => msg = await transform.UnwrapAsync(msg,cancellationToken));
             return MessageMapper.MapToRequest(msg);
         }
     }

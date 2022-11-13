@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 
@@ -28,7 +29,7 @@ public abstract class TransformAsync : IAmAMessageTransformAsync
     /// <param name="initializerList"></param>
     public void InitializeUnwrapFromAttributeParams(params object[] initializerList) { }
 
-    public abstract Task<Message> Wrap(Message message);
+    public abstract Task<Message> WrapAsync(Message message, CancellationToken cancellationToken);
 
-    public abstract Task<Message> Unwrap(Message message);
+    public abstract Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken);
 }

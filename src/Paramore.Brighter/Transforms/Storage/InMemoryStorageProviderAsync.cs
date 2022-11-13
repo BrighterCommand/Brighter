@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Storage
@@ -35,16 +36,17 @@ namespace Paramore.Brighter.Transforms.Storage
     /// </summary>
     public class InMemoryStorageProviderAsync : IAmAStorageProviderAsync
     {
-        private readonly Dictionary<Guid, string> _contents = new Dictionary<Guid, string>();
+        private readonly Dictionary<string, string> _contents = new Dictionary<string, string>();
 
         /// <summary>
         /// Delete the luggage identified by the claim check
         /// Used to clean up after luggage is retrieved
         /// </summary>
         /// <param name="id">The claim check for the luggage</param>
-        public Task DeleteAsync(Guid id)
+        /// <param name="cancellationToken">The cancellation token</param>
+        public Task DeleteAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<Guid>();
+            var tcs = new TaskCompletionSource<string>(cancellationToken);
             _contents.Remove(id);
             tcs.SetResult(id);
             return tcs.Task;
@@ -54,8 +56,9 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Downloads the luggage associated with the claim check
         /// </summary>
         /// <param name="claimCheck">The claim check for the luggage</param>
+        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The luggage as a stream</returns>
-        public async Task<Stream> DownloadAsync(Guid claimCheck)
+        public async Task<Stream> DownloadAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_contents.TryGetValue(claimCheck, out string value))
             {
@@ -74,9 +77,10 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
         /// <param name="id"></param>
-        public Task<bool> HasClaimAsync(Guid id)
+        /// <param name="cancellationToken">Add cancellation token</param>
+        public Task<bool> HasClaimAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var tcs = new TaskCompletionSource<bool>();
+            var tcs = new TaskCompletionSource<bool>(cancellationToken);
             var hasId = _contents.ContainsKey(id);
             tcs.SetResult(hasId);
             return tcs.Task;
@@ -86,10 +90,11 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Puts luggage into the store and provides a claim check for that luggage
         /// </summary>
         /// <param name="stream">A stream representing the luggage to check</param>
+        /// <param name="cancellationToken">Add cancellation token</param>
         /// <returns>A claim check for the luggage stored</returns>
-        public async Task<Guid> UploadAsync(Stream stream)
+        public async Task<string> UploadAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var id = Guid.NewGuid();
+            var id = Guid.NewGuid().ToString();
             var reader = new StreamReader(stream);
             _contents.Add(id, await reader.ReadToEndAsync());
             return id;
