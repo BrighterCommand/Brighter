@@ -42,13 +42,13 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Delete the luggage identified by the claim check
         /// Used to clean up after luggage is retrieved
         /// </summary>
-        /// <param name="id">The claim check for the luggage</param>
+        /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        public Task DeleteAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
+        public Task DeleteAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<string>(cancellationToken);
-            _contents.Remove(id);
-            tcs.SetResult(id);
+            _contents.Remove(claimCheck);
+            tcs.SetResult(claimCheck);
             return tcs.Task;
         }
 
@@ -76,12 +76,12 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <summary>
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="claimCheck"></param>
         /// <param name="cancellationToken">Add cancellation token</param>
-        public Task<bool> HasClaimAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<bool>(cancellationToken);
-            var hasId = _contents.ContainsKey(id);
+            var hasId = _contents.ContainsKey(claimCheck);
             tcs.SetResult(hasId);
             return tcs.Task;
         }

@@ -39,9 +39,9 @@ namespace Paramore.Brighter.Transforms.Storage
         /// Delete the luggage identified by the claim check
         /// Used to clean up after luggage is retrieved
         /// </summary>
-        /// <param name="id">The claim check for the luggage</param>
+        /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
-        Task DeleteAsync(string id, CancellationToken cancellationToken);
+        Task DeleteAsync(string claimCheck, CancellationToken cancellationToken);
 
         /// <summary>
         /// Downloads the luggage associated with the claim check
@@ -54,9 +54,9 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <summary>
         /// Do we have luggage for this claim check - in case of error or deletion
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="claimCheck"></param>
         /// <param name="cancellationToken">The cancellation token</param>
-        Task<bool> HasClaimAsync(string id, CancellationToken cancellationToken);
+        Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken);
 
         /// <summary>
         /// Puts luggage into the store and provides a claim check for that luggage

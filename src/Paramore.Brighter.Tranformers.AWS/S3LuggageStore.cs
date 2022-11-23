@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.Runtime;
@@ -52,6 +53,13 @@ namespace Paramore.Brighter.Tranformers.AWS
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<S3LuggageStore>();
         private string _luggagePrefix;
+        private static readonly Regex s_validBucketNameRx;
+
+        static S3LuggageStore()
+        {
+            string pattern = @"(?!(^xn--|.+-s3alias$))^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$";
+            s_validBucketNameRx = new Regex(pattern, RegexOptions.Compiled);
+        }
 
         private S3LuggageStore() { }
 
@@ -64,27 +72,27 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// This factory will throw if exceptions occur during creation 
         /// </summary>
         /// <param name="client">An Amazon S3 client to use to connect to S3</param>
-        /// <param name="bucketName">The bucket to store luggage in</param>
-        /// <param name="bucketRegion">The region of the bucket</param>
+        /// <param name="bucketName">The bucket to store luggage in. The name must follows S3 bucket name rules: https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html</param>
+        /// <param name="httpClientFactory">We need an HTTP client to check whether a bucket exists.</param>
+        /// <param name="storeCreation">Whether we should create, validate or assume the luggage store exists. Defaults to create if missing</param>
+        /// <param name="stsClient">An AmazonSecurityTokenServiceClient, required unless you assume luggage store exists </param>
+        /// <param name="bucketRegion">The region of the bucket. This MUST match the region of the client.</param>
         /// <param name="tags">Tags to use if creating the bucket</param>
         /// <param name="acl">The Access Control when creating a bucket</param>
         /// <param name="policy">The Polly policy to wrap around S3 calls:
-        ///  - Catch the InvalidOperationException to retry an invalid response i.e. not 200
-        ///  - Otherwise catch an AmazonS3Exception to catch network errors
-        ///  - If no policy is passed we will use a default policy to catch and retry an AmazonS3Exception
-        ///  - Immediate first retry, then at 50 and 100ms 
-        ///  This is not applied to the HttpClientFactory instance used to check for existence you must set that
+        ///     - Catch the InvalidOperationException to retry an invalid response i.e. not 200
+        ///     - Otherwise catch an AmazonS3Exception to catch network errors
+        ///     - If no policy is passed we will use a default policy to catch and retry an AmazonS3Exception
+        ///     - Immediate first retry, then at 50 and 100ms 
+        ///     This is not applied to the HttpClientFactory instance used to check for existence you must set that
         /// </param>
-        /// <param name="storeCreation">Whether we should create, validate or assume the luggage store exists</param>
-        /// <param name="stsClient">An AmazonSecurityTokenServiceClient, required unless you assume luggage store exists </param>
         /// <param name="abortFailedUploadsAfterDays">After what delay (in days) should we delete failed uploads. Default is 1</param>
         /// <param name="deleteGoodUploadsAfterDays">After what delay (in days) should we delete successful uploads. Default is 3, -1 is do not auto-delete</param>
         /// <param name="luggagePrefix">What prefix should the deletion policy be applied to: defaults to BRIGHTER_CHECKED_LUGGAGE</param>
-        public static async Task<S3LuggageStore> CreateAsync(
-            IAmazonS3 client,
+        public static async Task<S3LuggageStore> CreateAsync(IAmazonS3 client,
             string bucketName,
-            S3LuggageStoreCreation storeCreation,
             IHttpClientFactory httpClientFactory,
+            S3LuggageStoreCreation storeCreation = S3LuggageStoreCreation.CreateIfMissing,
             IAmazonSecurityTokenService stsClient = null,
             S3Region bucketRegion = null,
             List<Tag> tags = null,
@@ -92,9 +100,30 @@ namespace Paramore.Brighter.Tranformers.AWS
             AsyncRetryPolicy policy = null,
             int abortFailedUploadsAfterDays = 1,
             int deleteGoodUploadsAfterDays = 3,
-            string luggagePrefix = "BRIGHTER_CHECKED_LUGGAGE"
-        )
+            string luggagePrefix = "BRIGHTER_CHECKED_LUGGAGE")
         {
+            if (client == null) throw new ArgumentNullException(nameof(client), "We need a valid S3 client to connect to AWS, but was null");
+            if (string.IsNullOrEmpty(bucketName))
+                throw new ArgumentNullException(nameof(bucketName), "We require the name of a bucket to use for the luggage store");
+            if (!s_validBucketNameRx.IsMatch(bucketName)) throw new ArgumentException("The bucketName does not match S3 naming rules", nameof(bucketName));
+
+            if (storeCreation == S3LuggageStoreCreation.ValidateExists || storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+            {
+                if (stsClient == null)
+                    throw new ArgumentNullException(nameof(stsClient),
+                        "To check for the existence of your luggage store bucket we use the IAmazonSecurityServiceToken to get your account id, and it cannot be null");
+            }
+
+            if (storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+            {
+                if (bucketRegion == null)
+                    throw new ArgumentNullException(
+                        nameof(bucketRegion), "We need to know which region to create the bucket in, it should match the client region");
+                if (acl == null)
+                    throw new ArgumentNullException(
+                        nameof(acl), "We need to lock down any bucket we create with an ACL");
+            }
+
             var luggageStore = new S3LuggageStore();
             luggageStore._client = client;
             luggageStore._bucketName = bucketName;
@@ -105,51 +134,117 @@ namespace Paramore.Brighter.Tranformers.AWS
 
             if (storeCreation == S3LuggageStoreCreation.CreateIfMissing || storeCreation == S3LuggageStoreCreation.ValidateExists)
             {
-                luggageStore._accountId = await GetAccountIdAsync(stsClient);
-                var bucketExists = await BucketExistsAsync(httpClientFactory, luggageStore._accountId, bucketName, bucketRegion);
-                if (!bucketExists && storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+                try
                 {
-                    CreateBucketAsync(
-                        client,
-                        policy,
-                        luggageStore._accountId,
-                        bucketName,
-                        bucketRegion,
-                        acl,
-                        tags,
-                        abortFailedUploadsAfterDays,
-                        deleteGoodUploadsAfterDays,
-                        luggagePrefix);
+                    luggageStore._accountId = await GetAccountIdAsync(stsClient);
+                    var bucketExists = await BucketExistsAsync(httpClientFactory, luggageStore._accountId, bucketName, bucketRegion);
+                    if (!bucketExists && storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+                    {
+                        await CreateBucketAsync(
+                            client,
+                            policy,
+                            luggageStore._accountId,
+                            bucketName,
+                            bucketRegion,
+                            acl,
+                            tags,
+                            abortFailedUploadsAfterDays,
+                            deleteGoodUploadsAfterDays,
+                            luggagePrefix);
+                    }
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error creating or validating luggage store {bucketname} in {bucketRegion}", bucketName, bucketRegion);
+                    throw;
                 }
             }
 
             return luggageStore;
         }
 
-       ~S3LuggageStore()
+        ~S3LuggageStore()
         {
             ReleaseUnmanagedResources();
         }
 
-        public async Task DeleteAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task DeleteAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
+            var request = new DeleteObjectRequest { BucketName = _bucketName, Key = claimCheck };
+
+            var response = await _client.DeleteObjectAsync(request, cancellationToken);
+
+            if (response.HttpStatusCode != HttpStatusCode.NoContent)
+                s_logger.LogError("Could not delete luggage with claim {claim check} from {bucket}", claimCheck, _bucketName);
         }
 
         public async Task<Stream> DownloadAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
+            var request = new GetObjectRequest { BucketName = _bucketName, Key = claimCheck, };
+
+            s_logger.LogInformation("Downloading {claim check} from {bucket}", claimCheck, _bucketName);
+
+            // Issue request and remember to dispose of the response
+            GetObjectResponse response = await _client.GetObjectAsync(request, cancellationToken);
+            if (response.HttpStatusCode != HttpStatusCode.OK)
+            {
+                s_logger.LogError("Could not download {claimCheck} from {bucketName}", claimCheck, _bucketName);
+                throw new InvalidOperationException($"Could not download {claimCheck} from {_bucketName}");
+            }
+
+            try
+            {
+                // Save object to local file
+                var stream = new MemoryStream();
+                await response.ResponseStream.CopyToAsync(stream);
+                stream.Position = 0;
+                return stream;
+            }
+            catch (AmazonS3Exception ex)
+            {
+                s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
+                throw;
+            }
+            catch (Exception e) when (e is ObjectDisposedException || e is NotSupportedException)
+            {
+                 s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
+                 throw;
+            }
+            finally
+            {
+                response.Dispose();
+            }
+
             return null;
         }
 
-        public async Task<bool> HasClaimAsync(string id, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
+            try
+            {
+                var request = new GetObjectMetadataRequest { BucketName = _bucketName, Key = claimCheck };
+                var response = await _client.GetObjectMetadataAsync(request, cancellationToken);
+                if (response.HttpStatusCode == HttpStatusCode.OK) return true;
+            }
+            catch (AmazonS3Exception s3Exception)
+            {
+                if (s3Exception.StatusCode == System.Net.HttpStatusCode.NotFound)
+                    return false;
+
+                //status wasn't not found, so throw the exception
+                throw;
+            }
+
             return false;
         }
 
         public async Task<string> UploadAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var claim = $"{_luggagePrefix}{Guid.NewGuid().ToString()}";
+            var claim = $"{_luggagePrefix}/luggage_store/{Guid.NewGuid().ToString()}";
+
+            s_logger.LogInformation("Uploading {claim check} to {bucket}", claim, _bucketName);
             var transferUtility = new TransferUtility(_client);
-            transferUtility.UploadAsync(stream, _bucketName, claim, cancellationToken);
+            await transferUtility.UploadAsync(stream, _bucketName, claim, cancellationToken);
             return claim;
         }
 
@@ -167,7 +262,8 @@ namespace Paramore.Brighter.Tranformers.AWS
         private static async Task<bool> BucketExistsAsync(IHttpClientFactory httpClientFactory, string accountId, string bucketName, S3Region bucketRegion)
         {
             var httpClient = httpClientFactory.CreateClient();
-            using (var headRequest = new HttpRequestMessage(HttpMethod.Head, $"{bucketName}.s3.{bucketRegion.Value}.amazonaws.com"))
+            httpClient.BaseAddress = new Uri($"https://{bucketName}.s3.{bucketRegion.Value}.amazonaws.com");
+            using (var headRequest = new HttpRequestMessage(HttpMethod.Head, @"/"))
             {
                 headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
                 var response = await httpClient.SendAsync(headRequest);
@@ -175,7 +271,8 @@ namespace Paramore.Brighter.Tranformers.AWS
             }
         }
 
-        private static async void CreateBucketAsync(IAmazonS3 client,
+        private static async Task CreateBucketAsync(
+            IAmazonS3 client,
             AsyncRetryPolicy asyncRetryPolicy,
             string accountId,
             string bucketName,
@@ -186,13 +283,12 @@ namespace Paramore.Brighter.Tranformers.AWS
             int deleteGoodUploadsAfterDays,
             string luggagePrefix)
         {
-            if (string.IsNullOrEmpty(bucketName)) throw new ArgumentNullException(nameof(bucketName), "We require a bucket name for the luggage store, none was supplied");
-            if (region == null) throw new ArgumentNullException(nameof(region), "We require an S3 Region to create the luggage store bucket in");
-            if (cannedAcl == null) throw new ArgumentNullException(nameof(cannedAcl), "We require Acls to be set for the luggage store bucket");
-
-            await asyncRetryPolicy.ExecuteAsync(async () => 
+            await asyncRetryPolicy.ExecuteAsync(async () =>
             {
-                var bucketRequest = new PutBucketRequest { BucketName = bucketName, BucketRegion = region, CannedACL = cannedAcl };
+                var bucketRequest = new PutBucketRequest
+                {
+                    BucketName = bucketName, BucketRegionName = region.Value, CannedACL = cannedAcl, UseClientRegion = false
+                };
                 var createBucketResponse = await client.PutBucketAsync(bucketRequest);
                 if (createBucketResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException($"Could not create {bucketName} on {region}");
             });
@@ -200,20 +296,49 @@ namespace Paramore.Brighter.Tranformers.AWS
             await asyncRetryPolicy.ExecuteAsync(async () =>
             {
                 var rules = new List<LifecycleRule>();
-                var lifeCycleRule = new LifecycleRule
+                var multipartLifeCycleRule = new LifecycleRule
                 {
                     AbortIncompleteMultipartUpload = new LifecycleRuleAbortIncompleteMultipartUpload { DaysAfterInitiation = abortFailedUploadsAfterDays },
-                    Filter = new LifecycleFilter { LifecycleFilterPredicate = new LifecyclePrefixPredicate { Prefix = luggagePrefix } }
+                    Filter = new LifecycleFilter { LifecycleFilterPredicate = new LifecyclePrefixPredicate { Prefix = luggagePrefix } },
+                    Id = "Aborted_multipart_uploads_delete",
+                    Status = LifecycleRuleStatus.Enabled
                 };
-                if (deleteGoodUploadsAfterDays != -1) lifeCycleRule.Expiration = new LifecycleRuleExpiration { Days = deleteGoodUploadsAfterDays };
+                rules.Add(multipartLifeCycleRule);
+
+                if (deleteGoodUploadsAfterDays != -1)
+                {
+                    var goodUploadLifeCycleRule = new LifecycleRule()
+                    {
+                        Expiration = new LifecycleRuleExpiration { Days = deleteGoodUploadsAfterDays },
+                        Filter = new LifecycleFilter { LifecycleFilterPredicate = new LifecyclePrefixPredicate { Prefix = luggagePrefix } },
+                        Id = "Good_uploads_delete",
+                        Status = LifecycleRuleStatus.Enabled
+                    };
+                    rules.Add(goodUploadLifeCycleRule);
+                }
 
                 var lifeCycleRequest = new PutLifecycleConfigurationRequest
                 {
                     BucketName = bucketName, ExpectedBucketOwner = accountId, Configuration = new LifecycleConfiguration { Rules = rules }
                 };
-                await client.PutLifecycleConfigurationAsync(lifeCycleRequest);
+                var lifeCycleResponse = await client.PutLifecycleConfigurationAsync(lifeCycleRequest);
+                if (lifeCycleResponse.HttpStatusCode != HttpStatusCode.OK)
+                    throw new InvalidOperationException($"Could not add lifecycle rules to {bucketName}");
             });
-            
+
+            await asyncRetryPolicy.ExecuteAsync(async () =>
+            {
+                var blockAccessResponse = await client.PutPublicAccessBlockAsync(new PutPublicAccessBlockRequest
+                {
+                    BucketName = bucketName,
+                    ExpectedBucketOwner = accountId,
+                    PublicAccessBlockConfiguration = new PublicAccessBlockConfiguration() { BlockPublicPolicy = true, IgnorePublicAcls = true }
+                });
+                if (blockAccessResponse.HttpStatusCode != HttpStatusCode.OK)
+                    throw new InvalidOperationException($"Could not add lifecycle rules to {bucketName}");
+           
+            });
+
             if (tags != null)
             {
                 await asyncRetryPolicy.ExecuteAsync(async () =>
@@ -221,7 +346,8 @@ namespace Paramore.Brighter.Tranformers.AWS
                     var putBucketTagging = new PutBucketTaggingRequest { BucketName = bucketName, ExpectedBucketOwner = accountId, TagSet = tags };
 
                     var taggingResponse = await client.PutBucketTaggingAsync(putBucketTagging);
-                    if (taggingResponse.HttpStatusCode != HttpStatusCode.OK) throw new InvalidOperationException($"Could not add tags to {bucketName}");
+                    if (!(taggingResponse.HttpStatusCode == HttpStatusCode.OK || taggingResponse.HttpStatusCode == HttpStatusCode.NoContent))
+                        throw new InvalidOperationException($"Could not add tags to {bucketName}");
                 });
             }
         }
@@ -234,15 +360,26 @@ namespace Paramore.Brighter.Tranformers.AWS
 
             return callerIdentityResponse.Account;
         }
-        
+
         private static AsyncRetryPolicy GetDefaultS3Policy()
         {
-            var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst:true);
+            var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst: true);
 
             return Policy
-                .Handle<AmazonS3Exception>()
+                .Handle<AmazonS3Exception>(e =>
+                {
+                    switch (e.StatusCode)
+                    {
+                        case HttpStatusCode.InternalServerError:
+                        case HttpStatusCode.BadGateway:
+                        case HttpStatusCode.ServiceUnavailable:
+                        case HttpStatusCode.GatewayTimeout:
+                            return true;
+                        default:
+                            return false;
+                    }
+                })
                 .WaitAndRetryAsync(delay);
         }
-  
-     }
+    }
 }
