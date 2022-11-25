@@ -26,7 +26,7 @@ public class S3LuggageUploadTests : IDisposable
     private readonly AmazonS3Client _client;
     private readonly AmazonSecurityTokenServiceClient _stsClient;
     private readonly IHttpClientFactory _httpClientFactory;
-    private string _bucketName;
+    private readonly string _bucketName;
 
     public S3LuggageUploadTests()
     {
@@ -50,19 +50,16 @@ public class S3LuggageUploadTests : IDisposable
         var luggageStore = await S3LuggageStore.CreateAsync(
             client: _client,
             bucketName: _bucketName,
-            httpClientFactory: _httpClientFactory,
             storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-            stsClient: _stsClient,       
+            httpClientFactory: _httpClientFactory,       
+            stsClient: _stsClient,
             bucketRegion: S3Region.EUW1,
             tags: new List<Tag>(){new Tag{Key = "BrighterTests", Value = "S3LuggageUploadTests"}},
             acl: S3CannedACL.Private,
-            policy: GetSimpleHandlerRetryPolicy(),
-            abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);    
+            policy: GetSimpleHandlerRetryPolicy(), abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);    
         
         //act
         //Upload the test stream to S3
-        //TODO: S3 and large content?? Limits??
-        //TODO: https://docs.aws.amazon.com/AmazonS3/latest/userguide/security-best-practices.html
         var testContent = "Well, always know that you shine Brighter";
         var stream = new MemoryStream();
         var streamWriter = new StreamWriter(stream);

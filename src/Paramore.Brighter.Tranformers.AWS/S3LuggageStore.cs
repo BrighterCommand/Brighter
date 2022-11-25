@@ -71,10 +71,10 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// Because of this, the S3LuggageStore should hold no state that is not thread-safe.
         /// This factory will throw if exceptions occur during creation 
         /// </summary>
-        /// <param name="client">An Amazon S3 client to use to connect to S3</param>
+        /// <param name="client">An Amazon S3 client to use to connect to S3. If you need to ensure that objects uploaded are client-side encrypted use AmazonS3EncryptionClientV2</param>
         /// <param name="bucketName">The bucket to store luggage in. The name must follows S3 bucket name rules: https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html</param>
+        /// <param name="storeCreation">Whether we should create, validate or assume the luggage store exists. Defaults to assumes exists</param>
         /// <param name="httpClientFactory">We need an HTTP client to check whether a bucket exists.</param>
-        /// <param name="storeCreation">Whether we should create, validate or assume the luggage store exists. Defaults to create if missing</param>
         /// <param name="stsClient">An AmazonSecurityTokenServiceClient, required unless you assume luggage store exists </param>
         /// <param name="bucketRegion">The region of the bucket. This MUST match the region of the client.</param>
         /// <param name="tags">Tags to use if creating the bucket</param>
@@ -91,8 +91,8 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// <param name="luggagePrefix">What prefix should the deletion policy be applied to: defaults to BRIGHTER_CHECKED_LUGGAGE</param>
         public static async Task<S3LuggageStore> CreateAsync(IAmazonS3 client,
             string bucketName,
-            IHttpClientFactory httpClientFactory,
-            S3LuggageStoreCreation storeCreation = S3LuggageStoreCreation.CreateIfMissing,
+            S3LuggageStoreCreation storeCreation = S3LuggageStoreCreation.AssumeExists,
+            IHttpClientFactory httpClientFactory = null,
             IAmazonSecurityTokenService stsClient = null,
             S3Region bucketRegion = null,
             List<Tag> tags = null,
@@ -112,6 +112,10 @@ namespace Paramore.Brighter.Tranformers.AWS
                 if (stsClient == null)
                     throw new ArgumentNullException(nameof(stsClient),
                         "To check for the existence of your luggage store bucket we use the IAmazonSecurityServiceToken to get your account id, and it cannot be null");
+                
+                if (httpClientFactory == null)
+                    throw new ArgumentNullException(nameof(httpClientFactory),
+                        "To check for the existence of your luggage store bucket we use HttpClient, so we require an IHttpClientFactory and it cannot be null");
             }
 
             if (storeCreation == S3LuggageStoreCreation.CreateIfMissing)
@@ -335,7 +339,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                     PublicAccessBlockConfiguration = new PublicAccessBlockConfiguration() { BlockPublicPolicy = true, IgnorePublicAcls = true }
                 });
                 if (blockAccessResponse.HttpStatusCode != HttpStatusCode.OK)
-                    throw new InvalidOperationException($"Could not add lifecycle rules to {bucketName}");
+                    throw new InvalidOperationException($"Could not block public access to {bucketName}");
            
             });
 
