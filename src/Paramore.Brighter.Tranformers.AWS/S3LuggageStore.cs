@@ -116,14 +116,15 @@ namespace Paramore.Brighter.Tranformers.AWS
                 if (httpClientFactory == null)
                     throw new ArgumentNullException(nameof(httpClientFactory),
                         "To check for the existence of your luggage store bucket we use HttpClient, so we require an IHttpClientFactory and it cannot be null");
-            }
-
-            if (storeCreation == S3LuggageStoreCreation.CreateIfMissing)
-            {
+                
                 if (bucketRegion == null)
                     throw new ArgumentNullException(
                         nameof(bucketRegion), "We need to know which region to create the bucket in, it should match the client region");
-                if (acl == null)
+             }
+
+            if (storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+            {
+               if (acl == null)
                     throw new ArgumentNullException(
                         nameof(acl), "We need to lock down any bucket we create with an ACL");
             }
@@ -142,19 +143,23 @@ namespace Paramore.Brighter.Tranformers.AWS
                 {
                     luggageStore._accountId = await GetAccountIdAsync(stsClient);
                     var bucketExists = await BucketExistsAsync(httpClientFactory, luggageStore._accountId, bucketName, bucketRegion);
-                    if (!bucketExists && storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+
+                    if (!bucketExists)
                     {
-                        await CreateBucketAsync(
-                            client,
-                            policy,
-                            luggageStore._accountId,
-                            bucketName,
-                            bucketRegion,
-                            acl,
-                            tags,
-                            abortFailedUploadsAfterDays,
-                            deleteGoodUploadsAfterDays,
-                            luggagePrefix);
+                        if (storeCreation == S3LuggageStoreCreation.ValidateExists)
+                            throw new InvalidOperationException($"There was no luggage store with the bucket {bucketName}");
+                        else if (storeCreation == S3LuggageStoreCreation.CreateIfMissing)
+                            await CreateBucketAsync(
+                                client,
+                                policy,
+                                luggageStore._accountId,
+                                bucketName,
+                                bucketRegion,
+                                acl,
+                                tags,
+                                abortFailedUploadsAfterDays,
+                                deleteGoodUploadsAfterDays,
+                                luggagePrefix);
                     }
                 }
                 catch (Exception e)
@@ -271,7 +276,8 @@ namespace Paramore.Brighter.Tranformers.AWS
             {
                 headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
                 var response = await httpClient.SendAsync(headRequest);
-                return response.IsSuccessStatusCode;
+                //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
+                return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
             }
         }
 

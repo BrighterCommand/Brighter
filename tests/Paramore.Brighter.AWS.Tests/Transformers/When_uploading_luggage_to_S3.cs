@@ -56,7 +56,9 @@ public class S3LuggageUploadTests : IDisposable
             bucketRegion: S3Region.EUW1,
             tags: new List<Tag>(){new Tag{Key = "BrighterTests", Value = "S3LuggageUploadTests"}},
             acl: S3CannedACL.Private,
-            policy: GetSimpleHandlerRetryPolicy(), abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);    
+            policy: GetSimpleHandlerRetryPolicy(), 
+            abortFailedUploadsAfterDays: 1, 
+            deleteGoodUploadsAfterDays: 1);    
         
         //act
         //Upload the test stream to S3

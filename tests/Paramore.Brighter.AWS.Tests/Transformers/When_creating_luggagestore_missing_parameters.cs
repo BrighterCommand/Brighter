@@ -52,7 +52,9 @@ public class S3LuggageUploadMissingParametersTests
                 bucketRegion: S3Region.EUW1,
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);
+                policy: null, 
+                abortFailedUploadsAfterDays: 1, 
+                deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
@@ -74,11 +76,37 @@ public class S3LuggageUploadMissingParametersTests
                 bucketRegion: S3Region.EUW1,
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);
+                policy: null, 
+                abortFailedUploadsAfterDays: 1, 
+                deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ArgumentNullException>();
+    }
+    
+    [Fact]
+    public async Task When_creating_luggagestore_bad_bucketName()
+    {
+        //arrange
+        var exception = await Catch.ExceptionAsync(async () =>
+        {
+            var luggageStore = await S3LuggageStore.CreateAsync(
+                client: _client,
+                bucketName: "A",
+                storeCreation: S3LuggageStoreCreation.CreateIfMissing,
+                httpClientFactory: _httpClientFactory,
+                stsClient: _stsClient,
+                bucketRegion: S3Region.EUW1,
+                tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
+                acl: S3CannedACL.Private,
+                policy: null, 
+                abortFailedUploadsAfterDays: 1, 
+                deleteGoodUploadsAfterDays: 1);
+        });
+
+        exception.Should().NotBeNull();
+        exception.Should().BeOfType<ArgumentException>();
     }
     
     [Fact]
@@ -96,7 +124,9 @@ public class S3LuggageUploadMissingParametersTests
                 bucketRegion: S3Region.EUW1,
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);
+                policy: null, 
+                abortFailedUploadsAfterDays: 1, 
+                deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
@@ -118,7 +148,9 @@ public class S3LuggageUploadMissingParametersTests
                 bucketRegion: S3Region.EUW1,
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);
+                policy: null, 
+                abortFailedUploadsAfterDays: 1, 
+                deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
@@ -140,7 +172,9 @@ public class S3LuggageUploadMissingParametersTests
                 bucketRegion: null,
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);
+                policy: null, 
+                abortFailedUploadsAfterDays: 1, 
+                deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
@@ -162,7 +196,9 @@ public class S3LuggageUploadMissingParametersTests
                     bucketRegion: S3Region.EUW1,
                     tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: null,
-                    policy: null, abortFailedUploadsAfterDays: 1, deleteGoodUploadsAfterDays: 1);
+                    policy: null, 
+                    abortFailedUploadsAfterDays: 1, 
+                    deleteGoodUploadsAfterDays: 1);
             });
     
             exception.Should().NotBeNull();
