@@ -21,7 +21,8 @@ using Policy = Polly.Policy;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers;
 
-[Collection("S3Tests")]
+[Trait("Category", "AWS")] 
+[Trait("Fragile", "CI")]
 public class S3LuggageStoreExistsTests 
 {
     private readonly AmazonS3Client _client;
@@ -60,7 +61,8 @@ public class S3LuggageStoreExistsTests
             abortFailedUploadsAfterDays: 1, 
             deleteGoodUploadsAfterDays: 1);
 
-        await Task.Delay(1000);
+        //allow bucket endpoint to come into existence
+        await Task.Delay(5000);
 
         //act
         var luggageStore = await S3LuggageStore.CreateAsync(

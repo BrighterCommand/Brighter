@@ -19,6 +19,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers
 {
+    [Trait("Category", "AWS")] 
+    [Trait("Fragile", "CI")]
     public class LargeMessagePaylodUnwrapTests : IDisposable
     {
         private readonly TransformPipelineBuilder _pipelineBuilder;
@@ -72,6 +74,8 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         public async Task When_unwrapping_a_large_message()
         {
             //arrange
+            await Task.Delay(3000); //allow bucket definition to propogate
+            
             //store our luggage and get the claim check
             var contents = DataGenerator.CreateString(6000);
             var myCommand = new MyLargeCommand(1) { Value = contents };
