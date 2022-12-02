@@ -1,3 +1,28 @@
+#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+ 
+#endregion
+
+
 using System;
 using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
@@ -50,12 +75,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var subscriberRegistry = new ServiceCollectionSubscriberRegistry(services, options.HandlerLifetime);
             services.TryAddSingleton<ServiceCollectionSubscriberRegistry>(subscriberRegistry);
 
+            var transformRegistry = new ServiceCollectionTransformerRegistry(services, options.TransformerLifetime);
+            services.TryAddSingleton<ServiceCollectionTransformerRegistry>(transformRegistry);
+
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor), BuildCommandProcessor, options.CommandProcessorLifetime));
 
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton<ServiceCollectionMessageMapperRegistry>(mapperRegistry);
 
-            return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry);
+            return new ServiceCollectionBrighterBuilder(services, subscriberRegistry, mapperRegistry, transformRegistry);
         }
 
         /// <summary>
@@ -217,7 +245,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return messageMapperRegistry;
         }
-
+        
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
             var loggerFactory = provider.GetService<ILoggerFactory>();
@@ -231,6 +259,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var handlerConfiguration = new HandlerConfiguration(subscriberRegistry, handlerFactory);
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
+
+            var transformFactory = new ServiceProviderTransformerFactory(provider);
 
             var outbox = provider.GetService<IAmAnOutboxSync<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
@@ -265,7 +295,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     outbox, 
                     overridingConnectionProvider, 
                     useRequestResponse,
-                    _outboxBulkChunkSize)
+                    _outboxBulkChunkSize,
+                    transformFactory)
                 .RequestContextFactory(options.RequestContextFactory)
                 .Build();
 
@@ -288,7 +319,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IAmAnOutboxSync<Message> outbox,
             IAmABoxTransactionConnectionProvider overridingConnectionProvider, 
             IUseRpc useRequestResponse,
-            int outboxBulkChunkSize)
+            int outboxBulkChunkSize,
+            IAmAMessageTransformerFactory transformerFactory)
         {
             ExternalBusType externalBusType = GetExternalBusType(producerRegistry, useRequestResponse);
 
@@ -296,7 +328,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 return messagingBuilder.NoExternalBus();
             else if (externalBusType == ExternalBusType.FireAndForget)
                 return messagingBuilder.ExternalBus(
-                    new ExternalBusConfiguration(producerRegistry, messageMapperRegistry, useInbox: inboxConfiguration, outboxBulkChunkSize: outboxBulkChunkSize),
+                    new ExternalBusConfiguration(
+                        producerRegistry, 
+                        messageMapperRegistry, 
+                        outboxBulkChunkSize: outboxBulkChunkSize, 
+                        useInbox: inboxConfiguration,
+                        transformerFactory: transformerFactory),
                     outbox,
                     overridingConnectionProvider);
             else if (externalBusType == ExternalBusType.RPC)

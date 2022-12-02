@@ -23,14 +23,17 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Linq;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
+using Amazon.S3;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.Tranformers.AWS;
 using Serilog;
 using Serilog.Extensions.Logging;
 
@@ -72,16 +75,37 @@ namespace GreetingsSender
                     )
                     .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
+                //We need this for the check as to whether an S3 bucket exists
+                serviceCollection.AddHttpClient();
+                
+                //Adds a luggage store based on an S3 bucket
+                serviceCollection.AddS3LuggageStore((options) =>
+                {
+                    options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
+                    options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
+                    options.BucketRegion = S3Region.EUW1;
+                    options.StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
+                });
+                
+
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
                 var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
                 
                 Console.WriteLine($"Sending Event to SNS topic {topic} ");
 
-                commandProcessor.Post(new GreetingEvent("Ian"));
+                //create a 512K string, too large for a payload, that needs offloading
+                commandProcessor.Post(new GreetingEvent($"Hi - {CreateString(524288)}"));
                 
                 Console.WriteLine($"Sent Event to SNS topic {topic} ");
             }
         }
+        
+        public static string CreateString(int length)
+        {
+            const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+            return new string(Enumerable.Repeat(chars, length)
+                .Select(s => s[new Random().Next(s.Length)]).ToArray());
+        }    
     }
 }

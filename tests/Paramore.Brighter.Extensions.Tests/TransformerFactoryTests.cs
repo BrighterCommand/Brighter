@@ -1,0 +1,46 @@
+﻿using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.DependencyInjection;
+using Xunit;
+
+namespace Paramore.Brighter.Extensions.Tests;
+
+public class TransformerFactoryTests
+{
+    private ServiceProviderTransformerFactory _transformFactory;
+
+    [Fact]
+    public void When_resolving_a_transformer_from_the_factory()
+    {
+       //arrange
+       var collection = new ServiceCollection();
+       collection.AddSingleton(typeof(TestTransform),new TestTransform());
+       collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Singleton });
+       var provider = collection.BuildServiceProvider(new ServiceProviderOptions{ValidateOnBuild = true});
+
+       _transformFactory = new ServiceProviderTransformerFactory(provider);
+       
+       //act
+       var testTransform = _transformFactory.Create(typeof(TestTransform));
+       
+       //assert
+       testTransform.Should().NotBeNull();
+    }
+    
+    [Fact]
+    public void When_resolving_a_missing_transformer_from_the_factory()
+    {
+        //arrange
+        var collection = new ServiceCollection();
+        collection.AddSingleton<IBrighterOptions>(new BrighterOptions { TransformerLifetime = ServiceLifetime.Singleton });
+        var provider = collection.BuildServiceProvider();
+
+        _transformFactory = new ServiceProviderTransformerFactory(provider);
+       
+        //act
+        var testTransform = _transformFactory.Create(typeof(TestTransform));
+       
+        //assert
+        testTransform.Should().BeNull();
+    }
+}

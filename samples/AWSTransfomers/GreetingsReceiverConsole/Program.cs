@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System.Threading.Tasks;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
+using Amazon.S3;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -33,6 +34,7 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using Paramore.Brighter.Tranformers.AWS;
 using Serilog;
 
 namespace GreetingsReceiverConsole
@@ -76,6 +78,18 @@ namespace GreetingsReceiverConsole
                         })
                         .UseInMemoryOutbox()
                         .AutoFromAssemblies();
+                        
+                        //We need this for the check as to whether an S3 bucket exists
+                        services.AddHttpClient();
+                
+                        //Adds a luggage store based on an S3 bucket
+                        services.AddS3LuggageStore((options) =>
+                        {
+                            options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
+                            options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
+                            options.BucketRegion = S3Region.EUW1;
+                            options.StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
+                        });
                     }
 
                     services.AddHostedService<ServiceActivatorHostedService>();

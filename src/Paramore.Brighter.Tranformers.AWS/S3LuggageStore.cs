@@ -1,13 +1,35 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+ 
+#endregion
+
+using System;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Amazon.Runtime;
 using Amazon.S3;
 using Amazon.S3.Model;
 using Amazon.S3.Transfer;
@@ -112,19 +134,19 @@ namespace Paramore.Brighter.Tranformers.AWS
                 if (stsClient == null)
                     throw new ArgumentNullException(nameof(stsClient),
                         "To check for the existence of your luggage store bucket we use the IAmazonSecurityServiceToken to get your account id, and it cannot be null");
-                
+
                 if (httpClientFactory == null)
                     throw new ArgumentNullException(nameof(httpClientFactory),
                         "To check for the existence of your luggage store bucket we use HttpClient, so we require an IHttpClientFactory and it cannot be null");
-                
+
                 if (bucketRegion == null)
                     throw new ArgumentNullException(
                         nameof(bucketRegion), "We need to know which region to create the bucket in, it should match the client region");
-             }
+            }
 
             if (storeCreation == S3LuggageStoreCreation.CreateIfMissing)
             {
-               if (acl == null)
+                if (acl == null)
                     throw new ArgumentNullException(
                         nameof(acl), "We need to lock down any bucket we create with an ACL");
             }
@@ -209,22 +231,20 @@ namespace Paramore.Brighter.Tranformers.AWS
                 stream.Position = 0;
                 return stream;
             }
-            catch (AmazonS3Exception ex)
+            catch (AmazonS3Exception)
             {
                 s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
                 throw;
             }
             catch (Exception e) when (e is ObjectDisposedException || e is NotSupportedException)
             {
-                 s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
-                 throw;
+                s_logger.LogError("Unable to read {claim check} from {bucket}", claimCheck, _bucketName);
+                throw;
             }
             finally
             {
                 response.Dispose();
             }
-
-            return null;
         }
 
         public async Task<bool> HasClaimAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
@@ -346,7 +366,22 @@ namespace Paramore.Brighter.Tranformers.AWS
                 });
                 if (blockAccessResponse.HttpStatusCode != HttpStatusCode.OK)
                     throw new InvalidOperationException($"Could not block public access to {bucketName}");
-           
+            });
+
+            await asyncRetryPolicy.ExecuteAsync(async () =>
+            {
+                var ownershipControlsResponse = await client.PutBucketOwnershipControlsAsync(new PutBucketOwnershipControlsRequest
+                {
+                    BucketName = bucketName,
+                    ExpectedBucketOwner = accountId,
+                    OwnershipControls = new OwnershipControls
+                    {
+                        Rules = new List<OwnershipControlsRule> { new OwnershipControlsRule { ObjectOwnership = ObjectOwnership.BucketOwnerEnforced } }
+                    }
+                });
+
+                if (ownershipControlsResponse.HttpStatusCode != HttpStatusCode.OK)
+                    throw new InvalidOperationException($"Could not block public access to {bucketName}");
             });
 
             if (tags != null)

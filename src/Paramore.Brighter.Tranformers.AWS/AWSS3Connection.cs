@@ -22,35 +22,29 @@ THE SOFTWARE. */
  
 #endregion
 
-using System;
+using Amazon;
+using Amazon.Runtime;
 
-namespace Paramore.Brighter.Extensions.DependencyInjection
+namespace Paramore.Brighter.Tranformers.AWS
 {
     /// <summary>
-    /// Creates a message mapper from the underlying .NET IoC container
+    /// Used to create an AWS Client
     /// </summary>
-    public class ServiceProviderMapperFactory : IAmAMessageMapperFactory
+    public class AWSS3Connection
     {
-        private readonly IServiceProvider _serviceProvider;
-
-        /// <summary>
-        /// Constructs a mapper factory that uses the .NET Service Provider for implementation details
-        /// </summary>
-        /// <param name="serviceProvider"></param>
-        public ServiceProviderMapperFactory(IServiceProvider serviceProvider)
-        {
-            _serviceProvider = serviceProvider;
-        }
-
-        /// <summary>
-        /// Create an instance of the message mapper type from the .NET IoC container
-        /// Note that there is no release as we assume that Mappers are never IDisposable
-        /// </summary>
-        /// <param name="messageMapperType">The type of mapper to instantiate</param>
-        /// <returns></returns>
-        public IAmAMessageMapper Create(Type messageMapperType)
-        {
-            return (IAmAMessageMapper) _serviceProvider.GetService(messageMapperType);
-        }
+                /// <summary>
+                /// Constructs a credentials instance
+                /// </summary>
+                /// <param name="credentials">A credentials object for an AWS service</param>
+                /// <param name="region">The AWS region to connect to</param>
+                public AWSS3Connection(AWSCredentials credentials, RegionEndpoint region)
+                {
+                    Credentials = credentials;
+                    Region = region;
+                }
+        
+                public AWSCredentials Credentials { get; }
+                public RegionEndpoint Region { get; }
+         
     }
 }

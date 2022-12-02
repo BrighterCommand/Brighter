@@ -148,8 +148,8 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        public CommandProcessor(
-            IAmARequestContextFactory requestContextFactory,
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        public CommandProcessor(IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
@@ -158,14 +158,15 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
-            int outboxBulkChunkSize = 100)
+            int outboxBulkChunkSize = 100, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
             
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
@@ -184,14 +185,14 @@ namespace Paramore.Brighter
         /// <param name="outBox">The outbox</param>
         /// <param name="producerRegistry">The register of producers via whom we send messages over the external bus</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
-        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -204,7 +205,8 @@ namespace Paramore.Brighter
             IAmAChannelFactory responseChannelFactory = null,
             InboxConfiguration inboxConfiguration = null,
             IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
-            int outboxBulkChunkSize = 100)
+            int outboxBulkChunkSize = 100, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
             _featureSwitchRegistry = featureSwitchRegistry;
@@ -212,7 +214,7 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _replySubscriptions = replySubscriptions;
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
  
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
               
@@ -235,8 +237,8 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -247,12 +249,13 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
-            int outboxBulkChunkSize = 100)
+            int outboxBulkChunkSize = 100, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
  
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 

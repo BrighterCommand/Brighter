@@ -22,35 +22,41 @@ THE SOFTWARE. */
  
 #endregion
 
+
 using System;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     /// <summary>
-    /// Creates a message mapper from the underlying .NET IoC container
+    /// This class helps us register transformers with the IoC container
+    /// We don't have a separate registry for transformers, but we do need to understand
+    /// the service lifetime options for the transformers which we want to register
     /// </summary>
-    public class ServiceProviderMapperFactory : IAmAMessageMapperFactory
+    public class ServiceCollectionTransformerRegistry : ITransformerRegistry
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly IServiceCollection _services;
+        private readonly ServiceLifetime _serviceLifetime;
 
         /// <summary>
-        /// Constructs a mapper factory that uses the .NET Service Provider for implementation details
+        /// Constructs a new instance
         /// </summary>
-        /// <param name="serviceProvider"></param>
-        public ServiceProviderMapperFactory(IServiceProvider serviceProvider)
+        /// <param name="services">The Service Collection to register the transforms with</param>
+        /// <param name="serviceLifetime">The lifetime to use for registration. Defaults to Singleton</param>
+        public ServiceCollectionTransformerRegistry(IServiceCollection services, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
-            _serviceProvider = serviceProvider;
+            _services = services;
+            _serviceLifetime = serviceLifetime;
         }
 
         /// <summary>
-        /// Create an instance of the message mapper type from the .NET IoC container
-        /// Note that there is no release as we assume that Mappers are never IDisposable
+        /// Register a transform with the IServiceCollection using the ServiceLifetime
         /// </summary>
-        /// <param name="messageMapperType">The type of mapper to instantiate</param>
-        /// <returns></returns>
-        public IAmAMessageMapper Create(Type messageMapperType)
+        /// <param name="transform">The type of the transform to register</param>
+        public void Add(Type transform)
         {
-            return (IAmAMessageMapper) _serviceProvider.GetService(messageMapperType);
+            _services.TryAdd(new ServiceDescriptor(transform, transform, _serviceLifetime));
         }
     }
 }

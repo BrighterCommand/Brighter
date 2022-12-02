@@ -26,11 +26,13 @@ using System.Text.Json;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
 using Paramore.Brighter.MessagingGateway.AWSSQS;
+using Paramore.Brighter.Transforms.Attributes;
 
 namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
+        [ClaimCheck(step:0, thresholdInKb: 256)]
         public Message MapToMessage(GreetingEvent request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: typeof(GreetingEvent).FullName.ToValidSNSTopicName(), messageType: MessageType.MT_EVENT);
@@ -39,6 +41,7 @@ namespace Greetings.Ports.Mappers
             return message;
         }
 
+        [RetrieveClaim(0)]
         public GreetingEvent MapToRequest(Message message)
         {
             var greetingCommand = JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);

@@ -23,34 +23,49 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
     /// <summary>
-    /// Creates a message mapper from the underlying .NET IoC container
+    /// A factory for creating transformers, backed by the .NET Service Collection
     /// </summary>
-    public class ServiceProviderMapperFactory : IAmAMessageMapperFactory
+    public class ServiceProviderTransformerFactory : IAmAMessageTransformerFactory
     {
         private readonly IServiceProvider _serviceProvider;
+        private readonly bool _isTransient;
 
         /// <summary>
-        /// Constructs a mapper factory that uses the .NET Service Provider for implementation details
+        /// Constructs a transformer factory
         /// </summary>
-        /// <param name="serviceProvider"></param>
-        public ServiceProviderMapperFactory(IServiceProvider serviceProvider)
+        /// <param name="serviceProvider">The IoC container we use to satisfy requests for transforms</param>
+        public ServiceProviderTransformerFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
+            var options = (IBrighterOptions) serviceProvider.GetRequiredService<IBrighterOptions>();
+            if (options == null) _isTransient = false; else _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;  
+        }
+    
+        /// <summary>
+        /// Creates a specific transformer on demand
+        /// </summary>
+        /// <param name="transformerType">The type of transformer to creeate</param>
+        /// <returns></returns>
+        public IAmAMessageTransformAsync Create(Type transformerType)
+        {
+            return (IAmAMessageTransformAsync) _serviceProvider.GetService(transformerType);
         }
 
         /// <summary>
-        /// Create an instance of the message mapper type from the .NET IoC container
-        /// Note that there is no release as we assume that Mappers are never IDisposable
+        /// If the transform was scoped as transient, we release it when the pipeline is finished
         /// </summary>
-        /// <param name="messageMapperType">The type of mapper to instantiate</param>
-        /// <returns></returns>
-        public IAmAMessageMapper Create(Type messageMapperType)
+        /// <param name="transformer"></param>
+        public void Release(IAmAMessageTransformAsync transformer)
         {
-            return (IAmAMessageMapper) _serviceProvider.GetService(messageMapperType);
+            if (!_isTransient) return;
+            
+            var disposal = transformer as IDisposable;
+            disposal?.Dispose();
         }
     }
 }
