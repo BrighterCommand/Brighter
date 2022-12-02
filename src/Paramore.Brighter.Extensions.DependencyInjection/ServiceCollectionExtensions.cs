@@ -30,6 +30,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -223,6 +224,23 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder UseFeatureSwitches(this IBrighterBuilder brighterBuilder, IAmAFeatureSwitchRegistry featureSwitchRegistry)
         {
             brighterBuilder.Services.TryAddSingleton(featureSwitchRegistry);
+            return brighterBuilder;
+        }
+        
+        /// <summary>
+        /// Config the Json Serialiser that is used inside of Brighter
+        /// </summary>
+        /// <param name="brighterBuilder">The Brighter Builder</param>
+        /// <param name="configure">Action to configure the options</param>
+        /// <returns>Brighter Builder</returns>
+        public static IBrighterBuilder ConfigureJsonSerialisation(this IBrighterBuilder brighterBuilder, Action<JsonSerializerOptions> configure)
+        {
+            var options = new JsonSerializerOptions();
+            
+            configure.Invoke(options);
+
+            JsonSerialisationOptions.Options = options;
+            
             return brighterBuilder;
         }
         
