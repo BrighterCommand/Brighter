@@ -31,13 +31,19 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmACommandProcessorProvider _commandProcessorProvider;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
         private readonly Subscription _subscription;
+        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         private readonly ConsumerName _consumerName;
 
-        public ConsumerFactory(IAmACommandProcessorProvider commandProcessorProvider, IAmAMessageMapperRegistry messageMapperRegistry, Subscription subscription)
+        public ConsumerFactory(
+            IAmACommandProcessorProvider commandProcessorProvider,
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            Subscription subscription, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             _commandProcessorProvider = commandProcessorProvider;
             _messageMapperRegistry = messageMapperRegistry;
             _subscription = subscription;
+            _messageTransformerFactory = messageTransformerFactory;
             _consumerName = new ConsumerName($"{_subscription.Name}-{Guid.NewGuid()}");
         }
 
@@ -52,7 +58,7 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateBlocking()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry)
+            var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry, _messageTransformerFactory)
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
@@ -67,7 +73,7 @@ namespace Paramore.Brighter.ServiceActivator
         private Consumer CreateAsync()
         {
             var channel = _subscription.ChannelFactory.CreateChannel(_subscription);
-            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistry)
+            var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistry, _messageTransformerFactory)
             {
                 Channel = channel,
                 TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,

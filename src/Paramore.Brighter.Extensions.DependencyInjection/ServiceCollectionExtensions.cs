@@ -263,6 +263,17 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return messageMapperRegistry;
         }
+
+        /// <summary>
+        /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or the Service Activator
+        /// Visibility is required for use from both
+        /// </summary>
+        /// <param name="provider">The IoC container to build the transform factory over</param>
+        /// <returns></returns>
+        public static ServiceProviderTransformerFactory TransformFactory(IServiceProvider provider)
+        {
+            return new ServiceProviderTransformerFactory(provider);
+        }
         
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
@@ -278,7 +289,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var messageMapperRegistry = MessageMapperRegistry(provider);
 
-            var transformFactory = new ServiceProviderTransformerFactory(provider);
+            var transformFactory = TransformFactory(provider);
 
             var outbox = provider.GetService<IAmAnOutboxSync<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
@@ -320,6 +331,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return commandProcessor;
         }
+
 
         private enum ExternalBusType
         {

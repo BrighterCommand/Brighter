@@ -83,12 +83,13 @@ namespace GreetingsReceiverConsole
                         services.AddHttpClient();
                 
                         //Adds a luggage store based on an S3 bucket
+                        //Assume that the sender has already created, but validate it
                         services.AddS3LuggageStore((options) =>
                         {
                             options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
                             options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
                             options.BucketRegion = S3Region.EUW1;
-                            options.StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
+                            options.StoreCreation = S3LuggageStoreCreation.ValidateExists;
                         });
                     }
 

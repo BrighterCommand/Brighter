@@ -45,6 +45,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         private Task _controlTask;
         private readonly IAmAMessageMapperRegistry _messageMapperRegistry;
+        private readonly IAmAMessageTransformerFactory _messageTransformerFactory;
         private readonly ConcurrentDictionary<int, Task> _tasks;
         private readonly ConcurrentDictionary<string, IAmAConsumer> _consumers;
 
@@ -61,6 +62,7 @@ namespace Paramore.Brighter.ServiceActivator
         
         /// <summary>
         /// Gets the connections.
+        /// TODO: Rename to Subscriptions in V10
         /// </summary>
         /// <value>The connections.</value>
         public IEnumerable<Subscription> Connections { get; private set; }
@@ -89,16 +91,19 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="commandProcessorFactory">The command processor Factory.</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
-        /// <param name="connections">The connections.</param>
+        /// <param name="subscriptions">The subscriptions.</param>
+        /// <param name="messageTransformerFactory">Creates instances of Transforms</param>
         public Dispatcher(
-            Func<IAmACommandProcessorProvider> commandProcessorFactory, 
+            Func<IAmACommandProcessorProvider> commandProcessorFactory,
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IEnumerable<Subscription> connections)
+            IEnumerable<Subscription> subscriptions,
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             CommandProcessorFactory = commandProcessorFactory;
             
-            Connections = connections;
+            Connections = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
+            _messageTransformerFactory = messageTransformerFactory;
 
             State = DispatcherState.DS_NOTREADY;
 
@@ -108,9 +113,12 @@ namespace Paramore.Brighter.ServiceActivator
             State = DispatcherState.DS_AWAITING;
         }
 
-        public Dispatcher(IAmACommandProcessor commandProcessor, IAmAMessageMapperRegistry messageMapperRegistry,
-            IEnumerable<Subscription> connection) : this(() => new CommandProcessorProvider(commandProcessor),
-            messageMapperRegistry, connection)
+        public Dispatcher(
+            IAmACommandProcessor commandProcessor, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IEnumerable<Subscription> subscription, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null) 
+            : this(() => new CommandProcessorProvider(commandProcessor), messageMapperRegistry, subscription, messageTransformerFactory)
         {
         }
 
@@ -277,17 +285,17 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
-        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> connections)
+        private IEnumerable<Consumer> CreateConsumers(IEnumerable<Subscription> subscriptions)
         {
             var list = new List<Consumer>();
-            connections.Each(connection =>
+            subscriptions.Each(subscription =>
             {
-                for (var i = 0; i < connection.NoOfPeformers; i++)
+                for (var i = 0; i < subscription.NoOfPeformers; i++)
                 {
                     int performer = i;
-                    s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", performer + 1, connection.Name);
-                    var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(connection.DataType);
-                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessorFactory.Invoke(), _messageMapperRegistry, connection);
+                    s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", performer + 1, subscription.Name);
+                    var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
+                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessorFactory.Invoke(), _messageMapperRegistry, subscription, _messageTransformerFactory);
 
                     list.Add(consumerFactory.Create());
                 }
