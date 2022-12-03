@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Transforms.Transformers
 {
     public class ClaimCheckTransformer : IAmAMessageTransformAsync
     {
-        public const string CLAIM_CHECK = "Claim Check Header";
+        public const string CLAIM_CHECK = "claim_check_header";
         private readonly IAmAStorageProviderAsync _store;
         private int _thresholdInBytes;
         private bool _retainLuggage;

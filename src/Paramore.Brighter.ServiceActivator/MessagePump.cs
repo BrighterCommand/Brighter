@@ -57,7 +57,7 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private int _unacceptableMessageCount = 0;
-        private readonly UnwrapPipeline<TRequest> _wrapPipeline;
+        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
         /// <summary>
         /// Constructs a message pump 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             CommandProcessorProvider = commandProcessorProvider;
             var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
-            _wrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
+            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
 
         public int TimeoutInMilliseconds { get; set; }
@@ -354,7 +354,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             try
             {
-                request = _wrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
+                request = _unwrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
             }
             catch (ConfigurationException ce)
             {
