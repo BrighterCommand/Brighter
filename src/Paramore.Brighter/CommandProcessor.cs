@@ -280,7 +280,6 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactorySync, _inboxConfiguration))
             {
-                bool success = false;
                 try
                 {
                     s_logger.LogInformation("Building send pipeline for command: {CommandType} {Id}", command.GetType(),
@@ -290,16 +289,15 @@ namespace Paramore.Brighter
                     AssertValidSendPipeline(command, handlerChain.Count());
 
                     handlerChain.First().Handle(command);
-                    success = true;
                 }
                 catch (Exception)
                 {
-                    success = false;
+                    span.span?.SetStatus(ActivityStatusCode.Error);
                     throw;
                 }
                 finally
                 {
-                    EndSpan(span.span, success);
+                    EndSpan(span.span);
                 }
                 
             }
@@ -328,25 +326,23 @@ namespace Paramore.Brighter
 
             using (var builder = new PipelineBuilder<T>(_subscriberRegistry, _handlerFactoryAsync, _inboxConfiguration))
             {
-                bool success = false;
                 try
                 {
-                    s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
-                var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
+                  s_logger.LogInformation("Building send async pipeline for command: {CommandType} {Id}", command.GetType(), command.Id);
+                  var handlerChain = builder.BuildAsync(requestContext, continueOnCapturedContext);
 
-                AssertValidSendPipeline(command, handlerChain.Count());
+                  AssertValidSendPipeline(command, handlerChain.Count());
 
-                await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
-                success = true;
+                  await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                 }
-                catch (Exception e)
+                catch (Exception e) 
                 {
-                    success = false;
+                    span.span?.SetStatus(ActivityStatusCode.Error);
                     throw;
                 }
                 finally
                 {
-                    EndSpan(span.span, success);
+                    EndSpan(span.span);
                 }
             }
         }
@@ -390,12 +386,15 @@ namespace Paramore.Brighter
                     }
                     catch (Exception e)
                     {
-                        exceptions.Add(e);
+                      exceptions.Add(e);
                     }
                 }
 
-                if (span.created)
-                    EndSpan(span.span, exceptions.Any());
+                if (span.created) {
+                  if (exceptions.Any())
+                    span.span?.SetStatus(ActivityStatusCode.Error);
+                  EndSpan(span.span);
+                }
 
                 if (exceptions.Any())
                 {
@@ -447,12 +446,16 @@ namespace Paramore.Brighter
                     }
                     catch (Exception e)
                     {
-                        exceptions.Add(e);
+                      exceptions.Add(e);
                     }
                 }
-                
-                if (span.created)
-                    EndSpan(span.span, exceptions.Any());
+
+
+                if (span.created) {
+                  if (exceptions.Any())
+                    span.span?.SetStatus(ActivityStatusCode.Error);
+                  EndSpan(span.span);
+                }
 
                 if (exceptions.Count > 0)
                 {
@@ -471,10 +474,10 @@ namespace Paramore.Brighter
                 return (Activity.Current, create);
         }
 
-        private void EndSpan(Activity span, bool success)
+        private void EndSpan(Activity span)
         {
-            var status = success ? ActivityStatusCode.Error : ActivityStatusCode.Ok;
-            span?.SetStatus(status);
+            if (span?.Status == ActivityStatusCode.Unset)
+              span.SetStatus(ActivityStatusCode.Ok);
             span?.Dispose();
         }
 
