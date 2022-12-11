@@ -38,7 +38,7 @@ using Paramore.Brighter.MsSql;
 namespace Paramore.Brighter.Outbox.MsSql
 {
     /// <summary>
-    ///     Class MsSqlOutbox.
+    /// Class MsSqlOutbox.
     /// </summary>
     public class MsSqlOutbox :
         IAmABulkOutboxSync<Message>, 
@@ -80,6 +80,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
         }
 
+        #region Externals
+
         /// <summary>
         ///     Adds the specified message.
         /// </summary>
@@ -90,40 +92,12 @@ namespace Paramore.Brighter.Outbox.MsSql
         public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            
-            var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
-                connectionProvider = provider;
-            
-            var connection = connectionProvider.GetConnection();
-            
-            if(connection.State!= ConnectionState.Open) connection.Open();
-            using (var command = InitAddDbCommand(connection, parameters))
+            RunNonQuery(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
             {
-                try
-                {
-                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction(); 
-                    command.ExecuteNonQuery();
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        s_logger.LogWarning(
+                s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
-                        return;
-                    }
-
-                    throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
-                }
-            }
+            });
         }
         
         /// <summary>
@@ -135,38 +109,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns>Task.</returns>
         public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
-                connectionProvider = provider;
-            
-            var connection = connectionProvider.GetConnection();
-            
-            if(connection.State!= ConnectionState.Open) connection.Open();
-            using (var command = InitBulkAddDbCommand(messages.ToList(), connection))
-            {
-                try
-                {
-                    if (connectionProvider.HasOpenTransaction) command.Transaction = connectionProvider.GetTransaction(); 
-                    command.ExecuteNonQuery();
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: At least one message already exists in the outbox");
-                        return;
-                    }
-
-                    throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
-                }
-            }
+            RunNonQuery(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
         }
 
         /// <summary>
@@ -177,44 +120,16 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="cancellationToken">Cancellation Token</param>
         /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            
-            var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlConnectionProvider provider)
-                connectionProvider = provider;
-
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
-            
-            if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitAddDbCommand(connection, parameters))
+            return RunNonQueryAsync(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
             {
-                try
-                {
-                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
-                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        s_logger.LogWarning(
+                s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                             message.Id);
-                        return;
-                    }
-
-                    throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
-                }
-            }
-            
+            },
+            cancellationToken);
         }
 
         /// <summary>
@@ -225,42 +140,11 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
+        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken),
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-            var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlConnectionProvider provider)
-                connectionProvider = provider;
-            
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
-
-            if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitBulkAddDbCommand(messages.ToList(), connection))
-            {
-                try
-                {
-                    if (connectionProvider.IsSharedConnection) command.Transaction = connectionProvider.GetTransaction();
-                    await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                }
-                catch (SqlException sqlException)
-                {
-                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
-                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
-                    {
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: At least one message already exists in the outbox");
-                        return;
-                    }
-
-                    throw;
-                }
-                finally
-                {
-                    if(!connectionProvider.IsSharedConnection) connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction) connection.Close();
-                }
-            }
+            return RunNonQueryAsync(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"), cancellationToken);
         }
 
         /// <summary>
@@ -279,27 +163,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             int outboxTimeout = -1, 
             Dictionary<string, object> args = null)
         {
-            var connection = _connectionProvider.GetConnection();
-            using (var command = connection.CreateCommand())
-            {
-                CreatePagedDispatchedCommand(command, millisecondsDispatchedSince, pageSize, pageNumber);
-
-                if(connection.State!= ConnectionState.Open) connection.Open();
-                
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
-                {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
-                return messages;
-            }
+            return RunCommand(connection => CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber), dr => MapListFunction(dr));
         }
 
        /// <summary>
@@ -310,13 +174,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
-            var parameters = new[]
-            {
-                CreateSqlParameter("MessageId", messageId)
-            };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
+            return RunCommand(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunction(dr));
         }
 
         /// <summary>
@@ -326,22 +184,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
-        public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
-
-            var parameters = new[]
-            {
-                CreateSqlParameter("MessageId", messageId)
-            };
-
-            return await ExecuteCommandAsync(
-                async command => await MapFunctionAsync(await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext)),
-                sql,
-                outBoxTimeout,
-                cancellationToken,
-                parameters)
-                .ConfigureAwait(ContinueOnCapturedContext);
+            return RunCommandAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -351,33 +196,10 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="cancellationToken">Cancellation Token.</param>
         /// <param name="messageIds">The Ids of the messages</param>
         /// <returns></returns>
-        public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            using (var command = connection.CreateCommand())
-            {
-                CreateListOfMessagesCommand(command, messageIds.ToList());
-
-                if (connection.State != ConnectionState.Open)
-                    await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                
-                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-                var messages = new List<Message>();
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                dbDataReader.Close();
-
-                if (!_connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction)
-                    connection.Close();
-
-                return messages;
-            }
+            return RunCommandAsync(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout), async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -389,27 +211,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns>A list of messages</returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            var connection = _connectionProvider.GetConnection();
-            using (var command = connection.CreateCommand())
-            {
-                CreatePagedReadCommand(command, pageSize, pageNumber);
-
-                if(connection.State != ConnectionState.Open) connection.Open();
-                
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
-                {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-
-                return messages;
-            }
+            return RunCommand(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunction(dr)).ToList();
         }
 
         /// <summary>
@@ -426,28 +228,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            using (var command = connection.CreateCommand())
-            {
-                CreatePagedReadCommand(command, pageSize, pageNumber);
-
-                if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
-                var dbDataReader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-
-                var messages = new List<Message>();
-                while (await dbDataReader.ReadAsync(cancellationToken))
-                {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
-                return messages;
-            }
+            return (await RunCommandAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
         }
 
         /// <summary>
@@ -457,18 +238,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
 
-        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-           
-            if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow))
-            {
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();
-                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
-            if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+            return RunNonQueryAsync(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
         }
 
         /// <summary>
@@ -477,21 +249,10 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="ids">The ids of the messages to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
+        public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            using (var command = InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow))
-            {
-                await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
-            if (!_connectionProvider.IsSharedConnection)
-                connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction)
-                connection.Close();
+            return RunNonQueryAsync(null, connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
         }
 
         /// <summary>
@@ -501,15 +262,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            var connection = _connectionProvider.GetConnection();
-            if(connection.State!= ConnectionState.Open) connection.Open();
-            using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow))
-            {
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction();
-                command.ExecuteNonQuery();
-            }
-            if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-            else if (!_connectionProvider.HasOpenTransaction) connection.Close();
+            RunNonQuery(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null);
         }
 
        /// <summary>
@@ -524,28 +277,7 @@ namespace Paramore.Brighter.Outbox.MsSql
            int pageNumber = 1,
             Dictionary<string, object> args = null)
        {
-           var connection = _connectionProvider.GetConnection();
-            using (var command = connection.CreateCommand())
-            {
-                CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
-
-                if(connection.State!= ConnectionState.Open) connection.Open();
-
-                if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
-                var dbDataReader = command.ExecuteReader();
-
-                var messages = new List<Message>();
-                while (dbDataReader.Read())
-                {
-                    messages.Add(MapAMessage(dbDataReader));
-                }
-                dbDataReader.Close();
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
-                return messages;
-            }
+            return RunCommand(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunction(dr));
         }
 
         /// <summary>
@@ -555,39 +287,146 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
-        public async Task<IEnumerable<Message>> OutstandingMessagesAsync(
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(
            double millSecondsSinceSent, 
            int pageSize = 100, 
            int pageNumber = 1,
            Dictionary<string, object> args = null,
            CancellationToken cancellationToken = default)
        {
-           var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-           using (var command = connection.CreateCommand())
-           {
-               CreatePagedOutstandingCommand(command, millSecondsSinceSent, pageSize, pageNumber);
-
-               if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken);
-
-               if (_connectionProvider.HasOpenTransaction) command.Transaction = _connectionProvider.GetTransaction(); 
-               var dbDataReader = await command.ExecuteReaderAsync(cancellationToken);
-
-               var messages = new List<Message>();
-               while (await dbDataReader.ReadAsync(cancellationToken))
-               {
-                   messages.Add(MapAMessage(dbDataReader));
-               }
-               dbDataReader.Close();
-                
-               if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-               else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
-               return messages;
-           }
+            return RunCommandAsync(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
        }
-        
-        private void CreatePagedDispatchedCommand(SqlCommand command, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+
+        #endregion
+
+        #region Things that Actually call SQL
+        private void RunNonQuery(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction)
         {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+                catch (SqlException sqlException)
+                {
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    {
+                        loggingAction.Invoke();
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if (!connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
+        }
+
+        private async Task RunNonQueryAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (SqlException sqlException)
+                {
+                    if (sqlException.Number == MsSqlDuplicateKeyError_UniqueIndexViolation ||
+                        sqlException.Number == MsSqlDuplicateKeyError_UniqueConstraintViolation)
+                    {
+                        loggingAction.Invoke();
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if (!connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
+        }
+
+        private T RunCommand<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, T> resultFunc)
+        {
+            var connection = _connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    return resultFunc.Invoke(command.ExecuteReader());
+                }
+                finally
+                {
+                    if (!_connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!_connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
+        }
+
+        private async Task<T> RunCommandAsync<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+        {
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+                }
+                finally
+                {
+                    if (!_connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!_connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
+        }
+        #endregion
+
+        #region Things that Create Commands
+        private SqlCommand CreatePagedDispatchedCommand(SqlConnection connection, double millisecondsDispatchedSince, int pageSize, int pageNumber)
+        {
+            var command = connection.CreateCommand();
             var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
@@ -600,10 +439,13 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
+
+            return command;
         }
 
-        private void CreatePagedReadCommand(SqlCommand command, int pageSize, int pageNumber)
+        private SqlCommand CreatePagedReadCommand(SqlConnection connection, int pageSize, int pageNumber)
         {
+            var command = connection.CreateCommand();
             var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
             var parameters = new[]
             {
@@ -615,10 +457,13 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
+
+            return command;
         }
         
-        private void CreatePagedOutstandingCommand(SqlCommand command, double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        private SqlCommand CreatePagedOutstandingCommand(SqlConnection connection, double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
+            var command = connection.CreateCommand();
             var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
             var parameters = new[]
             {
@@ -631,67 +476,10 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);
+
+            return command;
         }
 
-        private void CreateListOfMessagesCommand(SqlCommand command, List<Guid> messageIds)
-        {
-            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
-
-            command.CommandText = sql;
-        }
-
-
-       //Fold this code back in as there is only one choice
-        private SqlParameter CreateSqlParameter(string parameterName, object value)
-        {
-            return new SqlParameter(parameterName, value ?? DBNull.Value);
-        }
-
-        private T ExecuteCommand<T>(Func<SqlCommand, T> execute, string sql, int outboxTimeout, params SqlParameter[] parameters)
-        {
-            var connection = _connectionProvider.GetConnection();
-            using (var command = connection.CreateCommand())
-            {
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
-
-                if (outboxTimeout != -1) command.CommandTimeout = outboxTimeout;
-
-                if(connection.State!= ConnectionState.Open) connection.Open();
-                var response = execute(command);
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
-                return response;
-            }
-        }
-
-        private async Task<T> ExecuteCommandAsync<T>(
-            Func<SqlCommand, Task<T>> execute,
-            string sql,
-            int timeoutInMilliseconds,
-            CancellationToken cancellationToken = default(CancellationToken),
-            params SqlParameter[] parameters)
-        {
-            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
-
-                if(connection.State!= ConnectionState.Open) await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var response =  await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                
-                if(!_connectionProvider.IsSharedConnection) connection.Dispose();
-                else if (!_connectionProvider.HasOpenTransaction) connection.Close();
-                
-                return response;
-            }
-        }
-        
         private SqlCommand InitAddDbCommand(SqlConnection connection, SqlParameter[] parameters)
         {
             var command = connection.CreateCommand();
@@ -705,22 +493,72 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var messageParams = new List<string>();
             var parameters = new List<SqlParameter>();
-            
+
             for (int i = 0; i < messages.Count(); i++)
             {
                 messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
-                
+
             }
             var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
-            
+
             var command = connection.CreateCommand();
-            
+
             command.CommandText = sql;
             command.Parameters.AddRange(parameters.ToArray());
             return command;
         }
 
+        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, Guid messageId, DateTime? dispatchedAt)
+        {
+            var command = connection.CreateCommand();
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
+            command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
+            return command;
+        }
+
+        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
+        {
+            var command = connection.CreateCommand();
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
+            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId in ( {inClause} )";
+
+            command.CommandText = sql;
+            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
+
+            return command;
+        }
+
+        private SqlCommand InitGetMessageCommand(SqlConnection connection, Guid messageId, int outBoxTimeout = -1)
+        {
+            var command = connection.CreateCommand();
+            command.CommandText = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
+            command.CommandTimeout = outBoxTimeout;
+            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
+            return command;
+        }
+
+        private SqlCommand InitGetMessagesCommand(SqlConnection connection, List<Guid> messageIds, int outBoxTimeout = -1)
+        {
+            var command = connection.CreateCommand();
+            var inClause = GenerateInClauseAndAddParameters(command, messageIds);
+            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
+            command.CommandTimeout = outBoxTimeout;
+            command.CommandText = sql;
+            return command;
+        }
+        #endregion
+
+        #region Parameter Helpers
+
+        //Fold this code back in as there is only one choice
+        private SqlParameter CreateSqlParameter(string parameterName, object value)
+        {
+            return new SqlParameter(parameterName, value ?? DBNull.Value);
+        }
+        
         private SqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
@@ -740,27 +578,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             return parameters;
         }
         
-        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, Guid messageId, DateTime? dispatchedAt)
-        {
-            var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
-            command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
-            return command;
-         }
-        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
-        {
-            var command = connection.CreateCommand();
-            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId in ( {inClause} )";
-
-            command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
-
-            return command;
-        }
-
         private string GenerateInClauseAndAddParameters(SqlCommand command, List<Guid> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
@@ -773,67 +590,15 @@ namespace Paramore.Brighter.Outbox.MsSql
             return string.Join(",", paramNames);
         }
 
-        private Message MapAMessage(SqlDataReader dr)
-        {
-            var id = GetMessageId(dr);
-            var messageType = GetMessageType(dr);
-            var topic = GetTopic(dr);
+        #endregion
 
-            var header = new MessageHeader(id, topic, messageType);
-            
+        #region Property Extractors
 
-            //new schema....we've got the extra header information
-            if (dr.FieldCount > 4)
-            {
-                DateTime timeStamp = GetTimeStamp(dr);
-                var correlationId = GetCorrelationId(dr);
-                var replyTo = GetReplyTo(dr);
-                var contentType = GetContentType(dr);
-                
-                header = new MessageHeader(
-                    messageId:id, 
-                    topic:topic, 
-                    messageType:messageType, 
-                    timeStamp:timeStamp, 
-                    handledCount:0, 
-                   delayedMilliseconds: 0,
-                    correlationId: correlationId,
-                    replyTo: replyTo,
-                    contentType: contentType);
+        private static string GetTopic(SqlDataReader dr) => dr.GetString(dr.GetOrdinal("Topic"));
 
-                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
-                if (dictionaryBag != null)
-                {
-                    foreach (var key in dictionaryBag.Keys)
-                    {
-                        header.Bag.Add(key, dictionaryBag[key]);
-                    }
-                }
-            }
-            
-            var bodyOrdinal = dr.GetOrdinal("Body");
-            string messageBody = string.Empty;
-            if(!dr.IsDBNull(bodyOrdinal))
-                messageBody = dr.GetString(bodyOrdinal);
-            var body = new MessageBody(messageBody);
+        private static MessageType GetMessageType(SqlDataReader dr) => (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
 
-            return new Message(header, body);
-        }
-
-        private static string GetTopic(SqlDataReader dr)
-        {
-            return dr.GetString(dr.GetOrdinal("Topic"));
-        }
-
-        private static MessageType GetMessageType(SqlDataReader dr)
-        {
-            return (MessageType) Enum.Parse(typeof (MessageType), dr.GetString(dr.GetOrdinal("MessageType")));
-        }
-
-        private static Guid GetMessageId(SqlDataReader dr)
-        {
-            return dr.GetGuid(dr.GetOrdinal("MessageId"));
-        }
+        private static Guid GetMessageId(SqlDataReader dr) => dr.GetGuid(dr.GetOrdinal("MessageId"));
 
         private string GetContentType(SqlDataReader dr)
         {
@@ -879,6 +644,9 @@ namespace Paramore.Brighter.Outbox.MsSql
             return timeStamp;
         }
 
+        #endregion
+
+        #region DataReader Operators
         private Message MapFunction(SqlDataReader dr)
         {
             Message message = null;
@@ -891,16 +659,88 @@ namespace Paramore.Brighter.Outbox.MsSql
             return message ?? new Message();
         }
         
-        private async Task<Message> MapFunctionAsync(SqlDataReader dr)
+        private async Task<Message> MapFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
         {
             Message message = null;
-            if (await dr.ReadAsync())
+            if (await dr.ReadAsync(cancellationToken))
             {
                 message = MapAMessage(dr);
             }
             dr.Close();
 
             return message ?? new Message();
+        }
+
+        private IEnumerable<Message> MapListFunction(SqlDataReader dr)
+        {
+            var messages = new List<Message>();
+            while (dr.Read())
+            {
+                messages.Add(MapAMessage(dr));
+            }
+            dr.Close();
+
+            return messages;
+        }
+
+        private async Task<IEnumerable<Message>> MapListFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
+        {
+            var messages = new List<Message>();
+            while (await dr.ReadAsync(cancellationToken))
+            {
+                messages.Add(MapAMessage(dr));
+            }
+            dr.Close();
+
+            return messages;
+        }
+        #endregion
+
+        private Message MapAMessage(SqlDataReader dr)
+        {
+            var id = GetMessageId(dr);
+            var messageType = GetMessageType(dr);
+            var topic = GetTopic(dr);
+
+            var header = new MessageHeader(id, topic, messageType);
+
+
+            //new schema....we've got the extra header information
+            if (dr.FieldCount > 4)
+            {
+                DateTime timeStamp = GetTimeStamp(dr);
+                var correlationId = GetCorrelationId(dr);
+                var replyTo = GetReplyTo(dr);
+                var contentType = GetContentType(dr);
+
+                header = new MessageHeader(
+                    messageId: id,
+                    topic: topic,
+                    messageType: messageType,
+                    timeStamp: timeStamp,
+                    handledCount: 0,
+                   delayedMilliseconds: 0,
+                    correlationId: correlationId,
+                    replyTo: replyTo,
+                    contentType: contentType);
+
+                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+                if (dictionaryBag != null)
+                {
+                    foreach (var key in dictionaryBag.Keys)
+                    {
+                        header.Bag.Add(key, dictionaryBag[key]);
+                    }
+                }
+            }
+
+            var bodyOrdinal = dr.GetOrdinal("Body");
+            string messageBody = string.Empty;
+            if (!dr.IsDBNull(bodyOrdinal))
+                messageBody = dr.GetString(bodyOrdinal);
+            var body = new MessageBody(messageBody);
+
+            return new Message(header, body);
         }
     }
 }
