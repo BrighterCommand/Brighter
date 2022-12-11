@@ -66,6 +66,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                         case int intValue:
                             headers.Add(header.Key, BitConverter.GetBytes(intValue));
                             break;
+                        default:
+                            headers.Add(header.Key, header.Value.ToString().ToByteArray());
+                            break;
                     }
                 }
             });

@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Extensions.Tests
         [Fact]
         public void ShouldHaveCommandProcessorRegisteredCorrectly()
         {
-            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Singleton);
+            TestRegistration(typeof(IAmACommandProcessor), ServiceLifetime.Transient);
         }
 
         [Fact]

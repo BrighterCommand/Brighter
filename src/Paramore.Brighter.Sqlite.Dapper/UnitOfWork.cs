@@ -5,7 +5,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Dapper;
-using SQLitePCL;
 
 namespace Paramore.Brighter.Sqlite.Dapper
 {

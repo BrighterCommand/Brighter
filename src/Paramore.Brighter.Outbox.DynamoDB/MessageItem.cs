@@ -75,6 +75,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string ReplyTo { get; set; }
         
         /// <summary>
+        /// The partition key for the Kafka message
+        /// </summary>
+        [DynamoDBProperty]
+        public string PartitionKey { get; set; }
+        
+        /// <summary>
         /// What is the content type of the message
         /// </summary>
         [DynamoDBProperty]
@@ -98,6 +104,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             ContentType = message.Header.ContentType;
             CreatedAt = $"{date}";
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+            PartitionKey = message.Header.PartitionKey;
             Body = message.Body.Value;
             DeliveryTime = 0;
         }
@@ -117,6 +124,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 timeStamp: timestamp,
                 correlationId: correlationId,
                 replyTo: ReplyTo,
+                partitionKey: PartitionKey,
                 contentType: ContentType);
 
             foreach (var key in bag.Keys)
