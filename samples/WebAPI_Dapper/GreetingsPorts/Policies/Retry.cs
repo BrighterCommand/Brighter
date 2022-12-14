@@ -1,5 +1,6 @@
 ﻿using System;
 using Polly;
+using Polly.CircuitBreaker;
 using Polly.Contrib.WaitAndRetry;
 using Polly.Retry;
 
@@ -22,6 +23,22 @@ namespace GreetingsPorts.Policies
         {
             var delay = Backoff.ExponentialBackoff(TimeSpan.FromMilliseconds(100), retryCount: 5, fastFirst: true);
             return Policy.Handle<Exception>().WaitAndRetryAsync(delay);
+        }
+        
+        public static AsyncRetryPolicy GetDefaultRetryPolicy()
+        {
+            return Policy.Handle<Exception>()
+                .WaitAndRetryAsync(new[]
+                {
+                    TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+                }); 
+        }
+        
+        public static AsyncCircuitBreakerPolicy GetDefaultCircuitBreakerPolicy()
+        {
+            return Policy.Handle<Exception>().CircuitBreakerAsync(
+                1, TimeSpan.FromMilliseconds(500)
+                );
         }
     }
 }

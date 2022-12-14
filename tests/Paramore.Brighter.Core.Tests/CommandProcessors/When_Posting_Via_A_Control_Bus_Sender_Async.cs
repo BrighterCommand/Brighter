@@ -35,6 +35,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
+    [Trait("Fragile", "CI")]
     [Collection("CommandProcessor")]
      public class ControlBusSenderPostMessageAsyncTests : IDisposable
     {

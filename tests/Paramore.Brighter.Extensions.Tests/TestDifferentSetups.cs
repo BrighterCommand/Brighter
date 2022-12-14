@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Polly;
@@ -32,7 +33,9 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() { { "MyTopic", new FakeProducerSync() }, });
-            
+
+            serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
+
             serviceCollection
                 .AddBrighter()
                 .UseInMemoryOutbox()
@@ -99,7 +102,9 @@ namespace Tests
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
- 
+
+        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
         public void Dispose()
         {
             throw new NotImplementedException();

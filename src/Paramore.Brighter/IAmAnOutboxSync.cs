@@ -83,6 +83,7 @@ namespace Paramore.Brighter
         /// <param name="pageNumber">Page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for the search, if any</param>
         /// <returns></returns>
+        [Obsolete("Removed in v10, Please use OutstandingMessages instead.")]
         IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null);
         
         /// <summary>

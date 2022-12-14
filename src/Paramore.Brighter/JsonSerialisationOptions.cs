@@ -15,7 +15,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Brighter serialization options for use when serializing or deserializing text
         /// </summary>
-        public static JsonSerializerOptions Options { get; }
+        public static JsonSerializerOptions Options { get; set; }
 
         static JsonSerialisationOptions()
         {

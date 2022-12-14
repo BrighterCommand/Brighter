@@ -6,6 +6,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
       <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
     </ItemGroup>
@@ -13,9 +14,9 @@
     <ItemGroup>
       <PackageReference Include="Dapper" Version="2.0.123" />
       <PackageReference Include="DapperExtensions" Version="1.7.0" />
-      <PackageReference Include="Paramore.Darker" Version="2.0.79" />
-      <PackageReference Include="Paramore.Darker.Policies" Version="2.0.79" />
-      <PackageReference Include="Paramore.Darker.QueryLogging" Version="2.0.79" />
+      <PackageReference Include="Paramore.Darker" Version="3.0.0" />
+      <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
+      <PackageReference Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
       <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     </ItemGroup>
 

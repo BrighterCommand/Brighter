@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
@@ -6,6 +7,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+
+        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
         public int SentCalledCount { get; set; }
         public void Dispose() { }
 

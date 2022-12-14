@@ -43,7 +43,7 @@ public static class OutboxExtensions
                 new MySqlConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.UnitOfWork), ServiceLifetime.Scoped)
+            .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
             .UseOutboxSweeper();
     }
 
@@ -53,7 +53,7 @@ public static class OutboxExtensions
                 new SqliteConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.UnitOfWork), ServiceLifetime.Scoped)
+            .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.SqliteDapperConnectionProvider), ServiceLifetime.Scoped)
             .UseOutboxSweeper(options =>
             {
                 options.TimerInterval = 5;

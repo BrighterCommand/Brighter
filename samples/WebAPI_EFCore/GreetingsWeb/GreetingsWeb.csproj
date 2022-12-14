@@ -6,13 +6,9 @@
 
     <ItemGroup>
         <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="6.0.10">
-          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-          <PrivateAssets>all</PrivateAssets>
-        </PackageReference>
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="6.0.10" />
-        <PackageReference Include="Paramore.Darker.AspNetCore" Version="2.0.79" />
+        <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.4.0" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.0" />
     </ItemGroup>
 
     <ItemGroup>
@@ -24,8 +20,12 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.EntityFrameworkCore\Paramore.Brighter.Sqlite.EntityFrameworkCore.csproj" />
       <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
-      <ProjectReference Include="..\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj" />
-      <ProjectReference Include="..\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj" />
+      <ProjectReference Include="..\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj">
+        <TreatAsUsed>true</TreatAsUsed>
+      </ProjectReference>
+      <ProjectReference Include="..\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj">
+        <TreatAsUsed>true</TreatAsUsed>
+      </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>

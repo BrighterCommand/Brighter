@@ -1,4 +1,6 @@
-﻿namespace Paramore.Brighter.Extensions.Hosting
+﻿using System.Collections.Generic;
+
+namespace Paramore.Brighter.Extensions.Hosting
 {
     /// <summary>
     /// The configuration options for <see cref="TimedOutboxSweeper"/>
@@ -18,6 +20,11 @@
         /// The maximum number of messages to dispatch.
         /// </summary>
         public int BatchSize { get; set; } = 100;
+
+        /// <summary>
+        /// An optional 'bag' of arguments that the sweeper needs for a specific flavor of outbox
+        /// </summary>
+        public readonly Dictionary<string, object> Args = new Dictionary<string, object>();
 
         /// <summary>
         /// Use bulk operations to dispatch messages.
