@@ -636,7 +636,7 @@ namespace Paramore.Brighter
             if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            var message = await _transformPipelineBuilder.BuildWrapPipeline<T>().WrapAsync(request);
+            var message = await _transformPipelineBuilder.BuildWrapPipeline<T>().WrapAsync(request, cancellationToken);
 
             AddTelemetryToMessage<T>(message);
 
@@ -683,13 +683,13 @@ namespace Paramore.Brighter
             }).ToList();
         }
         
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<T> requests) where T : class, IRequest
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<T> requests, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var messages = new List<Message>();
             foreach (var request in requests)
             {
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
-                var message = await wrapPipeline.WrapAsync(request);
+                var message = await wrapPipeline.WrapAsync(request, cancellationToken);
                 AddTelemetryToMessage<T>(message);
                 messages.Add(message);
             }

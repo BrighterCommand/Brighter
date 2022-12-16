@@ -202,6 +202,7 @@ namespace Paramore.Brighter
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
             _outbox = outbox;
+            _transformerFactory = configuration.TransformerFactory;
              
             return this;
         }
