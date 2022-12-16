@@ -46,7 +46,6 @@ namespace Paramore.Brighter
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<CommandProcessor>();
 
-        private readonly IAmAMessageMapperRegistry _mapperRegistry;
         private readonly IAmASubscriberRegistry _subscriberRegistry;
         private readonly IAmAHandlerFactorySync _handlerFactorySync;
         private readonly IAmAHandlerFactoryAsync _handlerFactoryAsync;
@@ -56,6 +55,7 @@ namespace Paramore.Brighter
         private readonly IAmABoxTransactionConnectionProvider _boxTransactionConnectionProvider;
         private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private readonly IEnumerable<Subscription> _replySubscriptions;
+        private readonly TransformPipelineBuilder _transformPipelineBuilder;
 
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
 
@@ -148,8 +148,8 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        public CommandProcessor(
-            IAmARequestContextFactory requestContextFactory,
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        public CommandProcessor(IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnOutbox<Message> outBox,
@@ -158,14 +158,15 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
-            int outboxBulkChunkSize = 100)
+            int outboxBulkChunkSize = 100, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
-            _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
             
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
@@ -184,14 +185,14 @@ namespace Paramore.Brighter
         /// <param name="outBox">The outbox</param>
         /// <param name="producerRegistry">The register of producers via whom we send messages over the external bus</param>
         /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
-        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="outboxTimeout">How long should we wait to write to the outbox</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -204,16 +205,17 @@ namespace Paramore.Brighter
             IAmAChannelFactory responseChannelFactory = null,
             InboxConfiguration inboxConfiguration = null,
             IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
-            int outboxBulkChunkSize = 100)
+            int outboxBulkChunkSize = 100, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
         {
-            _mapperRegistry = mapperRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _responseChannelFactory = responseChannelFactory;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _replySubscriptions = replySubscriptions;
-
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+ 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
               
             ConfigureCallbacks(producerRegistry);
@@ -235,8 +237,8 @@ namespace Paramore.Brighter
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="boxTransactionConnectionProvider">The Box Connection Provider to use when Depositing into the outbox.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        public CommandProcessor(
-            IAmASubscriberRegistry subscriberRegistry,
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
             IAmAHandlerFactory handlerFactory,
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
@@ -247,13 +249,14 @@ namespace Paramore.Brighter
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null,
-            int outboxBulkChunkSize = 100)
+            int outboxBulkChunkSize = 100, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
         {
-            _mapperRegistry = mapperRegistry;
             _inboxConfiguration = inboxConfiguration;
             _boxTransactionConnectionProvider = boxTransactionConnectionProvider;
-
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+ 
             InitExtServiceBus(policyRegistry, outBox, outboxTimeout, producerRegistry, outboxBulkChunkSize);
 
             ConfigureCallbacks(producerRegistry);
@@ -559,11 +562,7 @@ namespace Paramore.Brighter
             if (!_bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
-
-            var message = messageMapper.MapToMessage(request);
+            var message = _transformPipelineBuilder.BuildWrapPipeline<T>().WrapAsync(request).GetAwaiter().GetResult();
 
             AddTelemetryToMessage<T>(message);
 
@@ -637,11 +636,7 @@ namespace Paramore.Brighter
             if (!_bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException($"No message mapper registered for messages of type: {typeof(T)}");
-
-            var message = messageMapper.MapToMessage(request);
+            var message = await _transformPipelineBuilder.BuildWrapPipeline<T>().WrapAsync(request, cancellationToken);
 
             AddTelemetryToMessage<T>(message);
 
@@ -679,17 +674,27 @@ namespace Paramore.Brighter
 
         private List<Message> BulkMapMessages<T>(IEnumerable<T> requests) where T : class, IRequest
         {
-            var messageMapper = _mapperRegistry.Get<T>();
-            if (messageMapper == null)
-                throw new ArgumentOutOfRangeException(
-                    $"No message mapper registered for messages of type: {typeof(T)}");
-
             return requests.Select(r =>
             {
-                var message = messageMapper.MapToMessage(r);
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
+                var message = wrapPipeline.WrapAsync(r).GetAwaiter().GetResult();
                 AddTelemetryToMessage<T>(message);
                 return message;
             }).ToList();
+        }
+        
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<T> requests, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            var messages = new List<Message>();
+            foreach (var request in requests)
+            {
+                var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
+                var message = await wrapPipeline.WrapAsync(request, cancellationToken);
+                AddTelemetryToMessage<T>(message);
+                messages.Add(message);
+            }
+
+            return messages;
         }
 
         private void AddTelemetryToMessage<T>(Message message)
@@ -777,15 +782,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException("Timeout to a call method must have a duration greater than zero");
             }
 
-            var outMessageMapper = _mapperRegistry.Get<T>();
-            if (outMessageMapper == null)
-                throw new ArgumentOutOfRangeException(
-                    $"No message mapper registered for messages of type: {typeof(T)}");
-
-            var inMessageMapper = _mapperRegistry.Get<TResponse>();
-            if (inMessageMapper == null)
-                throw new ArgumentOutOfRangeException(
-                    $"No message mapper registered for messages of type: {typeof(T)}");
+            var outWrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>();
             
             var subscription = _replySubscriptions.FirstOrDefault(s => s.DataType == typeof(TResponse));
 
@@ -810,7 +807,7 @@ namespace Paramore.Brighter
                 //the channel to create the subscription, but this does not do much on a new queue
                 _bus.Retry(() => responseChannel.Purge());
 
-                var outMessage = outMessageMapper.MapToMessage(request);
+                var outMessage = outWrapPipeline.WrapAsync(request).GetAwaiter().GetResult(); 
 
                 //We don't store the message, if we continue to fail further retry is left to the sender 
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
@@ -828,7 +825,8 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
-                    response = inMessageMapper.MapToRequest(responseMessage);
+                    var inUnwrapPipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TResponse>();
+                    response = inUnwrapPipeline.UnwrapAsync(responseMessage).GetAwaiter().GetResult();
                     Send(response);
                 }
 
@@ -883,7 +881,8 @@ namespace Paramore.Brighter
         //Create an instance of the ExternalBusServices if one not already set for this app. Note that we do not support reinitialization here, so once you have
         //set a command processor for the app, you can't call init again to set them - although the properties are not read-only so overwriting is possible
         //if needed as a "get out of gaol" card.
-        private static void InitExtServiceBus(IPolicyRegistry<string> policyRegistry,
+        private static void InitExtServiceBus(
+            IPolicyRegistry<string> policyRegistry,
             IAmAnOutbox<Message> outbox,
             int outboxTimeout,
             IAmAProducerRegistry producerRegistry,

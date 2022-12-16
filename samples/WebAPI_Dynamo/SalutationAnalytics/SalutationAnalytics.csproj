@@ -15,6 +15,10 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
       <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
     </ItemGroup>
+  
+    <ItemGroup>
+      <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.0"/>
+    </ItemGroup>
 
     <ItemGroup>
       <Content Include="appsettings.Development.json">

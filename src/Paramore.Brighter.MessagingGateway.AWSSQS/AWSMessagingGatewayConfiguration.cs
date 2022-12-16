@@ -27,8 +27,16 @@ using Amazon.Runtime;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
+    /// <summary>
+    /// used to create AWS SDK clients as required
+    /// </summary>
     public class AWSMessagingGatewayConnection : IAmGatewayConfiguration
     {
+        /// <summary>
+        /// Constructs a credentials instance
+        /// </summary>
+        /// <param name="credentials">A credentials object for an AWS service</param>
+        /// <param name="region">The AWS region to connect to</param>
         public AWSMessagingGatewayConnection(AWSCredentials credentials, RegionEndpoint region)
         {
             Credentials = credentials;

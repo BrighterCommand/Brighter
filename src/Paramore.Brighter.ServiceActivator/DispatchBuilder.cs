@@ -40,6 +40,7 @@ namespace Paramore.Brighter.ServiceActivator
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmAChannelFactory _defaultChannelFactory;
         private IEnumerable<Subscription> _subscriptions;
+        private IAmAMessageTransformerFactory _messageTransformerFactory;
 
         private DispatchBuilder() { }
 
@@ -67,10 +68,14 @@ namespace Paramore.Brighter.ServiceActivator
         /// The message mappers used to map between commands, events, and on-the-wire handlers.
         /// </summary>
         /// <param name="theMessageMapperRegistry">The message mapper registry.</param>
+        /// <param name="messageTransformerFactory"></param>
         /// <returns>INeedAChannelFactory.</returns>
-        public INeedAChannelFactory MessageMappers(IAmAMessageMapperRegistry theMessageMapperRegistry)
+        public INeedAChannelFactory MessageMappers(
+            IAmAMessageMapperRegistry theMessageMapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory)
         {
             _messageMapperRegistry = theMessageMapperRegistry;
+            _messageTransformerFactory = messageTransformerFactory;
             return this;
         }
 
@@ -129,7 +134,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Dispatcher.</returns>
         public Dispatcher Build()
         {
-            return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _subscriptions);
+            return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _subscriptions, _messageTransformerFactory);
         }
     }
 
@@ -157,8 +162,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// The message mappers used to map between commands, events, and on-the-wire handlers.
         /// </summary>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="messageTransformerFactory">The factory for creating transforms</param>
         /// <returns>INeedAChannelFactory.</returns>
-        INeedAChannelFactory MessageMappers(IAmAMessageMapperRegistry messageMapperRegistry);
+        INeedAChannelFactory MessageMappers(
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory);
     }
     /// <summary>
     /// Interface INeedAChannelFactory
