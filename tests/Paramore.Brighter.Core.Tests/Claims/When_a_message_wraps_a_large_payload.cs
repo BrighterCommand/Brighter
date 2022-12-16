@@ -41,7 +41,7 @@ public class ClaimCheckLargePayloadTests
 
         var claimCheck = (string)storedData;
 
-        var luggage = await new StreamReader(await _store.DownloadAsync(claimCheck)).ReadToEndAsync(); 
+        var luggage = await new StreamReader(await _store.RetrieveAsync(claimCheck)).ReadToEndAsync(); 
         
         luggage.Should().Be(_body);
     }

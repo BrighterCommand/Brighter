@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The luggage as a stream</returns>
-        Task<Stream> DownloadAsync(string claimCheck, CancellationToken cancellationToken);
+        Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken);
 
         /// <summary>
         /// Do we have luggage for this claim check - in case of error or deletion
@@ -64,6 +64,6 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="stream">A stream representing the luggage to check</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>A claim check for the luggage stored</returns>
-        Task<string> UploadAsync(Stream stream, CancellationToken cancellationToken);
+        Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken);
     }
 }

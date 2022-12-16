@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="claimCheck">The claim check for the luggage</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>The luggage as a stream</returns>
-        public async Task<Stream> DownloadAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (_contents.TryGetValue(claimCheck, out string value))
             {
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="stream">A stream representing the luggage to check</param>
         /// <param name="cancellationToken">Add cancellation token</param>
         /// <returns>A claim check for the luggage stored</returns>
-        public async Task<string> UploadAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken))
         {
             var id = Guid.NewGuid().ToString();
             var reader = new StreamReader(stream);

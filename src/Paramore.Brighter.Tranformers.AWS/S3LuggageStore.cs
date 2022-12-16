@@ -209,7 +209,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                 s_logger.LogError("Could not delete luggage with claim {claim check} from {bucket}", claimCheck, _bucketName);
         }
 
-        public async Task<Stream> DownloadAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Stream> RetrieveAsync(string claimCheck, CancellationToken cancellationToken = default(CancellationToken))
         {
             var request = new GetObjectRequest { BucketName = _bucketName, Key = claimCheck, };
 
@@ -267,7 +267,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             return false;
         }
 
-        public async Task<string> UploadAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<string> StoreAsync(Stream stream, CancellationToken cancellationToken = default(CancellationToken))
         {
             var claim = $"{_luggagePrefix}/luggage_store/{Guid.NewGuid().ToString()}";
 

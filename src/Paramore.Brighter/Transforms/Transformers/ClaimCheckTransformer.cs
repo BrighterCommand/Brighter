@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             await writer.FlushAsync();
             stream.Position = 0;
 
-            var id = await _store.UploadAsync(stream, cancellationToken);
+            var id = await _store.StoreAsync(stream, cancellationToken);
 
             message.Header.Bag[CLAIM_CHECK] = id;
             message.Body = new MessageBody($"Claim Check {id}");
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
             {
                 var id = (string)objId;
-                var luggage = await new StreamReader(await _store.DownloadAsync(id, cancellationToken)).ReadToEndAsync();
+                var luggage = await new StreamReader(await _store.RetrieveAsync(id, cancellationToken)).ReadToEndAsync();
                 var newBody = new MessageBody(luggage);
                 message.Body = newBody;
                 if (!_retainLuggage)

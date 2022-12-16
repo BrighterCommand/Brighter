@@ -69,14 +69,14 @@ public class S3LuggageUploadTests : IDisposable
         await streamWriter.FlushAsync();
         stream.Position = 0;
 
-        var claim = await luggageStore.UploadAsync(stream);
+        var claim = await luggageStore.StoreAsync(stream);
 
         //assert
         //do we have a claim?
         (await luggageStore.HasClaimAsync(claim)).Should().BeTrue();
         
         //check for the contents indicated by the claim id on S3
-        var result = await luggageStore.DownloadAsync(claim);
+        var result = await luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
         resultAsString.Should().Be(testContent);
 

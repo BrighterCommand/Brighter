@@ -86,7 +86,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             await writer.WriteAsync(commandAsJson);
             await writer.FlushAsync();
             stream.Position = 0;
-            var id = await _luggageStore.UploadAsync(stream);
+            var id = await _luggageStore.StoreAsync(stream);
 
             //pretend we ran through the claim check
             myCommand.Value = $"Claim Check {id}";

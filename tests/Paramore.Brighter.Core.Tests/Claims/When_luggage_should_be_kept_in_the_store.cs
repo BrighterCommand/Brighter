@@ -33,7 +33,7 @@ public class RetrieveClaimLeaveLuggage
         await writer.FlushAsync();
         stream.Position = 0;
 
-        var id = await _store.UploadAsync(stream);
+        var id = await _store.StoreAsync(stream);
 
         var message = new Message(
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
