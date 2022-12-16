@@ -11,3 +11,10 @@ services:
       - "./docker/dynamodb:/home/dynamodblocal/data"
     working_dir: /home/dynamodblocal
   
+  dynamo-admin:
+    image: aaronshaf/dynamodb-admin
+    environment:
+      - DYNAMO_ENDPOINT=http://dynamodb-local:8000
+    ports:
+      - 8001:8001
+  
