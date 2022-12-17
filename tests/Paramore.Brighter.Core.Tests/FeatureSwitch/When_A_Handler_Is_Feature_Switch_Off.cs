@@ -23,10 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
-using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -37,39 +37,49 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
     [Collection("CommandProcessor")]
     public class CommandProcessorWithFeatureSwitchOffInPipelineTests : IDisposable
     {
-        private readonly MyCommand _myCommand = new MyCommand();
-        private readonly SubscriberRegistry _registry;
-        private readonly ServiceProviderHandlerFactory _handlerFactory;
+        private readonly MyCommand _myCommand = new();
+        private readonly MyCommandAsync _myAsyncCommand = new();
 
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
 
         public CommandProcessorWithFeatureSwitchOffInPipelineTests()
-        {            
-            _registry = new SubscriberRegistry();
-            _registry.Register<MyCommand, MyFeatureSwitchedOffHandler>();
+        {
+            SubscriberRegistry registry = new();
+            registry.Register<MyCommand, MyFeatureSwitchedOffHandler>();
+            registry.RegisterAsync<MyCommandAsync, MyFeatureSwitchedOffHandlerAsync>();
 
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedOffHandler>();
+            container.AddSingleton<MyFeatureSwitchedOffHandlerAsync>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddTransient<FeatureSwitchHandlerAsync<MyCommandAsync>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
-            _handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
+            ServiceProviderHandlerFactory handlerFactory = new(container.BuildServiceProvider());
+            
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .Handlers(new HandlerConfiguration(registry, handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
         }
 
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Is_Off()
         {
-            _commandProcessor = CommandProcessorBuilder
-                .With()
-                .Handlers(new HandlerConfiguration(_registry, _handlerFactory))
-                .DefaultPolicy()
-                .NoExternalBus()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build();
-            
             _commandProcessor.Send(_myCommand);
 
-            MyFeatureSwitchedOffHandler.DidReceive(_myCommand).Should().BeFalse();
+            MyFeatureSwitchedOffHandler.DidReceive().Should().BeFalse();
+        }
+
+        [Fact]
+        public async Task When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Is_Off()
+        {
+            await _commandProcessor.SendAsync(_myAsyncCommand);
+
+            MyFeatureSwitchedOffHandlerAsync.DidReceive().Should().BeFalse();
         }
 
         public void Dispose()
