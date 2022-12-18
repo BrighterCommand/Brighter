@@ -23,11 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
 using Paramore.Brighter.FeatureSwitch;
-using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
@@ -38,48 +38,57 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
     [Collection("CommandProcessor")]
     public class FeatureSwitchByConfigMissingConfigStrategySilentOnTests : IDisposable
     {
-        private readonly MyCommand _myCommand = new MyCommand();
-        private readonly SubscriberRegistry _registry;
+        private readonly MyCommand _myCommand = new();
+        private readonly MyCommandAsync _myAsyncCommand = new();
         private readonly ServiceProvider _provider;
-        private readonly ServiceProviderHandlerFactory _handlerFactory;
-        private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
 
-        private CommandProcessor _commandProcessor;        
+        private readonly CommandProcessor _commandProcessor;        
 
         public FeatureSwitchByConfigMissingConfigStrategySilentOnTests()
         {
-            _registry = new SubscriberRegistry();
-            _registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
+            SubscriberRegistry registry = new();
+            registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
+            registry.RegisterAsync<MyCommandAsync, MyFeatureSwitchedConfigHandlerAsync>();
 
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedConfigHandler>();
+            container.AddSingleton<MyFeatureSwitchedConfigHandlerAsync>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddTransient<FeatureSwitchHandlerAsync<MyCommandAsync>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             _provider = container.BuildServiceProvider();
-            _handlerFactory = new ServiceProviderHandlerFactory(_provider);
+            ServiceProviderHandlerFactory handlerFactory = new(_provider);
 
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = new FakeConfigRegistry
+            {
+                MissingConfigStrategy = MissingConfigStrategy.SilentOn
+            };
 
-            _featureSwitchRegistry = new FakeConfigRegistry();
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .ConfigureFeatureSwitches(featureSwitchRegistry)
+                .Handlers(new HandlerConfiguration(registry, handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
         }
 
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_SilentOn()
         {
-            _featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.SilentOn;
-
-            _commandProcessor = CommandProcessorBuilder
-                .With()
-                .ConfigureFeatureSwitches(_featureSwitchRegistry)
-                .Handlers(new HandlerConfiguration(_registry, _handlerFactory))
-                .DefaultPolicy()
-                .NoExternalBus()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build();
-            
             _commandProcessor.Send(_myCommand);
 
-            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeTrue();
+            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeTrue();
+        }  
+
+        [Fact]
+        public async Task When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_SilentOn()
+        {
+            await _commandProcessor.SendAsync(_myAsyncCommand);
+
+            _provider.GetService<MyFeatureSwitchedConfigHandlerAsync>().DidReceive().Should().BeTrue();
         }     
 
         public void Dispose()
