@@ -51,6 +51,16 @@ namespace Paramore.Brighter.Outbox.MsSql
         private readonly MsSqlConfiguration _configuration;
         private readonly IMsSqlConnectionProvider _connectionProvider;
 
+        private const string PagedDispatchedCommand = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+        private const string PagedReadCommand = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+        private const string PagedOutstandingCommand = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
+        private const string AddCommand = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
+        private const string BulkAddCommand = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {1}";
+        private const string MarkDispatchedCommand = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
+        private const string MarkMultipleDispatchedCommand = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId in ( {1} )";
+        private const string GetMessageCommand = "SELECT * FROM {0} WHERE MessageId = @MessageId";
+        private const string GetMessagesCommand = "SELECT * FROM {0} WHERE MessageId IN ( {1} )";
+
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
         ///     synchronization context.
@@ -76,9 +86,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlOutbox(MsSqlConfiguration configuration) : this(configuration, new MsSqlSqlAuthConnectionProvider(configuration))
-        {
-        }
+        public MsSqlOutbox(MsSqlConfiguration configuration) : this(configuration, new MsSqlSqlAuthConnectionProvider(configuration)) { }
 
         #region Externals
 
@@ -424,136 +432,60 @@ namespace Paramore.Brighter.Outbox.MsSql
         #endregion
 
         #region Things that Create Commands
-        private SqlCommand CreatePagedDispatchedCommand(SqlConnection connection, double millisecondsDispatchedSince, int pageSize, int pageNumber)
-        {
-            var command = connection.CreateCommand();
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            var parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
-            };
 
-            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-
-            return command;
-        }
+        private SqlCommand CreatePagedDispatchedCommand(SqlConnection connection, double millisecondsDispatchedSince, int pageSize, int pageNumber) 
+            => CreateCommand(connection, GenerateSqlText(PagedDispatchedCommand), 0, CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize), CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince));
 
         private SqlCommand CreatePagedReadCommand(SqlConnection connection, int pageSize, int pageNumber)
-        {
-            var command = connection.CreateCommand();
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-            var parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-
-            return command;
-        }
+            => CreateCommand(connection, GenerateSqlText(PagedReadCommand), 0, CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize));
         
         private SqlCommand CreatePagedOutstandingCommand(SqlConnection connection, double milliSecondsSinceAdded, int pageSize, int pageNumber)
-        {
-            var command = connection.CreateCommand();
-            var pagingSqlFormat = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
-            var parameters = new[]
-            {
-                CreateSqlParameter("PageNumber", pageNumber),
-                CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded)
-            };
-
-            var sql = string.Format(pagingSqlFormat, _configuration.OutBoxTableName);
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-
-            return command;
-        }
+            => CreateCommand(connection, GenerateSqlText(PagedOutstandingCommand), 0, CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize), CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded));
 
         private SqlCommand InitAddDbCommand(SqlConnection connection, SqlParameter[] parameters)
-        {
-            var command = connection.CreateCommand();
-            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters);
-            return command;
-        }
+            => CreateCommand(connection, GenerateSqlText(AddCommand), 0, parameters);
 
         private SqlCommand InitBulkAddDbCommand(List<Message> messages, SqlConnection connection)
         {
-            var messageParams = new List<string>();
-            var parameters = new List<SqlParameter>();
-
-            for (int i = 0; i < messages.Count(); i++)
-            {
-                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
-                parameters.AddRange(InitAddDbParameters(messages[i], i));
-
-            }
-            var sql = $"INSERT INTO {_configuration.OutBoxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
-
-            var command = connection.CreateCommand();
-
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters.ToArray());
-            return command;
+            var insertClause = GenerateBulkInsert(messages);
+            return CreateCommand(connection, GenerateSqlText(BulkAddCommand, insertClause.insertClause), 0, insertClause.parameters);
         }
 
         private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, Guid messageId, DateTime? dispatchedAt)
-        {
-            var command = connection.CreateCommand();
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
-            command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
-            return command;
-        }
+            => CreateCommand(connection, GenerateSqlText(MarkDispatchedCommand), 0, CreateSqlParameter("MessageId", messageId), CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
 
         private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
         {
-            var command = connection.CreateCommand();
-            var inClause = GenerateInClauseAndAddParameters(command, messageIds.ToList());
-            var sql = $"UPDATE {_configuration.OutBoxTableName} SET Dispatched = @DispatchedAt WHERE MessageId in ( {inClause} )";
-
-            command.CommandText = sql;
-            command.Parameters.Add(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())); //always store in UTC, as this is how we query messages
-
-            return command;
+            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
+            return CreateCommand(connection, GenerateSqlText(MarkMultipleDispatchedCommand, inClause.inClause), 0, inClause.parameters.Append(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())).ToArray());
         }
 
         private SqlCommand InitGetMessageCommand(SqlConnection connection, Guid messageId, int outBoxTimeout = -1)
-        {
-            var command = connection.CreateCommand();
-            command.CommandText = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
-            command.CommandTimeout = outBoxTimeout <0 ? 0 : outBoxTimeout;
-            command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
-            return command;
-        }
+            => CreateCommand(connection, GenerateSqlText(GetMessageCommand), outBoxTimeout, CreateSqlParameter("MessageId", messageId));
 
         private SqlCommand InitGetMessagesCommand(SqlConnection connection, List<Guid> messageIds, int outBoxTimeout = -1)
         {
+            var inClause = GenerateInClauseAndAddParameters(messageIds);            
+            return CreateCommand(connection, GenerateSqlText(GetMessagesCommand, inClause.inClause), outBoxTimeout, inClause.parameters);
+        }
+
+        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+            => string.Format(sqlFormat, orderedParams.Prepend(_configuration.OutBoxTableName).ToArray());
+
+        private SqlCommand CreateCommand(SqlConnection connection, string sqlText, int outBoxTimeout, params SqlParameter[] parameters)
+        {
             var command = connection.CreateCommand();
-            var inClause = GenerateInClauseAndAddParameters(command, messageIds);
-            var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
+
             command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
-            command.CommandText = sql;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
             return command;
         }
         #endregion
 
         #region Parameter Helpers
 
-        //Fold this code back in as there is only one choice
         private SqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value ?? DBNull.Value);
@@ -563,7 +495,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            var parameters = new[]
+            return new[]
             {
                 CreateSqlParameter($"{prefix}MessageId", message.Id),
                 CreateSqlParameter($"{prefix}MessageType", message.Header.MessageType.ToString()),
@@ -575,19 +507,33 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreateSqlParameter($"{prefix}HeaderBag", bagJson),
                 CreateSqlParameter($"{prefix}Body", message.Body?.Value)
             };
-            return parameters;
         }
         
-        private string GenerateInClauseAndAddParameters(SqlCommand command, List<Guid> messageIds)
+        private (string inClause, SqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
 
+            var parameters = new SqlParameter[messageIds.Count];
             for (int i = 0; i < paramNames.Count(); i++)
             {
-                command.Parameters.Add(CreateSqlParameter(paramNames[i], messageIds[i]));
+                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
             }
 
-            return string.Join(",", paramNames);
+            return (string.Join(",", paramNames), parameters);
+        }
+
+        private (string insertClause, SqlParameter[] parameters) GenerateBulkInsert(List<Message> messages)
+        {
+            var messageParams = new List<string>();
+            var parameters = new List<SqlParameter>();
+
+            for (int i = 0; i < messages.Count(); i++)
+            {
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                parameters.AddRange(InitAddDbParameters(messages[i], i));
+            }
+
+            return (string.Join(",", messageParams), parameters.ToArray());
         }
 
         #endregion
@@ -703,7 +649,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             var topic = GetTopic(dr);
 
             var header = new MessageHeader(id, topic, messageType);
-
 
             //new schema....we've got the extra header information
             if (dr.FieldCount > 4)
