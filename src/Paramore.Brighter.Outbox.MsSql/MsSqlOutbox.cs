@@ -535,7 +535,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             var command = connection.CreateCommand();
             command.CommandText = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId = @MessageId";
-            command.CommandTimeout = outBoxTimeout;
+            command.CommandTimeout = outBoxTimeout <0 ? 0 : outBoxTimeout;
             command.Parameters.Add(CreateSqlParameter("MessageId", messageId));
             return command;
         }
@@ -545,7 +545,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             var command = connection.CreateCommand();
             var inClause = GenerateInClauseAndAddParameters(command, messageIds);
             var sql = $"SELECT * FROM {_configuration.OutBoxTableName} WHERE MessageId IN ( {inClause} )";
-            command.CommandTimeout = outBoxTimeout;
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
             command.CommandText = sql;
             return command;
         }
