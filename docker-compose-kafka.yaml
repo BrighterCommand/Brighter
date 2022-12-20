@@ -6,8 +6,6 @@ services:
     image: confluentinc/cp-zookeeper:latest
     hostname: zookeeper
     container_name: zookeeper
-    networks:
-      - kafka
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -19,8 +17,6 @@ services:
     image: confluentinc/cp-enterprise-kafka:latest
     hostname: kafka
     container_name: kafka
-    networks:
-      - kafka
     depends_on:
       - zookeeper
     ports:
@@ -68,8 +64,3 @@ services:
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021    
-
-networks:
-  kafka:
-    driver: bridge
-  
