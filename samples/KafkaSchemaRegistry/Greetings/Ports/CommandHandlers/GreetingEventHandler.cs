@@ -23,38 +23,21 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
-using System.Text.Json.Serialization;
+using Greetings.Ports.Commands;
+using Paramore.Brighter;
 
-namespace Paramore.Brighter
+namespace Greetings.Ports.CommandHandlers
 {
-    /// <summary>
-    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
-    /// </summary>
-    public class Command : ICommand
+    public class GreetingEventHandler : RequestHandler<GreetingEvent>
     {
-        /// <summary>
-        /// Gets or sets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        [NJsonSchema.Annotations.NotNull]
-        public Guid Id { get; set; }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        protected Command(Guid id)
+        public override GreetingEvent Handle(GreetingEvent @event)
         {
-            Id = id;
+            Console.WriteLine("Received Greeting. Message Follows");
+            Console.WriteLine("----------------------------------");
+            Console.WriteLine(@event.Greeting);
+            Console.WriteLine("----------------------------------");
+            Console.WriteLine("Message Ends");
+            return base.Handle(@event);
         }
-        
-        /// <summary>
-        /// Gets or sets the span that this operation live within
-        /// </summary>
-        [JsonIgnore]
-        [Newtonsoft.Json.JsonIgnore]
-        [NJsonSchema.Annotations.JsonSchemaIgnore]
-        public Activity Span { get; set; }
     }
 }

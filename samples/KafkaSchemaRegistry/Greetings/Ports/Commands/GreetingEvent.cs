@@ -1,6 +1,6 @@
 #region Licence
 /* The MIT License (MIT)
-Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,38 +23,19 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Diagnostics;
-using System.Text.Json.Serialization;
+using Paramore.Brighter;
 
-namespace Paramore.Brighter
+namespace Greetings.Ports.Commands
 {
-    /// <summary>
-    /// A command is an imperative instruction to do something. We expect only one receiver of a command because it is point-to-point
-    /// </summary>
-    public class Command : ICommand
+    public class GreetingEvent : Event
     {
-        /// <summary>
-        /// Gets or sets the identifier.
-        /// </summary>
-        /// <value>The identifier.</value>
-        [NJsonSchema.Annotations.NotNull]
-        public Guid Id { get; set; }
+        public GreetingEvent() : base(Guid.NewGuid()) { }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Command"/> class.
-        /// </summary>
-        /// <param name="id">The identifier.</param>
-        protected Command(Guid id)
+        public GreetingEvent(string greeting) : base(Guid.NewGuid())
         {
-            Id = id;
+            Greeting = greeting;
         }
-        
-        /// <summary>
-        /// Gets or sets the span that this operation live within
-        /// </summary>
-        [JsonIgnore]
-        [Newtonsoft.Json.JsonIgnore]
-        [NJsonSchema.Annotations.JsonSchemaIgnore]
-        public Activity Span { get; set; }
+
+        public string Greeting { get; set; }
     }
 }
