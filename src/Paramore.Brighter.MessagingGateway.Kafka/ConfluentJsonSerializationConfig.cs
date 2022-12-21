@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     public static class ConfluentJsonSerializationConfig
     {
-        public static JsonSerializerConfig DefaultJsonSerializerConfig()
+        public static JsonSerializerConfig SerdesJsonSerializerConfig()
         {
             return new JsonSerializerConfig
             {
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             };
         }
 
-        public static JsonSchemaGeneratorSettings NewtonSoftJsonSchemaGeneratorSettings()
+        public static JsonSchemaGeneratorSettings NJsonSchemaGeneratorSettings()
         {
             var resolver = new DefaultContractResolver { NamingStrategy = new CamelCaseNamingStrategy() };
 
