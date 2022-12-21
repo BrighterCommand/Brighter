@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="Command"/> class.
         /// </summary>
         /// <param name="id">The identifier.</param>
-        protected Command(Guid id)
+        public Command(Guid id)
         {
             Id = id;
         }

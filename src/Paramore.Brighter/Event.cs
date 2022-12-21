@@ -46,7 +46,7 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="Event"/> class.
         /// </summary>
         /// <param name="id">The identifier.</param>
-        protected Event(Guid id)
+        public Event(Guid id)
         {
             Id = id;
         }
