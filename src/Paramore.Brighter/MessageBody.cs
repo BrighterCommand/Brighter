@@ -63,7 +63,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="body">The body of the message, usually XML or JSON.</param>
         /// <param name="bodyType">The type of the message, usualy XML or JSON. Defaults to JSON</param>
-        public MessageBody(string body, string bodyType = "JSON")
+        public MessageBody(string body, string bodyType = "application/json")
         {
             Bytes = Encoding.UTF8.GetBytes(body);
             BodyType = bodyType;
@@ -78,7 +78,7 @@ namespace Paramore.Brighter
         public MessageBody(byte[] bytes, string bodyType)
         {
             Bytes = bytes;
-            BodyType = bodyType ?? "JSON";
+            BodyType = bodyType ?? "application/json";
         }
 
         /// <summary>

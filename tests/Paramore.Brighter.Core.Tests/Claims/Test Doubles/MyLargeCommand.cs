@@ -1,4 +1,5 @@
 ﻿using System;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
 

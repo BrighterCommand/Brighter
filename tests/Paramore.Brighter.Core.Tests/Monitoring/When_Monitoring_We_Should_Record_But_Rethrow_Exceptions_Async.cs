@@ -36,6 +36,7 @@ using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using System.Text.Json;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
