@@ -10,7 +10,7 @@ namespace Paramore.Brighter.Transforms.Transformers
     {
         private CompressionMethod _compressionMethod = CompressionMethod.GZip;
         private CompressionLevel _compressionLevel = CompressionLevel.Optimal;
-        private int _thresholdInKb;
+        private int _thresholdInBytes;
         private string _contentType = "application/json";
 
         public void Dispose() { }
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
             _compressionMethod = (CompressionMethod)initializerList[0];
             _compressionLevel = (CompressionLevel)initializerList[1];
-            _thresholdInKb = (int)initializerList[2];
+            _thresholdInBytes = (int)initializerList[2] * 1024;
 
         }
 
@@ -32,6 +32,10 @@ namespace Paramore.Brighter.Transforms.Transformers
         public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
         {
             var bytes = message.Body.Bytes;
+
+            //don't transform it too small
+            if (bytes.Length < _thresholdInBytes) return message;
+            
             using var input = new MemoryStream(bytes);
             using var output = new MemoryStream();
             
