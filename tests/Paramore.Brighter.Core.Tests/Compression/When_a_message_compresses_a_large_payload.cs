@@ -14,11 +14,11 @@ public class CompressLargePayloadTests
     private readonly string _body;
     private readonly Message _message;
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
+    private const byte ZLIB_LEAD_BYTE = 0x78;
 
     public CompressLargePayloadTests()
     {
         _transformer = new CompressPayloadTransformer();
-        _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
         
         _body = DataGenerator.CreateString(6000);
         _message = new Message(
@@ -27,8 +27,9 @@ public class CompressLargePayloadTests
     }
 
     [Fact]
-    public async Task When_a_message_compresses_a_large_payload()
+    public async Task When_a_message_gzip_compresses_a_large_payload()
     {
+        _transformer.InitializeWrapFromAttributeParams(CompressionMethod.GZip, CompressionLevel.Optimal, 5);
         var compressedMessage = await _transformer.WrapAsync(_message);
 
         //look for gzip in the bytes
@@ -37,5 +38,32 @@ public class CompressLargePayloadTests
         compressedMessage.Body.BodyType.Should().Be("application/gzip");
         BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0).Should().Be(GZIP_LEAD_BYTES);
 
+    }
+    
+    [Fact]
+    public async Task When_a_message_zlib_compresses_a_large_payload()
+    {
+        _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Zlib, CompressionLevel.Optimal, 5);
+        var compressedMessage = await _transformer.WrapAsync(_message);
+    
+        //look for gzip in the bytes
+        compressedMessage.Body.Bytes.Should().NotBeNull();
+        compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
+        compressedMessage.Body.BodyType.Should().Be("application/deflate");
+        compressedMessage.Body.Bytes[0].Should().Be(ZLIB_LEAD_BYTE);
+    
+    }
+    
+    [Fact]
+    public async Task When_a_message_brotli_compresses_a_large_payload()
+    {
+        _transformer.InitializeWrapFromAttributeParams(CompressionMethod.Brotli, CompressionLevel.Optimal, 5);
+        var compressedMessage = await _transformer.WrapAsync(_message);
+    
+        //look for gzip in the bytes
+        compressedMessage.Body.Bytes.Should().NotBeNull();
+        compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
+        compressedMessage.Body.BodyType.Should().Be("application/br");
+    
     }
 }

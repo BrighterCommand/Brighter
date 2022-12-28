@@ -12,6 +12,8 @@ namespace Paramore.Brighter.Transforms.Transformers
         private CompressionLevel _compressionLevel = CompressionLevel.Optimal;
         private int _thresholdInBytes;
         private string _contentType = "application/json";
+        private const ushort GZIP_LEAD_BYTES = 0x8b1f;
+        private const byte ZLIB_LEAD_BYTE = 0x78;
 
         public void Dispose() { }
 
@@ -41,7 +43,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             
             (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
             await input.CopyToAsync(compressionStream);
-            await compressionStream.FlushAsync(cancellationToken);
+            compressionStream.Close();
 
             message.Body = new MessageBody(output.ToArray(), mimeType);
 
@@ -51,13 +53,15 @@ namespace Paramore.Brighter.Transforms.Transformers
 
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
+            if (!IsCompressed(message)) return message;
+            
             var bytes = message.Body.Bytes;
             using var input = new MemoryStream(bytes);
             using var output = new MemoryStream();
             
             Stream deCompressionStream = CreateDecompressionStream(input);
             await deCompressionStream.CopyToAsync(output);
-            await input.FlushAsync(cancellationToken);
+            deCompressionStream.Close();
 
             message.Body = new MessageBody(output.ToArray(), _contentType);
 
@@ -70,14 +74,16 @@ namespace Paramore.Brighter.Transforms.Transformers
             {
                 case CompressionMethod.GZip:
                     return (new GZipStream(uncompressed, _compressionLevel), "application/gzip");
-                case CompressionMethod.Deflate:
-                    return (new DeflateStream(uncompressed, _compressionLevel), "application/x-deflate");
 #if NETSTANDARD2_0
+                case CompressionMethod.Zlib:
+                    throw new ArgumentException("Zlib is not supported in nestandard20");
                 case CompressionMethod.Brotli:
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
-                  case CompressionMethod.Brotli:
-                    return (new BrotliStream(uncompressed, _compressionLevel), "pplication/x-brotli");              
+                case CompressionMethod.Zlib:
+                    return (new ZLibStream(uncompressed, _compressionLevel), "application/deflate");  
+                case CompressionMethod.Brotli:
+                    return (new BrotliStream(uncompressed, _compressionLevel), "application/br");              
 #endif
                 default:
                     return (uncompressed, "application/json");
@@ -90,7 +96,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             {
                 case CompressionMethod.GZip:
                     return new GZipStream(compressed, CompressionMode.Decompress);
-                case CompressionMethod.Deflate:
+                case CompressionMethod.Zlib:
                     return new DeflateStream(compressed, CompressionMode.Decompress);
 #if NETSTANDARD2_0
                 case CompressionMethod.Brotli:
@@ -101,6 +107,22 @@ namespace Paramore.Brighter.Transforms.Transformers
 #endif
                 default:
                     return compressed;
+            }
+        }
+
+        private bool IsCompressed(Message message)
+        {
+            switch (_compressionMethod)
+            {
+                case CompressionMethod.GZip:
+                    return message.Body.BodyType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
+                case CompressionMethod.Zlib:
+                    return  message.Body.BodyType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
+                case CompressionMethod.Brotli:
+                    return message.Body.BodyType == "application/br";
+                default:
+                    return false;
+                    
             }
         }
 

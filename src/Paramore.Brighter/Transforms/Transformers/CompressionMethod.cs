@@ -4,6 +4,6 @@
     {
         GZip,
         Brotli,
-        Deflate
+        Zlib
     }
 }
