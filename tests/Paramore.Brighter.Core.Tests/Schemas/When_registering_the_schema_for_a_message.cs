@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
@@ -58,11 +59,12 @@ public class SchemaRegistryTransformRegistrationTests
         
         //act
         var wrappedMessage = await _transformer.WrapAsync(message, default);
+        
         var (found, registeredSchema) = await _schemaRegistry.LookupAsync(_topic);
 
         //assert
         found.Should().BeTrue();
-        registeredSchema.Should().Be(_schema.ToJson());
+        registeredSchema.First().Should().Be(_schema.ToJson());
 
     }
 
@@ -70,5 +72,6 @@ public class SchemaRegistryTransformRegistrationTests
     {
         //Again, but
         // -- we probably need to be able to clear in memory so as to remove existing registrations
+        // -- implies being able to see version, can see that this one is later.
     }
 }

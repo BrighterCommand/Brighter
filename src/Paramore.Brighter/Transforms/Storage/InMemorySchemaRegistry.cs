@@ -22,7 +22,9 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Storage
@@ -32,7 +34,8 @@ namespace Paramore.Brighter.Transforms.Storage
     /// </summary>
     public class InMemorySchemaRegistry : IAmASchemaRegistry
     {
-        private readonly Dictionary<string, string> _schemas = new Dictionary<string, string>();
+        private readonly Dictionary<string, IList<RegisteredSchema>> _schemas = new Dictionary<string, IList<RegisteredSchema>>();
+        private static uint s_schemaId = 1;
 
         /// <summary>
         /// Register a schema
@@ -42,7 +45,22 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <returns></returns>
         public async Task RegisterAsync(string topic, string messageSchema)
         {
-            _schemas.Add(topic, messageSchema);
+            var (found, schemas) = await LookupAsync(topic);
+            if (found)
+            {
+                var id = schemas.Select(s => s.Id).First();
+                var version = schemas.Select(s => s.Version).Max();
+                schemas.Append(new RegisteredSchema(topic, id, version++, messageSchema));
+            }
+            else
+            {
+                _schemas.Add(
+                    topic, 
+                    new List<RegisteredSchema>
+                    {
+                        new RegisteredSchema(messageSchema, s_schemaId++, 0, messageSchema)
+                    });
+            }
         }
 
         /// <summary>
@@ -50,11 +68,15 @@ namespace Paramore.Brighter.Transforms.Storage
         /// </summary>
         /// <param name="topic">The topic to find the schema for</param>
         /// <returns></returns>
-        public async Task<(bool,string)> LookupAsync(string topic)
+        public async Task<(bool,IEnumerable<RegisteredSchema>)> LookupAsync(string topic, bool latestOnly = true)
         {
-            var schemaFound = _schemas.TryGetValue(topic, out string messageSchema);
+            var schemaFound = _schemas.TryGetValue(topic, out IList<RegisteredSchema> messageSchemas);
 
-            return (schemaFound, schemaFound ? messageSchema : "");
+            if (schemaFound && latestOnly) 
+                return (true, new List<RegisteredSchema>
+                    {messageSchemas.OrderByDescending(s => s.Version).FirstOrDefault()}); 
+
+            return (schemaFound, schemaFound ? messageSchemas : null);
         }
     }
 }

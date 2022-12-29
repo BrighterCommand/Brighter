@@ -22,13 +22,27 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Storage
 {
     public interface IAmASchemaRegistry
     {
+        /// <summary>
+        /// Register a schema for this topic with the registry
+        /// </summary>
+        /// <param name="topic">The topic to register under</param>
+        /// <param name="messageSchema">The schema to register</param>
+        /// <returns></returns>
         Task RegisterAsync(string topic, string messageSchema);
-        Task<(bool, string)> LookupAsync(string topic);
+        
+        /// <summary>
+        /// Lookup the schema history for this topic
+        /// </summary>
+        /// <param name="topic">The topic to find registered schemas for</param>
+        /// <param name="latestOnly">Only returs the latest schema</param>
+        /// <returns>The set of schemas for this topic</returns>
+        Task<(bool, IEnumerable<RegisteredSchema>)> LookupAsync(string topic, bool latestOnly = true);
     }
 }
