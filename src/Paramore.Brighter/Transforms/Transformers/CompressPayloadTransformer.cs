@@ -96,13 +96,16 @@ namespace Paramore.Brighter.Transforms.Transformers
             {
                 case CompressionMethod.GZip:
                     return new GZipStream(compressed, CompressionMode.Decompress);
-                case CompressionMethod.Zlib:
-                    return new DeflateStream(compressed, CompressionMode.Decompress);
+
 #if NETSTANDARD2_0
+                case CompressionMethod.Zlib:
+                    throw new ArgumentException("Zlib is not supported in nestandard20");
                 case CompressionMethod.Brotli:
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
-                  case CompressionMethod.Brotli:
+                case CompressionMethod.Zlib:
+                    return new ZLibStream(compressed, CompressionMode.Decompress); 
+                case CompressionMethod.Brotli:
                     return new BrotliStream(compressed, CompressionMode.Decompress);              
 #endif
                 default:
