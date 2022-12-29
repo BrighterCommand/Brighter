@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,19 +22,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Transforms.Storage
 {
-    /// <summary>
-    /// A Response to a Request. We derive from IRequest because our message handling infrastructure receives requests
-    /// even if in a Request-Response paradigm that is a response to another request.
-    /// </summary>
-    public interface IResponse : IRequest
+    public interface IAmASchemaRegistry
     {
-        /// <summary>
-        /// Allow us to correlate request and response
-        /// </summary>
-        Guid CorrelationId { get; }
-  }
+        Task RegisterAsync(string topic, string messageSchema);
+        Task<(bool, string)> LookupAsync(string topic);
+    }
 }

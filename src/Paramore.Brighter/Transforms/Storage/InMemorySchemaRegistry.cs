@@ -22,23 +22,39 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Transforms.Storage
 {
     /// <summary>
-    /// If this producer support a callback for confirmation of message send then it will return after calling send, but before the message is successfully
-    /// persisted to the broker. It will then callback to confirm that the message has persisted to the broker, or not.
-    /// Implementing producers should raise the OnMessagePublished event (using a threadpool thread) when the broker returns results
-    /// The CommandProcessor will only mark a message as dispatched from the Outbox when this confirmation is received.
+    /// Lightweight schema registry, mainly intended for testing as it does not persist into a shared schema registry.
     /// </summary>
-    public interface ISupportPublishConfirmation
+    public class InMemorySchemaRegistry : IAmASchemaRegistry
     {
+        private readonly Dictionary<string, string> _schemas = new Dictionary<string, string>();
+
         /// <summary>
-        /// Fired when a confirmation is recieved that a message has been published
-        /// bool => was the message published
-        /// Guid => what was the id of the published message
+        /// Register a schema
         /// </summary>
-        event Action<bool, Guid> OnMessagePublished;
-   }
+        /// <param name="topic">The topic to use as an identifier for the schema</param>
+        /// <param name="messageSchema">The JSON schema that you want to register</param>
+        /// <returns></returns>
+        public async Task RegisterAsync(string topic, string messageSchema)
+        {
+            _schemas.Add(topic, messageSchema);
+        }
+
+        /// <summary>
+        /// Looks up a schema for a topic
+        /// </summary>
+        /// <param name="topic">The topic to find the schema for</param>
+        /// <returns></returns>
+        public async Task<(bool,string)> LookupAsync(string topic)
+        {
+            var schemaFound = _schemas.TryGetValue(topic, out string messageSchema);
+
+            return (schemaFound, schemaFound ? messageSchema : "");
+        }
+    }
 }
