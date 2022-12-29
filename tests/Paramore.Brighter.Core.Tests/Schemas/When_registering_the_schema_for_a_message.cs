@@ -11,14 +11,14 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Schemas;
 
-public class SchemaRegistryTransformerTests 
+public class SchemaRegistryTransformRegistrationTests 
 {
     private readonly IAmAMessageTransformAsync _transformer;
     private readonly InMemorySchemaRegistry _schemaRegistry;
     private readonly string _topic = "io.goparamore.brighter.myschemregistrycommand";
     private readonly JsonSchema _schema;
 
-    public SchemaRegistryTransformerTests()
+    public SchemaRegistryTransformRegistrationTests()
     {
         _schemaRegistry = new InMemorySchemaRegistry();
         
@@ -30,7 +30,7 @@ public class SchemaRegistryTransformerTests
     }
 
     [Fact]
-    public async Task When_validating_the_schema_for_a_message()
+    public async Task When_registering_the_schema_for_a_message()
     {
         //arrange
         var command = new MySchemaRegistryCommand
@@ -53,6 +53,9 @@ public class SchemaRegistryTransformerTests
             new MessageBody(messageBody, "application/json")
         );
         
+        var (exists, _) = await _schemaRegistry.LookupAsync(_topic);
+        exists.Should().BeFalse();
+        
         //act
         var wrappedMessage = await _transformer.WrapAsync(message, default);
         var (found, registeredSchema) = await _schemaRegistry.LookupAsync(_topic);
@@ -61,5 +64,11 @@ public class SchemaRegistryTransformerTests
         found.Should().BeTrue();
         registeredSchema.Should().Be(_schema.ToJson());
 
+    }
+
+    public async Task When_the_schema_is_already_registered()
+    {
+        //Again, but
+        // -- we probably need to be able to clear in memory so as to remove existing registrations
     }
 }
