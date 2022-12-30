@@ -5,7 +5,7 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
-<> 2022-12-07T145326.200.json
+<> 2022-11-08T211212.200.json
 
 ###
 
@@ -16,7 +16,7 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
-<> 2022-12-07T145007.200.json
+<> 2022-11-08T211208.200.json
 
 ###
 
@@ -27,24 +27,7 @@ Content-Type: application/json
   "Greeting" : "I drink, and I know things"
 }
 
-<> 2022-12-07T144056.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2022-12-07T143748.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-
-<> 2022-12-07T143744.200.json
+<> 2022-11-08T211200.200.json
 
 ###
 
@@ -55,7 +38,18 @@ Content-Type: application/json
   "Name" : "Tyrion"
 }
 
-<> 2022-12-07T143738.200.json
+<> 2022-11-08T211124.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2022-11-08T200350.200.json
 
 ###
 
@@ -485,6 +479,15 @@ Content-Type: application/json
 }
 
 <> 2022-06-20T192613.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+
+{
+  "Name" : "Tyrion"
+}
 
 ###
 

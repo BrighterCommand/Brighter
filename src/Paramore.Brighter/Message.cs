@@ -42,12 +42,12 @@ namespace Paramore.Brighter
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>
-        public MessageHeader Header { get; private set; }
+        public MessageHeader Header { get; set; }
         /// <summary>
         /// Gets the body.
         /// </summary>
         /// <value>The body.</value>
-        public MessageBody Body { get; private set; }
+        public MessageBody Body { get; set; }
 
         /// <summary>
         /// Gets the identifier.

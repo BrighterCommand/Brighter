@@ -27,14 +27,12 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class SimpleMessageMapperFactory. This allows you to return a simple function that finds a given message mapper. Intended for lightweight messagage mapping,
+    /// Class SimpleMessageMapperFactory.
+    /// This allows you to return a simple function that finds a given message mapper. Intended for lightweight message mapping,
     /// such as with a ControlBusSender. We recommend you wrap your IoC container for heavyweight mapping.
     /// </summary>
     public class SimpleMessageMapperFactory : IAmAMessageMapperFactory
     {
-        /// <summary>
-        /// The _factory method{CC2D43FA-BBC4-448A-9D0B-7B57ADF2655C}
-        /// </summary>
         private readonly Func<Type, IAmAMessageMapper> _factoryMethod;
 
         /// <summary>

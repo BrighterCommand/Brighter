@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Threading;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.FeatureSwitch.Attributes;
@@ -32,15 +34,33 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
     {
         public bool CommandReceived { get; set; }
 
-        [FeatureSwitch(typeof(MyFeatureSwitchedConfigHandler), FeatureSwitchStatus.Config, 1, HandlerTiming.Before)]
-        public override MyCommand Handle(MyCommand comand)
+        [FeatureSwitch(typeof(MyFeatureSwitchedConfigHandler), FeatureSwitchStatus.Config, 1)]
+        public override MyCommand Handle(MyCommand command)
         {
             CommandReceived = true;
 
-            return base.Handle(comand);
+            return base.Handle(command);
         }
 
-        public bool DidReceive(MyCommand command)
+        public bool DidReceive()
+        {
+            return CommandReceived;
+        }
+    }
+
+    class MyFeatureSwitchedConfigHandlerAsync : RequestHandlerAsync<MyCommandAsync>
+    {
+        public bool CommandReceived { get; set; }
+
+        [FeatureSwitchAsync(typeof(MyFeatureSwitchedConfigHandlerAsync), FeatureSwitchStatus.Config, 1)]
+        public override async Task<MyCommandAsync> HandleAsync(MyCommandAsync command, CancellationToken cancellationToken = default)
+        {
+            CommandReceived = true;
+
+            return await base.HandleAsync(command, cancellationToken);
+        }
+
+        public bool DidReceive()
         {
             return CommandReceived;
         }

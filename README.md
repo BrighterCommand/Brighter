@@ -31,7 +31,7 @@
   
 
 ## Documentation
-* More detailed documentation on the project can be found on the ReadTheDocs pages for the project here: [Paramore](https://brightercommand.gitbook.io/paramore-brighter-documentation/)
+* More detailed documentation on the project can be found on the GitBook pages for the project here: [Paramore](https://brightercommand.gitbook.io/paramore-brighter-documentation/)
 
 
 ## What are the different branches?

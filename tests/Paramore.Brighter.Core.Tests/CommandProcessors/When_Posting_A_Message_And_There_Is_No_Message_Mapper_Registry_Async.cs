@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
-            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
+            _exception.Should().BeOfType<ConfigurationException>();
         }
 
         public void Dispose()
