@@ -23,8 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Storage
@@ -34,49 +36,58 @@ namespace Paramore.Brighter.Transforms.Storage
     /// </summary>
     public class InMemorySchemaRegistry : IAmASchemaRegistry
     {
-        private readonly Dictionary<string, IList<RegisteredSchema>> _schemas = new Dictionary<string, IList<RegisteredSchema>>();
-        private static uint s_schemaId = 1;
+        private readonly ConcurrentDictionary<string, List<RegisteredSchema>> _schemas = new ConcurrentDictionary<string, List<RegisteredSchema>>();
+        private static long s_schemaId = 1;
 
         /// <summary>
-        /// Register a schema
+        /// Resets the registry, clearing out the registered schemas and resetting ids
         /// </summary>
-        /// <param name="topic">The topic to use as an identifier for the schema</param>
-        /// <param name="messageSchema">The JSON schema that you want to register</param>
-        /// <returns></returns>
-        public async Task RegisterAsync(string topic, string messageSchema)
+        public void Clear()
         {
-            var (found, schemas) = await LookupAsync(topic);
-            if (found)
-            {
-                var id = schemas.Select(s => s.Id).First();
-                var version = schemas.Select(s => s.Version).Max();
-                schemas.Append(new RegisteredSchema(topic, id, version++, messageSchema));
-            }
-            else
-            {
-                _schemas.Add(
-                    topic, 
-                    new List<RegisteredSchema>
-                    {
-                        new RegisteredSchema(messageSchema, s_schemaId++, 0, messageSchema)
-                    });
-            }
+            _schemas.Clear();
+            s_schemaId = 0;
         }
 
         /// <summary>
         /// Looks up a schema for a topic
         /// </summary>
-        /// <param name="topic">The topic to find the schema for</param>
-        /// <returns></returns>
-        public async Task<(bool,IEnumerable<RegisteredSchema>)> LookupAsync(string topic, bool latestOnly = true)
+        /// <param name="topic">The topic to find the schema for. </param>
+        /// <param name="latestOnly">Only the highest version schema, or all schemas.</param>
+        /// <returns>A tuple, with a boolean indicating if the schema could be found and a list of schemas that match</returns>
+        public async Task<(bool, IEnumerable<RegisteredSchema>)> LookupAsync(string topic, bool latestOnly = true)
         {
-            var schemaFound = _schemas.TryGetValue(topic, out IList<RegisteredSchema> messageSchemas);
+            var schemaFound = _schemas.TryGetValue(topic, out List<RegisteredSchema> messageSchemas);
 
             if (schemaFound && latestOnly) 
                 return (true, new List<RegisteredSchema>
                     {messageSchemas.OrderByDescending(s => s.Version).FirstOrDefault()}); 
 
             return (schemaFound, schemaFound ? messageSchemas : null);
+        }
+        
+        /// <summary>
+        /// Register a schema
+        /// </summary>
+        /// <param name="topic">The topic to use as an identifier for the schema</param>
+        /// <param name="messageSchema">The JSON schema that you want to register</param>
+        public async Task RegisterAsync(string topic, string messageSchema)
+        {
+            var found = _schemas.TryGetValue(topic, out List<RegisteredSchema> schemas);
+            if (found)
+            {
+                var id = schemas.Select(s => s.Id).First();
+                var version = schemas.Select(s => s.Version).Max();
+                schemas.Add(new RegisteredSchema(topic, id, Interlocked.Increment(ref version), messageSchema));
+            }
+            else
+            {
+                _schemas.TryAdd(
+                    topic, 
+                    new List<RegisteredSchema>
+                    {
+                        new RegisteredSchema(messageSchema, Interlocked.Increment(ref s_schemaId), 0, messageSchema)
+                    });
+            }
         }
     }
 }

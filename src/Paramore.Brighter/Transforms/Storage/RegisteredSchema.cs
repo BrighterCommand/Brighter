@@ -44,12 +44,12 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <summary>
         /// The schema version.
         /// </summary>
-        public uint Version { get; }
+        public long Version { get; }
 
         /// <summary>
         /// Unique identifier of the schema.
         /// </summary>
-        public uint Id { get; }
+        public long Id { get; }
 
         /// <summary>
         /// A schema stored in the registry
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="id">The id of the schema in the registry</param>
         /// <param name="version">The version number of the schema for this is and subject</param>
         /// <param name="schema">The schema we want to register</param>
-        public RegisteredSchema(string subject, uint id, uint version, string schema)
+        public RegisteredSchema(string subject, long id, long version, string schema)
         {
             Subject = subject;
             Id = id;
