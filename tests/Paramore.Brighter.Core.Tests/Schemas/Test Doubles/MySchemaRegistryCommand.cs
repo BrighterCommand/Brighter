@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
 using NJsonSchema.Annotations;
 
 namespace Paramore.Brighter.Core.Tests.Schemas.Test_Doubles;
@@ -18,6 +19,7 @@ public class MySchemaRegistryCommand : Command
     /// I am an integer parameter of the command
     /// </summary>
     [NotNull]
+    [Required]
     public int IAmAnInt { get; set; }
     
     /// <summary>
@@ -28,6 +30,7 @@ public class MySchemaRegistryCommand : Command
     /// <summary>
     /// I am a string parameter of the command
     /// </summary>
+    [Required]
     public string IAmAString { get; set; }
     
     /// <summary>

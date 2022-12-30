@@ -43,6 +43,8 @@ namespace Paramore.Brighter.Transforms.Transformers
         private readonly JsonSchemaGeneratorSettings _jsonSchemaGeneratorSettings;
         private int _schemaVersion;
         private Type _requestType;
+        private bool _validateSchema;
+        private bool _latestOnly;
 
         /// <summary>
         /// Constructs an instance of the SchemaRegistryTransformer
@@ -59,7 +61,7 @@ namespace Paramore.Brighter.Transforms.Transformers
 
 
         /// <summary>
-        /// Release any unmanageed resources
+        /// Release any unmanaged resources
         /// </summary>
         public void Dispose() { }
 
@@ -71,7 +73,20 @@ namespace Paramore.Brighter.Transforms.Transformers
         public void InitializeWrapFromAttributeParams(params object[] initializerList)
         {
             _requestType = (Type)initializerList[0];
-            _schemaVersion = (int)initializerList[1];
+            if (initializerList.Length > 1)
+            {
+                _schemaVersion = (int)initializerList[1];
+                _latestOnly = false;
+            }
+            else
+            {
+                _latestOnly = true;
+            }
+
+            if (initializerList.Length > 2)
+                _validateSchema = (bool)initializerList[2];
+            else
+                _validateSchema = false;
         }
 
         /// <summary>
@@ -92,17 +107,28 @@ namespace Paramore.Brighter.Transforms.Transformers
         
         public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
         {
-            var (found, schemas) = await _schemaRegistry.LookupAsync(message.Header.Topic, false);
+            JsonSchema schema = null;
+            var (found, schemas) = await _schemaRegistry.LookupAsync(message.Header.Topic, _latestOnly);
             if (!found)
             {
-                RegisterSchema(message);
+                schema = RegisterSchema(message);
             }
             else
             {
                 bool versionExists = schemas.Any(s => s.Version == _schemaVersion);
                 if (!versionExists)
                 {
-                    RegisterSchema(message);
+                    schema = RegisterSchema(message);
+                }
+            }
+
+            if (_validateSchema && schema != null)
+            {
+                var err = schema.Validate(message.Body.Value);
+                if (err.Any())
+                {
+                    var errMsg = string.Join("|", err.Select(e => e.ToString()).ToArray());
+                    throw new InvalidSchemaException(errMsg);
                 }
             }
 
@@ -120,12 +146,14 @@ namespace Paramore.Brighter.Transforms.Transformers
             return message;
         }
  
-        private void RegisterSchema(Message message)
+        private JsonSchema RegisterSchema(Message message)
         {
             var generator = new JsonSchemaGenerator(_jsonSchemaGeneratorSettings ?? JsonSchemaGenerationSettings.Default);
             var schema = generator.Generate(_requestType);
 
             _schemaRegistry.RegisterAsync(message.Header.Topic, schema.ToJson());
+
+            return schema;
         }
     }
 }
