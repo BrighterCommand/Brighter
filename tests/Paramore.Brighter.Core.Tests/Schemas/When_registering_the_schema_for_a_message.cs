@@ -42,7 +42,11 @@ public class SchemaRegistryTransformRegistrationTests
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
             IAmAString = "my command value",
-            IAmAnotherString = "My command secret value"
+            IAmAnotherString = "My command secret value",
+            IAmAContainedType = new MyContainedType
+            {
+                IAmYetAnotherString = "Yet another string"
+            }
         };
 
         var messageBody = JsonSerializer.Serialize<MySchemaRegistryCommand>(command, JsonSerialisationOptions.Options);
@@ -75,7 +79,11 @@ public class SchemaRegistryTransformRegistrationTests
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
             IAmAString = "my command value",
-            IAmAnotherString = "My command secret value"
+            IAmAnotherString = "My command secret value",
+            IAmAContainedType = new MyContainedType
+            {
+                IAmYetAnotherString = "Yet another string"
+            } 
         };
 
         await _schemaRegistry.RegisterAsync(_topic, _schema.ToJson());
@@ -111,7 +119,11 @@ public class SchemaRegistryTransformRegistrationTests
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
             IAmAString = "my command value",
-            IAmAnotherString = "My command secret value"
+            IAmAnotherString = "My command secret value",
+            IAmAContainedType = new MyContainedType
+            {
+                IAmYetAnotherString = "Yet another string"
+            } 
         };
 
         //this will be version 1

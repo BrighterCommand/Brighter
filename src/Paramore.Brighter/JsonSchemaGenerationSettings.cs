@@ -39,9 +39,9 @@ namespace Paramore.Brighter
         {
             Default = new JsonSchemaGeneratorSettings
             {
-                AlwaysAllowAdditionalObjectProperties = true,
-                IgnoreObsoleteProperties = true,
-                FlattenInheritanceHierarchy = true,
+                AlwaysAllowAdditionalObjectProperties = false, //Be strict about what you send
+                IgnoreObsoleteProperties = true, //But allow us to ignore historical fields
+                FlattenInheritanceHierarchy = true,  //Don't publish messages using inheritance
                 SerializerSettings = null,   //use system.text.json not json.net
                 SerializerOptions = JsonSerialisationOptions.Options 
             };

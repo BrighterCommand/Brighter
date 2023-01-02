@@ -40,7 +40,12 @@ public class SchemaRegistryTransformValidationTests
             IAmADouble = 20.0D,
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
-            IAmAString = "my command value"
+            IAmAString = "my command value",
+            IAmAnotherString = "Another String",
+            IAmAContainedType = new MyContainedType
+            {
+                IAmYetAnotherString = "Yet another string"
+            } 
         };
 
         //register the schema ahead of validation; this will be version 1
@@ -74,6 +79,11 @@ public class SchemaRegistryTransformValidationTests
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
             /* IAmAString = "my command value", Required but missing*/
+            IAmAnotherString = "Another String",
+            IAmAContainedType = new MyContainedType
+            {
+                IAmYetAnotherString = "Yet another string"
+            } 
         };
 
         //register the schema ahead of validation; this will be version 1
