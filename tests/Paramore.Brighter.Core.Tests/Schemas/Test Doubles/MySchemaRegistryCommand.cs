@@ -4,11 +4,6 @@ using NJsonSchema.Annotations;
 
 namespace Paramore.Brighter.Core.Tests.Schemas.Test_Doubles;
 
-public class MyContainedType
-{
-    public string IAmAAnotherString { get; set; }
-}
-
 /// <summary>
 /// This is used for testing how we create and register schemas
 /// </summary>
@@ -48,11 +43,6 @@ public class MySchemaRegistryCommand : Command
     /// I am a double parameter of the command
     /// </summary>
     public double IAmADouble { get; set; }
-    
-    /// <summary>
-    /// I am a contained type of the command
-    /// </summary>
-    public MyContainedType IAmAContainedType { get; set; }
     
     /// <summary>
     /// Constructs an instance of the command

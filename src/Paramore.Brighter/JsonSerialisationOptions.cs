@@ -48,7 +48,8 @@ namespace Paramore.Brighter
                 PropertyNameCaseInsensitive = true,
                 PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
                 NumberHandling = JsonNumberHandling.AllowReadingFromString,
-                AllowTrailingCommas = true
+                AllowTrailingCommas = true,
+                
             };
 
             opts.Converters.Add(new JsonStringConverter());

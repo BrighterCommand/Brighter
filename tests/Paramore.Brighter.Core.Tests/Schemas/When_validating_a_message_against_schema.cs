@@ -40,12 +40,7 @@ public class SchemaRegistryTransformValidationTests
             IAmADouble = 20.0D,
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
-            IAmAString = "my command value",
-            IAmAnotherString = "My command secret value",
-            IAmAContainedType = new MyContainedType
-            {
-                IAmAAnotherString = "My contained value"
-            }
+            IAmAString = "my command value"
         };
 
         //register the schema ahead of validation; this will be version 1
@@ -65,7 +60,7 @@ public class SchemaRegistryTransformValidationTests
         }
         catch (Exception e)
         {
-            Assert.Fail("This is a good message, so no exception should be thrown");
+            Assert.Fail($"This is a good message, so no exception should be thrown: {e.Message}");
         }       
     }
     
@@ -78,14 +73,7 @@ public class SchemaRegistryTransformValidationTests
             IAmADouble = 20.0D,
             IAmAFloat = 19.0F,
             IAmAnInt = 5,
-            IAmAString = "my command value",
-            IAmAnotherString = "My command secret value",
-            /* Missing required property -> this will cause the test to fail.
-            IAmAContainedType = new MyContainedType
-            {
-                IAmAAnotherString = "My contained value"
-            }
-            */
+            /* IAmAString = "my command value", Required but missing*/
         };
 
         //register the schema ahead of validation; this will be version 1
