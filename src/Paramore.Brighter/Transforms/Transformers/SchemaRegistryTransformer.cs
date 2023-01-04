@@ -25,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using NJsonSchema;
@@ -46,8 +47,9 @@ namespace Paramore.Brighter.Transforms.Transformers
         Header,
 
         /// <summary>
-        /// Include the schema id in the first 4 bytes of payload of the messages
-        /// Kafka Connect will use this to determine the schema
+        /// Include the schema id in the first bytes of payload of the messages
+        /// <MAGIC_BYTE><SCHEMA_ID><SERIALIZED AVRO/JSON DATA>
+        /// Confluent ecosystem including Kafka Connect use this to determine the schema from the schema registry
         /// </summary>
         Payload
     }
@@ -123,6 +125,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <summary>
         /// Looks to see if we have a schema registered for this message. If not it will register the appropriate schema.
         /// If the parameter is set, we will also validate the message against the stored schema
+        /// If you configure your transformer to use the <see cref="SchemaIdStrategy.Header"/> strategy, the schema id will be added to the header of the message
+        /// If you configure your transformer to use the <see cref="SchemaIdStrategy.Payload"/> strategy, the schema id will be added to the first 4 bytes of the payload of the message
+        /// The format of the schema id is a 32 bit integer, in network byte order
+        /// It is preceded by the magic byte 0
+        /// <MAGIC_BYTE><SCHEMA_ID><SERIALIZED AVRO/JSON DATA>
         /// </summary>
         /// <param name="message">The message to validate against the schema</param>
         /// <param name="cancellationToken">The cancellation token</param>
@@ -145,11 +152,12 @@ namespace Paramore.Brighter.Transforms.Transformers
                 }
                 else
                 {
-                    id = schemas.First(s => s.Version == _schemaVersion).Id;
+                    var brighterMessageSchema = schemas.First(s => s.Version == _schemaVersion);
+                    schema = await JsonSchema.FromJsonAsync(brighterMessageSchema.Schema, cancellationToken);
+                    id = brighterMessageSchema.Id;
                 }
             }
 
-            message.Header.SchemaId = id;
 
             if (_validateSchema && schema != null)
             {
@@ -159,6 +167,18 @@ namespace Paramore.Brighter.Transforms.Transformers
                     var errMsg = string.Join("|", err.Select(e => e.ToString()).ToArray());
                     throw new InvalidSchemaException(errMsg);
                 }
+            }
+            
+            if (_schemaIdStrategy == SchemaIdStrategy.Payload)
+            {
+                var magicByte = new byte[] { 0 };
+                var schemaId = BitConverter.GetBytes(IPAddress.HostToNetworkOrder(id));
+                var payload = magicByte.Concat(schemaId).ToArray();
+                message.Body = new MessageBody(payload.Concat(message.Body.Bytes).ToArray(), "application/json");
+            }
+            else if (_schemaIdStrategy == SchemaIdStrategy.Header)
+            {
+                message.Header.SchemaId = id;
             }
 
             return message;

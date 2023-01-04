@@ -72,24 +72,18 @@ public class SchemaRegistryTransformValidationTests
     [Fact]
     public async Task When_validating_a_bad_message_against_schema()
     {
-        var command = new MySchemaRegistryCommand
+        var command = new MySchemaRegistryCommandV2
         {
-            IAmABool = false,
-            IAmADouble = 20.0D,
-            IAmAFloat = 19.0F,
-            IAmAnInt = 5,
-            /* IAmAString = "my command value", Required but missing*/
-            IAmAnotherString = "Another String",
-            IAmAContainedType = new MyContainedType
-            {
-                IAmYetAnotherString = "Yet another string"
-            } 
+            ABool = false,
+            ADouble = 20.0D,
+            AFloat = 19.0F,
+            AnInt = 5,
         };
 
         //register the schema ahead of validation; this will be version 1
         await _schemaRegistry.RegisterAsync(_topic, _schema.ToJson(), 1);
 
-        var messageBody = JsonSerializer.Serialize<MySchemaRegistryCommand>(command, JsonSerialisationOptions.Options);
+        var messageBody = JsonSerializer.Serialize<MySchemaRegistryCommandV2>(command, JsonSerialisationOptions.Options);
         var message = new Message(
             new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND, DateTime.UtcNow),
             new MessageBody(messageBody, "application/json")
