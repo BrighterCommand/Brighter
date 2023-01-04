@@ -87,7 +87,7 @@ public class SchemaRegistryTransformValidationTests
         };
 
         //register the schema ahead of validation; this will be version 1
-        await _schemaRegistry.RegisterAsync(_topic, _schema.ToJson());
+        await _schemaRegistry.RegisterAsync(_topic, _schema.ToJson(), 1);
 
         var messageBody = JsonSerializer.Serialize<MySchemaRegistryCommand>(command, JsonSerialisationOptions.Options);
         var message = new Message(

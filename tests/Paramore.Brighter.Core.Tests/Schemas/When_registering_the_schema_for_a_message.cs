@@ -25,7 +25,12 @@ public class SchemaRegistryTransformRegistrationTests
         _schemaRegistry = new InMemorySchemaRegistry();
         
         _transformer = new SchemaRegistryTransformer(_schemaRegistry, JsonSchemaGenerationSettings.Default);
-        _transformer.InitializeWrapFromAttributeParams(typeof(MySchemaRegistryCommand), 1);
+        _transformer.InitializeWrapFromAttributeParams(
+            typeof(MySchemaRegistryCommand), 
+            1, 
+            false,
+            SchemaIdStrategy.Header
+            );
         
         var generator = new JsonSchemaGenerator(JsonSchemaGenerationSettings.Default);
         _schema = generator.Generate(typeof(MySchemaRegistryCommand));
@@ -35,6 +40,9 @@ public class SchemaRegistryTransformRegistrationTests
     public async Task When_registering_the_schema_for_a_message()
     {
         //arrange
+        
+        _schemaRegistry.ClearSchemas();
+        
         var command = new MySchemaRegistryCommand
         {
             IAmABool = false,
@@ -65,14 +73,21 @@ public class SchemaRegistryTransformRegistrationTests
 
         //assert
         found.Should().BeTrue();
-        registeredSchema.First().Schema.Should().Be(_schema.ToJson());
+        BrighterMessageSchema messageSchema = registeredSchema.First();
+        messageSchema.Schema.Should().Be(_schema.ToJson());
+        messageSchema.Version.Should().Be(1);
+        messageSchema.Subject.Should().Be(_topic);
+        messageSchema.Id.Should().Be(1);
+        wrappedMessage.Header.SchemaId.Should().Be(1);
 
     }
 
     [Fact]
     public async Task When_the_schema_is_already_registered()
     {
-        var command = new MySchemaRegistryCommand
+        _schemaRegistry.ClearSchemas();
+        
+         var command = new MySchemaRegistryCommand
         {
             IAmABool = false,
             IAmADouble = 20.0D,
@@ -102,13 +117,20 @@ public class SchemaRegistryTransformRegistrationTests
         //assert
         found.Should().BeTrue();
         registeredSchema.Count().Should().Be(1);                        //we should not need to add a new schema
-        registeredSchema.First().Schema.Should().Be(_schema.ToJson());
+        BrighterMessageSchema messageSchema = registeredSchema.First();
+        messageSchema.Schema.Should().Be(_schema.ToJson());
+        messageSchema.Version.Should().Be(1);
+        messageSchema.Subject.Should().Be(_topic);
+        messageSchema.Id.Should().Be(1);
+        wrappedMessage.Header.SchemaId.Should().Be(1);
 
     }
     
     [Fact]
     public async Task When_an_earlier_version_is_already_registered()
     {
+        _schemaRegistry.ClearSchemas();
+         
         //identify that we want to use version 2
         _transformer.InitializeWrapFromAttributeParams(typeof(MySchemaRegistryCommand), 2);
         
@@ -127,7 +149,7 @@ public class SchemaRegistryTransformRegistrationTests
         };
 
         //this will be version 1
-        await _schemaRegistry.RegisterAsync(_topic, _schema.ToJson());
+        await _schemaRegistry.RegisterAsync(_topic, _schema.ToJson(), 1);
 
         var messageBody = JsonSerializer.Serialize<MySchemaRegistryCommand>(command, JsonSerialisationOptions.Options);
         var message = new Message(
@@ -143,7 +165,12 @@ public class SchemaRegistryTransformRegistrationTests
         //assert
         found.Should().BeTrue();
         registeredSchema.Count().Should().Be(2);                        //we should not need to add a new schema
-        registeredSchema.Skip(1).Take(1).First().Schema.Should().Be(_schema.ToJson());
+        BrighterMessageSchema messageSchema = registeredSchema.Skip(1).Take(1).First();
+        messageSchema.Schema.Should().Be(_schema.ToJson());
+        messageSchema.Version.Should().Be(2);
+        messageSchema.Subject.Should().Be(_topic);
+        messageSchema.Id.Should().Be(1);
+        wrappedMessage.Header.SchemaId.Should().Be(1);
 
     }
 }

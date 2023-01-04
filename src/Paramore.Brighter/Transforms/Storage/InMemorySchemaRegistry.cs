@@ -22,7 +22,6 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,17 +35,8 @@ namespace Paramore.Brighter.Transforms.Storage
     /// </summary>
     public class InMemorySchemaRegistry : IAmASchemaRegistry
     {
-        private readonly ConcurrentDictionary<string, List<RegisteredSchema>> _schemas = new ConcurrentDictionary<string, List<RegisteredSchema>>();
-        private static long s_schemaId = 1;
-
-        /// <summary>
-        /// Resets the registry, clearing out the registered schemas and resetting ids
-        /// </summary>
-        public void Clear()
-        {
-            _schemas.Clear();
-            s_schemaId = 0;
-        }
+        private readonly ConcurrentDictionary<string, List<BrighterMessageSchema>> _schemas = new ConcurrentDictionary<string, List<BrighterMessageSchema>>();
+        private static int s_schemaId = 1;
 
         /// <summary>
         /// Looks up a schema for a topic
@@ -54,40 +44,52 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="topic">The topic to find the schema for. </param>
         /// <param name="latestOnly">Only the highest version schema, or all schemas.</param>
         /// <returns>A tuple, with a boolean indicating if the schema could be found and a list of schemas that match</returns>
-        public async Task<(bool, IEnumerable<RegisteredSchema>)> LookupAsync(string topic, bool latestOnly = true)
+        public async Task<(bool, IEnumerable<BrighterMessageSchema>)> LookupAsync(string topic, bool latestOnly = true)
         {
-            var schemaFound = _schemas.TryGetValue(topic, out List<RegisteredSchema> messageSchemas);
+            var schemaFound = _schemas.TryGetValue(topic, out List<BrighterMessageSchema> messageSchemas);
 
             if (schemaFound && latestOnly) 
-                return (true, new List<RegisteredSchema>
+                return (true, new List<BrighterMessageSchema>
                     {messageSchemas.OrderByDescending(s => s.Version).FirstOrDefault()}); 
 
             return (schemaFound, schemaFound ? messageSchemas : null);
         }
-        
+
         /// <summary>
         /// Register a schema
         /// </summary>
         /// <param name="topic">The topic to use as an identifier for the schema</param>
         /// <param name="messageSchema">The JSON schema that you want to register</param>
-        public async Task RegisterAsync(string topic, string messageSchema)
+        /// <param name="newVersion">Explicitly set the new version; if omitted will be 1 if not exists, or highest version + 1</param>
+        public async Task<int> RegisterAsync(string topic, string messageSchema, int newVersion = -1)
         {
-            var found = _schemas.TryGetValue(topic, out List<RegisteredSchema> schemas);
+            var found = _schemas.TryGetValue(topic, out List<BrighterMessageSchema> schemas);
             if (found)
             {
                 var id = schemas.Select(s => s.Id).First();
-                var version = schemas.Select(s => s.Version).Max();
-                schemas.Add(new RegisteredSchema(topic, id, Interlocked.Increment(ref version), messageSchema));
+                var version = newVersion == -1 ? schemas.Select(s => s.Version).Max() + 1 : newVersion;
+                schemas.Add(new BrighterMessageSchema(topic, id, version, messageSchema));
             }
             else
             {
                 _schemas.TryAdd(
                     topic, 
-                    new List<RegisteredSchema>
+                    new List<BrighterMessageSchema>
                     {
-                        new RegisteredSchema(messageSchema, Interlocked.Increment(ref s_schemaId), 0, messageSchema)
+                        new BrighterMessageSchema(topic, Interlocked.Increment(ref s_schemaId), 1, messageSchema)
                     });
             }
+
+            return s_schemaId;
+        }
+
+        /// <summary>
+        /// Resets the registry, clearing out the registered schemas and resetting ids
+        /// </summary>
+        public void ClearSchemas()
+        {
+            _schemas.Clear();
+            s_schemaId = 0; 
         }
     }
 }

@@ -131,10 +131,16 @@ namespace Paramore.Brighter
         public string PartitionKey { get; set; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        public int SchemaId { get; set; }
+        
+        /// <summary>
         /// Gets the telemetry information for the message
         /// </summary>
         public MessageTelemetry Telemetry { get; private set; }
-        
+
+
         /// Intended for serialization, prefer a parameterized constructor in application code as a better 'pit of success'
         /// </summary>
         public MessageHeader() {}
@@ -196,17 +202,17 @@ namespace Paramore.Brighter
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-          /// <summary>
-          /// Initializes a new instance of the <see cref="MessageHeader"/> class.
-          /// </summary>
-          /// <param name="messageId">The message identifier.</param>
-          /// <param name="topic">The topic.</param>
-          /// <param name="messageType">Type of the message.</param>
-          /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
-          /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-          /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
-          /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-          public MessageHeader(
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageHeader"/> class.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="messageType">Type of the message.</param>
+        /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
+        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
+        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+        /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
+        public MessageHeader(
             Guid messageId, 
             string topic, 
             MessageType messageType, 

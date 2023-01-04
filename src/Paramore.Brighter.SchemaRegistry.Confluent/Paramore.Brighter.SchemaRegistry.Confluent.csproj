@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+      <Description>A schema registry lets you store the schemas for your messages, and validate against them; this provides support for using Confluent's Schema Registry with Brighter</Description>
+      <Authors>Ian Cooper</Authors>
+      <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
+        <PackageTags>Command;Event;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
+        <LangVersion>8</LangVersion> 
+    </PropertyGroup>
+
+  <ItemGroup Condition=" '$(TargetFramework)' == 'netstandard2.0' ">
+    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="7.0.0" />
+    <PackageReference Include="System.Text.Json" Version="7.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Confluent.SchemaRegistry" Version="1.9.3" />
+  </ItemGroup>
+
+</Project>

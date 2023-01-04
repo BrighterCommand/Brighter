@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Transforms.Storage
     /// <summary>
     /// A schema stored in a registry
     /// </summary>
-    public class RegisteredSchema
+    public class BrighterMessageSchema
     {
         /// <summary>
         /// The schema that we are storing
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <summary>
         /// Unique identifier of the schema.
         /// </summary>
-        public long Id { get; }
+        public int Id { get; }
 
         /// <summary>
         /// A schema stored in the registry
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="id">The id of the schema in the registry</param>
         /// <param name="version">The version number of the schema for this is and subject</param>
         /// <param name="schema">The schema we want to register</param>
-        public RegisteredSchema(string subject, long id, long version, string schema)
+        public BrighterMessageSchema(string subject, int id, long version, string schema)
         {
             Subject = subject;
             Id = id;
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Transforms.Storage
             Schema = schema;
         }
         
-        protected bool Equals(RegisteredSchema other)
+        protected bool Equals(BrighterMessageSchema other)
         {
             return Subject == other.Subject && Version == other.Version && Id == other.Id;
         }
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Transforms.Storage
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((RegisteredSchema)obj);
+            return Equals((BrighterMessageSchema)obj);
         }
 
         public override int GetHashCode()
@@ -84,12 +84,12 @@ namespace Paramore.Brighter.Transforms.Storage
             return HashCode.Combine(Subject, Version, Id);
         }
 
-        public static bool operator ==(RegisteredSchema left, RegisteredSchema right)
+        public static bool operator ==(BrighterMessageSchema left, BrighterMessageSchema right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(RegisteredSchema left, RegisteredSchema right)
+        public static bool operator !=(BrighterMessageSchema left, BrighterMessageSchema right)
         {
             return !Equals(left, right);
         }

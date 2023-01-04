@@ -34,6 +34,25 @@ using Paramore.Brighter.Transforms.Storage;
 namespace Paramore.Brighter.Transforms.Transformers
 {
     /// <summary>
+    /// Where we have a schema id, should we:
+    /// - Header: Include it in the header of the message
+    /// - Payload: Include it in the payload of the message
+    /// </summary>
+    public enum SchemaIdStrategy
+    {
+        /// <summary>
+        /// Include the schema id in the header of the message
+        /// </summary>
+        Header,
+
+        /// <summary>
+        /// Include the schema id in the first 4 bytes of payload of the messages
+        /// Kafka Connect will use this to determine the schema
+        /// </summary>
+        Payload
+    }
+
+    /// <summary>
     /// The schema registry transformer offers the ability to register the schema of a message with a registry
     /// Optionally it can also validate the message against the schema
     /// </summary>
@@ -45,6 +64,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         private Type _requestType;
         private bool _validateSchema;
         private bool _latestOnly;
+        private SchemaIdStrategy _schemaIdStrategy;
 
         /// <summary>
         /// Constructs an instance of the SchemaRegistryTransformer
@@ -87,6 +107,9 @@ namespace Paramore.Brighter.Transforms.Transformers
                 _validateSchema = (bool)initializerList[2];
             else
                 _validateSchema = false;
+
+            if (initializerList.Length > 3)
+                _schemaIdStrategy = (SchemaIdStrategy)initializerList[3];
         }
 
         /// <summary>
@@ -104,23 +127,29 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <param name="message">The message to validate against the schema</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        
         public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
         {
             JsonSchema schema = null;
+            int id = -1;
             var (found, schemas) = await _schemaRegistry.LookupAsync(message.Header.Topic, _latestOnly);
             if (!found)
             {
-                schema = RegisterSchema(message);
+                (id, schema) = await RegisterSchemaAsync(message);
             }
             else
             {
                 bool versionExists = schemas.Any(s => s.Version == _schemaVersion);
                 if (!versionExists)
                 {
-                    schema = RegisterSchema(message);
+                    (id, schema) = await RegisterSchemaAsync(message, _schemaVersion);
+                }
+                else
+                {
+                    id = schemas.First(s => s.Version == _schemaVersion).Id;
                 }
             }
+
+            message.Header.SchemaId = id;
 
             if (_validateSchema && schema != null)
             {
@@ -145,15 +174,18 @@ namespace Paramore.Brighter.Transforms.Transformers
         {
             return message;
         }
- 
-        private JsonSchema RegisterSchema(Message message)
+
+        private async Task<(int, JsonSchema)> RegisterSchemaAsync(Message message, int? version = null)
         {
-            var generator = new JsonSchemaGenerator(_jsonSchemaGeneratorSettings ?? JsonSchemaGenerationSettings.Default);
+            var generator =
+                new JsonSchemaGenerator(_jsonSchemaGeneratorSettings ?? JsonSchemaGenerationSettings.Default);
             var schema = generator.Generate(_requestType);
 
-            _schemaRegistry.RegisterAsync(message.Header.Topic, schema.ToJson());
+            var id = version.HasValue
+                ? await _schemaRegistry.RegisterAsync(message.Header.Topic, schema.ToJson(), version.Value)
+                : await _schemaRegistry.RegisterAsync(message.Header.Topic, schema.ToJson(), -1);
 
-            return schema;
+            return (id, schema);
         }
     }
 }
