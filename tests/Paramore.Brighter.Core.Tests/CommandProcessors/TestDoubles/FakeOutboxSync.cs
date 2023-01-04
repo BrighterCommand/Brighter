@@ -158,7 +158,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 .ToArray();
         }
 
-        class OutboxEntry
+       public void Delete(params Guid[] messageIds)
+       {
+           foreach (Guid messageId in messageIds)
+           {
+               var message = _posts.First(e => e.Message.Id == messageId);
+               _posts.Remove(message);
+           }
+       }
+
+       class OutboxEntry
         {
             public DateTime? TimeDeposited { get; set; }
             public DateTime? TimeFlushed { get; set; }

@@ -60,6 +60,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private const string MarkMultipleDispatchedCommand = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId in ( {1} )";
         private const string GetMessageCommand = "SELECT * FROM {0} WHERE MessageId = @MessageId";
         private const string GetMessagesCommand = "SELECT * FROM {0} WHERE MessageId IN ( {1} )";
+        private const string DeleteMessagesCommand = "DELETE FROM {0} WHERE MessageId IN ( {1} )";
 
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -100,7 +101,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            ReadFromStore(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+            WriteToStore(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
             {
                 s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -117,7 +118,16 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns>Task.</returns>
         public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-            ReadFromStore(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
+            WriteToStore(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
+        }
+        
+        /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="messageIds">The id of the message to delete</param>
+        public void Delete(params Guid[] messageIds)
+        {
+            WriteToStore(null,connection => InitDeleteDispatchedCommand(connection, messageIds), null);
         }
 
         /// <summary>
@@ -131,7 +141,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            return ReadFromStoreAsync(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+            return WriteToStoreAsync(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
             {
                 s_logger.LogWarning(
                             "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -152,7 +162,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             CancellationToken cancellationToken = default(CancellationToken),
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-            return ReadFromStoreAsync(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"), cancellationToken);
+            return WriteToStoreAsync(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"), cancellationToken);
         }
 
         /// <summary>
@@ -171,7 +181,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             int outboxTimeout = -1, 
             Dictionary<string, object> args = null)
         {
-            return WriteToStore(connection => CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber), dr => MapListFunction(dr));
+            return ReadFromStore(connection => CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber), dr => MapListFunction(dr));
         }
 
        /// <summary>
@@ -182,7 +192,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns>The message</returns>
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
-            return WriteToStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunction(dr));
+            return ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunction(dr));
         }
 
         /// <summary>
@@ -194,7 +204,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns><see cref="Task{Message}" />.</returns>
         public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
-            return WriteToStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
+            return ReadFromStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -207,7 +217,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return WriteToStoreAsync(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout), async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+            return ReadFromStoreAsync(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout), async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
         /// <summary>
@@ -219,7 +229,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <returns>A list of messages</returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
-            return WriteToStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunction(dr)).ToList();
+            return ReadFromStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunction(dr)).ToList();
         }
 
         /// <summary>
@@ -236,7 +246,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return (await WriteToStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
+            return (await ReadFromStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
         }
 
         /// <summary>
@@ -248,7 +258,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
-            return ReadFromStoreAsync(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
+            return WriteToStoreAsync(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
         }
 
         /// <summary>
@@ -260,7 +270,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            return ReadFromStoreAsync(null, connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
+            return WriteToStoreAsync(null, connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
         }
 
         /// <summary>
@@ -270,7 +280,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-            ReadFromStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null);
+            WriteToStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null);
         }
 
        /// <summary>
@@ -285,7 +295,7 @@ namespace Paramore.Brighter.Outbox.MsSql
            int pageNumber = 1,
             Dictionary<string, object> args = null)
        {
-            return WriteToStore(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunction(dr));
+            return ReadFromStore(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunction(dr));
         }
 
         /// <summary>
@@ -302,13 +312,13 @@ namespace Paramore.Brighter.Outbox.MsSql
            Dictionary<string, object> args = null,
            CancellationToken cancellationToken = default)
        {
-            return WriteToStoreAsync(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+            return ReadFromStoreAsync(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
        }
 
         #endregion
 
         #region Things that Actually call SQL
-        private void ReadFromStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction)
+        private void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
             if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
@@ -347,7 +357,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
 
-        private async Task ReadFromStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
+        private async Task WriteToStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
             if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
@@ -386,7 +396,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
 
-        private T WriteToStore<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, T> resultFunc)
+        private T ReadFromStore<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, T> resultFunc)
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -408,7 +418,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
 
-        private async Task<T> WriteToStoreAsync<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+        private async Task<T> ReadFromStoreAsync<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -472,6 +482,12 @@ namespace Paramore.Brighter.Outbox.MsSql
         private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(_configuration.OutBoxTableName).ToArray());
 
+        private SqlCommand InitDeleteDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds)
+        {
+            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
+            return CreateCommand(connection, GenerateSqlText(DeleteMessagesCommand, inClause.inClause), 0, inClause.parameters);
+        }
+        
         private SqlCommand CreateCommand(SqlConnection connection, string sqlText, int outBoxTimeout, params SqlParameter[] parameters)
         {
             var command = connection.CreateCommand();

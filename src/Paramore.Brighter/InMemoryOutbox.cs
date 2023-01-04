@@ -328,6 +328,14 @@ namespace Paramore.Brighter
             return outstandingMessages;
         }
 
+        public void Delete(params Guid[] messageIds)
+        {
+            foreach (Guid messageId in messageIds)
+            {
+                _requests.TryRemove(messageId.ToString(), out _);
+            }
+        }
+
         public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IList<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);

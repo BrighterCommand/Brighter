@@ -217,6 +217,11 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 return new Message[0]; 
             }
 
+            public void Delete(params Guid[] messageIds)
+            {
+                //ignore
+            }
+
             public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
             {
                return new Message[0]; 
