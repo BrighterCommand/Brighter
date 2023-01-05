@@ -23,9 +23,13 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Text.Json;
+using System.Linq;
+using System.Net;
 using System.Threading.Tasks;
 using Confluent.Kafka;
+using Confluent.Kafka.SyncOverAsync;
+using Confluent.SchemaRegistry;
+using Confluent.SchemaRegistry.Serdes;
 using FluentAssertions;
 using Paramore.Brighter.Kafka.Tests.TestDoubles;
 using Paramore.Brighter.MessagingGateway.Kafka;
@@ -36,7 +40,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 {
     [Trait("Category", "Kafka")]
     [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
-    public class KafkaMessageProducerSendTests : IDisposable
+    public class KafkaMessageProducerHeaderBytesSendTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
         private readonly string _queueName = Guid.NewGuid().ToString(); 
@@ -44,9 +48,13 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
+        private readonly ISchemaRegistryClient _schemaRegistryClient;
+        private readonly ISerializer<MyCommand> _serializer;
+        private readonly IDeserializer<MyCommand> _deserializer;
+        private readonly SerializationContext _serializationContext;
 
 
-        public KafkaMessageProducerSendTests(ITestOutputHelper output)
+        public KafkaMessageProducerHeaderBytesSendTests (ITestOutputHelper output)
         {
             const string groupId = "Kafka Message Producer Send Test";
             _output = output;
@@ -69,50 +77,67 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }}).Create(); 
             
             _consumer = new KafkaMessageConsumerFactory(
-                 new KafkaMessagingGatewayConfiguration
-                 {
-                     Name = "Kafka Consumer Test",
-                     BootStrapServers = new[] { "localhost:9092" }
-                 })
+                    new KafkaMessagingGatewayConfiguration
+                    {
+                        Name = "Kafka Consumer Test",
+                        BootStrapServers = new[] { "localhost:9092" }
+                    })
                 .Create(new KafkaSubscription<MyCommand>(
-                     channelName: new ChannelName(_queueName), 
-                     routingKey: new RoutingKey(_topic),
-                     groupId: groupId,
-                     numOfPartitions: 1,
-                     replicationFactor: 1,
-                     makeChannels: OnMissingChannel.Create
-                     )
-             );
+                        channelName: new ChannelName(_queueName), 
+                        routingKey: new RoutingKey(_topic),
+                        groupId: groupId,
+                        numOfPartitions: 1,
+                        replicationFactor: 1,
+                        makeChannels: OnMissingChannel.Create
+                    )
+                );
+            
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
+            _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
   
+            _serializer = new JsonSerializer<MyCommand>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
+            _deserializer = new JsonDeserializer<MyCommand>().AsSyncOverAsync();
+            _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
         }
 
         [Fact]
         public void When_posting_a_message_via_the_messaging_gateway()
         {
-            var command = new MyCommand{Value = "Test Content"};
+            //arrange
             
-            //vanilla i.e. no Kafka specific bytes at the beginning
-            var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
+            var myCommand = new MyCommand{ Value = "Hello World"};
             
-            var message = new Message(
+            //use the serdes json serializer to write the message to the topic
+            var body = _serializer.Serialize(myCommand, _serializationContext);
+            
+            //grab the schema id that was written to the message by the serializer
+            var schemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(body.Skip(1).Take(4).ToArray()));
+
+            var sent = new Message(
                 new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
                 new MessageBody(body));
             
-            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
+            //act
+            
+            ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(sent);
 
-            var receivedMessage = GetMessage();
+            var received = GetMessage();
             
-            var receivedCommand = JsonSerializer.Deserialize<MyCommand>(message.Body.Value, JsonSerialisationOptions.Options);
+            var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(body.Skip(1).Take(4).ToArray()));
             
-            receivedMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
-            receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
-            receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
-            receivedMessage.Body.Value.Should().Be(message.Body.Value);
-            receivedCommand.Id.Should().Be(command.Id);
-            receivedCommand.Value.Should().Be(command.Value);
+            var receivedCommand = _deserializer.Deserialize(received.Body.Bytes, received.Body.Bytes is null, _serializationContext);
+            
+            //assert
+            received.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
+            received.Header.PartitionKey.Should().Be(_partitionKey);
+            received.Body.Bytes.Should().Equal(received.Body.Bytes);
+            received.Body.Value.Should().Be(received.Body.Value);
+            receivedSchemaId.Should().Be(schemaId);
+            receivedCommand.Id.Should().Be(myCommand.Id);
+            receivedCommand.Value.Should().Be(myCommand.Value);
         }
 
         private Message GetMessage()
@@ -124,7 +149,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 try
                 {
                     maxTries++;
-                    Task.Delay(500).Wait(); //Let topic propogate in the broker
+                    Task.Delay(500).Wait(); //Let topic propagate in the broker
                     messages = _consumer.Receive(1000);
                     _consumer.Acknowledge(messages[0]);
                     
@@ -134,7 +159,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }
                 catch (ChannelFailureException cfx)
                 {
-                    //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     _output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
 
