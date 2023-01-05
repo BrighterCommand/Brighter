@@ -151,10 +151,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propagate in the broker
                     messages = _consumer.Receive(1000);
-                    _consumer.Acknowledge(messages[0]);
                     
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
+                    {
+                        _consumer.Acknowledge(messages[0]);
                         break;
+                    }
                         
                 }
                 catch (ChannelFailureException cfx)
