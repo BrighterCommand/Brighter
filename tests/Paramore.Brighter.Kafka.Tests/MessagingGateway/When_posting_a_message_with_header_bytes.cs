@@ -126,7 +126,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
             var received = GetMessage();
             
-            var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(body.Skip(1).Take(4).ToArray()));
+            var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(received.Body.Bytes.Skip(1).Take(4).ToArray()));
             
             var receivedCommand = _deserializer.Deserialize(received.Body.Bytes, received.Body.Bytes is null, _serializationContext);
             
