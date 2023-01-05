@@ -24,6 +24,9 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Net;
+using System.Net.Mime;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Serialization;
 
@@ -35,6 +38,8 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {
+        public const string ApplicationJson = "application/json";
+
         /// <summary>
         /// The message body as a byte array.
         /// </summary>
@@ -42,19 +47,35 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// The type of message encoded into Bytes.  A hint for deserialization that 
-        /// will be sent with the byte[] to allow 
+        /// will be sent with the byte[] to allow
         /// </summary>
-        public string BodyType { get; private set; }
+        public string ContentType { get; private set; }
+
+        public CharacterEncoding CharacterEncoding { get; }
 
         /// <summary>
-        /// The message body as a string - usually used to store the message body as JSON or XML.
+        /// The message body as a string.
+        /// If the message body is UTF8 or ASCII, this will be the same as the string representation of the byte array.
+        /// If the message body is Base64 encoded, this will be the encoded string.
+        /// if the message body is compressed, it will throw an exception, you should decompress the bytes first. 
         /// </summary>
         /// <value>The value.</value>
         public string Value
         {
             get
             {
-                return Encoding.UTF8.GetString(Bytes);
+                switch (CharacterEncoding)
+                {
+                    case CharacterEncoding.Base64:
+                        return Convert.ToBase64String(Bytes);
+                    case CharacterEncoding.UTF8:
+                        return Encoding.UTF8.GetString(Bytes);
+                    case CharacterEncoding.ASCII:
+                        return Encoding.ASCII.GetString(Bytes);
+                    default:
+                        throw new InvalidOperationException(
+                            $"Message Body with {CharacterEncoding} is not available");
+                }
             }
         }
 
@@ -62,23 +83,36 @@ namespace Paramore.Brighter
         /// Initializes a new instance of the <see cref="MessageBody"/> class with a string.  Use Value property to retrieve.
         /// </summary>
         /// <param name="body">The body of the message, usually XML or JSON.</param>
-        /// <param name="bodyType">The type of the message, usualy XML or JSON. Defaults to JSON</param>
-        public MessageBody(string body, string bodyType = "JSON")
+        /// <param name="contentType">The type of the message, usually "application/json". Defaults to "application/json"</param>
+        /// <param name="encoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
+        /// If you pass us "application/octet" but the type is ascii or utf8, we will convert to base64 for you.
+        /// </param>
+        public MessageBody(string body, string contentType = ApplicationJson, CharacterEncoding encoding = CharacterEncoding.UTF8)
         {
-            Bytes = Encoding.UTF8.GetBytes(body);
-            BodyType = bodyType;
+            ContentType = contentType;
+            CharacterEncoding = encoding;
+
+            Bytes = CharacterEncoding switch
+            {
+                CharacterEncoding.Base64 => Convert.FromBase64String(body),
+                CharacterEncoding.UTF8 => Encoding.UTF8.GetBytes(body),
+                CharacterEncoding.ASCII => Encoding.ASCII.GetBytes(body),
+                _ => Bytes
+            };
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageBody"/> class using a byte array.
         /// </summary>
         /// <param name="bytes">The Body of the Message</param>
-        /// <param name="bodyType">Hint for deserilization, the type of message encoded in body</param>
+        /// <param name="contentType">The content type of message encoded in body</param>
+        /// <param name="encoding"></param>
         [JsonConstructor]
-        public MessageBody(byte[] bytes, string bodyType)
+        public MessageBody(byte[] bytes, string contentType = ApplicationJson, CharacterEncoding encoding = CharacterEncoding.UTF8)
         {
             Bytes = bytes;
-            BodyType = bodyType ?? "JSON";
+            ContentType = contentType;
+            CharacterEncoding = encoding;
         }
 
         /// <summary>
@@ -86,15 +120,32 @@ namespace Paramore.Brighter
         /// TODO: We don't support the range of options on Span<T> on netstandard2.0 that let's us
         /// flow through a ReadOnlyMemory<byte> for serialization so we allocate here as well as in
         /// PullConsumer when we probably don't need this allocation.
-        /// We can fix in .NET 5.0 over the dead-end fork of netstandard2.1
+        /// We can fix in .NET 7.0 over the dead-end fork of netstandard2.1
         /// </summary>
         /// <param name="body"></param>
-        /// <param name="bodyType"></param>
-        public MessageBody(in ReadOnlyMemory<byte> body, string bodyType)
+        /// <param name="contentType"></param>
+        public MessageBody(in ReadOnlyMemory<byte> body, string contentType = ApplicationJson, CharacterEncoding encoding = CharacterEncoding.UTF8)
         {
             Bytes = body.ToArray();
-            BodyType = bodyType ?? "JSON";
-         }
+            ContentType = contentType;
+            CharacterEncoding = encoding;
+        }
+
+
+        /// <summary>
+        /// Converts the body to a character encoded string.
+        /// </summary>
+        /// <returns></returns>
+        public string ToCharacterEncodedString(CharacterEncoding characterEncoding)
+        {
+            return characterEncoding switch
+            {
+                CharacterEncoding.Base64 => Convert.ToBase64String(Bytes),
+                CharacterEncoding.UTF8 => Encoding.UTF8.GetString(Bytes),
+                CharacterEncoding.ASCII => Encoding.ASCII.GetString(Bytes),
+                _ => throw new InvalidOperationException($"Message Body with {CharacterEncoding} is not available")
+            };
+        }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -103,7 +154,7 @@ namespace Paramore.Brighter
         /// <returns>true if the current object is equal to the <paramref name="other" /> parameter; otherwise, false.</returns>
         public bool Equals(MessageBody other)
         {
-            return Bytes.SequenceEqual(other.Bytes) && BodyType.Equals(other.BodyType);
+            return Bytes.SequenceEqual(other.Bytes) && ContentType.Equals(other.ContentType);
         }
 
         /// <summary>

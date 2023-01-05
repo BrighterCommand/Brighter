@@ -8,29 +8,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     internal class KafkaMessagePublisher
     {
-        private readonly IProducer<string, string> _producer;
-        private static readonly string[] _headersToReset =
-        {
-            HeaderNames.MESSAGE_TYPE,
-            HeaderNames.TOPIC,
-            HeaderNames.CORRELATION_ID,
-            HeaderNames.TIMESTAMP
-        };
-
-
-        public KafkaMessagePublisher(IProducer<string, string> producer)
+        private readonly IProducer<string, byte[]> _producer;
+        
+        private static readonly string[] s_headersToReset;
+        
+        public KafkaMessagePublisher(IProducer<string, byte[]> producer)
         {
             _producer = producer;
         }
 
-        public void PublishMessage(Message message, Action<DeliveryReport<string, string>> deliveryReport)
+        static KafkaMessagePublisher()
+        {
+            s_headersToReset = new[] {
+                HeaderNames.MESSAGE_TYPE,
+                HeaderNames.TOPIC,
+                HeaderNames.CORRELATION_ID,
+                HeaderNames.TIMESTAMP
+            };
+        }
+
+        public void PublishMessage(Message message, Action<DeliveryReport<string, byte[]>> deliveryReport)
         {
             var kafkaMessage = BuildMessage(message);
             
             _producer.Produce(message.Header.Topic, kafkaMessage, deliveryReport);
         }
 
-        public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, string>> deliveryReport)
+        public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, byte[]>> deliveryReport)
         {
             var kafkaMessage = BuildMessage(message);
             
@@ -38,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             deliveryReport(deliveryResult);
         }
 
-        private static Message<string, string> BuildMessage(Message message)
+        private static Message<string, byte[]> BuildMessage(Message message)
         {
             var headers = new Headers()
             {
@@ -53,13 +57,16 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (!string.IsNullOrEmpty(message.Header.PartitionKey))
                 headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());
+            
+            if (!string.IsNullOrEmpty(message.Header.ContentType))
+                headers.Add(HeaderNames.CONTENT_TYPE, message.Header.ContentType.ToByteArray());
 
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))
                 headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
 
             message.Header.Bag.Each((header) =>
             {
-                if (!_headersToReset.Any(htr => htr.Equals(header.Key)))
+                if (!s_headersToReset.Any(htr => htr.Equals(header.Key)))
                 {
                     switch (header.Value)
                     {
@@ -76,11 +83,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 }
             });
 
-            var kafkaMessage = new Message<string, string>()
+            var kafkaMessage = new Message<string, byte[]>()
             {
                 Headers = headers,
                 Key = message.Header.PartitionKey,
-                Value = message.Body.Value
+                Value = message.Body.Bytes
             };
             return kafkaMessage;
         }
