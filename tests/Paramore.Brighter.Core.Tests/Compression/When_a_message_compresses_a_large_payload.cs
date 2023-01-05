@@ -35,7 +35,7 @@ public class CompressLargePayloadTests
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
         compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        compressedMessage.Body.BodyType.Should().Be("application/gzip");
+        compressedMessage.Body.ContentType.Should().Be("application/gzip");
         BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0).Should().Be(GZIP_LEAD_BYTES);
 
     }
@@ -49,7 +49,7 @@ public class CompressLargePayloadTests
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
         compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        compressedMessage.Body.BodyType.Should().Be("application/deflate");
+        compressedMessage.Body.ContentType.Should().Be("application/deflate");
         compressedMessage.Body.Bytes[0].Should().Be(ZLIB_LEAD_BYTE);
     
     }
@@ -63,7 +63,7 @@ public class CompressLargePayloadTests
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
         compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        compressedMessage.Body.BodyType.Should().Be("application/br");
+        compressedMessage.Body.ContentType.Should().Be("application/br");
     
     }
 }
