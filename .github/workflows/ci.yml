@@ -184,6 +184,14 @@ jobs:
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
           KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
           KAFKA_DELETE_TOPIC_ENABLE: "false"
+      schema-registry:
+        image: confluentinc/cp-schema-registry:latest
+        ports:
+          - 8081:8081
+        env:
+          SCHEMA_REGISTRY_HOST_NAME: schema-registry
+          SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:29092'
+          SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
 
     steps:
     - name: Install KafkaCat
