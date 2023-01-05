@@ -94,6 +94,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
+            
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
 
             Message[] messages = new Message[0];
@@ -122,6 +123,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             messages.Length.Should().Be(1);
             messages[0].Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             messages[0].Header.PartitionKey.Should().Be(_partitionKey);
+            messages[0].Body.Bytes.Should().Equal(message.Body.Bytes);
             messages[0].Body.Value.Should().Be(message.Body.Value);
         }
 

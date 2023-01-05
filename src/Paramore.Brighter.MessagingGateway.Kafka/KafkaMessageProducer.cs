@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
 
-        private IProducer<string, string> _producer;
+        private IProducer<string, byte[]> _producer;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _hasFatalProducerError = false;
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public void Init()
         {
-            _producer = new ProducerBuilder<string, string>(_producerConfig)
+            _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
                 .SetErrorHandler((_, error) =>
                 {
                     s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason,
