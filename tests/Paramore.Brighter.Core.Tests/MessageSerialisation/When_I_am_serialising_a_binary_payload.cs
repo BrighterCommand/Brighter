@@ -25,12 +25,12 @@ public class MessageValueSerializationTests
 
         var body = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options);
         
-        var serBody = new MessageBody(body, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var serBody = new MessageBody(body, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
         var serBodyValue = serBody.Value;
         
-        var desBody = new MessageBody(serBodyValue, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var desBody = new MessageBody(serBodyValue, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //assert
         serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
@@ -51,12 +51,12 @@ public class MessageValueSerializationTests
 
         var body = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options);
         
-        var serBody = new MessageBody(body, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var serBody = new MessageBody(body, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
         var serBodyValue = serBody.ToCharacterEncodedString(CharacterEncoding.Base64);
         
-        var desBody = new MessageBody(serBodyValue, MediaTypeNames.Application.Json, encoding: CharacterEncoding.Base64);
+        var desBody = new MessageBody(serBodyValue, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.Base64);
         
         //assert
         serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
@@ -83,14 +83,14 @@ public class MessageValueSerializationTests
         var payload = magicByte.Concat(schemaId).ToArray();
         var serdesBody = payload.Concat(Encoding.ASCII.GetBytes(body)).ToArray();
         
-        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Octet, encoding: CharacterEncoding.UTF8);
+        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.UTF8);
         
         //act
         //Ask for the value back as a Base64 encoded string
         var bodyAsString = serBody.ToCharacterEncodedString(CharacterEncoding.Base64);
         
         //will be base64 encoded when read back
-        var desBody = new MessageBody(bodyAsString, MediaTypeNames.Application.Octet, encoding: CharacterEncoding.Base64);
+        var desBody = new MessageBody(bodyAsString, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Base64);
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
@@ -118,12 +118,12 @@ public class MessageValueSerializationTests
         var payload = magicByte.Concat(schemaId).ToArray();
         var serdesBody = payload.Concat(Encoding.ASCII.GetBytes(body)).ToArray();
         
-        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
         var bodyAsBytes = serBody.Bytes;
         
-        var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
@@ -151,12 +151,12 @@ public class MessageValueSerializationTests
         var payload = magicByte.Concat(schemaId).ToArray();
         var serdesBody = payload.Concat(Encoding.ASCII.GetBytes(body)).ToArray();
         
-        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
         var bodyAsBytes = serBody.Value;
         
-        var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, encoding: CharacterEncoding.UTF8);
+        var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
