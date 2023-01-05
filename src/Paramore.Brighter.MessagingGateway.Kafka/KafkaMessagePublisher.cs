@@ -54,6 +54,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!string.IsNullOrEmpty(message.Header.PartitionKey))
                 headers.Add(HeaderNames.PARTITIONKEY, message.Header.PartitionKey.ToByteArray());
 
+            if (!string.IsNullOrEmpty(message.Header.ReplyTo))
+                headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
+
             message.Header.Bag.Each((header) =>
             {
                 if (!_headersToReset.Any(htr => htr.Equals(header.Key)))

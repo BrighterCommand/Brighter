@@ -21,6 +21,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var messageType = HeaderResult<MessageType>.Empty();
             var correlationId = HeaderResult<Guid>.Empty();
             var partitionKey = HeaderResult<string>.Empty();
+            var replyTo = HeaderResult<string>.Empty();
 
             Message message;
             try
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 messageType = ReadMessageType(consumeResult.Message.Headers);
                 correlationId = ReadCorrelationId(consumeResult.Message.Headers);
                 partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
-
+                replyTo = ReadReplyTo(consumeResult.Message.Headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -48,6 +49,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                     if (partitionKey.Success)
                         messageHeader.PartitionKey = partitionKey.Result;
+
+                    if (replyTo.Success)
+                        messageHeader.ReplyTo = replyTo.Result;
 
                     message = new Message(messageHeader, new MessageBody(consumeResult.Message.Value));
 
@@ -94,6 +98,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
 
             return new HeaderResult<Guid>(Guid.Empty, false);
+        }
+
+        private HeaderResult<string> ReadReplyTo(Headers headers)
+        {
+            if (headers.TryGetLastBytes(HeaderNames.REPLY_TO, out byte[] lastHeader))
+            {
+                var replyToValue = Encoding.UTF8.GetString(lastHeader);
+                return new HeaderResult<string>(replyToValue, true);
+            }
+        
+            return new HeaderResult<string>(string.Empty, false);
         }
 
         private HeaderResult<DateTime> ReadTimeStamp(Headers headers)

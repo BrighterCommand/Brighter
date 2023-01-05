@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2020 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -46,6 +46,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// The topic
         /// </summary>
         public const string TOPIC = "Topic";
+        /// <summary>
+        /// Used for a request-reply message to indicate the private channel to reply to
+        /// </summary>
+        public const string REPLY_TO = "ReplyTo";
         /// <summary>
         /// The key used to partition this message
         /// </summary>
