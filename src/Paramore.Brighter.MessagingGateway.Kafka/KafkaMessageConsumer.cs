@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     /// </summary>
     public class KafkaMessageConsumer : KafkaMessagingGateway, IAmAMessageConsumer
     {
-        private IConsumer<string, string> _consumer;
+        private IConsumer<string, byte[]> _consumer;
         private readonly KafkaMessageCreator _creator;
         private readonly ConsumerConfig _consumerConfig;
         private List<TopicPartition> _partitions = new List<TopicPartition>();
@@ -154,7 +154,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             _sweepUncommittedInterval = TimeSpan.FromMilliseconds(sweepUncommittedOffsetsIntervalMs);
             _readCommittedOffsetsTimeoutMs = readCommittedOffsetsTimeoutMs;
 
-            _consumer = new ConsumerBuilder<string, string>(_consumerConfig)
+            _consumer = new ConsumerBuilder<string, byte[]>(_consumerConfig)
                 .SetPartitionsAssignedHandler((consumer, list) =>
                 {
                     var partitions = list.Select(p => $"{p.Topic} : {p.Partition.Value}");

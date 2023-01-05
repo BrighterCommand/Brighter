@@ -77,6 +77,7 @@ namespace Paramore.Brighter
         {
             Header = header;
             Body = body;
+            Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
             
             Header.UpdateTelemetryFromHeaders();
         }

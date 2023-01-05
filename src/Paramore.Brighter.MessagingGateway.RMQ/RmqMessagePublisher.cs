@@ -117,7 +117,7 @@ internal class RmqMessagePublisher
                 CreateBasicProperties(
                     messageId, 
                     message.Header.TimeStamp, 
-                    message.Body.BodyType, 
+                    message.Body.ContentType, 
                     message.Header.ContentType, 
                     message.Header.ReplyTo,
                     message.Persist,
@@ -169,7 +169,7 @@ internal class RmqMessagePublisher
                 CreateBasicProperties(
                     messageId, 
                     message.Header.TimeStamp, 
-                    message.Body.BodyType, 
+                    message.Body.ContentType, 
                     message.Header.ContentType, 
                     message.Header.ReplyTo,
                     message.Persist,

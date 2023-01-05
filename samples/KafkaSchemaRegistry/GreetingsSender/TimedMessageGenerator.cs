@@ -25,7 +25,7 @@ namespace GreetingsSender
         {
             _logger.LogInformation("Kafka Message Generator is starting.");
 
-            //_timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
+            _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
             
             DoWork(null);
 
@@ -36,7 +36,7 @@ namespace GreetingsSender
         {
             _logger.LogInformation("Kafka Message Generator is stopping.");
 
-            //_timer?.Change(Timeout.Infinite, 0);
+            _timer?.Change(Timeout.Infinite, 0);
 
             return Task.CompletedTask;
         }
@@ -56,7 +56,7 @@ namespace GreetingsSender
 
         public void Dispose()
         {
-            //_timer?.Dispose();
+            _timer?.Dispose();
         }
     }
 }

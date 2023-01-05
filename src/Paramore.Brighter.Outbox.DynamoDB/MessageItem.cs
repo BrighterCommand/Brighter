@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CreatedAt = $"{date}";
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             PartitionKey = message.Header.PartitionKey;
-            Body = message.Body.Value;
+            Body = message.Body.ToCharacterEncodedString(CharacterEncoding.Base64);
             DeliveryTime = 0;
         }
 
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 header.Bag.Add(key, bag[key]);
             }
 
-            var body = new MessageBody(Body);
+            var body = new MessageBody(Convert.FromBase64String(Body), ContentType);
 
             return new Message(header, body);
         }

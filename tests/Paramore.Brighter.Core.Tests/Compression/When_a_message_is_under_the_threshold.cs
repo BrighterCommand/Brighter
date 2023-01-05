@@ -34,7 +34,7 @@ public class SmallPayloadNotCompressedTests
         var uncompressedMessage = await _transformer.WrapAsync(_message);
 
         //look for gzip in the bytes
-        uncompressedMessage.Body.BodyType.Should().Be("application/json");
+        uncompressedMessage.Body.ContentType.Should().Be("application/json");
         uncompressedMessage.Body.Value.Should().Be(_message.Body.Value);
     }
 }

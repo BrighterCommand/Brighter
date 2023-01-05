@@ -118,11 +118,11 @@ namespace Paramore.Brighter.Transforms.Transformers
             switch (_compressionMethod)
             {
                 case CompressionMethod.GZip:
-                    return message.Body.BodyType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
+                    return message.Body.ContentType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
                 case CompressionMethod.Zlib:
-                    return  message.Body.BodyType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
+                    return  message.Body.ContentType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
                 case CompressionMethod.Brotli:
-                    return message.Body.BodyType == "application/br";
+                    return message.Body.ContentType == "application/br";
                 default:
                     return false;
                     
