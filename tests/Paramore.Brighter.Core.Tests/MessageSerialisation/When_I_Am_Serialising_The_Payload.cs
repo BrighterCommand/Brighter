@@ -202,6 +202,7 @@ public class MessageValueSerializationTests
         serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
         desBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);
         serBody.Bytes.Should().Equal(desBody.Bytes);
+        serBody.Value.Should().Be(desBody.Value);
         retrievedSchemaId.Should().Be(id);
 
     }
@@ -226,7 +227,7 @@ public class MessageValueSerializationTests
         var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
-        var bodyAsBytes = serBody.Value;   //Transfer as string
+        var bodyAsBytes = serBody.Value;   //Transfer as utf8 string fails for Kafka
         
         var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));

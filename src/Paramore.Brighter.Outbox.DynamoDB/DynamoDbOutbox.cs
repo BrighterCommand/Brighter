@@ -365,8 +365,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             
             var messages = new List<MessageItem>();
             do
-            {
-              messages.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext));
+            { 
+                messages.AddRange(await asyncSearch.GetNextSetAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext));
             } while (!asyncSearch.IsDone);
 
             return messages;
