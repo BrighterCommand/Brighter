@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
 
-    <PackageReference Include="Npgsql" Version="7.0.0" />
+    <PackageReference Include="Npgsql" Version="7.0.1" />
   </ItemGroup>
 
 </Project>
