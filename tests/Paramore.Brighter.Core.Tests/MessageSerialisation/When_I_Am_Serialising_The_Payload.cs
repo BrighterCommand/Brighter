@@ -67,6 +67,78 @@ public class MessageValueSerializationTests
     }
     
     [Fact]
+    public void When_I_serialise_a_raw_payload_as_binary()
+    {
+        //arrange
+        var request = new MyTransformableCommand
+        {
+            Value = "Hello World"
+        };
+
+        var body = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options);
+        var serBody = new MessageBody(Encoding.UTF8.GetBytes(body), MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Raw);
+        
+        //act
+        var desBody = new MessageBody(serBody.Bytes, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Raw);
+        
+        //assert
+        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
+        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);  
+        serBody.Bytes.Should().Equal(desBody.Bytes); 
+
+    }
+    
+    [Fact]
+    public void When_I_serialise_a_raw_payload_as_a_base64_string()
+    {
+        //arrange
+        var request = new MyTransformableCommand
+        {
+            Value = "Hello World"
+        };
+
+        var body = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options);
+        var serBody = new MessageBody(Encoding.UTF8.GetBytes(body), MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Raw);
+        
+        //act
+        //Ask for the bytes as a base 64 string
+        var bodyAsString = serBody.ToCharacterEncodedString(CharacterEncoding.Base64); 
+        
+        var desBody = new MessageBody(serBody.Bytes, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Base64);
+        
+        //assert
+        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
+        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
+        serBody.Bytes.Should().Equal(desBody.Bytes); 
+
+    }
+    
+    [Fact]
+    public void When_I_try_to_serialise_a_raw_payload_as_a_string()
+    {
+        //arrange
+        var request = new MyTransformableCommand
+        {
+            Value = "Hello World"
+        };
+
+        var body = JsonSerializer.Serialize(request, JsonSerialisationOptions.Options);
+        var serBody = new MessageBody(Encoding.UTF8.GetBytes(body), MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Raw);
+        
+        //act
+        //If we are raw, we get the bytes as a base64 encoded string
+        var bodyAsString = serBody.Value;
+        
+        var desBody = new MessageBody(bodyAsString, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Base64);
+        
+        //assert
+        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
+        desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
+        serBody.Bytes.Should().Equal(desBody.Bytes); 
+    }
+    
+    
+    [Fact]
     public void When_I_serialise_a_kafka_payload_as_binary()
     {
         //arrange
@@ -83,7 +155,7 @@ public class MessageValueSerializationTests
         var payload = magicByte.Concat(schemaId).ToArray();
         var serdesBody = payload.Concat(Encoding.ASCII.GetBytes(body)).ToArray();
         
-        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.UTF8);
+        var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Octet, characterEncoding: CharacterEncoding.Raw);
         
         //act
         //Ask for the value back as a Base64 encoded string
@@ -94,7 +166,7 @@ public class MessageValueSerializationTests
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
         
         //assert
-        serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    //we should have changed the encoding to base64
+        serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);    
         desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
         serBody.Bytes.Should().Equal(desBody.Bytes); 
         retrievedSchemaId.Should().Be(id);
@@ -102,7 +174,7 @@ public class MessageValueSerializationTests
     }
     
     [Fact]
-    public void When_I_serialise_a_kafka_payload_as_utf8()
+    public void When_I_serialise_a_utf8_kafka_payload_as_bytes()
     {
         //arrange
         var request = new MyTransformableCommand
@@ -121,7 +193,7 @@ public class MessageValueSerializationTests
         var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
-        var bodyAsBytes = serBody.Bytes;
+        var bodyAsBytes = serBody.Bytes;    //Transfer as bytes
         
         var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
@@ -135,7 +207,7 @@ public class MessageValueSerializationTests
     }
     
     [Fact]
-    public void When_I_serialise_a_kafka_payload_as_a_utf8_string()
+    public void When_I_try_to_serialise_a_utf8_kafka_payload_as_a_utf8_string()
     {
         //arrange
         var request = new MyTransformableCommand
@@ -154,7 +226,7 @@ public class MessageValueSerializationTests
         var serBody = new MessageBody(serdesBody, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         
         //act
-        var bodyAsBytes = serBody.Value;
+        var bodyAsBytes = serBody.Value;   //Transfer as string
         
         var desBody = new MessageBody(bodyAsBytes, MediaTypeNames.Application.Json, characterEncoding: CharacterEncoding.UTF8);
         var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(desBody.Bytes.Skip(1).Take(4).ToArray()));
@@ -162,7 +234,6 @@ public class MessageValueSerializationTests
         //assert
         serBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);    
         desBody.CharacterEncoding.Should().Be(CharacterEncoding.UTF8);
-        
         
         //Note the issue here, that the UTF conversion means that we do not get back the same bytes
         serBody.Bytes.Should().NotEqual(desBody.Bytes);

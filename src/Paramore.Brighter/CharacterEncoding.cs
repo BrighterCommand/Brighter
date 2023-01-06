@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2023 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -34,13 +35,20 @@ namespace Paramore.Brighter
         /// Ascii text
         /// </summary>
         ASCII,
+
         /// <summary>
         /// Bse64 or asciiArmor
         /// </summary>
         Base64,
-       /// <summary>
+
+        /// <summary>
         /// UTF-8 Text
         /// </summary>
         UTF8,
+
+        /// <summary>
+        /// Raw bytes, conversion to string may be lossy
+        /// </summary>
+        Raw
     }
 }

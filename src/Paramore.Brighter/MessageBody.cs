@@ -67,13 +67,14 @@ namespace Paramore.Brighter
                 switch (CharacterEncoding)
                 {
                     case CharacterEncoding.Base64:
+                    case CharacterEncoding.Raw:
                         return Convert.ToBase64String(Bytes);
                     case CharacterEncoding.UTF8:
                         return Encoding.UTF8.GetString(Bytes);
                     case CharacterEncoding.ASCII:
                         return Encoding.ASCII.GetString(Bytes);
                     default:
-                        throw new InvalidOperationException(
+                        throw new InvalidCastException(
                             $"Message Body with {CharacterEncoding} is not available");
                 }
             }
@@ -91,6 +92,8 @@ namespace Paramore.Brighter
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
+            
+            if (characterEncoding == CharacterEncoding.Raw) throw new ArgumentOutOfRangeException("characterEncoding", "Raw encoding is not supported for string constructor");
 
             Bytes = CharacterEncoding switch
             {
