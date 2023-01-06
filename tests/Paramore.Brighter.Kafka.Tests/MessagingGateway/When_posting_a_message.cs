@@ -69,25 +69,25 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }}).Create(); 
             
             _consumer = new KafkaMessageConsumerFactory(
-                 new KafkaMessagingGatewayConfiguration
-                 {
-                     Name = "Kafka Consumer Test",
-                     BootStrapServers = new[] { "localhost:9092" }
-                 })
+                    new KafkaMessagingGatewayConfiguration
+                    {
+                        Name = "Kafka Consumer Test",
+                        BootStrapServers = new[] { "localhost:9092" }
+                    })
                 .Create(new KafkaSubscription<MyCommand>(
-                     channelName: new ChannelName(_queueName), 
-                     routingKey: new RoutingKey(_topic),
-                     groupId: groupId,
-                     numOfPartitions: 1,
-                     replicationFactor: 1,
-                     makeChannels: OnMissingChannel.Create
-                     )
-             );
+                        channelName: new ChannelName(_queueName), 
+                        routingKey: new RoutingKey(_topic),
+                        groupId: groupId,
+                        numOfPartitions: 1,
+                        replicationFactor: 1,
+                        makeChannels: OnMissingChannel.Create
+                    )
+                );
   
         }
 
         [Fact]
-        public void When_posting_a_message_via_the_messaging_gateway()
+        public void When_posting_a_message()
         {
             var command = new MyCommand{Value = "Test Content"};
             
@@ -126,10 +126,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propogate in the broker
                     messages = _consumer.Receive(1000);
-                    _consumer.Acknowledge(messages[0]);
-                    
+
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
+                    {
+                        _consumer.Acknowledge(messages[0]);
                         break;
+                    }
                         
                 }
                 catch (ChannelFailureException cfx)
@@ -139,6 +141,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }
 
             } while (maxTries <= 3);
+            
+            if (messages[0].Header.MessageType == MessageType.MT_NONE)
+                throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
             
             return messages[0];
         }

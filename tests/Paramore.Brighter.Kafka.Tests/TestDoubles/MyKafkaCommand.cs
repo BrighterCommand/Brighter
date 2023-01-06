@@ -1,7 +1,6 @@
 ﻿#region Licence
-
 /* The MIT License (MIT)
-Copyright © 2023 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,32 +22,19 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 
-namespace Paramore.Brighter
+namespace Paramore.Brighter.Kafka.Tests.TestDoubles
 {
-    /// <summary>
-    /// How is the message body being encoded
-    /// </summary>
-    public enum CharacterEncoding
+    internal class MyKafkaCommand : Command
     {
-        /// <summary>
-        /// Ascii text
-        /// </summary>
-        ASCII,
+        public MyKafkaCommand()
+            :base(Guid.NewGuid()) 
+            
+        {}
 
-        /// <summary>
-        /// Bse64 or asciiArmor
-        /// </summary>
-        Base64,
-
-        /// <summary>
-        /// UTF-8 Text
-        /// </summary>
-        UTF8,
-
-        /// <summary>
-        /// Raw bytes, conversion to string may be lossy
-        /// </summary>
-        Raw
+        public string Value { get; set; }
+        public bool WasCancelled { get; set; }
+        public bool TaskCompleted { get; set; }
     }
 }

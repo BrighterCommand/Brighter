@@ -49,14 +49,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         private readonly IAmAMessageConsumer _consumer;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
         private readonly ISchemaRegistryClient _schemaRegistryClient;
-        private readonly ISerializer<MyCommand> _serializer;
-        private readonly IDeserializer<MyCommand> _deserializer;
+        private readonly ISerializer<MyKafkaCommand> _serializer;
+        private readonly IDeserializer<MyKafkaCommand> _deserializer;
         private readonly SerializationContext _serializationContext;
 
 
         public KafkaMessageProducerHeaderBytesSendTests (ITestOutputHelper output)
         {
-            const string groupId = "Kafka Message Producer Send Test";
+            const string groupId = "Kafka Message Producer Header Bytes Send Test";
             _output = output;
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -95,8 +95,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
             _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
   
-            _serializer = new JsonSerializer<MyCommand>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
-            _deserializer = new JsonDeserializer<MyCommand>().AsSyncOverAsync();
+            _serializer = new JsonSerializer<MyKafkaCommand>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
+            _deserializer = new JsonDeserializer<MyKafkaCommand>().AsSyncOverAsync();
             _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
         }
 
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             //arrange
             
-            var myCommand = new MyCommand{ Value = "Hello World"};
+            var myCommand = new MyKafkaCommand{ Value = "Hello World"};
             
             //use the serdes json serializer to write the message to the topic
             var body = _serializer.Serialize(myCommand, _serializationContext);
@@ -125,6 +125,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(sent);
 
             var received = GetMessage();
+
+            received.Body.Bytes.Length.Should().BeGreaterThan(5);
             
             var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(received.Body.Bytes.Skip(1).Take(4).ToArray()));
             
@@ -142,7 +144,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
         private Message GetMessage()
         {
-            Message[] messages = new Message[0];
+            Message[] messages = Array.Empty<Message>();
             int maxTries = 0;
             do
             {
@@ -151,10 +153,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     maxTries++;
                     Task.Delay(500).Wait(); //Let topic propagate in the broker
                     messages = _consumer.Receive(1000);
-                    _consumer.Acknowledge(messages[0]);
                     
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
+                    {
+                        _consumer.Acknowledge(messages[0]);
                         break;
+                    }
                         
                 }
                 catch (ChannelFailureException cfx)
@@ -164,6 +168,9 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }
 
             } while (maxTries <= 3);
+            
+            if (messages[0].Header.MessageType == MessageType.MT_NONE)
+                throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
             
             return messages[0];
         }

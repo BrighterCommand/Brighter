@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         /// </summary>
         public string ContentType { get; private set; }
 
-        public CharacterEncoding CharacterEncoding { get; }
+        public CharacterEncoding CharacterEncoding { get; private set; }
 
         /// <summary>
         /// The message body as a string.
@@ -67,13 +67,14 @@ namespace Paramore.Brighter
                 switch (CharacterEncoding)
                 {
                     case CharacterEncoding.Base64:
+                    case CharacterEncoding.Raw:
                         return Convert.ToBase64String(Bytes);
                     case CharacterEncoding.UTF8:
                         return Encoding.UTF8.GetString(Bytes);
                     case CharacterEncoding.ASCII:
                         return Encoding.ASCII.GetString(Bytes);
                     default:
-                        throw new InvalidOperationException(
+                        throw new InvalidCastException(
                             $"Message Body with {CharacterEncoding} is not available");
                 }
             }
@@ -84,13 +85,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="body">The body of the message, usually XML or JSON.</param>
         /// <param name="contentType">The type of the message, usually "application/json". Defaults to "application/json"</param>
-        /// <param name="encoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
+        /// <param name="characterEncoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
         /// If you pass us "application/octet" but the type is ascii or utf8, we will convert to base64 for you.
         /// </param>
-        public MessageBody(string body, string contentType = ApplicationJson, CharacterEncoding encoding = CharacterEncoding.UTF8)
+        public MessageBody(string body, string contentType = ApplicationJson, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             ContentType = contentType;
-            CharacterEncoding = encoding;
+            CharacterEncoding = characterEncoding;
+            
+            if (characterEncoding == CharacterEncoding.Raw) throw new ArgumentOutOfRangeException("characterEncoding", "Raw encoding is not supported for string constructor");
 
             Bytes = CharacterEncoding switch
             {
@@ -108,11 +111,11 @@ namespace Paramore.Brighter
         /// <param name="contentType">The content type of message encoded in body</param>
         /// <param name="encoding"></param>
         [JsonConstructor]
-        public MessageBody(byte[] bytes, string contentType = ApplicationJson, CharacterEncoding encoding = CharacterEncoding.UTF8)
+        public MessageBody(byte[] bytes, string contentType = ApplicationJson, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             Bytes = bytes;
             ContentType = contentType;
-            CharacterEncoding = encoding;
+            CharacterEncoding = characterEncoding;
         }
 
         /// <summary>
@@ -124,11 +127,11 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="body"></param>
         /// <param name="contentType"></param>
-        public MessageBody(in ReadOnlyMemory<byte> body, string contentType = ApplicationJson, CharacterEncoding encoding = CharacterEncoding.UTF8)
+        public MessageBody(in ReadOnlyMemory<byte> body, string contentType = ApplicationJson, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             Bytes = body.ToArray();
             ContentType = contentType;
-            CharacterEncoding = encoding;
+            CharacterEncoding = characterEncoding;
         }
 
 
