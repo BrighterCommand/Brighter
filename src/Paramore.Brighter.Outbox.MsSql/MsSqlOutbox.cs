@@ -274,6 +274,22 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
+        /// Retrieves messages that have been sent within the window
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
+        /// <param name="pageSize">How many messages in a page</param>
+        /// <param name="pageNumber">Which page of messages to get</param>
+        /// <param name="outboxTimeout"></param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>A list of dispatched messages</returns>
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return ReadFromStoreAsync(connection => CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+        }
+
+        /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
         /// <param name="id">The id of the message to update</param>
@@ -314,6 +330,16 @@ namespace Paramore.Brighter.Outbox.MsSql
        {
             return ReadFromStoreAsync(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
        }
+
+        /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <param name="messageIds">The id of the message to delete</param>
+        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        {
+            return WriteToStoreAsync(null,connection => InitDeleteDispatchedCommand(connection, messageIds), null, cancellationToken);
+        }
 
         #endregion
 
