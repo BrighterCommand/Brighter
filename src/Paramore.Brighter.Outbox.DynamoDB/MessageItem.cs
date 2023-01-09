@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.DocumentModel;
 
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
@@ -11,7 +13,25 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The message body
         /// </summary>
-        public string Body { get; set; }
+        [DynamoDBProperty(typeof(MessageItemBodyConverter))]
+        public byte[] Body { get; set; }
+        
+        /// <summary>
+        /// What is the character encoding of the body
+        /// </summary>
+        public string CharacterEncoding { get; set; }
+
+        /// <summary>
+        /// What is the content type of the message
+        /// </summary>
+        [DynamoDBProperty]
+        public string ContentType { get; set; } 
+
+        // <summary>
+        /// The correlation id of the message
+        /// </summary>
+        [DynamoDBProperty]
+        public string CorrelationId { get; set; }
 
         /// <summary>
         /// The time at which the message was created, formatted as a string yyyy-MM-dd
@@ -56,36 +76,27 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string MessageType { get; set; }
 
         /// <summary>
-        /// The Topic the message was published to
+        /// The partition key for the Kafka message
         /// </summary>
-        [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
         [DynamoDBProperty]
-        public string Topic { get; set; }
+        public string PartitionKey { get; set; }
 
-        /// <summary>
-        /// The correlation id of the message
-        /// </summary>
-        [DynamoDBProperty]
-        public string CorrelationId { get; set; }
 
         /// <summary>
         /// If this is a conversation i.e. request-response, what is the reply channel
         /// </summary>
         [DynamoDBProperty]
         public string ReplyTo { get; set; }
-        
+
         /// <summary>
-        /// The partition key for the Kafka message
+        /// The Topic the message was published to
         /// </summary>
+        /// 
+        [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
         [DynamoDBProperty]
-        public string PartitionKey { get; set; }
-        
-        /// <summary>
-        /// What is the content type of the message
-        /// </summary>
-        [DynamoDBProperty]
-        public string ContentType { get; set; }
-        
+        public string Topic { get; set; }
+
+
         public MessageItem()
         {
             /*Deserialization*/
@@ -95,32 +106,36 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             var date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 
-            CreatedTime = date.Ticks;
-            MessageId = message.Id.ToString();
-            Topic = message.Header.Topic;
-            MessageType = message.Header.MessageType.ToString();
-            CorrelationId = message.Header.CorrelationId.ToString();
-            ReplyTo = message.Header.ReplyTo;
+            Body = message.Body.Bytes;
             ContentType = message.Header.ContentType;
+            CorrelationId = message.Header.CorrelationId.ToString();
+            CharacterEncoding = message.Body.CharacterEncoding.ToString();
             CreatedAt = $"{date}";
-            HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            PartitionKey = message.Header.PartitionKey;
-            Body = message.Body.Value;
+            CreatedTime = date.Ticks;
             DeliveryTime = 0;
+            HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
+            MessageId = message.Id.ToString();
+            MessageType = message.Header.MessageType.ToString();
+            PartitionKey = message.Header.PartitionKey;
+            ReplyTo = message.Header.ReplyTo;
+            Topic = message.Header.Topic;
         }
 
         public Message ConvertToMessage()
         {
+            //following type may be missing on older data
+            var characterEncoding = CharacterEncoding != null ? (CharacterEncoding) Enum.Parse(typeof(CharacterEncoding), CharacterEncoding) : Brighter.CharacterEncoding.UTF8;
+            var correlationId = Guid.Parse(CorrelationId);
+            var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(HeaderBag,
+                JsonSerialisationOptions.Options);
             var messageId = Guid.Parse(MessageId);
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
             var timestamp = DateTime.Parse(CreatedAt);
-            var correlationId = Guid.Parse(CorrelationId);
-            var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(HeaderBag, JsonSerialisationOptions.Options);
 
             var header = new MessageHeader(
-                messageId:messageId, 
-                topic: Topic, 
-                messageType: messageType, 
+                messageId: messageId,
+                topic: Topic,
+                messageType: messageType,
                 timeStamp: timestamp,
                 correlationId: correlationId,
                 replyTo: ReplyTo,
@@ -132,7 +147,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 header.Bag.Add(key, bag[key]);
             }
 
-            var body = new MessageBody(Body);
+            var body = new MessageBody(Body, ContentType, characterEncoding);
 
             return new Message(header, body);
         }
@@ -141,6 +156,38 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             DeliveryTime = deliveredAt.Ticks;
             DeliveredAt = $"{deliveredAt:yyyy-MM-dd}";
+        }
+    }
+
+    public class MessageItemBodyConverter : IPropertyConverter
+    {
+        public DynamoDBEntry ToEntry(object value)
+        {
+            byte[] body = value as byte[];
+            if (body == null) throw new ArgumentOutOfRangeException("Expected the body to be a byte array");
+
+            DynamoDBEntry entry = new Primitive
+            {
+                Value = body,
+                Type = DynamoDBEntryType.Binary
+                
+            };
+            
+            return entry;
+        }
+
+        public object FromEntry(DynamoDBEntry entry)
+        {
+            byte[] data = Array.Empty<byte>();
+            Primitive primitive = entry as Primitive; 
+            if (primitive?.Value is byte[] bytes)
+                data = ((byte[])bytes);
+            if (primitive?.Value is string text)    //for historical data that used UTF-8 strings
+                data = Encoding.UTF8.GetBytes(text);
+            if (primitive == null || !(primitive.Value is string || primitive.Value is byte[]))
+                throw new ArgumentOutOfRangeException("Expected Dynamo to have stored a byte array");
+            
+            return data;
         }
     }
 }

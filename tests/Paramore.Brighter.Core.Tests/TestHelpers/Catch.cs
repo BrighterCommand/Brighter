@@ -27,7 +27,7 @@ using System;
 using System.Diagnostics;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.Core.Tests
+namespace Paramore.Brighter.Core.Tests.TestHelpers
 {
     [DebuggerStepThrough]
     public static class Catch

@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<KafkaMessageCreator>();
 
-        public Message CreateMessage(ConsumeResult<string, string> consumeResult)
+        public Message CreateMessage(ConsumeResult<string, byte[]> consumeResult)
         {
             var headers = consumeResult.Message.Headers;
             var topic = HeaderResult<string>.Empty();
@@ -21,6 +21,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var messageType = HeaderResult<MessageType>.Empty();
             var correlationId = HeaderResult<Guid>.Empty();
             var partitionKey = HeaderResult<string>.Empty();
+            var replyTo = HeaderResult<string>.Empty();
+            var contentType = HeaderResult<string>.Empty();
 
             Message message;
             try
@@ -31,7 +33,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 messageType = ReadMessageType(consumeResult.Message.Headers);
                 correlationId = ReadCorrelationId(consumeResult.Message.Headers);
                 partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
-
+                replyTo = ReadReplyTo(consumeResult.Message.Headers);
+                contentType = ReadContentType(consumeResult.Message.Headers); 
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -48,8 +51,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                     if (partitionKey.Success)
                         messageHeader.PartitionKey = partitionKey.Result;
+                    
+                    if (contentType.Success)
+                        messageHeader.ContentType =contentType.Result;
 
-                    message = new Message(messageHeader, new MessageBody(consumeResult.Message.Value));
+                    if (replyTo.Success)
+                        messageHeader.ReplyTo = replyTo.Result;
+
+                    message = new Message(messageHeader, new MessageBody(consumeResult.Message.Value, messageHeader.ContentType));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header)));
                     
@@ -66,7 +75,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             return message;
         }
 
-
         private Message FailureMessage(HeaderResult<string> topic, HeaderResult<Guid> messageId)
         {
             var header = new MessageHeader(
@@ -75,6 +83,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 MessageType.MT_UNACCEPTABLE);
             var message = new Message(header, new MessageBody(string.Empty));
             return message;
+        }
+        
+        
+        private HeaderResult<string> ReadContentType(Headers headers)
+        {
+           return ReadHeader(headers, HeaderNames.CONTENT_TYPE,false);
         }
 
         private HeaderResult<Guid> ReadCorrelationId(Headers headers)
@@ -94,6 +108,17 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
 
             return new HeaderResult<Guid>(Guid.Empty, false);
+        }
+
+        private HeaderResult<string> ReadReplyTo(Headers headers)
+        {
+            if (headers.TryGetLastBytes(HeaderNames.REPLY_TO, out byte[] lastHeader))
+            {
+                var replyToValue = Encoding.UTF8.GetString(lastHeader);
+                return new HeaderResult<string>(replyToValue, true);
+            }
+        
+            return new HeaderResult<string>(string.Empty, false);
         }
 
         private HeaderResult<DateTime> ReadTimeStamp(Headers headers)
@@ -156,8 +181,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (string.IsNullOrEmpty(s))
                     {
-                         s_logger.LogDebug("No partition key found in message");
-                         return new HeaderResult<string>(string.Empty, true);
+                        s_logger.LogDebug("No partition key found in message");
+                        return new HeaderResult<string>(string.Empty, true);
                     }
 
                     return new HeaderResult<string>(s, true);
