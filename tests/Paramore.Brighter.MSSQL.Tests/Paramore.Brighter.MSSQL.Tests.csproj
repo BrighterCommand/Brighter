@@ -12,7 +12,7 @@
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
       <PackageReference Include="FluentAssertions" Version="6.9.0" />
-      <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.1" />
+      <PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="7.0.2" />
       <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="7.0.0" />
       <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.4.1" />
       <PackageReference Include="xunit" Version="2.4.2" />
