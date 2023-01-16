@@ -23,8 +23,8 @@ public class SmallPayloadNotCompressedTests
 
         _body = "small message";
         _message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
-            new MessageBody(_body));      
+            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
+            new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));      
     }
     
     
@@ -34,7 +34,7 @@ public class SmallPayloadNotCompressedTests
         var uncompressedMessage = await _transformer.WrapAsync(_message);
 
         //look for gzip in the bytes
-        uncompressedMessage.Body.ContentType.Should().Be("application/json");
+        uncompressedMessage.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
         uncompressedMessage.Body.Value.Should().Be(_message.Body.Value);
     }
 }

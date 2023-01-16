@@ -38,7 +38,7 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageBody : IEquatable<MessageBody>
     {
-        public const string ApplicationJson = "application/json";
+        public const string APPLICATION_JSON = "application/json";
 
         /// <summary>
         /// The message body as a byte array.
@@ -88,7 +88,7 @@ namespace Paramore.Brighter
         /// <param name="characterEncoding">The encoding of the content. Defaults to MessageEncoding.UTF8.
         /// If you pass us "application/octet" but the type is ascii or utf8, we will convert to base64 for you.
         /// </param>
-        public MessageBody(string body, string contentType = ApplicationJson, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(string body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
@@ -111,7 +111,7 @@ namespace Paramore.Brighter
         /// <param name="contentType">The content type of message encoded in body</param>
         /// <param name="encoding"></param>
         [JsonConstructor]
-        public MessageBody(byte[] bytes, string contentType = ApplicationJson, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(byte[] bytes, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             Bytes = bytes;
             ContentType = contentType;
@@ -127,7 +127,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="body"></param>
         /// <param name="contentType"></param>
-        public MessageBody(in ReadOnlyMemory<byte> body, string contentType = ApplicationJson, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
+        public MessageBody(in ReadOnlyMemory<byte> body, string contentType = APPLICATION_JSON, CharacterEncoding characterEncoding = CharacterEncoding.UTF8)
         {
             Bytes = body.ToArray();
             ContentType = contentType;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Mime;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,9 +12,18 @@ namespace Paramore.Brighter.Transforms.Transformers
         private CompressionMethod _compressionMethod = CompressionMethod.GZip;
         private CompressionLevel _compressionLevel = CompressionLevel.Optimal;
         private int _thresholdInBytes;
-        private string _contentType = "application/json";
         private const ushort GZIP_LEAD_BYTES = 0x8b1f;
         private const byte ZLIB_LEAD_BYTE = 0x78;
+        
+        /// <summary>Compression method GZip</summary>
+        public const string GZIP = "application/gzip";
+        /// <summary> Compression method Deflate</summary>
+        public const string DEFLATE = "application/deflate";
+        /// <summary> Compression method Brotli</summary>
+        public const string BROTLI = "application/br";
+        
+        /// <summary> Original content type header name</summary>
+        public const string ORIGINAL_CONTENTTYPE_HEADER = "OriginalContentType";
 
         public void Dispose() { }
 
@@ -28,7 +38,6 @@ namespace Paramore.Brighter.Transforms.Transformers
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
         {
             _compressionMethod = (CompressionMethod)initializerList[0];
-            _contentType = (string)initializerList[1];
         }
 
         public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
@@ -45,6 +54,8 @@ namespace Paramore.Brighter.Transforms.Transformers
             await input.CopyToAsync(compressionStream);
             compressionStream.Close();
 
+            message.Header.ContentType = mimeType;
+            message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType);
             message.Body = new MessageBody(output.ToArray(), mimeType);
 
             return message;
@@ -63,7 +74,9 @@ namespace Paramore.Brighter.Transforms.Transformers
             await deCompressionStream.CopyToAsync(output);
             deCompressionStream.Close();
 
-            message.Body = new MessageBody(output.ToArray(), _contentType);
+            string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
+            message.Body = new MessageBody(output.ToArray(), contentType);
+            message.Header.ContentType = contentType;
 
             return message;
         }
@@ -73,7 +86,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             switch (_compressionMethod)
             {
                 case CompressionMethod.GZip:
-                    return (new GZipStream(uncompressed, _compressionLevel), "application/gzip");
+                    return (new GZipStream(uncompressed, _compressionLevel), GZIP);
 #if NETSTANDARD2_0
                 case CompressionMethod.Zlib:
                     throw new ArgumentException("Zlib is not supported in nestandard20");
@@ -81,9 +94,9 @@ namespace Paramore.Brighter.Transforms.Transformers
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
                 case CompressionMethod.Zlib:
-                    return (new ZLibStream(uncompressed, _compressionLevel), "application/deflate");  
+                    return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);  
                 case CompressionMethod.Brotli:
-                    return (new BrotliStream(uncompressed, _compressionLevel), "application/br");              
+                    return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);              
 #endif
                 default:
                     return (uncompressed, "application/json");
@@ -118,11 +131,11 @@ namespace Paramore.Brighter.Transforms.Transformers
             switch (_compressionMethod)
             {
                 case CompressionMethod.GZip:
-                    return message.Body.ContentType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
+                    return message.Header.ContentType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
                 case CompressionMethod.Zlib:
-                    return  message.Body.ContentType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
+                    return  message.Header.ContentType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
                 case CompressionMethod.Brotli:
-                    return message.Body.ContentType == "application/br";
+                    return message.Header.ContentType == "application/br";
                 default:
                     return false;
                     
