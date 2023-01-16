@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Net.Mime;
 using Greetings.Ports.Commands;
 using Confluent.Kafka;
 using Confluent.Kafka.SyncOverAsync;
@@ -52,7 +53,7 @@ namespace Greetings.Ports.Mappers
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
             var serializer = new JsonSerializer<GreetingEvent>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
             var s = serializer.Serialize(request, _serializationContext);
-            var body = new MessageBody(s, "JSON");
+            var body = new MessageBody(s, MediaTypeNames.Application.Octet, CharacterEncoding.Raw);
             header.PartitionKey = _partitionKey;
 
             var message = new Message(header, body);

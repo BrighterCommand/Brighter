@@ -23,7 +23,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="7.0.1" />
+      <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="7.0.2" />
       <PackageReference Include="FluentMigrator" Version="3.3.2" />
       <PackageReference Include="FluentMigrator.Runner" Version="3.3.2" />
     </ItemGroup>
