@@ -6,7 +6,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="1.9.3" />
+      <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.0.2" />
       <PackageReference Include="coverlet.collector" Version="3.2.0">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

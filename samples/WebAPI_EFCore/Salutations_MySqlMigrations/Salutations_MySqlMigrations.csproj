@@ -7,7 +7,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\SalutationPorts\SalutationPorts.csproj" />
-       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="6.0.2" />
+       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
      </ItemGroup>
 
 </Project>
