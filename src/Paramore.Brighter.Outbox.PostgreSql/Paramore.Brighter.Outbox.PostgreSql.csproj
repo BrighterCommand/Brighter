@@ -13,6 +13,11 @@
   <ItemGroup>
 
     <PackageReference Include="Npgsql" Version="7.0.1" />
+
+    <PackageReference Update="MinVer" Version="4.3.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
 </Project>
