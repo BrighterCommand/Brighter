@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         public const string BROTLI = "application/br";
         
         /// <summary> Original content type header name</summary>
-        public const string ORIGINAL_CONTENTTYPE_HEADER = "OriginalContentType";
+        public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
 
         public void Dispose() { }
 
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Transforms.Transformers
 
             message.Header.ContentType = mimeType;
             message.Header.Bag.Add(ORIGINAL_CONTENTTYPE_HEADER, message.Body.ContentType);
-            message.Body = new MessageBody(output.ToArray(), mimeType);
+            message.Body = new MessageBody(output.ToArray(), mimeType, CharacterEncoding.Raw);
 
             return message;
         }
@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             deCompressionStream.Close();
 
             string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];
-            message.Body = new MessageBody(output.ToArray(), contentType);
+            message.Body = new MessageBody(output.ToArray(), contentType, CharacterEncoding.UTF8);
             message.Header.ContentType = contentType;
 
             return message;

@@ -37,7 +37,6 @@ namespace Paramore.Brighter.Transforms.Attributes
     public class Decompress: UnwrapWithAttribute
     {
         private readonly CompressionMethod _compressionMethod;
-        private readonly string _contentType;
 
         /// <summary>
         /// Configures decompression of a payload
