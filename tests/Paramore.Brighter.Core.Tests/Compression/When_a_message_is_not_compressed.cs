@@ -15,16 +15,16 @@ public class UncompressedPayloadTests
         
         //arrange
         var transformer = new CompressPayloadTransformer();
-        transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.GZip, "application/json");
+        transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.GZip);
         
         var smallContent = "small message";
-        string mimeType = "application/json";
+        string mimeType = MessageBody.APPLICATION_JSON;
 
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),body);
-        
+            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
+
         //act
         var msg = await transformer.UnwrapAsync(message);
         
@@ -38,15 +38,15 @@ public class UncompressedPayloadTests
         
         //arrange
         var transformer = new CompressPayloadTransformer();
-        transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Zlib, "application/json");
+        transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Zlib);
         
         var smallContent = "small message";
-        string mimeType = "application/json";
+        string mimeType = MessageBody.APPLICATION_JSON;
 
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),body);
+            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
         
         //act
         var msg = await transformer.UnwrapAsync(message);
@@ -61,15 +61,15 @@ public class UncompressedPayloadTests
         
         //arrange
         var transformer = new CompressPayloadTransformer();
-        transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Brotli, "application/json");
+        transformer.InitializeUnwrapFromAttributeParams(CompressionMethod.Brotli);
         
         var smallContent = "small message";
-        string mimeType = "application/json";
+        string mimeType = MessageBody.APPLICATION_JSON;
 
         var body = new MessageBody(smallContent, mimeType);
         
         var message = new Message(
-            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),body);
+            new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: mimeType),body);
         
         //act
         var msg = await transformer.UnwrapAsync(message);

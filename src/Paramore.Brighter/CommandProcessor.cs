@@ -338,7 +338,7 @@ namespace Paramore.Brighter
 
                   await handlerChain.First().HandleAsync(command, cancellationToken).ConfigureAwait(continueOnCapturedContext);
                 }
-                catch (Exception e) 
+                catch (Exception) 
                 {
                     span.span?.SetStatus(ActivityStatusCode.Error);
                     throw;

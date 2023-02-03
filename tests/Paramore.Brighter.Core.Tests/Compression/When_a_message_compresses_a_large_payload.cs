@@ -23,7 +23,7 @@ public class CompressLargePayloadTests
         _body = DataGenerator.CreateString(6000);
         _message = new Message(
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
-            new MessageBody(_body));        
+            new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));        
     }
 
     [Fact]
@@ -35,8 +35,13 @@ public class CompressLargePayloadTests
         //look for gzip in the bytes
         compressedMessage.Body.Bytes.Should().NotBeNull();
         compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
-        compressedMessage.Body.ContentType.Should().Be("application/gzip");
         BitConverter.ToUInt16(compressedMessage.Body.Bytes, 0).Should().Be(GZIP_LEAD_BYTES);
+        
+        //mime types
+        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.GZIP);
+        compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
+        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.GZIP);
+        
 
     }
     
@@ -52,6 +57,10 @@ public class CompressLargePayloadTests
         compressedMessage.Body.ContentType.Should().Be("application/deflate");
         compressedMessage.Body.Bytes[0].Should().Be(ZLIB_LEAD_BYTE);
     
+        //mime types
+        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.DEFLATE);
+        compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
+        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.DEFLATE);
     }
     
     [Fact]
@@ -64,6 +73,11 @@ public class CompressLargePayloadTests
         compressedMessage.Body.Bytes.Should().NotBeNull();
         compressedMessage.Body.Bytes.Length.Should().BeGreaterThanOrEqualTo(2);
         compressedMessage.Body.ContentType.Should().Be("application/br");
+        
+        //mime types
+        compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.BROTLI);
+        compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
+        compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.BROTLI);
     
     }
 }

@@ -356,7 +356,7 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 request = _unwrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
             }
-            catch (ConfigurationException ce)
+            catch (ConfigurationException)
             {
                 throw;
             }

@@ -37,21 +37,17 @@ namespace Paramore.Brighter.Transforms.Attributes
     public class Decompress: UnwrapWithAttribute
     {
         private readonly CompressionMethod _compressionMethod;
-        private readonly string _contentType;
 
         /// <summary>
         /// Configures decompression of a payload
         /// </summary>
         /// <param name="step">The order to run this step in</param>
         /// <param name="compressionMethod">The <see cref="CompressionMethod"/> used to compress the payload. Supported decompression is Gzip, Zlib and Brotli. Defaults to GZip</param>
-        /// <param name="contentType">The type to set on the message ***after** decompression. Defaults to "application/json". Should be the uncompressed type of the message. </param>
         public Decompress(
             int step,
-            CompressionMethod compressionMethod = CompressionMethod.GZip,
-            string contentType = "application/json") : base(step)
+            CompressionMethod compressionMethod = CompressionMethod.GZip) : base(step)
         {
             _compressionMethod = compressionMethod;
-            _contentType = contentType;
         }
         
         /// <summary>
@@ -60,7 +56,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <returns>Configuration values</returns>
         public override object[] InitializerParams()
         {
-            return new object[] { _compressionMethod, _contentType };
+            return new object[] { _compressionMethod};
         }
 
         /// <summary>
