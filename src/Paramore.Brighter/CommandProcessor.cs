@@ -23,9 +23,11 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -580,7 +582,7 @@ namespace Paramore.Brighter
             
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = BulkMapMessages(requests);
+                var messages = MapMessages(batch.Key, batch);
                 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -655,7 +657,7 @@ namespace Paramore.Brighter
             
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = BulkMapMessages(batch.ToArray());
+                var messages = await MapMessagesAsync(batch.Key, batch.ToArray(), cancellationToken);
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -672,24 +674,41 @@ namespace Paramore.Brighter
             return requests.GroupBy(r => r.GetType());
         }
 
-        private List<Message> BulkMapMessages<T>(IEnumerable<T> requests) where T : class, IRequest
+        private List<Message> MapMessages(Type requestType, IEnumerable<IRequest> requests)
+        {
+            return (List<Message>)GetType()
+                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
+                .MakeGenericMethod(requestType)
+                .Invoke(this, new[] { requests });
+        }
+        
+        private Task<List<Message>> MapMessagesAsync(Type requestType, IEnumerable<IRequest> requests, CancellationToken cancellationToken)
+        {
+            var parameters = new object[] { requests, cancellationToken };
+            return (Task<List<Message>>)GetType()
+                .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
+                .MakeGenericMethod(requestType)
+                .Invoke(this, parameters);
+        }
+
+        private List<Message> BulkMapMessages<T>(IEnumerable<IRequest> requests) where T : class, IRequest
         {
             return requests.Select(r =>
             {
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
-                var message = wrapPipeline.WrapAsync(r).GetAwaiter().GetResult();
+                var message = wrapPipeline.WrapAsync((T)r).GetAwaiter().GetResult();
                 AddTelemetryToMessage<T>(message);
                 return message;
             }).ToList();
         }
         
-        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<T> requests, CancellationToken cancellationToken = default) where T : class, IRequest
+        private async Task<List<Message>> BulkMapMessagesAsync<T>(IEnumerable<IRequest> requests, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var messages = new List<Message>();
             foreach (var request in requests)
             {
                 var wrapPipeline = _transformPipelineBuilder.BuildWrapPipeline<T>(); 
-                var message = await wrapPipeline.WrapAsync(request, cancellationToken);
+                var message = await wrapPipeline.WrapAsync((T)request, cancellationToken);
                 AddTelemetryToMessage<T>(message);
                 messages.Add(message);
             }
