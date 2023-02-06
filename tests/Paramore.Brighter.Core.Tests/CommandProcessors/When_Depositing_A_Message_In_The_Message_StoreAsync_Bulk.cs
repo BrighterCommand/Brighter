@@ -36,6 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             var topic = "MyCommand";
+            var eventTopic = "MyEvent";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
@@ -47,11 +48,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             );
             
             _message3 = new Message(
-                new MessageHeader(_myEvent.Id, topic, MessageType.MT_EVENT),
+                new MessageHeader(_myEvent.Id, eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
             );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            {
+                if (type.Equals(typeof(MyCommandMessageMapper)))
+                    return new MyCommandMessageMapper();
+                else
+                {
+                    return new MyEventMessageMapper();
+                }
+            }));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
