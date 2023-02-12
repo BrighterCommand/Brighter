@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
 
         
-        private const string _deleteMessageCommand = "DELETE FROM {0}} WHERE MessageId = ({1}})";
+        private const string _deleteMessageCommand = "DELETE FROM {0} WHERE MessageId IN ({1})";
         private readonly string _outboxTableName;
         
         public bool ContinueOnCapturedContext
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
-            _connectionProvider = connectionProvider;
+            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
             _outboxTableName = configuration.OutboxTableName;
         }
 
@@ -319,6 +319,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private NpgsqlCommand InitDeleteDispatchedCommand(NpgsqlConnection connection, IEnumerable<Guid> messageIds)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
+            foreach (var p in inClause.parameters)
+            {
+                p.DbType = DbType.Object;
+            }
             return CreateCommand(connection, GenerateSqlText(_deleteMessageCommand, inClause.inClause), 0,
                 inClause.parameters);
         }
