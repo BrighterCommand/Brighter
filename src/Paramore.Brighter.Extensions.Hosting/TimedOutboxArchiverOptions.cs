@@ -3,9 +3,9 @@ namespace Paramore.Brighter.Extensions.Hosting
     public class TimedOutboxArchiverOptions
     {
         /// <summary>
-        /// The timer interval in hours. 
+        /// The timer interval in seconds. 
         /// </summary>
-        public int TimerInterval { get; set; } = 24;
+        public int TimerInterval { get; set; } = 15;
 
         /// <summary>
         /// The maximum number of messages to dispatch.
