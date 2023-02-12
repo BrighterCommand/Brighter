@@ -350,8 +350,7 @@ namespace Paramore.Brighter
         private TCommand CreatePagedOutstandingCommand(TConnection connection, double milliSecondsSinceAdded,
             int pageSize, int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedOutstandingCommand), 0,
-                CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
-                CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded));
+                CreatePagedOutstandingParameters(milliSecondsSinceAdded, pageSize, pageNumber));
 
         private TCommand InitAddDbCommand(TConnection connection, TParameter[] parameters)
             => CreateCommand(connection, GenerateSqlText(_queries.AddCommand), 0, parameters);
@@ -403,13 +402,16 @@ namespace Paramore.Brighter
 
         #endregion
 
+
+        #region Parameters
+
+        protected abstract TParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
+            int pageSize, int pageNumber);
+
+        #endregion
+        
         protected abstract TParameter CreateSqlParameter(string parameterName, object value);
         protected abstract TParameter[] InitAddDbParameters(Message message, int? position = null);
-
-        protected abstract (string inClause, TParameter[] parameters) GenerateInClauseAndAddParameters(
-            List<Guid> messageIds);
-
-        protected abstract (string insertClause, TParameter[] parameters) GenerateBulkInsert(List<Message> messages);
 
         protected abstract Message MapFunction(TDataReader dr);
 
@@ -419,5 +421,33 @@ namespace Paramore.Brighter
 
         protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(TDataReader dr,
             CancellationToken cancellationToken);
+        
+        
+        private (string inClause, TParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
+        {
+            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+
+            var parameters = new TParameter[messageIds.Count];
+            for (int i = 0; i < paramNames.Count(); i++)
+            {
+                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
+            }
+
+            return (string.Join(",", paramNames), parameters);
+        }
+
+        private  (string insertClause, TParameter[] parameters) GenerateBulkInsert(List<Message> messages)
+        {
+            var messageParams = new List<string>();
+            var parameters = new List<TParameter>();
+
+            for (int i = 0; i < messages.Count(); i++)
+            {
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                parameters.AddRange(InitAddDbParameters(messages[i], i));
+            }
+
+            return (string.Join(",", messageParams), parameters.ToArray());
+        }
     }
 }

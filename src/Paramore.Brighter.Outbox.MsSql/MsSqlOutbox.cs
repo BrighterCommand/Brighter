@@ -199,6 +199,16 @@ namespace Paramore.Brighter.Outbox.MsSql
             return command;
         }
 
+        protected override SqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        {
+            var parameters = new SqlParameter[3];
+            parameters[0] = CreateSqlParameter("PageNumber", pageNumber);
+            parameters[1] = CreateSqlParameter("PageSize", pageSize);
+            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
+
+            return parameters;
+        }
+
         #region Parameter Helpers
 
         protected override SqlParameter CreateSqlParameter(string parameterName, object value)
@@ -224,33 +234,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             };
         }
         
-        protected override (string inClause, SqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
-        {
-            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
-
-            var parameters = new SqlParameter[messageIds.Count];
-            for (int i = 0; i < paramNames.Count(); i++)
-            {
-                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
-            }
-
-            return (string.Join(",", paramNames), parameters);
-        }
-
-        protected override (string insertClause, SqlParameter[] parameters) GenerateBulkInsert(List<Message> messages)
-        {
-            var messageParams = new List<string>();
-            var parameters = new List<SqlParameter>();
-
-            for (int i = 0; i < messages.Count(); i++)
-            {
-                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
-                parameters.AddRange(InitAddDbParameters(messages[i], i));
-            }
-
-            return (string.Join(",", messageParams), parameters.ToArray());
-        }
-
         #endregion
 
         #region Property Extractors
