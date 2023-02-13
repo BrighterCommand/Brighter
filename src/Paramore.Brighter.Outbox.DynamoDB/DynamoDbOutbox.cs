@@ -239,6 +239,32 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
         }
 
+        public async Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            if (args == null)
+            {
+                throw new ArgumentException("Missing required argument", nameof(args));
+            }
+            
+            var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
+            var topic = (string)args["Topic"];
+
+            //in theory this is all values on that index that have a Delivered data (sparse index)
+            //we just need to filter for ones in the right date range
+            //As it is a GSI it can't use a consistent read
+            var queryConfig = new QueryOperationConfig
+            {
+                IndexName = _configuration.DeliveredIndexName,
+                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
+                ConsistentRead = false
+            };
+           
+            //block async to make this sync
+            var messages = await PageAllMessagesAsync(queryConfig, cancellationToken);
+            return messages.Select(msg => msg.ConvertToMessage());
+        }
+
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
@@ -301,6 +327,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
+        public void Delete(params Guid[] messageIds)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Returns messages that have yet to be dispatched
         /// </summary>
@@ -341,8 +372,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var messages = (await PageAllMessagesAsync(queryConfig, cancellationToken)).ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
-        
-       private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
+
+        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        {
+            throw new NotImplementedException();
+        }
+
+        private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
        {
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
            var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();

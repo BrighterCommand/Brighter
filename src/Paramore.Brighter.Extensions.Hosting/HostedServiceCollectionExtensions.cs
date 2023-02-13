@@ -23,5 +23,19 @@ namespace Paramore.Brighter.Extensions.Hosting
             brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
             return brighterBuilder;
         }
+
+        public static IBrighterBuilder UseOutboxArchiver(this IBrighterBuilder brighterBuilder,
+            IAmAnArchiveProvider archiveProvider,
+            Action<TimedOutboxArchiverOptions> timedOutboxArchiverOptionsAction = null)
+        {
+            var options = new TimedOutboxArchiverOptions();
+            timedOutboxArchiverOptionsAction?.Invoke(options);
+            brighterBuilder.Services.TryAddSingleton<TimedOutboxArchiverOptions>(options);
+            brighterBuilder.Services.AddSingleton<IAmAnArchiveProvider>(archiveProvider);
+            
+            brighterBuilder.Services.AddHostedService<TimedOutboxArchiver>();
+
+            return brighterBuilder;
+        }
     }
 }
