@@ -26,6 +26,8 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MsSql;
 using Xunit;
@@ -33,7 +35,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
-    public class SqlOutboxWritingMessagesTests : IDisposable
+    public class SqlOutboxDeletingMessagesTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
         private readonly Message _messageEarliest;
@@ -42,7 +44,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         private IEnumerable<Message> _retrievedMessages;
         private readonly MsSqlOutbox _sqlOutbox;
 
-        public SqlOutboxWritingMessagesTests()
+        public SqlOutboxDeletingMessagesTests()
         {
             _msSqlTestHelper = new MsSqlTestHelper();
             _msSqlTestHelper.SetupMessageDb();
@@ -57,34 +59,46 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         }
 
         [Fact]
-        public void When_Writing_Messages_To_The_Outbox()
+        public void When_Removing_Messages_From_The_Outbox()
         {
             AddMessagesToOutbox();
             _retrievedMessages = _sqlOutbox.Get();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //should read the messages from the outbox
-            _retrievedMessages.Should().HaveCount(3);
-        }
-        
-        [Fact]
-        public void When_Bulk_Writing_Messages_To_The_Outbox_Async()
-        {
+            _sqlOutbox.Delete(_retrievedMessages.First().Id);
+
+            var remainingMessages = _sqlOutbox.Get();
+
+            remainingMessages.Should().HaveCount(2);
+            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
+            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
             
-            var messages = new List<Message>() { _messageEarliest, _message2, _messageLatest };
-            _sqlOutbox.Add(messages);
+            _sqlOutbox.Delete(remainingMessages.Select(m => m.Id).ToArray());
 
-            _retrievedMessages = _sqlOutbox.Get();
+            var messages = _sqlOutbox.Get();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
-            //should read the messages from the outbox
-            _retrievedMessages.Should().HaveCount(3);
+            messages.Should().HaveCount(0);
+
+        }
+        [Fact]
+        public async Task When_Removing_Messages_From_The_OutboxAsync()
+        {
+            AddMessagesToOutbox();
+            _retrievedMessages = await _sqlOutbox.GetAsync();
+
+            await _sqlOutbox.DeleteAsync(CancellationToken.None, _retrievedMessages.First().Id);
+
+            var remainingMessages = await _sqlOutbox.GetAsync();
+
+            remainingMessages.Should().HaveCount(2);
+            remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
+            remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
+            
+            await _sqlOutbox.DeleteAsync(CancellationToken.None, remainingMessages.Select(m => m.Id).ToArray());
+
+            var messages = await _sqlOutbox.GetAsync();
+
+            messages.Should().HaveCount(0);
+
         }
 
         private void AddMessagesToOutbox()
@@ -105,7 +119,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             Release();
         }
 
-        ~SqlOutboxWritingMessagesTests()
+        ~SqlOutboxDeletingMessagesTests()
         {
             Release();
         }
