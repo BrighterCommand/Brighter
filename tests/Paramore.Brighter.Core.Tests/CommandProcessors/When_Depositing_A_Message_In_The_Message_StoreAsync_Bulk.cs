@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -19,8 +20,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly MyCommand _myCommand2 = new MyCommand();
+        private readonly MyEvent _myEvent = new MyEvent();
         private readonly Message _message;
         private readonly Message _message2;
+        private readonly Message _message3;
         private readonly FakeOutboxSync _fakeOutboxSync;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
@@ -33,6 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             var topic = "MyCommand";
+            var eventTopic = "MyEvent";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
@@ -42,9 +46,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageHeader(_myCommand2.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
+            
+            _message3 = new Message(
+                new MessageHeader(_myEvent.Id, eventTopic, MessageType.MT_EVENT),
+                new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
+            );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            {
+                if (type.Equals(typeof(MyCommandMessageMapper)))
+                    return new MyCommandMessageMapper();
+                else
+                {
+                    return new MyEventMessageMapper();
+                }
+            }));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -68,7 +86,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public async Task When_depositing_a_message_in_the_outbox()
         {
             //act
-            var postedMessageIds = await _commandProcessor.DepositPostAsync(new []{_myCommand, _myCommand2});
+            var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
+            var postedMessageIds = await _commandProcessor.DepositPostAsync(requests);
             
             //assert
             //message should not be posted
@@ -83,6 +102,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var depositedPost2 = _fakeOutboxSync
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
+            
+            //message should be in the store
+            var depositedPost3 = _fakeOutboxSync
+                .OutstandingMessages(0)
+                .SingleOrDefault(msg => msg.Id == _message3.Id);
 
             depositedPost.Should().NotBeNull();
            
@@ -97,6 +121,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost2.Body.Value.Should().Be(_message2.Body.Value);
             depositedPost2.Header.Topic.Should().Be(_message2.Header.Topic);
             depositedPost2.Header.MessageType.Should().Be(_message2.Header.MessageType);
+            
+            //message should correspond to the command
+            depositedPost3.Id.Should().Be(_message3.Id);
+            depositedPost3.Body.Value.Should().Be(_message3.Body.Value);
+            depositedPost3.Header.Topic.Should().Be(_message3.Header.Topic);
+            depositedPost3.Header.MessageType.Should().Be(_message3.Header.MessageType);
         }
         
         public void Dispose()

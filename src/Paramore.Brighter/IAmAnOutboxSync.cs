@@ -99,5 +99,11 @@ namespace Paramore.Brighter
             int pageSize = 100, 
             int pageNumber = 1,
             Dictionary<string, object> args = null);
+
+        /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="messageIds">The id of the message to delete</param>
+        void Delete(params Guid[] messageIds);
     }
 }

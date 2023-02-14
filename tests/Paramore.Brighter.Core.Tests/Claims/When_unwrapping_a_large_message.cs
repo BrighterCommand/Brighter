@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.Claims.Test_Doubles;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Transforms.Storage;
 using Paramore.Brighter.Transforms.Transformers;
 using Xunit;

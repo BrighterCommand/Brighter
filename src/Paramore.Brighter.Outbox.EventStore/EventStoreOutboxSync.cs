@@ -268,6 +268,12 @@ namespace Paramore.Brighter.Outbox.EventStore
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Update a message to show it is dispatched
         /// </summary>
@@ -294,7 +300,12 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             return OutstandingMessagesAsync(millSecondsSinceSent, pageSize, pageNumber, args).Result;
         }
-        
+
+        public void Delete(params Guid[] messageIds)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// Returns messages that have yet to be dispatched
         /// </summary>
@@ -352,6 +363,11 @@ namespace Paramore.Brighter.Outbox.EventStore
             }
 
             return outstandingMessages.Where(om => !dispatchedIds.Contains(om.Id));
+        }
+
+        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        {
+            throw new NotImplementedException();
         }
 
         private static int ExtractEventNumberFromHeader(Dictionary<string, object> headerBag, Guid messageId)

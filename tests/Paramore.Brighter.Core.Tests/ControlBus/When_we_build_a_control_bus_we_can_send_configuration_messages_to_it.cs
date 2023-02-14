@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using FakeItEasy;
 using FluentAssertions;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.ControlBus;

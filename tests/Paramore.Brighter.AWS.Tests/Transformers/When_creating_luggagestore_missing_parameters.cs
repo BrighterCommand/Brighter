@@ -49,7 +49,9 @@ public class S3LuggageUploadMissingParametersTests
                 storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                 httpClientFactory: _httpClientFactory,
                 stsClient: _stsClient,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                 bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
                 policy: null, 
@@ -73,7 +75,9 @@ public class S3LuggageUploadMissingParametersTests
                 storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                 httpClientFactory: _httpClientFactory,
                 stsClient: _stsClient,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                 bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
                 policy: null, 
@@ -97,7 +101,9 @@ public class S3LuggageUploadMissingParametersTests
                 storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                 httpClientFactory: _httpClientFactory,
                 stsClient: _stsClient,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                 bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
                 policy: null, 
@@ -121,7 +127,9 @@ public class S3LuggageUploadMissingParametersTests
                 storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                 httpClientFactory: null,
                 stsClient: _stsClient,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                 bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
                 policy: null, 
@@ -145,7 +153,9 @@ public class S3LuggageUploadMissingParametersTests
                 storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                 httpClientFactory: _httpClientFactory,
                 stsClient: null,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                 bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
                 policy: null, 
@@ -193,7 +203,9 @@ public class S3LuggageUploadMissingParametersTests
                     storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                     httpClientFactory: _httpClientFactory,
                     stsClient: _stsClient,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                     bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 // turn warning back on
                     tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: null,
                     policy: null, 

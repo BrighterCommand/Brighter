@@ -23,10 +23,12 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -86,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (contentType.Success)
                     messageHeader.ContentType = contentType.Result;
                    
-                message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
+                message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
                     
                 //deserialize the bag 
                 var bag = ReadMessageBag(sqsMessage);
@@ -106,6 +108,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             
             return message;
+        }
+
+        private static MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage, string contentType)
+        {
+            if(contentType == CompressPayloadTransformer.GZIP || contentType == CompressPayloadTransformer.DEFLATE || contentType == CompressPayloadTransformer.BROTLI)
+                return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
+            
+            return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
         }
 
         private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)

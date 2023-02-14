@@ -31,7 +31,6 @@ using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
 
@@ -41,41 +40,20 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// Class MsSqlOutbox.
     /// </summary>
     public class MsSqlOutbox :
-        IAmABulkOutboxSync<Message>, 
-        IAmABulkOutboxAsync<Message>
+        RelationDatabaseOutboxSync<SqlConnection, SqlCommand, SqlDataReader, SqlParameter>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlOutbox>();
-
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly MsSqlConfiguration _configuration;
         private readonly IMsSqlConnectionProvider _connectionProvider;
-
-        private const string PagedDispatchedCommand = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < DATEADD(millisecond, @OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-        private const string PagedReadCommand = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-        private const string PagedOutstandingCommand = "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < DATEADD(millisecond, -@OutStandingSince, getutcdate()) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
-        private const string AddCommand = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @HeaderBag, @Body)";
-        private const string BulkAddCommand = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {1}";
-        private const string MarkDispatchedCommand = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
-        private const string MarkMultipleDispatchedCommand = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId in ( {1} )";
-        private const string GetMessageCommand = "SELECT * FROM {0} WHERE MessageId = @MessageId";
-        private const string GetMessagesCommand = "SELECT * FROM {0} WHERE MessageId IN ( {1} )";
-
-        /// <summary>
-        ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
-        ///     synchronization context.
-        ///     Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
-        ///     or access the Result or otherwise block. You may need the originating synchronization context if you need to access
-        ///     thread specific storage such as HTTPContext
-        /// </summary>
-        public bool ContinueOnCapturedContext { get; set; }
-
+        
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
-        public MsSqlOutbox(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
+        public MsSqlOutbox(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider) : base(
+            configuration.OutBoxTableName, new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlOutbox>())
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -88,227 +66,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="configuration">The configuration.</param>
         public MsSqlOutbox(MsSqlConfiguration configuration) : this(configuration, new MsSqlSqlAuthConnectionProvider(configuration)) { }
 
-        #region Externals
-
-        /// <summary>
-        ///     Adds the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
-        /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
-        {
-            var parameters = InitAddDbParameters(message);
-            ReadFromStore(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
-            {
-                s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                            message.Id);
-            });
-        }
-        
-        /// <summary>
-        ///     Adds the specified message.
-        /// </summary>
-        /// <param name="messages">The message.</param>
-        /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
-        /// <returns>Task.</returns>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
-        {
-            ReadFromStore(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
-        }
-
-        /// <summary>
-        ///     Gets the specified message identifier.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="outBoxTimeout"></param>
-        /// <param name="cancellationToken">Cancellation Token</param>
-        /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
-        /// <returns>Task&lt;Message&gt;.</returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
-        {
-            var parameters = InitAddDbParameters(message);
-            return ReadFromStoreAsync(transactionConnectionProvider, connection => InitAddDbCommand(connection, parameters), () =>
-            {
-                s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                            message.Id);
-            },
-            cancellationToken);
-        }
-
-        /// <summary>
-        /// Awaitable add the specified message.
-        /// </summary>
-        /// <param name="messages">The message.</param>
-        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        /// <returns><see cref="Task"/>.</returns>
-        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken),
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
-        {
-            return ReadFromStoreAsync(transactionConnectionProvider, connection => InitBulkAddDbCommand(messages.ToList(), connection), () => s_logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"), cancellationToken);
-        }
-
-        /// <summary>
-        /// Retrieves messages that have been sent within the window
-        /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago would the message have been dispatched in milliseconds</param>
-        /// <param name="pageSize">How many messages in a page</param>
-        /// <param name="pageNumber">Which page of messages to get</param>
-        /// <param name="outboxTimeout"></param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
-            int pageNumber = 1,
-            int outboxTimeout = -1, 
-            Dictionary<string, object> args = null)
-        {
-            return WriteToStore(connection => CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber), dr => MapListFunction(dr));
-        }
-
-       /// <summary>
-        /// Gets the specified message
-        /// </summary>
-        /// <param name="messageId">The id of the message to get</param>
-        /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
-        /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            return WriteToStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunction(dr));
-        }
-
-        /// <summary>
-        /// get as an asynchronous operation.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns><see cref="Task{Message}" />.</returns>
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return WriteToStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout), dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
-        }
-
-        /// <summary>
-        /// Returns messages specified by the Ids
-        /// </summary>
-        /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
-        /// <param name="cancellationToken">Cancellation Token.</param>
-        /// <param name="messageIds">The Ids of the messages</param>
-        /// <returns></returns>
-        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return WriteToStoreAsync(connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout), async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
-        }
-
-        /// <summary>
-        /// Returns all messages in the store
-        /// </summary>
-        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
-        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns>A list of messages</returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
-        {
-            return WriteToStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunction(dr)).ToList();
-        }
-
-        /// <summary>
-        /// Returns all messages in the store
-        /// </summary>
-        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
-        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <param name="cancellationToken">Cancellation Token</param>
-        /// <returns></returns>
-        public async Task<IList<Message>> GetAsync(
-            int pageSize = 100, 
-            int pageNumber = 1, 
-            Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return (await WriteToStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
-        }
-
-        /// <summary>
-        /// Update a message to show it is dispatched
-        /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
-        {
-            return ReadFromStoreAsync(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
-        }
-
-        /// <summary>
-        /// Update messages to show it is dispatched
-        /// </summary>
-        /// <param name="ids">The ids of the messages to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
-        {
-            return ReadFromStoreAsync(null, connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null, cancellationToken);
-        }
-
-        /// <summary>
-        /// Update a message to show it is dispatched
-        /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
-        {
-            ReadFromStore(null, connection => InitMarkDispatchedCommand(connection, id, dispatchedAt ?? DateTime.UtcNow), null);
-        }
-
-       /// <summary>
-        /// Messages still outstanding in the Outbox because their timestamp
-        /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-       /// <returns>Outstanding Messages</returns>
-       public IEnumerable<Message> OutstandingMessages(
-           double millSecondsSinceSent, 
-           int pageSize = 100, 
-           int pageNumber = 1,
-            Dictionary<string, object> args = null)
-       {
-            return WriteToStore(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunction(dr));
-        }
-
-        /// <summary>
-        /// Messages still outstanding in the Outbox because their timestamp
-        /// </summary>
-        /// <param name="millSecondsSinceSent">How many seconds since the message was sent do we wait to declare it outstanding</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <param name="cancellationToken">Async Cancellation Token</param>
-        /// <returns>Outstanding Messages</returns>
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(
-           double millSecondsSinceSent, 
-           int pageSize = 100, 
-           int pageNumber = 1,
-           Dictionary<string, object> args = null,
-           CancellationToken cancellationToken = default)
-       {
-            return WriteToStoreAsync(connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber), dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
-       }
-
-        #endregion
-
-        #region Things that Actually call SQL
-        private void ReadFromStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction)
+        protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
             if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
@@ -347,7 +105,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
 
-        private async Task ReadFromStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
+        protected override async Task WriteToStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<SqlConnection, SqlCommand> commandFunc, Action loggingAction, CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
             if (transactionConnectionProvider != null && transactionConnectionProvider is IMsSqlTransactionConnectionProvider provider)
@@ -386,7 +144,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
 
-        private T WriteToStore<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, T> resultFunc)
+        protected override T ReadFromStore<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, T> resultFunc)
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -408,7 +166,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             }
         }
 
-        private async Task<T> WriteToStoreAsync<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<SqlConnection, SqlCommand> commandFunc, Func<SqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -429,50 +187,8 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
             }
         }
-        #endregion
 
-        #region Things that Create Commands
-
-        private SqlCommand CreatePagedDispatchedCommand(SqlConnection connection, double millisecondsDispatchedSince, int pageSize, int pageNumber) 
-            => CreateCommand(connection, GenerateSqlText(PagedDispatchedCommand), 0, CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize), CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince));
-
-        private SqlCommand CreatePagedReadCommand(SqlConnection connection, int pageSize, int pageNumber)
-            => CreateCommand(connection, GenerateSqlText(PagedReadCommand), 0, CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize));
-        
-        private SqlCommand CreatePagedOutstandingCommand(SqlConnection connection, double milliSecondsSinceAdded, int pageSize, int pageNumber)
-            => CreateCommand(connection, GenerateSqlText(PagedOutstandingCommand), 0, CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize), CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded));
-
-        private SqlCommand InitAddDbCommand(SqlConnection connection, SqlParameter[] parameters)
-            => CreateCommand(connection, GenerateSqlText(AddCommand), 0, parameters);
-
-        private SqlCommand InitBulkAddDbCommand(List<Message> messages, SqlConnection connection)
-        {
-            var insertClause = GenerateBulkInsert(messages);
-            return CreateCommand(connection, GenerateSqlText(BulkAddCommand, insertClause.insertClause), 0, insertClause.parameters);
-        }
-
-        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, Guid messageId, DateTime? dispatchedAt)
-            => CreateCommand(connection, GenerateSqlText(MarkDispatchedCommand), 0, CreateSqlParameter("MessageId", messageId), CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime()));
-
-        private SqlCommand InitMarkDispatchedCommand(SqlConnection connection, IEnumerable<Guid> messageIds, DateTime? dispatchedAt)
-        {
-            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
-            return CreateCommand(connection, GenerateSqlText(MarkMultipleDispatchedCommand, inClause.inClause), 0, inClause.parameters.Append(CreateSqlParameter("DispatchedAt", dispatchedAt?.ToUniversalTime())).ToArray());
-        }
-
-        private SqlCommand InitGetMessageCommand(SqlConnection connection, Guid messageId, int outBoxTimeout = -1)
-            => CreateCommand(connection, GenerateSqlText(GetMessageCommand), outBoxTimeout, CreateSqlParameter("MessageId", messageId));
-
-        private SqlCommand InitGetMessagesCommand(SqlConnection connection, List<Guid> messageIds, int outBoxTimeout = -1)
-        {
-            var inClause = GenerateInClauseAndAddParameters(messageIds);            
-            return CreateCommand(connection, GenerateSqlText(GetMessagesCommand, inClause.inClause), outBoxTimeout, inClause.parameters);
-        }
-
-        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
-            => string.Format(sqlFormat, orderedParams.Prepend(_configuration.OutBoxTableName).ToArray());
-
-        private SqlCommand CreateCommand(SqlConnection connection, string sqlText, int outBoxTimeout, params SqlParameter[] parameters)
+        protected override SqlCommand CreateCommand(SqlConnection connection, string sqlText, int outBoxTimeout, params SqlParameter[] parameters)
         {
             var command = connection.CreateCommand();
 
@@ -482,16 +198,25 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return command;
         }
-        #endregion
+
+        protected override SqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded, int pageSize, int pageNumber)
+        {
+            var parameters = new SqlParameter[3];
+            parameters[0] = CreateSqlParameter("PageNumber", pageNumber);
+            parameters[1] = CreateSqlParameter("PageSize", pageSize);
+            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
+
+            return parameters;
+        }
 
         #region Parameter Helpers
 
-        private SqlParameter CreateSqlParameter(string parameterName, object value)
+        protected override SqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value ?? DBNull.Value);
         }
         
-        private SqlParameter[] InitAddDbParameters(Message message, int? position = null)
+        protected override SqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
@@ -509,33 +234,6 @@ namespace Paramore.Brighter.Outbox.MsSql
             };
         }
         
-        private (string inClause, SqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
-        {
-            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
-
-            var parameters = new SqlParameter[messageIds.Count];
-            for (int i = 0; i < paramNames.Count(); i++)
-            {
-                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
-            }
-
-            return (string.Join(",", paramNames), parameters);
-        }
-
-        private (string insertClause, SqlParameter[] parameters) GenerateBulkInsert(List<Message> messages)
-        {
-            var messageParams = new List<string>();
-            var parameters = new List<SqlParameter>();
-
-            for (int i = 0; i < messages.Count(); i++)
-            {
-                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
-                parameters.AddRange(InitAddDbParameters(messages[i], i));
-            }
-
-            return (string.Join(",", messageParams), parameters.ToArray());
-        }
-
         #endregion
 
         #region Property Extractors
@@ -593,7 +291,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         #endregion
 
         #region DataReader Operators
-        private Message MapFunction(SqlDataReader dr)
+        protected override Message MapFunction(SqlDataReader dr)
         {
             Message message = null;
             if (dr.Read())
@@ -605,7 +303,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return message ?? new Message();
         }
         
-        private async Task<Message> MapFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<Message> MapFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
         {
             Message message = null;
             if (await dr.ReadAsync(cancellationToken))
@@ -617,7 +315,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return message ?? new Message();
         }
 
-        private IEnumerable<Message> MapListFunction(SqlDataReader dr)
+        protected override IEnumerable<Message> MapListFunction(SqlDataReader dr)
         {
             var messages = new List<Message>();
             while (dr.Read())
@@ -629,7 +327,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             return messages;
         }
 
-        private async Task<IEnumerable<Message>> MapListFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
         {
             var messages = new List<Message>();
             while (await dr.ReadAsync(cancellationToken))

@@ -55,7 +55,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
 
-        private IProducer<string, string> _producer;
+        private IProducer<string, byte[]> _producer;
+        private readonly IKafkaMessageHeaderBuilder _headerBuilder;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _hasFatalProducerError = false;
@@ -67,23 +68,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (string.IsNullOrEmpty(publication.Topic))
                 throw new ConfigurationException("Topic is required for a publication");
-            
+
             _clientConfig = new ClientConfig
             {
                 Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
-                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
+                BootstrapServers = string.Join(",", configuration.BootStrapServers),
                 ClientId = configuration.Name,
                 Debug = configuration.Debug,
                 SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
                 SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
                 SaslUsername = configuration.SaslUsername,
                 SaslPassword = configuration.SaslPassword,
-                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int)configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation,
                 SslKeyLocation = configuration.SslKeystoreLocation,
-                    
+
             };
-            
+
             _producerConfig = new ProducerConfig(_clientConfig)
             {
                 BatchNumMessages = publication.BatchNumberMessages,
@@ -108,8 +109,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             MaxOutStandingMessages = publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingCheckIntervalMilliSeconds;
             OutBoxBag = publication.OutBoxBag;
+            _headerBuilder = publication.MessageHeaderBuilder;
         }
-        
+
         /// <summary>
         /// There are a **lot** of properties that we can set to configure Kafka. We expose only those of high importance
         /// This gives you a chance to set additional parameter before we create the producer. Because it depends on the Confluent
@@ -127,7 +129,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public void Init()
         {
-            _producer = new ProducerBuilder<string, string>(_producerConfig)
+            _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
                 .SetErrorHandler((_, error) =>
                 {
                     s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason,
@@ -135,7 +137,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     _hasFatalProducerError = error.IsFatal;
                 })
                 .Build();
-            _publisher = new KafkaMessagePublisher(_producer);
+            _publisher = new KafkaMessagePublisher(_producer, _headerBuilder);
 
             EnsureTopic();
         }

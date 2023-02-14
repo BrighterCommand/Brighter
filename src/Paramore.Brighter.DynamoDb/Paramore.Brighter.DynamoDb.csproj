@@ -5,7 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.101.14" />
+      <PackageReference Include="AWSSDK.DynamoDBv2" Version="3.7.101.43" />
+      <PackageReference Update="MinVer" Version="4.3.0">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
 
     </ItemGroup>
 

@@ -296,6 +296,13 @@ namespace Paramore.Brighter
            throw new NotImplementedException();
        }
 
+       public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+           int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+       {
+           return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
+               args));
+       }
+
        /// <summary>
         /// Mark the message as dispatched
         /// </summary>
@@ -328,6 +335,14 @@ namespace Paramore.Brighter
             return outstandingMessages;
         }
 
+        public void Delete(params Guid[] messageIds)
+        {
+            foreach (Guid messageId in messageIds)
+            {
+                _requests.TryRemove(messageId.ToString(), out _);
+            }
+        }
+
         public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IList<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -344,6 +359,12 @@ namespace Paramore.Brighter
             tcs.SetResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
 
             return tcs.Task;
+        }
+
+        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        {
+            Delete(messageIds);
+            return Task.CompletedTask;
         }
     }
 }

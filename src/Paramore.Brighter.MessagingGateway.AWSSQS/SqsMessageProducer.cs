@@ -21,6 +21,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
 #endregion
 
+using System;
 using System.Collections.Generic;
 using Amazon.SimpleNotificationService;
 using Microsoft.Extensions.Logging;
@@ -103,7 +104,17 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
             {
                 var publisher = new SqsMessagePublisher(ChannelTopicArn, client);
-                publisher.Publish(message);
+                var messageId = publisher.Publish(message);
+                if (messageId != null)
+                {
+                    s_logger.LogDebug(
+                        "SQSMessageProducer: Published message with topic {Topic}, Brighter messageId {MessageId} and SNS messageId {SNSMessageId}",
+                        message.Header.Topic, message.Id, messageId);
+                    return;
+                }
+
+                throw new InvalidOperationException(
+                    string.Format($"Failed to publish message with topic {message.Header.Topic} and id {message.Id} and message: {message.Body}"));
             }
         }
 
