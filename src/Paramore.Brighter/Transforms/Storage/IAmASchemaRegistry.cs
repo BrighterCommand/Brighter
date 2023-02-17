@@ -30,13 +30,20 @@ namespace Paramore.Brighter.Transforms.Storage
 {
     public interface IAmASchemaRegistry
     {
+        
+        Task<bool, BrighterMessageSchema> GetAsync(int schemaId)
+        
+        
         /// <summary>
-        /// Lookup the schema history for this topic
+        /// Lookup the schema history for this topic. This is always a call the registry because we can't know whether
+        /// the last version in the cache is that latest version. In usage, lookup tends to be for attaching the latest
+        /// version of a schema to a produced message, whereas get is used to retrieve a schema when we know the id
         /// </summary>
         /// <param name="topic">The topic to find registered schemas for</param>
         /// <param name="latestOnly">Only returs the latest schema</param>
         /// <returns>The set of schemas for this topic</returns>
         Task<(bool, IEnumerable<BrighterMessageSchema>)> LookupAsync(string topic, bool latestOnly = true);
+        
 
         /// <summary>
         /// Register a schema for this topic with the registry
@@ -44,7 +51,7 @@ namespace Paramore.Brighter.Transforms.Storage
         /// <param name="topic">The topic to register under</param>
         /// <param name="messageSchema">The schema to register</param>
         /// <param name="newVersion">An explicit version to register. Pass -1 to figure out the version as highest existing + 1</param>
-        /// <returns></returns>
+        /// <returns>The id of the schema + version</returns>
         Task<int> RegisterAsync(string topic, string messageSchema, int newVersion);
 
         /// <summary>
