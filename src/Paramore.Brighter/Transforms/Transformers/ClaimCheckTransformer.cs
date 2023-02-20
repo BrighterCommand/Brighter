@@ -50,6 +50,18 @@ namespace Paramore.Brighter.Transforms.Transformers
             _store = store;
         }
 
+        /// <summary>
+        /// NOTE: Default constructor is not intended for usage, but is required for the service activator to not throw an exception
+        /// due to missing dependencies when auto-registration registers this transformer but you do not use the claim check
+        /// functionality
+        /// If you forget to register your storage provider, you will get a not implemented exception when you try to use the
+        /// claim check functionality
+        /// </summary>
+        public ClaimCheckTransformer()
+        {
+            _store = new NullLuggageStore();
+        }
+
         public void Dispose()
         {
         }
