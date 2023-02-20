@@ -145,6 +145,11 @@ namespace Paramore.Brighter
         public string PartitionKey { get; set; }
 
         /// <summary>
+        /// 
+        /// </summary>
+        public int SchemaId { get; set; }
+        
+        /// <summary>
         /// Gets the telemetry information for the message
         /// </summary>
         public MessageTelemetry Telemetry { get; private set; }

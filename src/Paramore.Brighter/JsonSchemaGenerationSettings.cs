@@ -1,4 +1,4 @@
-#region Licence
+﻿#region Licence
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -22,19 +22,29 @@ THE SOFTWARE. */
 
 #endregion
 
-using System;
+using System.Text.Json;
+using NJsonSchema.Generation;
 
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// A Response to a Request. We derive from IRequest because our message handling infrastructure receives requests
-    /// even if in a Request-Response paradigm that is a response to another request.
+    /// Settings for use with NJsonSchema. These are provided as a convenience, feel free to use your own settings
+    /// By default where these are required we will use these if the parameter is omitted
     /// </summary>
-    public interface IResponse : IRequest
+    public static class JsonSchemaGenerationSettings
     {
-        /// <summary>
-        /// Allow us to correlate request and response
-        /// </summary>
-        Guid CorrelationId { get; }
-  }
+        public static JsonSchemaGeneratorSettings Default { get; set; }
+        
+        static JsonSchemaGenerationSettings()
+        {
+            Default = new JsonSchemaGeneratorSettings
+            {
+                AlwaysAllowAdditionalObjectProperties = false, //Be strict about what you send
+                IgnoreObsoleteProperties = true, //But allow us to ignore historical fields
+                FlattenInheritanceHierarchy = true,  //Don't publish messages using inheritance
+                SerializerSettings = null,   //use system.text.json not json.net
+                SerializerOptions = JsonSerialisationOptions.Options 
+            };
+        }
+    }
 }
