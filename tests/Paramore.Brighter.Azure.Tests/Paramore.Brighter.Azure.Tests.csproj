@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <PackageReference Include="Azure.Identity" Version="1.8.0" />
+        <PackageReference Include="FluentAssertions" Version="6.10.0" />
         <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.1.0" />
         <PackageReference Include="NUnit" Version="3.13.3" />
         <PackageReference Include="NUnit3TestAdapter" Version="4.3.1" />
@@ -20,8 +21,9 @@
         <PackageReference Include="coverlet.collector" Version="3.1.2" />
     </ItemGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\src\Paramore.Brighter.Archive.Azure\Paramore.Brighter.Archive.Azure.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Archive.Azure\Paramore.Brighter.Archive.Azure.csproj" />
+    <ProjectReference Include="..\..\src\Paramore.Brighter.Transformers.Azure\Paramore.Brighter.Transformers.Azure.csproj" />
+  </ItemGroup>
 
 </Project>
