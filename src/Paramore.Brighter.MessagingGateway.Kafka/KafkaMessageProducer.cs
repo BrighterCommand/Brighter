@@ -293,7 +293,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (status == PersistenceStatus.Persisted)
             {
-                if (headers.TryGetLastBytes(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
+                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val) && (Guid.TryParse(val, out Guid messageId)))
