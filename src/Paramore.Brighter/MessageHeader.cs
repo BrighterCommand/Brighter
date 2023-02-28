@@ -105,7 +105,7 @@ namespace Paramore.Brighter
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
         /// Gets the number of times this message has been seen 
