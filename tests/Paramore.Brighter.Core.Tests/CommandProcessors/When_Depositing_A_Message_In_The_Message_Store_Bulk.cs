@@ -2,10 +2,9 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -19,8 +18,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly MyCommand _myCommand2 = new MyCommand();
+        private readonly MyEvent _myEvent = new MyEvent();
         private readonly Message _message;
         private readonly Message _message2;
+        private readonly Message _message3;
         private readonly FakeOutboxSync _fakeOutbox;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
@@ -32,6 +33,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
+            var eventTopic = "MyEvent";
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
@@ -41,9 +43,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageHeader(_myCommand2.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
+            
+            _message3 = new Message(
+                new MessageHeader(_myEvent.Id, eventTopic, MessageType.MT_EVENT),
+                new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
+            );
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            {
+                if (type.Equals(typeof(MyCommandMessageMapper)))
+                    return new MyCommandMessageMapper();
+                else
+                {
+                    return new MyEventMessageMapper();
+                }
+            }));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var retryPolicy = Policy
                 .Handle<Exception>()
@@ -66,7 +82,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public void When_depositing_a_message_in_the_outbox()
         {
             //act
-            var postedMessageId = _commandProcessor.DepositPost(new []{_myCommand, _myCommand2});
+            var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
+            var postedMessageId = _commandProcessor.DepositPost(requests);
             
             //assert
             
@@ -86,9 +103,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost2.Header.Topic.Should().Be(_message2.Header.Topic);
             depositedPost2.Header.MessageType.Should().Be(_message2.Header.MessageType);
             
+            
+            var depositedPost3 = _fakeOutbox
+                .OutstandingMessages(0)
+                .SingleOrDefault(msg => msg.Id == _message3.Id);
+            //message should correspond to the command
+            depositedPost3.Id.Should().Be(_message3.Id);
+            depositedPost3.Body.Value.Should().Be(_message3.Body.Value);
+            depositedPost3.Header.Topic.Should().Be(_message3.Header.Topic);
+            depositedPost3.Header.MessageType.Should().Be(_message3.Header.MessageType);
+            
             //message should be marked as outstanding if not sent
             var outstandingMessages = _fakeOutbox.OutstandingMessages(0);
-            outstandingMessages.Count().Should().Be(2);
+            outstandingMessages.Count().Should().Be(3);
         }
         
         public void Dispose()

@@ -131,10 +131,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             }
         }
 
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+        {
+            return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
+                args));
+        }
+
         public Task<IEnumerable<Message>> OutstandingMessagesAsync(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
             Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
+        }
+
+        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        {
+            Delete(messageIds);
+            return Task.CompletedTask;
         }
 
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
@@ -158,7 +171,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 .ToArray();
         }
 
-        class OutboxEntry
+       public void Delete(params Guid[] messageIds)
+       {
+           foreach (Guid messageId in messageIds)
+           {
+               var message = _posts.First(e => e.Message.Id == messageId);
+               _posts.Remove(message);
+           }
+       }
+
+       class OutboxEntry
         {
             public DateTime? TimeDeposited { get; set; }
             public DateTime? TimeFlushed { get; set; }

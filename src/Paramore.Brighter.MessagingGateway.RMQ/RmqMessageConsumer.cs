@@ -266,8 +266,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                         s_logger.LogInformation(
                             "RmqMessageConsumer: Received message from queue {ChannelName} with routing key {RoutingKeys} via exchange {ExchangeName} on subscription {URL}, message: {Request}",
                             _queueName, _routingKeys, Connection.Exchange.Name, Connection.AmpqUri.GetSanitizedUri(),
-                            JsonSerializer.Serialize(message, JsonSerialisationOptions.Options),
-                            Environment.NewLine);
+                            JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
                     }
 
                     return messages;

@@ -42,6 +42,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
 
+        
+        private const string _deleteMessageCommand = "DELETE FROM {0} WHERE MessageId IN ({1})";
+        private readonly string _outboxTableName;
+        
         public bool ContinueOnCapturedContext
         {
             get => throw new NotImplementedException();
@@ -55,7 +59,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
-            _connectionProvider = connectionProvider;
+            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
+            _outboxTableName = configuration.OutboxTableName;
         }
 
         /// <summary>
@@ -303,6 +308,94 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     connection.Dispose();
                 else if (!connectionProvider.HasOpenTransaction)
                     connection.Close();
+            }
+        }
+
+        public void Delete(params Guid[] messageIds)
+        {
+            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+        }
+        
+        private NpgsqlCommand InitDeleteDispatchedCommand(NpgsqlConnection connection, IEnumerable<Guid> messageIds)
+        {
+            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
+            foreach (var p in inClause.parameters)
+            {
+                p.DbType = DbType.Object;
+            }
+            return CreateCommand(connection, GenerateSqlText(_deleteMessageCommand, inClause.inClause), 0,
+                inClause.parameters);
+        }
+        
+        private (string inClause, NpgsqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
+        {
+            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+
+            var parameters = new NpgsqlParameter[messageIds.Count];
+            for (int i = 0; i < paramNames.Count(); i++)
+            {
+                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
+            }
+
+            return (string.Join(",", paramNames), parameters);
+        }
+        
+        private NpgsqlParameter CreateSqlParameter(string parameterName, object value)
+        {
+            return new NpgsqlParameter(parameterName, value ?? DBNull.Value);
+        }
+        
+        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+            => string.Format(sqlFormat, orderedParams.Prepend(_outboxTableName).ToArray());
+        
+        private NpgsqlCommand CreateCommand(NpgsqlConnection connection, string sqlText, int outBoxTimeout,
+            params NpgsqlParameter[] parameters)
+
+        {
+            var command = connection.CreateCommand();
+
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+        
+        private void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IPostgreSqlConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+                catch (PostgresException sqlException)
+                {
+                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                    {
+                        loggingAction.Invoke();
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if (!connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
             }
         }
 

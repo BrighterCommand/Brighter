@@ -75,27 +75,16 @@ namespace GreetingsSender
                     )
                     .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
 
-                //We need this for the check as to whether an S3 bucket exists
-                serviceCollection.AddHttpClient();
-                
-                //Adds a luggage store based on an S3 bucket
-                serviceCollection.AddS3LuggageStore((options) =>
-                {
-                    options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
-                    options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
-                    options.BucketRegion = S3Region.EUW1;
-                    options.StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
-                });
-                
-
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
                 var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
                 
                 Console.WriteLine($"Sending Event to SNS topic {topic} ");
 
-                //create a 512K string, too large for a payload, that needs offloading
-                commandProcessor.Post(new GreetingEvent($"Hi - {CreateString(524288)}"));
+                //create a string that is too large for a payload, that needs compression but will give some good compression
+                var largeString = new string('a', 512000);
+                //var largeString = "hello world";
+                commandProcessor.Post(new GreetingEvent($"Hi -{largeString}"));
                 
                 Console.WriteLine($"Sent Event to SNS topic {topic} ");
             }

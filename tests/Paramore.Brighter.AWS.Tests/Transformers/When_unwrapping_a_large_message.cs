@@ -57,7 +57,9 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                     storeCreation: S3LuggageStoreCreation.CreateIfMissing,
                     httpClientFactory: httpClientFactory,
                     stsClient: stsClient,
+#pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                     bucketRegion: S3Region.EUW1,
+#pragma warning restore CS0618 
                     tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: S3CannedACL.Private,
                     abortFailedUploadsAfterDays: 1,

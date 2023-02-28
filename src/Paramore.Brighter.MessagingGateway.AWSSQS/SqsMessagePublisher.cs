@@ -23,9 +23,11 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Net.Mime;
 using System.Text.Json;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
+using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -40,7 +42,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             _client = client;
         }
 
-        public void Publish(Message message)
+        public string Publish(Message message)
         {
             var messageString = message.Body.Value;
             var publishRequest = new PublishRequest(_topicArn, messageString);
@@ -63,7 +65,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             publishRequest.MessageAttributes = messageAttributes;
             
             
-            _client.PublishAsync(publishRequest).Wait();
+             var response = _client.PublishAsync(publishRequest).GetAwaiter().GetResult();
+             if (response.HttpStatusCode == System.Net.HttpStatusCode.OK || response.HttpStatusCode == System.Net.HttpStatusCode.Created || response.HttpStatusCode == System.Net.HttpStatusCode.Accepted)
+             {
+                 return response.MessageId;
+             }
+
+             return null;
         }
     }
 }
