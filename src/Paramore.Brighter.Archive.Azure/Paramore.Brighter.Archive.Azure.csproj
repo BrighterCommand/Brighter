@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Azure.Storage.Blobs" Version="12.14.1" />
+      <PackageReference Include="Azure.Storage.Blobs" Version="12.15.0" />
     </ItemGroup>
 
 </Project>
