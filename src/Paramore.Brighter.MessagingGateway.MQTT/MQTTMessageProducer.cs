@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter.MessagingGateway.MQTT
@@ -12,6 +13,8 @@ namespace Paramore.Brighter.MessagingGateway.MQTT
     {
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
+        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
         private MQTTMessagePublisher _mqttMessagePublisher;
 
         /// <summary>
