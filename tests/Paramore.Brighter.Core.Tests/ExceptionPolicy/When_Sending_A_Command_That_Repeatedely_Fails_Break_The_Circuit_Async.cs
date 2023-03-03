@@ -33,11 +33,12 @@ using Polly;
 using Polly.CircuitBreaker;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorWithCircuitBreakerAsyncTests
+    public class CommandProcessorWithCircuitBreakerAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -92,5 +93,9 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             _thirdException.Should().BeOfType<BrokenCircuitException>();
         }
 
-   }
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+    }
 }

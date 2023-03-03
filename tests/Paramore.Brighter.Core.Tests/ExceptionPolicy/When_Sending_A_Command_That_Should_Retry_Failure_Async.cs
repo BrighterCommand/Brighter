@@ -9,11 +9,12 @@ using Paramore.Brighter.Policies.Handlers;
 using Polly;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorWithRetryPolicyAsyncTests
+    public class CommandProcessorWithRetryPolicyAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -64,6 +65,12 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>().ShouldReceive(_myCommand).Should().BeTrue();
             //_should_retry_three_times
             _retryCount.Should().Be(3);
+        }
+
+        public void Dispose()
+        {
+            _provider?.Dispose();
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

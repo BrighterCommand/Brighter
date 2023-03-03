@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Extensions
 {
@@ -40,6 +41,15 @@ namespace Paramore.Brighter.Extensions
             foreach (var item in collection)
             {
                 doThis(item);
+            }
+        }
+
+
+        public static async Task EachAsync<T>(this IEnumerable<T> collection, Func<T, Task> doThis)
+        {
+            foreach (T item in collection)
+            {
+                await doThis(item);
             }
         }
     }

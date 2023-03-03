@@ -5,6 +5,7 @@ using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.Inbox.Handlers;
@@ -13,7 +14,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
     [Trait("Fragile", "CI")]
     [Collection("CommandProcessor")]
-    public class CommandProcessorUsingInboxAsyncTests
+    public class CommandProcessorUsingInboxAsyncTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxAsync _inbox;
@@ -60,6 +61,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
             exists.Should().BeFalse();
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

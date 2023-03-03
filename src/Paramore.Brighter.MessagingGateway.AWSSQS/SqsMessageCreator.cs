@@ -1,9 +1,34 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+#endregion
+
+using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Text.Json;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.Transforms.Transformers;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -63,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 if (contentType.Success)
                     messageHeader.ContentType = contentType.Result;
                    
-                message = new Message(messageHeader, new MessageBody(sqsMessage.Body));
+                message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
                     
                 //deserialize the bag 
                 var bag = ReadMessageBag(sqsMessage);
@@ -83,6 +108,14 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             
             return message;
+        }
+
+        private static MessageBody ReadMessageBody(Amazon.SQS.Model.Message sqsMessage, string contentType)
+        {
+            if(contentType == CompressPayloadTransformer.GZIP || contentType == CompressPayloadTransformer.DEFLATE || contentType == CompressPayloadTransformer.BROTLI)
+                return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
+            
+            return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
         }
 
         private Dictionary<string, object> ReadMessageBag(Amazon.SQS.Model.Message sqsMessage)

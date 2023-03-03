@@ -45,6 +45,12 @@ namespace Paramore.Brighter
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; }
         
         /// <summary>
+        /// The maximum amount of messages to deposit into the outbox in one transmissions.
+        /// This is to stop insert statements getting too big
+        /// </summary>
+        public int OutboxBulkChunkSize { get; }
+
+        /// <summary>
         /// When do we timeout writing to the outbox
         /// </summary>
         public int OutboxWriteTimeout { get; }
@@ -54,34 +60,44 @@ namespace Paramore.Brighter
         /// this tends to he handled by a Dispatcher not a Command Processor. 
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; }
+        
+        /// <summary>
+        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
+        /// of your MessageMappers
+        /// </summary>
+        public IAmAMessageTransformerFactory TransformerFactory { get; }
 
         /// <summary>
         /// The configuration of our inbox
         /// </summary>
-         public InboxConfiguration UseInbox { get;}
-        
+        public InboxConfiguration UseInbox { get;}
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
         /// </summary>
         /// <param name="producerRegistry">Clients for the external bus by topic they send to. The client details are specialised by transport</param>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
+        /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
         /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipelie</param>
+        /// <param name="transformerFactory">The factory that builds instances of a transforms for us</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
-        public ExternalBusConfiguration(
-            IAmAProducerRegistry producerRegistry,
+        public ExternalBusConfiguration(IAmAProducerRegistry producerRegistry,
             IAmAMessageMapperRegistry messageMapperRegistry,
+            int outboxBulkChunkSize = 100,
             int outboxWriteTimeout = 300,
             IAmAChannelFactory responseChannelFactory = null,
-            InboxConfiguration useInbox = null
-            )
+            IAmAMessageTransformerFactory transformerFactory = null,
+            InboxConfiguration useInbox = null)
         {
             ProducerRegistry = producerRegistry;
             MessageMapperRegistry = messageMapperRegistry;
             OutboxWriteTimeout = outboxWriteTimeout;
             ResponseChannelFactory = responseChannelFactory;
             UseInbox = useInbox;
+            OutboxBulkChunkSize = outboxBulkChunkSize;
+            TransformerFactory = transformerFactory;
         }
     }
 }

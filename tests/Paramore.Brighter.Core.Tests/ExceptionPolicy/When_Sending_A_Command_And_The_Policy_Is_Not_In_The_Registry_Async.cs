@@ -32,11 +32,12 @@ using Xunit;
 using Paramore.Brighter.Policies.Handlers;
 using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorMissingPolicyFromRegistryAsyncTests
+    public class CommandProcessorMissingPolicyFromRegistryAsyncTests : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
@@ -72,6 +73,11 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             innerException.Should().BeOfType<KeyNotFoundException>();
             //_should_give_the_name_of_the_missing_policy
             innerException.Message.Should().Contain("The given key 'MyDivideByZeroPolicy' was not present in the dictionary");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

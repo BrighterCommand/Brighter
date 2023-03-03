@@ -22,6 +22,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Confluent.Kafka;
@@ -33,10 +34,29 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     internal class KafkaMessageProducer : KafkaMessagingGateway, IAmAMessageProducerSync, IAmAMessageProducerAsync, ISupportPublishConfirmation
     {
         public event Action<bool, Guid> OnMessagePublished;
+        /// <summary>
+        /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
+        /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
+        /// 0 => No outstanding messages, i.e. throw an error as soon as something goes into the Outbox
+        /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
+        /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
+        
+        /// <summary>
+        /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
+        /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
+        /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
+        /// </summary>
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
 
-        private IProducer<string, string> _producer;
+        /// <summary>
+        /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
+        /// This bag provides the args required
+        /// </summary>
+        public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
+
+        private IProducer<string, byte[]> _producer;
+        private readonly IKafkaMessageHeaderBuilder _headerBuilder;
         private readonly ProducerConfig _producerConfig;
         private KafkaMessagePublisher _publisher;
         private bool _hasFatalProducerError = false;
@@ -48,23 +68,23 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (string.IsNullOrEmpty(publication.Topic))
                 throw new ConfigurationException("Topic is required for a publication");
-            
+
             _clientConfig = new ClientConfig
             {
                 Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
-                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
+                BootstrapServers = string.Join(",", configuration.BootStrapServers),
                 ClientId = configuration.Name,
                 Debug = configuration.Debug,
                 SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
                 SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
                 SaslUsername = configuration.SaslUsername,
                 SaslPassword = configuration.SaslPassword,
-                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int)configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation,
                 SslKeyLocation = configuration.SslKeystoreLocation,
-                    
+
             };
-            
+
             _producerConfig = new ProducerConfig(_clientConfig)
             {
                 BatchNumMessages = publication.BatchNumberMessages,
@@ -88,8 +108,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             TopicFindTimeoutMs = publication.TopicFindTimeoutMs;
             MaxOutStandingMessages = publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingCheckIntervalMilliSeconds;
+            OutBoxBag = publication.OutBoxBag;
+            _headerBuilder = publication.MessageHeaderBuilder;
         }
-        
+
         /// <summary>
         /// There are a **lot** of properties that we can set to configure Kafka. We expose only those of high importance
         /// This gives you a chance to set additional parameter before we create the producer. Because it depends on the Confluent
@@ -107,15 +129,15 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public void Init()
         {
-            _producer = new ProducerBuilder<string, string>(_producerConfig)
-                .SetErrorHandler((consumer, error) =>
+            _producer = new ProducerBuilder<string, byte[]>(_producerConfig)
+                .SetErrorHandler((_, error) =>
                 {
                     s_logger.LogError("Code: {ErrorCode}, Reason: {ErrorMessage}, Fatal: {FatalError}", error.Code, error.Reason,
                         error.IsFatal);
                     _hasFatalProducerError = error.IsFatal;
                 })
                 .Build();
-            _publisher = new KafkaMessagePublisher(_producer);
+            _publisher = new KafkaMessagePublisher(_producer, _headerBuilder);
 
             EnsureTopic();
         }
@@ -174,7 +196,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 s_logger.LogError(kafkaException, $"KafkaMessageProducer: There was an error sending to topic {Topic})");
                 
-                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new consumer
+                if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
                 
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
@@ -271,7 +293,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             if (status == PersistenceStatus.Persisted)
             {
-                if (headers.TryGetLastBytes(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
+                if (headers.TryGetLastBytesIgnoreCase(HeaderNames.MESSAGE_ID, out byte[] messageIdBytes))
                 {
                     var val = messageIdBytes.FromByteArray();
                     if (!string.IsNullOrEmpty(val) && (Guid.TryParse(val, out Guid messageId)))

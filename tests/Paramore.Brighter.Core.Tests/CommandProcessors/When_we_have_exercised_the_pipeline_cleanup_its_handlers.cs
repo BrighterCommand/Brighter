@@ -27,7 +27,25 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             _pipelineBuilder.Build(new RequestContext()).Any();
         }
+    
+        [Fact]
+        public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
+        {
+            _pipelineBuilder.Dispose();
 
+            //_should_have_called_dispose_on_instances_from_ioc
+            MyPreAndPostDecoratedHandler.DisposeWasCalled.Should().BeTrue();
+            //_should_have_called_dispose_on_instances_from_pipeline_builder
+            MyLoggingHandler<MyCommand>.DisposeWasCalled.Should().BeTrue();
+            //_should_have_called_release_on_all_handlers
+            s_released.Should().Be("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
+        
         internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType)
@@ -57,22 +75,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         }
 
 
-        [Fact]
-        public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
-        {
-            _pipelineBuilder.Dispose();
-
-            //_should_have_called_dispose_on_instances_from_ioc
-            MyPreAndPostDecoratedHandler.DisposeWasCalled.Should().BeTrue();
-            //_should_have_called_dispose_on_instances_from_pipeline_builder
-            MyLoggingHandler<MyCommand>.DisposeWasCalled.Should().BeTrue();
-            //_should_have_called_release_on_all_handlers
-            s_released.Should().Be("|MyValidationHandler`1|MyPreAndPostDecoratedHandler|MyLoggingHandler`1|MyLoggingHandler`1");
-        }
-
-        public void Dispose()
-        {
-            CommandProcessor.ClearExtServiceBus();
-        }
     }
 }

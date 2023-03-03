@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
-    static class StringTools
+    public static class StringTools
     {
         public static byte[] ToByteArray(this string str)
         {

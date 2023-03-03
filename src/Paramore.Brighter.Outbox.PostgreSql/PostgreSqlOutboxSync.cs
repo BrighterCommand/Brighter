@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Npgsql;
@@ -35,12 +36,16 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxSync : IAmAnOutboxSync<Message>
+    public class PostgreSqlOutboxSync : IAmABulkOutboxSync<Message>
     {
         private readonly PostgreSqlOutboxConfiguration _configuration;
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
 
+        
+        private const string _deleteMessageCommand = "DELETE FROM {0} WHERE MessageId IN ({1})";
+        private readonly string _outboxTableName;
+        
         public bool ContinueOnCapturedContext
         {
             get => throw new NotImplementedException();
@@ -54,7 +59,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
-            _connectionProvider = connectionProvider;
+            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
+            _outboxTableName = configuration.OutboxTableName;
         }
 
         /// <summary>
@@ -72,6 +78,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 using (var command = InitAddDbCommand(connection, parameters))
                 {
+                    if (connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
             }
@@ -82,6 +90,47 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     s_logger.LogWarning(
                         "PostgresSQLOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
                         message.Id);
+                    return;
+                }
+
+                throw;
+            }
+            finally
+            {
+                if (!connectionProvider.IsSharedConnection)
+                    connection.Dispose();
+                else if (!connectionProvider.HasOpenTransaction)
+                    connection.Close();
+            }
+        }
+        
+        /// <summary>
+        /// Awaitable add the specified message.
+        /// </summary>
+        /// <param name="messages">The message.</param>
+        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
+        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
+            var connection = GetOpenConnection(connectionProvider);
+
+            try
+            {
+                using (var command = InitBulkAddDbCommand(connection, messages.ToList()))
+                {
+                    if (connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+            }
+            catch (PostgresException sqlException)
+            {
+                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                {
+                    s_logger.LogWarning(
+                        "PostgresSQLOutbox: A duplicate Message was found in the batch");
                     return;
                 }
 
@@ -262,6 +311,94 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
         }
 
+        public void Delete(params Guid[] messageIds)
+        {
+            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+        }
+        
+        private NpgsqlCommand InitDeleteDispatchedCommand(NpgsqlConnection connection, IEnumerable<Guid> messageIds)
+        {
+            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
+            foreach (var p in inClause.parameters)
+            {
+                p.DbType = DbType.Object;
+            }
+            return CreateCommand(connection, GenerateSqlText(_deleteMessageCommand, inClause.inClause), 0,
+                inClause.parameters);
+        }
+        
+        private (string inClause, NpgsqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
+        {
+            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
+
+            var parameters = new NpgsqlParameter[messageIds.Count];
+            for (int i = 0; i < paramNames.Count(); i++)
+            {
+                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
+            }
+
+            return (string.Join(",", paramNames), parameters);
+        }
+        
+        private NpgsqlParameter CreateSqlParameter(string parameterName, object value)
+        {
+            return new NpgsqlParameter(parameterName, value ?? DBNull.Value);
+        }
+        
+        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
+            => string.Format(sqlFormat, orderedParams.Prepend(_outboxTableName).ToArray());
+        
+        private NpgsqlCommand CreateCommand(NpgsqlConnection connection, string sqlText, int outBoxTimeout,
+            params NpgsqlParameter[] parameters)
+
+        {
+            var command = connection.CreateCommand();
+
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+        
+        private void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction)
+        {
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null && transactionConnectionProvider is IPostgreSqlConnectionProvider provider)
+                connectionProvider = provider;
+
+            var connection = connectionProvider.GetConnection();
+
+            if (connection.State != ConnectionState.Open)
+                connection.Open();
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    command.ExecuteNonQuery();
+                }
+                catch (PostgresException sqlException)
+                {
+                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                    {
+                        loggingAction.Invoke();
+                        return;
+                    }
+
+                    throw;
+                }
+                finally
+                {
+                    if (!connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
+        }
+
         private IPostgreSqlConnectionProvider GetConnectionProvider(IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var connectionProvider = _connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(_configuration);
@@ -356,20 +493,21 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
 
-        private NpgsqlParameter[] InitAddDbParameters(Message message)
+        private NpgsqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
+            var prefix = position.HasValue ? $"p{position}_" : "";
             var bagjson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new NpgsqlParameter[]
             {
-                InitNpgsqlParameter("MessageId", message.Id),
-                InitNpgsqlParameter("MessageType", message.Header.MessageType.ToString()),
-                InitNpgsqlParameter("Topic", message.Header.Topic),
-                new NpgsqlParameter("Timestamp", NpgsqlDbType.TimestampTz) {Value = message.Header.TimeStamp},
-                InitNpgsqlParameter("CorrelationId", message.Header.CorrelationId),
-                InitNpgsqlParameter("ReplyTo", message.Header.ReplyTo),
-                InitNpgsqlParameter("ContentType", message.Header.ContentType),
-                InitNpgsqlParameter("HeaderBag", bagjson),
-                InitNpgsqlParameter("Body", message.Body.Value)
+                InitNpgsqlParameter($"{prefix}MessageId", message.Id),
+                InitNpgsqlParameter($"{prefix}MessageType", message.Header.MessageType.ToString()),
+                InitNpgsqlParameter($"{prefix}Topic", message.Header.Topic),
+                new NpgsqlParameter($"{prefix}Timestamp", NpgsqlDbType.TimestampTz) {Value = message.Header.TimeStamp},
+                InitNpgsqlParameter($"{prefix}CorrelationId", message.Header.CorrelationId),
+                InitNpgsqlParameter($"{prefix}ReplyTo", message.Header.ReplyTo),
+                InitNpgsqlParameter($"{prefix}ContentType", message.Header.ContentType),
+                InitNpgsqlParameter($"{prefix}HeaderBag", bagjson),
+                InitNpgsqlParameter($"{prefix}Body", message.Body.Value)
             };
         }
 
@@ -419,6 +557,27 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             command.CommandText = string.Format(addSqlFormat, _configuration.OutboxTableName);
             command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+        
+        private NpgsqlCommand InitBulkAddDbCommand(NpgsqlConnection connection, List<Message> messages)
+        {
+            var messageParams = new List<string>();
+            var parameters = new List<NpgsqlParameter>();
+            
+            for (int i = 0; i < messages.Count; i++)
+            {
+                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
+                parameters.AddRange(InitAddDbParameters(messages[i], i));
+                
+            }
+            var sql = $"INSERT INTO {_configuration.OutboxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
+            
+            var command = connection.CreateCommand();
+            
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters.ToArray());
 
             return command;
         }
@@ -530,6 +689,5 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
-
     }
 }

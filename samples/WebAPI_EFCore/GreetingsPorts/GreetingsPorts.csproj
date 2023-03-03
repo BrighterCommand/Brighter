@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net5.0</TargetFramework>
+        <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
 
     <ItemGroup>
@@ -10,9 +10,10 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="5.0.15" />
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="5.0.15" />
-      <PackageReference Include="Paramore.Darker" Version="2.0.78" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.3" />
+      <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
+      <PackageReference Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
+      <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     </ItemGroup>
 
 </Project>

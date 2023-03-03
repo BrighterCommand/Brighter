@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
     
     [Trait("Fragile", "CI")]
     [Collection("CommandProcessor")]
-    public class OnceOnlyAttributeAsyncTests
+    public class OnceOnlyAttributeAsyncTests : IDisposable
     {
         private readonly MyCommand _command;
         private readonly IAmAnInboxAsync _inbox;
@@ -51,6 +51,11 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
  
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
         }
     }
 }

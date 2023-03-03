@@ -3,6 +3,7 @@ using System.Data;
 using System.Data.Common;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
+using GreetingsPorts.Policies;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -24,10 +25,12 @@ using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
 using Paramore.Brighter.Sqlite.EntityFrameworkCore;
 using Paramore.Darker.AspNetCore;
+using Paramore.Darker.Policies;
+using Paramore.Darker.QueryLogging;
 using Polly;
 using Polly.Registry;
 
-namespace Greetingsweb
+namespace GreetingsWeb
 {
     public class Startup
     {
@@ -106,20 +109,6 @@ namespace Greetingsweb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            var retryPolicy = Policy.Handle<Exception>()
-                .WaitAndRetry(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
-            var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-            var retryPolicyAsync = Policy.Handle<Exception>()
-                .WaitAndRetryAsync(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
-            var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-            var policyRegistry = new PolicyRegistry()
-            {
-                { CommandProcessor.RETRYPOLICY, retryPolicy },
-                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
-                { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
-                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
-            };
-
             if (_env.IsDevelopment())
             {
                  services.AddBrighter(options =>
@@ -128,7 +117,7 @@ namespace Greetingsweb
                          options.HandlerLifetime = ServiceLifetime.Scoped;
                          options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                          options.MapperLifetime = ServiceLifetime.Singleton;
-                         options.PolicyRegistry = policyRegistry;
+                         options.PolicyRegistry = new GreetingsPolicy();
                      })
                      .UseExternalBus(new RmqProducerRegistryFactory(
                              new RmqMessagingGatewayConnection
@@ -162,7 +151,7 @@ namespace Greetingsweb
                     {
                         options.HandlerLifetime = ServiceLifetime.Scoped;
                         options.MapperLifetime = ServiceLifetime.Singleton;
-                        options.PolicyRegistry = policyRegistry;
+                        options.PolicyRegistry = new GreetingsPolicy();
                     })
                     .UseExternalBus(new RmqProducerRegistryFactory(
                             new RmqMessagingGatewayConnection
@@ -196,7 +185,10 @@ namespace Greetingsweb
                     options.HandlerLifetime = ServiceLifetime.Scoped;
                     options.QueryProcessorLifetime = ServiceLifetime.Scoped;
                 })
-                .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly);
+                .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
+                .AddJsonQueryLogging()
+                .AddPolicies(new GreetingsPolicy());
+            
         }
 
         private void ConfigureEFCore(IServiceCollection services)

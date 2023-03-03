@@ -24,7 +24,7 @@ THE SOFTWARE. */
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     //These enums map to Confluent's ProducerConfig values, we just don't want a dependency on that in our interface
-    
+
     /// <summary>
     /// What is the algorithm for mapping keys to partitions
     /// </summary>
@@ -138,5 +138,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns></returns>
         public string TransactionalId { get; set; }
 
+        /// <summary>
+        /// The Kafka message header builder that builds the message header before sending to Kafka topic.
+        /// Populate this property to override the default implementation of header builder.
+        /// </summary>
+        public IKafkaMessageHeaderBuilder MessageHeaderBuilder { get; set; } = KafkaDefaultMessageHeaderBuilder.Instance;
     }
 }

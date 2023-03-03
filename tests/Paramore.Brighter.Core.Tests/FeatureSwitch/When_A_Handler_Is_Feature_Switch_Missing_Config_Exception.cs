@@ -27,8 +27,8 @@ using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles;
 using Paramore.Brighter.FeatureSwitch;
-using Polly.Registry;
 using Microsoft.Extensions.DependencyInjection;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Xunit;
 using Paramore.Brighter.FeatureSwitch.Handlers;
@@ -38,52 +38,65 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
     [Collection("CommandProcessor")] 
     public class FeatureSwitchByConfigMissingConfigStrategyExceptionTests : IDisposable
     {
-        private readonly MyCommand _myCommand = new MyCommand();
-        private readonly SubscriberRegistry _registry;
-        private readonly ServiceProviderHandlerFactory _handlerFactory;
-        private readonly IAmAFeatureSwitchRegistry _featureSwitchRegistry;
+        private readonly MyCommand _myCommand = new();
+        private readonly MyCommand _myAsyncCommand = new();
 
-        private CommandProcessor _commandProcessor;
+        private readonly CommandProcessor _commandProcessor;
+        private readonly ServiceProvider _provider;
         private Exception _exception;
-        ServiceProvider _provider;
 
         public FeatureSwitchByConfigMissingConfigStrategyExceptionTests()
         {
-            _registry = new SubscriberRegistry();
-            _registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
+            SubscriberRegistry registry = new();
+            registry.Register<MyCommand, MyFeatureSwitchedConfigHandler>();
+            registry.RegisterAsync<MyCommandAsync, MyFeatureSwitchedConfigHandlerAsync>();
 
             var container = new ServiceCollection();
             container.AddSingleton<MyFeatureSwitchedConfigHandler>();
+            container.AddSingleton<MyFeatureSwitchedConfigHandlerAsync>();
             container.AddTransient<FeatureSwitchHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddTransient<FeatureSwitchHandlerAsync<MyCommandAsync>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             _provider = container.BuildServiceProvider();
-            _handlerFactory = new ServiceProviderHandlerFactory(_provider);
+            ServiceProviderHandlerFactory handlerFactory = new(_provider);
             
-            _featureSwitchRegistry = new FakeConfigRegistry();
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = new FakeConfigRegistry();
+            
+            featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.Exception;
+
+            _commandProcessor = CommandProcessorBuilder
+                .With()
+                .ConfigureFeatureSwitches(featureSwitchRegistry)
+                .Handlers(new HandlerConfiguration(registry, handlerFactory))
+                .DefaultPolicy()
+                .NoExternalBus()
+                .RequestContextFactory(new InMemoryRequestContextFactory())
+                .Build();
         }        
 
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_Exception()
         {
-            _featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.Exception;
-
-            _commandProcessor = CommandProcessorBuilder
-                .With()
-                .ConfigureFeatureSwitches(_featureSwitchRegistry)
-                .Handlers(new HandlerConfiguration(_registry, _handlerFactory))
-                .DefaultPolicy()
-                .NoExternalBus()
-                .RequestContextFactory(new InMemoryRequestContextFactory())
-                .Build();
-
             _exception = Catch.Exception(() => _commandProcessor.Send(_myCommand));
 
             _exception.Should().BeOfType<ConfigurationException>();
             _exception.Should().NotBeNull();
             _exception.Message.Should().Contain($"Handler of type {nameof(MyFeatureSwitchedConfigHandler)} does not have a Feature Switch configuration!");
 
-            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive(_myCommand).Should().BeFalse(); 
+            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeFalse(); 
+        }        
+
+        [Fact]
+        public void When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_Exception()
+        {
+            var sendAsync = async () => await _commandProcessor.SendAsync(_myAsyncCommand);
+
+            sendAsync.Should()
+                .ThrowAsync<ConfigurationException>()
+                .WithMessage($"Handler of type {nameof(MyFeatureSwitchedConfigHandlerAsync)} does not have a Feature Switch configuration!");
+
+            _provider.GetService<MyFeatureSwitchedConfigHandlerAsync>().DidReceive().Should().BeFalse(); 
         }
 
         public void Dispose()

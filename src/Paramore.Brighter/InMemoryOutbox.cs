@@ -80,7 +80,7 @@ namespace Paramore.Brighter
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well
     /// </summary>
-    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>
+    public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -111,6 +111,23 @@ namespace Paramore.Brighter
                 }
             }
         }
+        
+        /// <summary>
+        /// Adds the specified message
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="outBoxTimeout"></param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            ClearExpiredMessages();
+            EnforceCapacityLimit();
+
+            foreach (Message message in messages)
+            {
+                Add(message, outBoxTimeout, transactionConnectionProvider);
+            }
+        }
 
         /// <summary>
         /// Adds the specified message
@@ -132,6 +149,33 @@ namespace Paramore.Brighter
 
             Add(message, outBoxTimeout);
             
+            tcs.SetResult(new object());
+            return tcs.Task;
+        }
+        
+        /// <summary>
+        /// Adds the specified message
+        /// </summary>
+        /// <param name="messages"></param>
+        /// <param name="outBoxTimeout"></param>
+        /// <param name="cancellationToken"></param>
+        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        /// <returns></returns>
+        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        {
+            var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                tcs.SetCanceled();
+                return tcs.Task;
+            }
+
+            foreach (Message message in messages)
+            {
+                Add(message, outBoxTimeout);
+            }
+
             tcs.SetResult(new object());
             return tcs.Task;
         }
@@ -252,6 +296,13 @@ namespace Paramore.Brighter
            throw new NotImplementedException();
        }
 
+       public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
+           int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+       {
+           return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
+               args));
+       }
+
        /// <summary>
         /// Mark the message as dispatched
         /// </summary>
@@ -278,9 +329,18 @@ namespace Paramore.Brighter
             ClearExpiredMessages();
             
             DateTime sentBefore = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
-            return _requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
+            var outstandingMessages = _requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
+            return outstandingMessages;
+        }
+
+        public void Delete(params Guid[] messageIds)
+        {
+            foreach (Guid messageId in messageIds)
+            {
+                _requests.TryRemove(messageId.ToString(), out _);
+            }
         }
 
         public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
@@ -299,6 +359,12 @@ namespace Paramore.Brighter
             tcs.SetResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
 
             return tcs.Task;
+        }
+
+        public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
+        {
+            Delete(messageIds);
+            return Task.CompletedTask;
         }
     }
 }

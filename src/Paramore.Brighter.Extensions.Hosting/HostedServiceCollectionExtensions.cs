@@ -1,5 +1,6 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Paramore.Brighter.Extensions.DependencyInjection;
 
 namespace Paramore.Brighter.Extensions.Hosting
@@ -18,8 +19,22 @@ namespace Paramore.Brighter.Extensions.Hosting
             var options = new TimedOutboxSweeperOptions();
             timedOutboxSweeperOptionsAction?.Invoke(options);
             
-            brighterBuilder.Services.AddSingleton<TimedOutboxSweeperOptions>(options);
+            brighterBuilder.Services.TryAddSingleton<TimedOutboxSweeperOptions>(options);
             brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
+            return brighterBuilder;
+        }
+
+        public static IBrighterBuilder UseOutboxArchiver(this IBrighterBuilder brighterBuilder,
+            IAmAnArchiveProvider archiveProvider,
+            Action<TimedOutboxArchiverOptions> timedOutboxArchiverOptionsAction = null)
+        {
+            var options = new TimedOutboxArchiverOptions();
+            timedOutboxArchiverOptionsAction?.Invoke(options);
+            brighterBuilder.Services.TryAddSingleton<TimedOutboxArchiverOptions>(options);
+            brighterBuilder.Services.AddSingleton<IAmAnArchiveProvider>(archiveProvider);
+            
+            brighterBuilder.Services.AddHostedService<TimedOutboxArchiver>();
+
             return brighterBuilder;
         }
     }

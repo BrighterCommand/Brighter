@@ -46,12 +46,20 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         Call
     }
 
-    internal class SpyCommandProcessor : IAmACommandProcessor
+    public class ClearParams
+    {
+        public int AmountToClear;
+        public int MinimumAge;
+        public Dictionary<string, object> Args;
+    }
+
+    internal class SpyCommandProcessor : Paramore.Brighter.IAmACommandProcessor
     {
         private readonly Queue<IRequest> _requests = new Queue<IRequest>();
         private readonly Dictionary<Guid, IRequest> _postBox = new Dictionary<Guid, IRequest>();
 
         public IList<CommandType> Commands { get; } = new List<CommandType>();
+        public List<ClearParams> ClearParamsList { get; } = new List<ClearParams>();
 
         public virtual void Send<T>(T command) where T : class, IRequest
         {
@@ -113,6 +121,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             return request.Id;
         }
 
+        public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
+        {
+            var ids = new List<Guid>();
+            foreach (T r in request)
+            {
+                ids.Add(DepositPost(r));
+            }
+
+            return ids.ToArray();
+        }
+
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
@@ -121,6 +140,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             tcs.SetResult(request.Id);
             return await tcs.Task;
+        }
+
+        public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var ids = new List<Guid>();
+            foreach (T r in requests)
+            {
+                ids.Add(await DepositPostAsync(r, cancellationToken: cancellationToken));
+            }
+
+            return ids.ToArray();
         }
 
         public void ClearOutbox(params Guid[] posts)
@@ -134,9 +165,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             }
         }
 
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
         {
-            throw new NotImplementedException();
+            Commands.Add(CommandType.Clear);
+            ClearParamsList.Add(new ClearParams { AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args });
         }
 
         public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
@@ -149,9 +181,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             await completionSource.Task;
         }
 
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false)
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
         {
-            throw new NotImplementedException();
+            Commands.Add(CommandType.Clear);
+            ClearParamsList.Add(new ClearParams { AmountToClear = amountToClear, MinimumAge = minimumAge, Args = args });
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,

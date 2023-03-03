@@ -74,6 +74,7 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Cancellation Token, if any</param>
         /// <returns></returns>
+        [Obsolete("Removed in v10, Please use OutstandingMessagesAsync instead.")]
         Task<IList<Message>> GetAsync(
             int pageSize = 100, 
             int pageNumber = 1, 
@@ -104,6 +105,24 @@ namespace Paramore.Brighter
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken));
+
+        /// <summary>
+        /// Retrieves messages that have been sent within the window
+        /// </summary>
+        /// <param name="millisecondsDispatchedSince"></param>
+        /// <param name="pageSize">The number of messages to fetch.</param>
+        /// <param name="pageNumber">The page number.</param>
+        /// <param name="outboxTimeout">Timeout of sql call.</param>
+        /// <param name="args">Additional parameters required for search, if any</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>List of messages that need to be dispatched.</returns>
+        Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
+            int pageNumber = 1,
+            int outboxTimeout = -1,
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default(CancellationToken));
         
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
@@ -120,5 +139,12 @@ namespace Paramore.Brighter
             int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Delete the specified messages
+        /// </summary>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <param name="messageIds">The id of the message to delete</param>
+        Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds);
     }
 }

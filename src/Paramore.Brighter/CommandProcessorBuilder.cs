@@ -73,6 +73,7 @@ namespace Paramore.Brighter
         private IAmAnOutbox<Message> _outbox;
         private IAmAProducerRegistry _producers;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
+        private IAmAMessageTransformerFactory _transformerFactory;
         private IAmARequestContextFactory _requestContextFactory;
         private IAmASubscriberRegistry _registry;
         private IAmAHandlerFactory _handlerFactory;
@@ -84,7 +85,8 @@ namespace Paramore.Brighter
         private bool _useRequestReplyQueues = false;
         private IEnumerable<Subscription> _replySubscriptions;
         private IAmABoxTransactionConnectionProvider _overridingBoxTransactionConnectionProvider = null;
-        
+        private int _outboxBulkChunkSize;
+
         private CommandProcessorBuilder()
         {
             DefaultPolicy();
@@ -170,6 +172,8 @@ namespace Paramore.Brighter
             _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
+            _outboxBulkChunkSize = configuration.OutboxBulkChunkSize;
+            _transformerFactory = configuration.TransformerFactory;
             return this;
         }
 
@@ -198,6 +202,7 @@ namespace Paramore.Brighter
             _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
             _outbox = outbox;
+            _transformerFactory = configuration.TransformerFactory;
              
             return this;
         }
@@ -242,7 +247,9 @@ namespace Paramore.Brighter
                     producerRegistry: _producers,
                     outboxTimeout: _outboxWriteTimeout,
                     featureSwitchRegistry: _featureSwitchRegistry,
-                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
+                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider,
+                    outboxBulkChunkSize: _outboxBulkChunkSize,
+                    messageTransformerFactory: _transformerFactory
                 );
             }
             else if (_useRequestReplyQueues)
@@ -253,12 +260,10 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
-                    replySubscriptions: _replySubscriptions,
                     outBox: _outbox,
                     producerRegistry: _producers,
-                    responseChannelFactory: _responseChannelFactory,
-                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider
-                    );
+                    replySubscriptions: _replySubscriptions,
+                    responseChannelFactory: _responseChannelFactory, boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider);
             }
             else
             {

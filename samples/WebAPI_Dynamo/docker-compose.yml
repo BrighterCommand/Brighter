@@ -1,0 +1,24 @@
+version: '3.1'
+services:
+  dynamodb-local:
+    command: "-jar DynamoDBLocal.jar -sharedDb -dbPath ./data"
+    image: "amazon/dynamodb-local:latest"
+    container_name: dynamodb-local
+    ports:
+      - "8000:8000"
+    volumes:
+      - "./docker/dynamodb:/home/dynamodblocal/data"
+    working_dir: /home/dynamodblocal
+    
+  rabbitmq:
+    image: brightercommand/rabbitmq:3.8-management-delay
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-home:/var/lib/rabbitmq
+
+volumes:
+    rabbitmq-home:
+      driver: local
+ 

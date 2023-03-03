@@ -1,4 +1,30 @@
-﻿using System;
+﻿#region Licence
+/* The MIT License (MIT)
+Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the “Software”), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE. */
+
+#endregion
+
+using System;
+using System.Diagnostics;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -8,35 +34,45 @@ using Polly.CircuitBreaker;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    // The message pump is a classic event loop and is intended to be run on a single-thread
-    // The event loop is terminated when reading a MT_QUIT message on the channel
-    // The event loop blocks on the Channel Listen call, though it will timeout
-    // The event loop calls user code synchronously. You can post again for further decoupled invocation, but of course the likelihood is we are supporting decoupled invocation elsewhere
-    // This is why you should spin up a thread for your message pump: to avoid blocking your main control path while you listen for a message and process it
-    // It is also why throughput on a queue needs multiple performers, each with their own message pump
-    // Retry and circuit breaker should be provided by exception policy using an attribute on the handler
-    // Timeout on the handler should be provided by timeout policy using an attribute on the handler
+    /// <summary>
+    /// The message pump is the heart of a consumer. It runs a loop that performs the following:
+    ///  - Gets a message from a queue/stream
+    ///  - Translates the message to the local type system
+    ///  - Dispatches the message to waiting handlers
+    /// The message pump is a classic event loop and is intended to be run on a single-thread
+    /// The event loop is terminated when reading a MT_QUIT message on the channel
+    /// The event loop blocks on the Channel Listen call, though it will timeout
+    /// The event loop calls user code synchronously. You can post again for further decoupled invocation, but of course the likelihood is we are supporting decoupled invocation elsewhere
+    /// This is why you should spin up a thread for your message pump: to avoid blocking your main control path while you listen for a message and process it
+    /// It is also why throughput on a queue needs multiple performers, each with their own message pump
+    /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
+    /// Timeout on the handler should be provided by timeout policy using an attribute on the handler 
+    /// </summary>
     public abstract class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
         internal static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MessagePump<TRequest>>();
-        
+
+        private static readonly ActivitySource _activitySource = new ActivitySource("Paramore.Brighter.ServiceActivator",
+            Assembly.GetAssembly(typeof(CommandProcessor)).GetName().Version.ToString());
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
-        private readonly IAmAMessageMapper<TRequest> _messageMapper;
         private int _unacceptableMessageCount = 0;
+        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
         /// <summary>
-        /// Message Pump abstract class
+        /// Constructs a message pump 
         /// </summary>
-        /// <param name="commandProcessorProvider"></param>
-        /// <param name="messageMapper"></param>
+        /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
+        /// <param name="messageMapperRegistry">The registry of mappers</param>
+        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         public MessagePump(
-            IAmACommandProcessorProvider commandProcessorProvider, 
-            IAmAMessageMapper<TRequest> messageMapper
-        )
+            IAmACommandProcessorProvider commandProcessorProvider,
+            IAmAMessageMapperRegistry messageMapperRegistry, 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             CommandProcessorProvider = commandProcessorProvider;
-            _messageMapper = messageMapper;
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
+            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
 
         public int TimeoutInMilliseconds { get; set; }
@@ -48,6 +84,9 @@ namespace Paramore.Brighter.ServiceActivator
         public int UnacceptableMessageLimit { get; set; }
 
         public IAmAChannel Channel { get; set; }
+        
+        public int EmptyChannelDelay { get; set; }
+        public int ChannelFailureDelay { get; set; }
 
         public void Run()
         {
@@ -69,13 +108,13 @@ namespace Paramore.Brighter.ServiceActivator
                 catch (ChannelFailureException ex) when (ex.InnerException is BrokenCircuitException)
                 {
                     s_logger.LogWarning("MessagePump: BrokenCircuitException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(1000).Wait();
+                    Task.Delay(ChannelFailureDelay).Wait();
                     continue;
                 }
                 catch (ChannelFailureException)
                 {
                     s_logger.LogWarning("MessagePump: ChannelFailureException messages from {ChannelName} on thread # {ManagementThreadId}", Channel.Name, Thread.CurrentThread.ManagedThreadId);
-                    Task.Delay(1000).Wait();
+                    Task.Delay(ChannelFailureDelay).Wait();
                     continue;
                 }
                 catch (Exception exception)
@@ -92,7 +131,7 @@ namespace Paramore.Brighter.ServiceActivator
                 // empty queue
                 if (message.Header.MessageType == MessageType.MT_NONE)
                 {
-                    Task.Delay(500).Wait();
+                    Task.Delay(EmptyChannelDelay).Wait();
                     continue;
                 }
 
@@ -116,11 +155,26 @@ namespace Paramore.Brighter.ServiceActivator
                 }
 
                 // Serviceable message
+                Activity span = null;
                 try
                 {
+                    message.Header.UpdateTelemetryFromHeaders();//ToDo: Discuss this as a temp measure
                     var request = TranslateMessage(message);
+                    if (message.Header.Telemetry != null)
+                    {
+                        span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer,
+                            message.Header.Telemetry.EventId);
+                    }
+                    else
+                    {
+                        span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer);
+                    }
+                    request.Span = span;
+                    
                     CommandProcessorProvider.CreateScope();
                     DispatchRequest(message.Header, request);
+
+                    span?.SetStatus(ActivityStatusCode.Ok);
                 }
                 catch (ConfigurationException configurationException)
                 {
@@ -129,17 +183,21 @@ namespace Paramore.Brighter.ServiceActivator
                         Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     RejectMessage(message);
+                    span?.SetStatus(ActivityStatusCode.Error,
+                        $"MessagePump: Stopping receiving of messages from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                     Channel.Dispose();
                     break;
                 }
                 catch (DeferMessageAction)
                 {
+                    span?.SetStatus(ActivityStatusCode.Error, "Deferring message for later action");
                     if (RequeueMessage(message)) continue;
                 }
                 catch (AggregateException aggregateException)
                 {
                     var (stop, requeue) = HandleProcessingException(aggregateException);
 
+                    span?.SetStatus(ActivityStatusCode.Error, $"Error while dispatching, re-queueing {requeue}, rejecting {stop}");
                     if (requeue)
                     {
                         if (RequeueMessage(message)) continue;
@@ -159,15 +217,22 @@ namespace Paramore.Brighter.ServiceActivator
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageLimit();
+                    
+                    span?.SetStatus(ActivityStatusCode.Error,
+                        $"MessagePump: Failed to map message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 catch (Exception e)
                 {
                     s_logger.LogError(e,
                         "MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}",
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
+
+                    span?.SetStatus(ActivityStatusCode.Error,
+                        $"MessagePump: Failed to dispatch message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
                 finally
                 {
+                    span?.Dispose();
                     CommandProcessorProvider.ReleaseScope();
                 }
 
@@ -283,22 +348,21 @@ namespace Paramore.Brighter.ServiceActivator
 
         private TRequest TranslateMessage(Message message)
         {
-            if (_messageMapper == null)
-            {
-                throw new ConfigurationException($"No message mapper found for type {typeof(TRequest).FullName} for message {message.Id}.");
-            }
-
             s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
 
             TRequest request;
 
             try
             {
-                request = _messageMapper.MapToRequest(message);
+                request = _unwrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
+            }
+            catch (ConfigurationException)
+            {
+                throw;
             }
             catch (Exception exception)
             {
-                throw new MessageMappingException($"Failed to map message {message.Id} using message mapper {_messageMapper.GetType().FullName} for type {typeof(TRequest).FullName} ", exception);
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
             }
 
             return request;

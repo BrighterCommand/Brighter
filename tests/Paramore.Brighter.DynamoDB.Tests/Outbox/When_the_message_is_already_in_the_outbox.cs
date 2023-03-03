@@ -36,20 +36,20 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private readonly Message _messageEarliest;
 
         private Exception _exception;
-        private DynamoDbOutboxSync _dynamoDbOutboxSync;
+        private readonly DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxMessageAlreadyExistsTests()
         {            
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _dynamoDbOutboxSync = new DynamoDbOutboxSync(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, TableName));
+            _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
             
-            _dynamoDbOutboxSync.AddAsync(_messageEarliest).Wait();
+            _dynamoDbOutbox.AddAsync(_messageEarliest).Wait();
          }
 
         [Fact]
         public void When_the_message_is_already_in_the_outbox()
         {
-            _exception = Catch.Exception(() => _dynamoDbOutboxSync.Add(_messageEarliest));
+            _exception = Catch.Exception(() => _dynamoDbOutbox.Add(_messageEarliest));
 
             //_should_ignore_the_duplicate_key_and_still_succeed
             _exception.Should().BeNull();

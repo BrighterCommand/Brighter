@@ -78,6 +78,17 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return request.Id;
         }
 
+        public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
+        {
+            var ids = new List<Guid>();
+            foreach (T r in request)
+            {
+                ids.Add(DepositPost(r));
+            }
+
+            return ids.ToArray();
+        }
+
         public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -93,6 +104,18 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         }
 
+        public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        {
+            var ids = new List<Guid>();
+            foreach (T r in requests)
+            {
+                ids.Add(await DepositPostAsync(r, cancellationToken: cancellationToken));
+            }
+
+            return ids.ToArray();
+        }
+
         public void ClearOutbox(params Guid[] posts)
         {
             foreach (var post in posts)
@@ -102,7 +125,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             }
         }
 
-        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000)
+        public void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null)
         {
             var depositedMessages = Deposited.Where(m =>
                 m.EnqueuedTime < DateTime.Now.AddMilliseconds(-1 * minimumAge) &&
@@ -128,7 +151,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
         }
 
-        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false)
+        public void ClearAsyncOutbox(int amountToClear = 100, int minimumAge = 5000, bool useBulk = false, Dictionary<string, object> args = null)
         {
             ClearOutbox(amountToClear, minimumAge);
         }

@@ -23,6 +23,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
+using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
 {
@@ -37,6 +39,7 @@ namespace Paramore.Brighter
         /// Gets or sets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
+        [NJsonSchema.Annotations.NotNull]
         public Guid Id { get; set; }
 
         /// <summary>
@@ -47,5 +50,13 @@ namespace Paramore.Brighter
         {
             Id = id;
         }
+        
+        /// <summary>
+        /// Gets or sets the span that this operation live within
+        /// </summary>
+        [JsonIgnore]
+        [Newtonsoft.Json.JsonIgnore]
+        [NJsonSchema.Annotations.JsonSchemaIgnore]
+        public Activity Span { get; set; }
     }
 }

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net6.0</TargetFramework>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.DynamoDb\Paramore.Brighter.DynamoDb.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Inbox.DynamoDB\Paramore.Brighter.Inbox.DynamoDB.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.DynamoDB\Paramore.Brighter.Outbox.DynamoDB.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+      <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Paramore.Darker" Version="3.0.0" />
+      <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
+      <PackageReference Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
+      <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+    </ItemGroup>
+
+</Project>

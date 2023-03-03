@@ -1,6 +1,9 @@
 ﻿using System;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 {
@@ -28,16 +31,19 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var options = new ServiceActivatorOptions();
             configure?.Invoke(options);
-            services.AddSingleton(options);
-            services.AddSingleton<IBrighterOptions>(options);
+            services.TryAddSingleton(options);
+            services.TryAddSingleton<IBrighterOptions>(options);
 
-            services.AddSingleton<IDispatcher>(BuildDispatcher);
+            services.TryAddSingleton<IDispatcher>(BuildDispatcher);
 
             return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
         }
 
         private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
+            var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
+            ApplicationLogging.LoggerFactory = loggerFactory;
+
             var options = serviceProvider.GetService<ServiceActivatorOptions>();
 
             Func<IAmACommandProcessorProvider> providerFactory;
@@ -55,10 +61,12 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             var dispatcherBuilder = DispatchBuilder.With().CommandProcessorFactory(providerFactory);
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
+            var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
             
-            return dispatcherBuilder.MessageMappers(messageMapperRegistry)
+            return dispatcherBuilder
+                .MessageMappers(messageMapperRegistry, messageTransformFactory)
                 .DefaultChannelFactory(options.ChannelFactory)
-                .Connections(options.Subscriptions).Build();
+                .Subscriptions(options.Subscriptions).Build();
         }
     }
    

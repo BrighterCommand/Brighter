@@ -8,6 +8,8 @@ using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
 using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
@@ -22,7 +24,8 @@ namespace GreetingsPorts.Handlers
             _postBox = postBox;
  
         }
-
+        [RequestLoggingAsync(0, HandlerTiming.Before)]
+        [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
@@ -52,6 +55,7 @@ namespace GreetingsPorts.Handlers
             {
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
+                return await base.HandleAsync(addGreeting, cancellationToken);
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

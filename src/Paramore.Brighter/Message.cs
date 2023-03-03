@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 
 namespace Paramore.Brighter
@@ -41,12 +42,12 @@ namespace Paramore.Brighter
         /// Gets the header.
         /// </summary>
         /// <value>The header.</value>
-        public MessageHeader Header { get; private set; }
+        public MessageHeader Header { get; set; }
         /// <summary>
         /// Gets the body.
         /// </summary>
         /// <value>The body.</value>
-        public MessageBody Body { get; private set; }
+        public MessageBody Body { get; set; }
 
         /// <summary>
         /// Gets the identifier.
@@ -76,6 +77,9 @@ namespace Paramore.Brighter
         {
             Header = header;
             Body = body;
+            Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
+            
+            Header.UpdateTelemetryFromHeaders();
         }
 
         public ulong DeliveryTag

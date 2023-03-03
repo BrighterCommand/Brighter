@@ -1,4 +1,5 @@
 ﻿#region Licence
+
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -24,6 +25,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Paramore.Brighter.Serialization;
 
@@ -39,24 +41,29 @@ namespace Paramore.Brighter
         /// The message could not be read
         /// </summary>
         MT_UNACCEPTABLE = -1,
+
         /// <summary>
         /// The message type has not been configured
         /// </summary>
         MT_NONE = 0,
+
         /// <summary>
         /// The message was sent as a command, and the producer intended it to be handled by a consumer
         /// </summary>
         MT_COMMAND = 1,
+
         /// <summary>
         /// The message was raised as an event and the producer does not care if anyone listens to it
         /// It only contains a simple notification, not the data of what changed
         /// </summary>
         MT_EVENT = 2,
+
         /// <summary>
         /// The message was raised as an event and the producer does not care if anyone listens to it
         /// It contains a notification of what changed
         /// </summary>
         MT_DOCUMENT = 3,
+
         /// <summary>
         /// A quit message, used to end a dispatcher's message pump
         /// </summary>
@@ -69,17 +76,23 @@ namespace Paramore.Brighter
     /// </summary>
     public class MessageHeader : IEquatable<MessageHeader>
     {
+        /// <summary>
+        /// The date the message was created
+        /// </summary>
         public DateTime TimeStamp { get; set; }
+
         /// <summary>
         /// Gets the identifier.
         /// </summary>
         /// <value>The identifier.</value>
         public Guid Id { get; set; }
+
         /// <summary>
         /// Gets the topic.
         /// </summary>
         /// <value>The topic.</value>
         public string Topic { get; set; }
+
         /// <summary>
         /// Gets the type of the message. Used for routing the message to a handler
         /// </summary>
@@ -92,11 +105,13 @@ namespace Paramore.Brighter
         /// name from UpperCase to camelCase
         /// </summary>
         /// <value>The bag.</value>
-        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>();
+        public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+
         /// <summary>
         /// Gets the number of times this message has been seen 
         /// </summary>
         public int HandledCount { get; set; }
+
         /// <summary>
         /// Gets the number of milliseconds the message was instructed to be delayed for
         /// </summary>
@@ -129,9 +144,14 @@ namespace Paramore.Brighter
         /// </summary>
         public string PartitionKey { get; set; }
 
+        /// <summary>
+        /// Gets the telemetry information for the message
+        /// </summary>
+        public MessageTelemetry Telemetry { get; private set; }
+
         /// Intended for serialization, prefer a parameterized constructor in application code as a better 'pit of success'
         /// </summary>
-        public MessageHeader() {}
+        public MessageHeader() { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MessageHeader"/> class.
@@ -141,15 +161,15 @@ namespace Paramore.Brighter
         /// <param name="messageType">Type of the message.</param>
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+        /// <param name="contentType">The type of the payload of the message</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
         public MessageHeader(
-            Guid messageId, 
-            string topic, 
-            MessageType messageType, 
-            Guid? correlationId = null, 
-            string replyTo = "", 
-            string contentType = "text/plain",
+            Guid messageId,
+            string topic,
+            MessageType messageType,
+            Guid? correlationId = null,
+            string replyTo = "",
+            string contentType = "",
             string partitionKey = "")
         {
             Id = messageId;
@@ -158,12 +178,11 @@ namespace Paramore.Brighter
             TimeStamp = RoundToSeconds(DateTime.UtcNow);
             HandledCount = 0;
             DelayedMilliseconds = 0;
-            CorrelationId = correlationId ?? Guid.Empty ;
+            CorrelationId = correlationId ?? Guid.Empty;
             ReplyTo = replyTo;
             ContentType = contentType;
             PartitionKey = partitionKey;
             ReplyTo = replyTo ?? string.Empty;
-            ContentType = contentType ?? "text/plain";
         }
 
         /// <summary>
@@ -172,43 +191,47 @@ namespace Paramore.Brighter
         /// <param name="messageId">The message identifier.</param>
         /// <param name="topic">The topic.</param>
         /// <param name="messageType">Type of the message.</param>
+        /// <param name="timeStamp">The time of message creation, will be rounded to seconds</param>
         /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
         /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
         /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
         /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
         public MessageHeader(
-            Guid messageId, 
-            string topic, 
-            MessageType messageType, 
-            DateTime timeStamp, 
-            Guid? correlationId = null, 
+            Guid messageId,
+            string topic,
+            MessageType messageType,
+            DateTime timeStamp,
+            Guid? correlationId = null,
             string replyTo = null,
-            string contentType = "text/plain", 
+            string contentType = "text/plain",
             string partitionKey = "")
             : this(messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
         {
             TimeStamp = RoundToSeconds(timeStamp);
         }
 
-          /// <summary>
-          /// Initializes a new instance of the <see cref="MessageHeader"/> class.
-          /// </summary>
-          /// <param name="messageId">The message identifier.</param>
-          /// <param name="topic">The topic.</param>
-          /// <param name="messageType">Type of the message.</param>
-          /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
-          /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
-          /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
-          /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
-          public MessageHeader(
-            Guid messageId, 
-            string topic, 
-            MessageType messageType, 
-            DateTime timeStamp, 
-            int handledCount, 
-            int delayedMilliseconds, 
-            Guid? correlationId = null, 
-            string replyTo = null, 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MessageHeader"/> class.
+        /// </summary>
+        /// <param name="messageId">The message identifier.</param>
+        /// <param name="topic">The topic.</param>
+        /// <param name="messageType">Type of the message.</param>
+        /// <param name="timeStamp">The time of message creation</param>
+        /// <param name="handledCount">The number of attempts to handle this message</param>
+        /// <param name="delayedMilliseconds">The delay in milliseconds to this message (usually to retry)</param>
+        /// <param name="correlationId">Used in request-reply to allow the sender to match response to their request</param>
+        /// <param name="replyTo">Used for a request-reply message to indicate the private channel to reply to</param>
+        /// <param name="contentType">The type of the payload of the message, defaults to tex/plain</param>
+        /// <param name="partitionKey">How should we group messages that must be processed together i.e. consistent hashing</param>
+        public MessageHeader(
+            Guid messageId,
+            string topic,
+            MessageType messageType,
+            DateTime timeStamp,
+            int handledCount,
+            int delayedMilliseconds,
+            Guid? correlationId = null,
+            string replyTo = null,
             string contentType = "text/plain",
             string partitionKey = "")
             : this(messageId, topic, messageType, timeStamp, correlationId, replyTo, contentType, partitionKey)
@@ -216,7 +239,7 @@ namespace Paramore.Brighter
             HandledCount = handledCount;
             DelayedMilliseconds = delayedMilliseconds;
         }
-        
+
         /// <summary>
         /// Create a copy of the header that allows manipulation of bag contents.
         /// </summary>
@@ -322,6 +345,38 @@ namespace Paramore.Brighter
         public void UpdateHandledCount()
         {
             HandledCount++;
+        }
+
+        /// <summary>
+        /// Populate the Telemetry from the HeaderBag
+        /// </summary>
+        [Obsolete(
+            "Looking to remove this in v10 in favour of storing the Cloud Events in their own property in the outbox")]
+        public void UpdateTelemetryFromHeaders()
+        {
+            object eventId;
+            object source;
+            object eventType;
+            object subject;
+
+            if (Bag.TryGetValue(MessageTelemetry.EventIdHeaderName, out eventId) &&
+                Bag.TryGetValue(MessageTelemetry.SourceHeaderName, out source) &&
+                Bag.TryGetValue(MessageTelemetry.EventTypeHeaderName, out eventType))
+            {
+                Bag.TryGetValue(MessageTelemetry.SubjectHeaderName, out subject);
+
+                Telemetry = new MessageTelemetry(eventId.ToString(), source.ToString(), eventType.ToString(),
+                    subject?.ToString());
+            }
+        }
+
+        public void AddTelemetryInformation(Activity activity, string eventType)
+        {
+            Bag[MessageTelemetry.EventIdHeaderName] = activity.Id;
+            Bag[MessageTelemetry.SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
+            Bag[MessageTelemetry.EventTypeHeaderName] = eventType;
+
+            UpdateTelemetryFromHeaders();
         }
     }
 }

@@ -28,6 +28,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Polly;
 using Polly.Registry;
 using Xunit;
@@ -81,7 +82,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _exception = await Catch.ExceptionAsync(async () => await _commandProcessor.PostAsync(_myCommand));
 
             //_should_throw_an_exception
-            _exception.Should().BeOfType<ArgumentOutOfRangeException>();
+            _exception.Should().BeOfType<ConfigurationException>();
         }
 
         public void Dispose()

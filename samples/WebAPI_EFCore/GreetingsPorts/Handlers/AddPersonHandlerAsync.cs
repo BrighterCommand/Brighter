@@ -4,20 +4,22 @@ using GreetingsEntities;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
+using Paramore.Brighter.Logging.Attributes;
+using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
         private readonly GreetingsEntityGateway _uow;
-        private readonly IAmACommandProcessor _postBox;
 
-        public AddPersonHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
+        public AddPersonHandlerAsync(GreetingsEntityGateway uow)
         {
             _uow = uow;
-            _postBox = postBox;
         }
 
+        [RequestLoggingAsync(0, HandlerTiming.Before)]
+        [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
         {
             _uow.Add(new Person(addPerson.Name));

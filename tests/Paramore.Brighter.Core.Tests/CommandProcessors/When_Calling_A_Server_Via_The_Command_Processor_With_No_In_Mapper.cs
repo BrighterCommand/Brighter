@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;

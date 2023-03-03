@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,16 +25,22 @@ namespace Paramore.Brighter
 
         internal int OutboxTimeout { get; set; } = 300;
 
+        internal int OutboxBulkChunkSize { get; set; } = 100;
+
         internal IAmAProducerRegistry ProducerRegistry { get; set; }
-        
+
         private static readonly SemaphoreSlim _clearSemaphoreToken = new SemaphoreSlim(1, 1);
         private static readonly SemaphoreSlim _backgroundClearSemaphoreToken = new SemaphoreSlim(1, 1);
+        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
+        private static readonly SemaphoreSlim _checkOutstandingSemaphoreToken = new SemaphoreSlim(1, 1);
+        
+        private const string ADDMESSAGETOOUTBOX = "Add message to outbox";
+        private const string GETMESSAGESFROMOUTBOX = "Get outstanding messages from the outbox";
+        private const string DISPATCHMESSAGE = "Dispatching message";
+        private const string BULKDISPATCHMESSAGE = "Bulk dispatching messages";
 
         private DateTime _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         
-        //Used to checking the limit on outstanding messages for an Outbox. We throw at that point. Writes to the static bool should be made thread-safe by locking the object
-        private readonly object _checkOutStandingMessagesObject = new object();
-
         //Uses -1 to indicate no outbox and will thus force a throw on a failed publish
         private int _outStandingCount;
         private bool _disposed;
@@ -68,8 +75,35 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
-        }            
-            
+            Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
+                tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
+        }
+
+        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
+        {
+            CheckOutboxOutstandingLimit();
+
+            if (AsyncOutbox is IAmABulkOutboxAsync<Message> box)
+            {
+                foreach (var chunk in ChunkMessages(messages))
+                {
+                    var written = await RetryAsync(
+                        async ct =>
+                        {
+                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingTransactionConnectionProvider)
+                                .ConfigureAwait(continueOnCapturedContext);
+                        },
+                        continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
+
+                    if (!written)
+                        throw new ChannelFailureException($"Could not write {chunk.Count()} requests to the outbox");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"{AsyncOutbox.GetType()} does not implement IAmABulkOutboxAsync");
+            }
+        } 
             
         internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
         {
@@ -79,6 +113,38 @@ namespace Paramore.Brighter
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
+            Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
+                tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
+        }
+        
+        internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) 
+        {
+            CheckOutboxOutstandingLimit();
+
+            if (OutBox is IAmABulkOutboxSync<Message> box)
+            {
+                foreach (var chunk in ChunkMessages(messages))
+                {
+                    var written =
+                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingTransactionConnectionProvider); });
+
+                    if (!written)
+                        throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"{OutBox.GetType()} does not implement IAmABulkOutboxSync");
+            }
+        }
+
+        private IEnumerable<List<Message>> ChunkMessages(IEnumerable<Message> messages)
+        {
+            return Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)OutboxBulkChunkSize)))
+                .Select(i => new List<Message>(messages
+                    .Skip(i * OutboxBulkChunkSize)
+                    .Take(OutboxBulkChunkSize)
+                    .ToArray()));
         }
 
         private void CheckOutboxOutstandingLimit()
@@ -114,7 +180,6 @@ namespace Paramore.Brighter
             s_logger.LogDebug("Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait", DateTime.UtcNow, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
             Task.Run(() => OutstandingMessagesCheck());
-            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
         }
 
         internal void ClearOutbox(params Guid[] posts)
@@ -143,7 +208,9 @@ namespace Paramore.Brighter
             CheckOutstandingMessages();
         }
 
-        internal async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
+        internal async Task ClearOutboxAsync(
+            IEnumerable<Guid> posts, 
+            bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken))
         {
 
@@ -177,14 +244,21 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">The minimum age of messages to be cleared in milliseconds.</param>
         /// <param name="useAsync">Use the Async outbox and Producer</param>
         /// <param name="useBulk">Use bulk sending capability of the message producer, this must be paired with useAsync.</param>
-        internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk)
+        /// <param name="args">Optional bag of arguments required by an outbox implementation to sweep</param>
+         internal void ClearOutbox(int amountToClear, int minimumAge, bool useAsync, bool useBulk, Dictionary<string, object> args = null)
         {
+            var span = Activity.Current;
+            span?.AddTag("amountToClear", amountToClear);
+            span?.AddTag("minimumAge", minimumAge);
+            span?.AddTag("async", useAsync);
+            span?.AddTag("bulk", useBulk);
+            
             if (useAsync)
             {
                 if (!HasAsyncOutbox())
                     throw new InvalidOperationException("No async outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk), CancellationToken.None);
+                Task.Run(() => BackgroundDispatchUsingAsync(amountToClear, minimumAge, useBulk, args), CancellationToken.None);
             }
 
             else
@@ -192,29 +266,36 @@ namespace Paramore.Brighter
                 if (!HasOutbox())
                     throw new InvalidOperationException("No outbox defined.");
                 
-                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge));
+                Task.Run(() => BackgroundDispatchUsingSync(amountToClear, minimumAge, args));
             }
         }
 
-        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge)
+        private async Task BackgroundDispatchUsingSync(int amountToClear, int minimumAge, Dictionary<string, object> args)
         {
+            var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
-                    var messages = OutBox.OutstandingMessages(minimumAge, amountToClear);
+                    
+                    var messages = OutBox.OutstandingMessages(minimumAge, amountToClear, args:args);
+                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
+                        tags: new ActivityTagsCollection() {{"Outstanding Messages", messages.Count()}}));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
                     Dispatch(messages);
                     s_logger.LogInformation("Messages have been cleared");
+                    span?.SetStatus(ActivityStatusCode.Ok);
                 }
                 catch (Exception e)
                 {
+                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                     s_logger.LogError(e, "Error while dispatching from outbox");
                 }
                 finally
                 {
+                    span?.Dispose();
                     _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
@@ -223,37 +304,48 @@ namespace Paramore.Brighter
             }
             else
             {
+                span?.SetStatus(ActivityStatusCode.Error)
+                    .Dispose();
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
         
-        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk)
+        private async Task BackgroundDispatchUsingAsync(int amountToClear, int minimumAge, bool useBulk, Dictionary<string, object> args)
         {
-            
+            var span = Activity.Current;
             if (await _backgroundClearSemaphoreToken.WaitAsync(TimeSpan.Zero))
             {
                 await _clearSemaphoreToken.WaitAsync(CancellationToken.None);
                 try
                 {
+                    
                     var messages =
-                        await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear);
+                        await AsyncOutbox.OutstandingMessagesAsync(minimumAge, amountToClear, args: args);
+                    span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX));
 
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
 
                     if (useBulk)
+                    {
                         await BulkDispatchAsync(messages, CancellationToken.None);
+                    }
                     else
+                    {
                         await DispatchAsync(messages, false, CancellationToken.None);
+                    }
 
+                    span?.SetStatus(ActivityStatusCode.Ok);
                     s_logger.LogInformation("Messages have been cleared");
                 }
                 catch (Exception e)
                 {
                     s_logger.LogError(e, "Error while dispatching from outbox");
+                    span?.SetStatus(ActivityStatusCode.Error, "Error while dispatching from outbox");
                 }
                 finally
                 {
+                    span?.Dispose();
                     _clearSemaphoreToken.Release();
                     _backgroundClearSemaphoreToken.Release();
                 }
@@ -262,6 +354,8 @@ namespace Paramore.Brighter
             }
             else
             {
+                span?.SetStatus(ActivityStatusCode.Error)
+                    .Dispose();
                 s_logger.LogInformation("Skipping dispatch of messages as another thread is running");
             }
         }
@@ -270,6 +364,8 @@ namespace Paramore.Brighter
         {
             foreach (var message in posts)
             {
+                Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
+                    tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
 
                 var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
@@ -297,6 +393,8 @@ namespace Paramore.Brighter
         {
             foreach (var message in posts)
             {
+                Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
+                    tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
                 
                 var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
@@ -335,6 +433,7 @@ namespace Paramore.Brighter
         
         private async Task BulkDispatchAsync(IEnumerable<Message> posts, CancellationToken cancellationToken)
         {
+            var span = Activity.Current;
             //Chunk into Topics
             var messagesByTopic = posts.GroupBy(m => m.Header.Topic);
 
@@ -346,6 +445,8 @@ namespace Paramore.Brighter
                 {
                     var messages = topicBatch.ToArray();
                     s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
+                    span?.AddEvent(new ActivityEvent(BULKDISPATCHMESSAGE,
+                        tags: new ActivityTagsCollection() {{"Topic", topicBatch.Key}, {"Number Of Messages", messages.Length}}));
                     var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 
                     await foreach (var successfulMessage in dispatchesMessages.WithCancellation(cancellationToken))
@@ -406,51 +507,53 @@ namespace Paramore.Brighter
         {
             return AsyncOutbox != null;
         }
+        internal bool HasAsyncBulkOutbox()
+        {
+            return AsyncOutbox is IAmABulkOutboxAsync<Message>;
+        }
 
         internal bool HasOutbox()
         {
             return OutBox != null;
         }
+        
+        internal bool HasBulkOutbox()
+        {
+            return OutBox is IAmABulkOutboxSync<Message>;
+        }
 
         private void OutstandingMessagesCheck()
         {
-            if (Monitor.TryEnter(_checkOutStandingMessagesObject))
+            _checkOutstandingSemaphoreToken.Wait();
+            
+            _lastOutStandingMessageCheckAt = DateTime.UtcNow;
+            s_logger.LogDebug("Begin count of outstanding messages");
+            try
             {
-
-                s_logger.LogDebug("Begin count of outstanding messages");
-                try
+                var producer = ProducerRegistry.GetDefaultProducer();
+                if (OutBox != null)
                 {
-                    if (OutBox != null)
-                    {
-                        _outStandingCount = OutBox
-                            .OutstandingMessages(ProducerRegistry.GetDefaultProducer()
-                                .MaxOutStandingCheckIntervalMilliSeconds)
-                            .Count();
-                        return;
-                    }
-                    // else if(AsyncOutbox != null)
-                    // {
-                    //     //TODO: There is no async version of this call at present; the thread here means that won't hurt if implemented
-                    //     _outStandingCount = AsyncOutbox
-                    //         .OutstandingMessages(ProducerRegistry.GetDefaultProducer().MaxOutStandingCheckIntervalMilliSeconds)
-                    //         .Count();
-                    //     return;
-                    // }
-                    
-                    _outStandingCount = 0;
+                    _outStandingCount = OutBox
+                        .OutstandingMessages(
+                            producer.MaxOutStandingCheckIntervalMilliSeconds,
+                            args:producer.OutBoxBag 
+                            )
+                        .Count();
+                    return;
                 }
-                catch (Exception ex)
-                {
-                    //if we can't talk to the outbox, we would swallow the exception on this thread
-                    //by setting the _outstandingCount to -1, we force an exception
-                    s_logger.LogError(ex,"Error getting outstanding message count, reset count");
-                    _outStandingCount = 0;
-                }
-                finally
-                {
-                    s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
-                    Monitor.Exit(_checkOutStandingMessagesObject);
-                }
+                _outStandingCount = 0;
+            }
+            catch (Exception ex)
+            {
+                //if we can't talk to the outbox, we would swallow the exception on this thread
+                //by setting the _outstandingCount to -1, we force an exception
+                s_logger.LogError(ex,"Error getting outstanding message count, reset count");
+                _outStandingCount = 0;
+            }
+            finally
+            {
+                s_logger.LogDebug("Current outstanding count is {OutStandingCount}", _outStandingCount);
+                _checkOutstandingSemaphoreToken.Release();
             }
         }
 

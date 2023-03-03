@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Core.Tests.TestHelpers;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
 using Polly;
 using Polly.Registry;
@@ -70,7 +71,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 500));
             
             //should throw an exception as we require a mapper for the outgoing request 
-            exception.Should().BeOfType<ArgumentOutOfRangeException>();
+            exception.Should().BeOfType<ConfigurationException>();
         }
 
 
