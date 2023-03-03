@@ -126,7 +126,7 @@ jobs:
   
   mqtt-ci:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 5
     needs: [build]
     
     services:
