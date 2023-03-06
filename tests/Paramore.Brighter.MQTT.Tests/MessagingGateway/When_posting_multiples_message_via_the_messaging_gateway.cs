@@ -32,6 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.MQTT.Tests.MessagingGateway
 {
     [Trait("Category", "MQTT")]
+    [Collection("MQTT")]
     public class MqttMessageProducerSendMessageTests : IDisposable
     {
         private const string MqttHost = "localhost";
