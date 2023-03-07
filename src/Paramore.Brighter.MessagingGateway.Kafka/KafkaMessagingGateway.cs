@@ -31,34 +31,41 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (MakeChannels == OnMissingChannel.Validate || MakeChannels == OnMissingChannel.Create)
             {
-                var topicExists = FindTopic();
-                if (!topicExists && MakeChannels == OnMissingChannel.Validate)
+                var (exists, err) = FindTopic();
+                if (err)
+                    throw new ChannelFailureException(
+                        $"Topic {Topic.Value} exists but is in error, see logs for details");
+
+                if (!exists && MakeChannels == OnMissingChannel.Validate)
                     throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
-                if (!topicExists && MakeChannels == OnMissingChannel.Create)
+
+                if (!exists && MakeChannels == OnMissingChannel.Create)
                     MakeTopic().GetAwaiter().GetResult();
             }
         }
 
         private async Task MakeTopic()
         {
-
             using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
             {
                 try
                 {
-                    await adminClient.CreateTopicsAsync(new List<TopicSpecification> {
+                    await adminClient.CreateTopicsAsync(new List<TopicSpecification>
+                    {
                         new TopicSpecification
                         {
-                            Name = Topic.Value, 
-                            NumPartitions = NumPartitions, 
+                            Name = Topic.Value,
+                            NumPartitions = NumPartitions,
                             ReplicationFactor = ReplicationFactor
-                        } });
+                        }
+                    });
                 }
                 catch (CreateTopicsException e)
                 {
                     if (e.Results[0].Error.Code != ErrorCode.TopicAlreadyExists)
                     {
-                        throw new ChannelFailureException($"An error occured creating topic {Topic.Value}: {e.Results[0].Error.Reason}");
+                        throw new ChannelFailureException(
+                            $"An error occured creating topic {Topic.Value}: {e.Results[0].Error.Reason}");
                     }
 
                     s_logger.LogDebug("Topic {Topic} already exists", Topic.Value);
@@ -66,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-        private bool FindTopic()
+        private (bool found, bool err) FindTopic()
         {
             using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
             {
@@ -74,29 +81,50 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     var metadata = adminClient.GetMetadata(Topic.Value, TimeSpan.FromMilliseconds(TopicFindTimeoutMs));
                     //confirm we are in the list
-                    var matchingTopics = metadata.Topics.Where(tp => tp.Topic ==Topic.Value).ToArray();
+                    var matchingTopics = metadata.Topics.Where(tp => tp.Topic == Topic.Value).ToArray();
                     if (matchingTopics.Length > 0)
                     {
                         var matchingTopic = matchingTopics[0];
-                        if (matchingTopic.Error == null) return true;
-                        if (matchingTopic.Error.Code == ErrorCode.NoError) return true;
-                        if (matchingTopic.Error.Code == ErrorCode.UnknownTopicOrPart)
-                            return false;
-                        else
+                        
+                        //is it in error, and does it have required number of partitions or replicas
+                        bool inError = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.NoError;
+                        bool matchingPartitions = matchingTopic.Partitions.Count == NumPartitions;
+                        bool replicated = matchingTopic.Partitions.All(partition => partition.Replicas.Length == ReplicationFactor);
+                        
+                        bool valid = !inError && matchingPartitions && replicated;
+
+                        if (!valid)
                         {
-                            s_logger.LogWarning("Topic {Topic} is in error with code: {ErrorCode} and reason: {ErrorMessage}", matchingTopic.Topic, matchingTopic.Error.Code, matchingTopic.Error.Reason);
-                            return false;
+                            string error = "Topic exists but does not match publication: ";
+                            //if topic is in error
+                            if (inError)
+                            {
+                                error += $" topic is in error => {matchingTopic.Error.Reason};";
+                            }
+                            
+                            if (!matchingPartitions)
+                            {
+                                error += $"topic is misconfigured => NumPartitions should be {NumPartitions} but is {matchingTopic.Partitions.Count};";
+                            }
+                            
+                            if (!replicated)
+                            {
+                                error += $"topic is misconfigured => ReplicationFactor should be {ReplicationFactor} but is {matchingTopic.Partitions[0].Replicas.Length};";
+                            }
+
+                            s_logger.LogError(error);
                         }
 
+                        return (true, !valid);
                     }
 
-                    return false;
+                    return (false, false);
                 }
                 catch (Exception e)
                 {
                     throw new ChannelFailureException($"Error finding topic {Topic.Value}", e);
                 }
-            } 
+            }
         }
     }
 }
