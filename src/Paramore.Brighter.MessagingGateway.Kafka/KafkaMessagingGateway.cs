@@ -31,10 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (MakeChannels == OnMissingChannel.Validate || MakeChannels == OnMissingChannel.Create)
             {
-                var (exists, err) = FindTopic();
-                if (err)
-                    throw new ChannelFailureException(
-                        $"Topic {Topic.Value} exists but is in error, see logs for details");
+                var exists = FindTopic();
 
                 if (!exists && MakeChannels == OnMissingChannel.Validate)
                     throw new ChannelFailureException($"Topic: {Topic.Value} does not exist");
@@ -73,52 +70,65 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-        private (bool found, bool err) FindTopic()
+        private bool FindTopic()
         {
             using (var adminClient = new AdminClientBuilder(_clientConfig).Build())
             {
                 try
                 {
+                    bool found = false;
+
                     var metadata = adminClient.GetMetadata(Topic.Value, TimeSpan.FromMilliseconds(TopicFindTimeoutMs));
                     //confirm we are in the list
                     var matchingTopics = metadata.Topics.Where(tp => tp.Topic == Topic.Value).ToArray();
                     if (matchingTopics.Length > 0)
                     {
+                        found = true;
                         var matchingTopic = matchingTopics[0];
                         
-                        //is it in error, and does it have required number of partitions or replicas
-                        bool inError = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.NoError;
-                        bool matchingPartitions = matchingTopic.Partitions.Count == NumPartitions;
-                        bool replicated = matchingTopic.Partitions.All(partition => partition.Replicas.Length == ReplicationFactor);
-                        
-                        bool valid = !inError && matchingPartitions && replicated;
-
-                        if (!valid)
+                        //was it really found?
+                        found = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.UnknownTopicOrPart;
+                        if (found)
                         {
-                            string error = "Topic exists but does not match publication: ";
-                            //if topic is in error
-                            if (inError)
-                            {
-                                error += $" topic is in error => {matchingTopic.Error.Reason};";
-                            }
-                            
-                            if (!matchingPartitions)
-                            {
-                                error += $"topic is misconfigured => NumPartitions should be {NumPartitions} but is {matchingTopic.Partitions.Count};";
-                            }
-                            
-                            if (!replicated)
-                            {
-                                error += $"topic is misconfigured => ReplicationFactor should be {ReplicationFactor} but is {matchingTopic.Partitions[0].Replicas.Length};";
-                            }
+                            //is it in error, and does it have required number of partitions or replicas
+                            bool inError = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.NoError;
+                            bool matchingPartitions = matchingTopic.Partitions.Count == NumPartitions;
+                            bool replicated =
+                                matchingTopic.Partitions.All(
+                                    partition => partition.Replicas.Length == ReplicationFactor);
 
-                            s_logger.LogError(error);
+                            bool valid = !inError && matchingPartitions && replicated;
+
+                            if (!valid)
+                            {
+                                string error = "Topic exists but does not match publication: ";
+                                //if topic is in error
+                                if (inError)
+                                {
+                                    error += $" topic is in error => {matchingTopic.Error.Reason};";
+                                }
+
+                                if (!matchingPartitions)
+                                {
+                                    error +=
+                                        $"topic is misconfigured => NumPartitions should be {NumPartitions} but is {matchingTopic.Partitions.Count};";
+                                }
+
+                                if (!replicated)
+                                {
+                                    error +=
+                                        $"topic is misconfigured => ReplicationFactor should be {ReplicationFactor} but is {matchingTopic.Partitions[0].Replicas.Length};";
+                                }
+
+                                s_logger.LogWarning(error);
+                            }
                         }
-
-                        return (true, !valid);
                     }
 
-                    return (false, false);
+                    if (found)
+                        s_logger.LogInformation($"Topic {Topic.Value} exists");
+                    
+                    return found;
                 }
                 catch (Exception e)
                 {
