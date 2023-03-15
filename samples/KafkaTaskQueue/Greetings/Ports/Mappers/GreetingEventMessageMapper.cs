@@ -30,13 +30,13 @@ namespace Greetings.Ports.Mappers
 {
     public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
     {
-        private string _partitionKey = "KafkaTestQueueExample_Partition_One";
- 
         public Message MapToMessage(GreetingEvent request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
-            header.PartitionKey = _partitionKey;
+            
+            //This won't have repeats that need to go to the same partition, but it's a good example of how to set the partition key
+            header.PartitionKey = request.Id.ToString();
 
             var message = new Message(header, body);
             return message;

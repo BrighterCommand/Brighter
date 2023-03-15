@@ -102,6 +102,7 @@ namespace GreetingsSender
                                         new KafkaPublication()
                                         {
                                             Topic = new RoutingKey("greeting.event"),
+                                            NumPartitions = 3,
                                             MessageSendMaxRetries = 3,
                                             MessageTimeoutMs = 1000,
                                             MaxInFlightRequestsPerConnection = 1
