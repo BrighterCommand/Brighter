@@ -27,7 +27,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -227,7 +226,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         protected override SqliteParameter CreateSqlParameter(string parameterName, object value)
         {
-            return new SqliteParameter(parameterName, value ?? DBNull.Value);
+            return new SqliteParameter("@" + parameterName, value ?? DBNull.Value);
         }
 
         protected override SqliteParameter[] InitAddDbParameters(Message message, int? position = null)
