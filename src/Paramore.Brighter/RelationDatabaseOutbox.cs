@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,7 +11,11 @@ namespace Paramore.Brighter
 
     public abstract class
         RelationDatabaseOutboxSync<TConnection, TCommand, TDataReader, TParameter> : IAmAnOutboxSync<Message>,
-            IAmAnOutboxAsync<Message>
+            IAmAnOutboxAsync<Message> 
+        where TConnection : IDbConnection, new() 
+        where TCommand : IDbCommand, new() 
+        where TDataReader: IDataReader
+        where TParameter : IDbDataParameter, new()
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;

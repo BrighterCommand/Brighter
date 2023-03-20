@@ -8,12 +8,18 @@ namespace Paramore.Brighter.Sqlite.Tests
 {
     public class SqliteTestHelper
     {
+        private readonly bool _binaryMessagePayload;
         private const string TestDbPath = "test.db";
         public string ConnectionString = $"DataSource=\"{TestDbPath}\"";
         public string TableName = "test_commands";
         public string TableName_Messages = "test_messages";
         private string connectionStringPath;
         private string connectionStringPathDir;
+
+        public SqliteTestHelper(bool binaryMessagePayload = false)
+        {
+            _binaryMessagePayload = binaryMessagePayload;
+        }
 
         public void SetupCommandDb()
         {
@@ -26,7 +32,7 @@ namespace Paramore.Brighter.Sqlite.Tests
         {
             connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableName_Messages));
+            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableName_Messages, hasBinaryMessagePayload: _binaryMessagePayload));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()
