@@ -17,7 +17,7 @@
     </ItemGroup>
   
     <ItemGroup>
-      <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.1" />
+      <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="7.0.2" />
     </ItemGroup>
 
     <ItemGroup>
