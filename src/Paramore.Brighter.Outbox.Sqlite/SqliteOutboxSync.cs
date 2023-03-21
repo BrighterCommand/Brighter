@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         protected override SqliteParameter CreateSqlParameter(string parameterName, object value)
         {
-            return new SqliteParameter("@" + parameterName, value ?? DBNull.Value);
+            return new SqliteParameter(parameterName, value ?? DBNull.Value);
         }
 
         protected override SqliteParameter[] InitAddDbParameters(Message message, int? position = null)
