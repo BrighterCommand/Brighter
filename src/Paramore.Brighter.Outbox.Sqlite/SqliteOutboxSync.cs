@@ -249,8 +249,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     Value = message.Header.CorrelationId
                 },
-                new SqliteParameter($"@{prefix}ReplyTo", message.Header.ReplyTo),
-                new SqliteParameter($"@{prefix}ContentType", message.Header.ContentType),
+                new SqliteParameter($"@{prefix}ReplyTo", SqliteType.Text) {Value =  message.Header.ReplyTo},
+                new SqliteParameter($"@{prefix}ContentType", SqliteType.Text) {Value = message.Header.ContentType},
                 new SqliteParameter($"@{prefix}HeaderBag", SqliteType.Text) { Value = bagJson },
                 _configuration.BinaryMessagePayload
                     ? new SqliteParameter($"@{prefix}Body", SqliteType.Blob) { Value = message.Body.Bytes }
