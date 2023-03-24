@@ -26,21 +26,22 @@ namespace Paramore.Brighter.Outbox.Sqlite
 {
     /// <summary>
     /// Provide SQL statement helpers for creation of an Outbox
+    /// Note that due to a case-related bug in Microsoft.Data.Core when comparing GUIDs in Sqlite, we use COLLATE NOCASE for the MessageId
     /// </summary>
     public class SqliteOutboxBuilder
     {
         const string OutboxDdl = @"CREATE TABLE {0} 
                                     (
-                                        [MessageId] uniqueidentifier NOT NULL,
-                                        [Topic] nvarchar(255) NULL,
-                                        [MessageType] nvarchar(32) NULL,
-                                        [Timestamp] datetime NULL,
-                                        [CorrelationId] UNIQUEIDENTIFIER NULL,
-                                        [ReplyTo] NVARCHAR(255) NULL,
-                                        [ContentType] NVARCHAR(128) NULL,  
-                                        [Dispatched] datetime NULL,
-                                        [HeaderBag] ntext NULL,
-                                        [Body] ntext NULL,
+                                        [MessageId] TEXT NOT NULL COLLATE NOCASE,
+                                        [Topic] TEXT NULL,
+                                        [MessageType] TEXT NULL,
+                                        [Timestamp] TEXT NULL,
+                                        [CorrelationId] TEXT NULL,
+                                        [ReplyTo] TEXT NULL,
+                                        [ContentType] TEXT NULL,  
+                                        [Dispatched] TEXT NULL,
+                                        [HeaderBag] TEXT NULL,
+                                        [Body] TEXT NULL,
                                         CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
                                     );";
 

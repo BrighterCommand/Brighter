@@ -26,7 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -230,8 +229,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 new SqliteParameter($"@{prefix}Topic", SqliteType.Text) { Value = message.Header.Topic },
                 new SqliteParameter($"@{prefix}Timestamp", SqliteType.Text) { Value = message.Header.TimeStamp.ToString("s") },
                 new SqliteParameter($"@{prefix}CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId },
-                new SqliteParameter($"@{prefix}ReplyTo", message.Header.ReplyTo), 
-                new SqliteParameter($"@{prefix}ContentType", message.Header.ContentType),
+                new SqliteParameter($"@{prefix}ReplyTo", SqliteType.Text) {Value =  message.Header.ReplyTo}, 
+                new SqliteParameter($"@{prefix}ContentType", SqliteType.Text) {Value = message.Header.ContentType},
                 new SqliteParameter($"@{prefix}HeaderBag", SqliteType.Text) { Value = bagJson },
                 new SqliteParameter($"@{prefix}Body", SqliteType.Text) { Value = message.Body.Value }
             };
