@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
@@ -355,30 +356,19 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
 
             var body = _configuration.BinaryMessagePayload 
-                ? new MessageBody(GetBodyAsBytes(dr)) 
+                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr)) 
                 : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
         }
 
-        private byte[] GetBodyAsBytes(IDataReader dr)
+        private byte[] GetBodyAsBytes(SqliteDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
-            using var payload = new MemoryStream();
-
-            var bufferSize = 4096; 
-            var buffer = new byte[bufferSize];
-            var bytesRead = dr.GetBytes(i, 0, buffer, 0, buffer.Length);
-            
-            payload.Write(buffer);
-            
-            while (bytesRead == buffer.Length)
-            {
-                bytesRead = dr.GetBytes(i, bytesRead, buffer, 0, buffer.Length);
-                payload.Write(buffer);
-            }
-
-            return payload.ToArray();
+            var body = dr.GetStream(i);
+            var buffer = new byte[body.Length];
+            body.Read(buffer);
+            return buffer;
         }
 
         private static string GetTopic(IDataReader dr)

@@ -47,18 +47,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
         
         const string BinaryOutboxDdl = @"CREATE TABLE {0} 
                                     (
-<<<<<<< HEAD
-                                        [MessageId] uniqueidentifier NOT NULL,
-                                        [Topic] nvarchar(255) NULL,
-                                        [MessageType] nvarchar(32) NULL,
-                                        [Timestamp] datetime NULL,
-                                        [CorrelationId] UNIQUEIDENTIFIER NULL,
-                                        [ReplyTo] NVARCHAR(255) NULL,
-                                        [ContentType] NVARCHAR(128) NULL,  
-                                        [Dispatched] datetime NULL,
-                                        [HeaderBag] ntext NULL,
-                                        [Body] binary NULL,
-=======
                                         [MessageId] TEXT NOT NULL COLLATE NOCASE,
                                         [Topic] TEXT NULL,
                                         [MessageType] TEXT NULL,
@@ -68,8 +56,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [ContentType] TEXT NULL,  
                                         [Dispatched] TEXT NULL,
                                         [HeaderBag] TEXT NULL,
-                                        [Body] TEXT NULL,
->>>>>>> master
+                                        [Body] BLOB NULL,
                                         CONSTRAINT[PK_MessageId] PRIMARY KEY([MessageId])
                                     );";
          
