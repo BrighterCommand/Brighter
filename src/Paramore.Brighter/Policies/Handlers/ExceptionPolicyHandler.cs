@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Collections.Generic;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Policies.Attributes;
 using Polly;
 using Polly.Registry;
@@ -41,7 +43,7 @@ namespace Paramore.Brighter.Policies.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
-        private Policy _policy;
+        private List<Policy> _policies = new List<Policy>();
 
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
@@ -52,8 +54,8 @@ namespace Paramore.Brighter.Policies.Handlers
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             //we expect the first and only parameter to be a string
-            var policyName = (string)initializerList[0];
-            _policy = Context.Policies.Get<Policy>(policyName);
+            var policies = (List<string>)initializerList[0];
+            policies.Each(p => _policies.Add(Context.Policies.Get<Policy>(p)));
         }
 
         /// <summary>
@@ -63,7 +65,22 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <returns>TRequest.</returns>
         public override TRequest Handle(TRequest command)
         {
-            return _policy.Execute(() => base.Handle(command));
+            if (_policies.Count == 1)
+            {
+                return _policies[0].Execute(() => base.Handle(command));
+            }
+            else
+            {
+                var policyWrap = _policies[0].Wrap(_policies[1]);
+                if (_policies.Count <= 2) return policyWrap.Execute(() => base.Handle(command));
+                
+                //we have more than two policies, so we need to wrap them
+                for (int i = 2; i < _policies.Count; i++)
+                {
+                    policyWrap = policyWrap.Wrap(_policies[i]);
+                }
+                return policyWrap.Execute(() => base.Handle(command));
+            }
         }
     }
 }
