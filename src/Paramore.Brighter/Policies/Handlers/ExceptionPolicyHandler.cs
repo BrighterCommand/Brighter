@@ -43,19 +43,25 @@ namespace Paramore.Brighter.Policies.Handlers
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
     public class ExceptionPolicyHandler<TRequest> : RequestHandler<TRequest> where TRequest : class, IRequest
     {
+        private bool _initialized = false;
         private List<Policy> _policies = new List<Policy>();
 
         /// <summary>
         /// Initializes from attribute parameters. This will get the <see cref="PolicyRegistry"/> from the <see cref="IRequestContext"/> and query it for the
         /// policy identified in <see cref="UsePolicyAttribute"/>
+        /// Because we call InitializeFromAttributeParams for each request, we need to guard against multiple calls to this method
+        /// adding to the list of policies. Once we have the list of policies, then we do not need to re-initialize them.
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
         /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
+            if (_initialized) return;
+            
             //we expect the first and only parameter to be a string
             var policies = (List<string>)initializerList[0];
             policies.Each(p => _policies.Add(Context.Policies.Get<Policy>(p)));
+            _initialized = true;
         }
 
         /// <summary>

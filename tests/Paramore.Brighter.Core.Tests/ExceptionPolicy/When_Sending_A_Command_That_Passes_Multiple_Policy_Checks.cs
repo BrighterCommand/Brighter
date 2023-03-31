@@ -10,66 +10,66 @@ using Polly;
 using Polly.Registry;
 using Xunit;
 
-namespace Paramore.Brighter.Core.Tests;
-
-public class CommandProcessorWithMultipleExceptionPoliciesNothingThrowTests : IDisposable
+namespace Paramore.Brighter.Core.Tests
 {
-    private readonly CommandProcessor _commandProcessor;
-    private readonly MyCommand _myCommand = new MyCommand();
-    private int _retryCount;
-
-    public CommandProcessorWithMultipleExceptionPoliciesNothingThrowTests()
+    public class CommandProcessorWithMultipleExceptionPoliciesNothingThrowTests : IDisposable
     {
-        var registry = new SubscriberRegistry();
-        registry.Register<MyCommand, MyDoesNotFailMultiplePoliciesHandler>();
+        private readonly CommandProcessor _commandProcessor;
+        private readonly MyCommand _myCommand = new MyCommand();
+        private int _retryCount;
 
-        var container = new ServiceCollection();
-        container.AddTransient<MyDoesNotFailMultiplePoliciesHandler>();
-        container.AddTransient<ExceptionPolicyHandler<MyCommand>>();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        public CommandProcessorWithMultipleExceptionPoliciesNothingThrowTests()
+        {
+            var registry = new SubscriberRegistry();
+            registry.Register<MyCommand, MyDoesNotFailMultiplePoliciesHandler>();
 
-
-        var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
-        var policyRegistry = new PolicyRegistry();
-
-        var retryPolicy = Policy
-            .Handle<DivideByZeroException>()
-            .WaitAndRetry(new[]
+            var container = new ServiceCollection();
+            container.AddTransient<MyDoesNotFailMultiplePoliciesHandler>();
+            container.AddTransient<ExceptionPolicyHandler<MyCommand>>();
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions()
             {
-                1.Seconds(),
-                2.Seconds(),
-                3.Seconds()
-            }, (exception, timeSpan) =>
-            {
-                _retryCount++;
+                HandlerLifetime = ServiceLifetime.Transient
             });
 
-        var breakerPolicy = Policy.Handle<DivideByZeroException>()
-            .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-        policyRegistry.Add("MyDivideByZeroRetryPolicy", retryPolicy);
-        policyRegistry.Add("MyDivideByZeroBreakerPolicy", breakerPolicy);
+            var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
-        MyDoesNotFailMultiplePoliciesHandler.ReceivedCommand = false;
+            var policyRegistry = new PolicyRegistry();
 
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);        
+            var retryPolicy = Policy
+                .Handle<DivideByZeroException>()
+                .WaitAndRetry(new[] { 1.Seconds(), 2.Seconds(), 3.Seconds() }, (exception, timeSpan) =>
+                {
+                    _retryCount++;
+                });
 
-    }
-    
-    [Fact]
-    public void When_Sending_A_Command_That_Passes_Multiple_Policy_Checks()
-    {
-        _commandProcessor.Send(_myCommand);
+            var breakerPolicy = Policy.Handle<DivideByZeroException>()
+                .CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
 
-        //_should_send_the_command_to_the_command_handler
-        MyDoesNotFailMultiplePoliciesHandler.Shouldreceive(_myCommand).Should().BeTrue();
-        //_should_not_retry
-        _retryCount.Should().Be(0); 
-    }
+            policyRegistry.Add("MyDivideByZeroRetryPolicy", retryPolicy);
+            policyRegistry.Add("MyDivideByZeroBreakerPolicy", breakerPolicy);
 
-    public void Dispose()
-    {
-        CommandProcessor.ClearExtServiceBus();
+            MyDoesNotFailMultiplePoliciesHandler.ReceivedCommand = false;
+
+            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
+                policyRegistry);
+
+        }
+
+        [Fact]
+        public void When_Sending_A_Command_That_Passes_Multiple_Policy_Checks()
+        {
+            _commandProcessor.Send(_myCommand);
+
+            //_should_send_the_command_to_the_command_handler
+            MyDoesNotFailMultiplePoliciesHandler.ShouldReceive(_myCommand).Should().BeTrue();
+            //_should_not_retry
+            _retryCount.Should().Be(0);
+        }
+
+        public void Dispose()
+        {
+            CommandProcessor.ClearExtServiceBus();
+        }
     }
 }

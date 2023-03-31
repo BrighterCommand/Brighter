@@ -22,25 +22,26 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    internal class MyDoesNotFailMultiplePoliciesHandler : RequestHandler<MyCommand>
+    internal class MyMultiplePoliciesFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
     {
         public static bool ReceivedCommand { get; set; }
 
-        static MyDoesNotFailMultiplePoliciesHandler()
+        static MyMultiplePoliciesFailsWithDivideByZeroHandler()
         {
             ReceivedCommand = false;
         }
 
-        [UsePolicy(new[] {"MyDivideByZeroRetryPolicy", "MyDivideByZeroBreakerPolicy"}, 1)]
+        [UsePolicy(new [] {"MyDivideByZeroBreakerPolicy", "MyDivideByZeroRetryPolicy", }, 1)]
         public override MyCommand Handle(MyCommand command)
         {
             ReceivedCommand = true;
-            return base.Handle(command);
+            throw new DivideByZeroException();
         }
 
         public static bool ShouldReceive(MyCommand myCommand)
