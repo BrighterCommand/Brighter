@@ -45,14 +45,14 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-              var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-              if (cancellationToken.IsCancellationRequested)
-                  tcs.SetCanceled();
+            if (cancellationToken.IsCancellationRequested)
+                tcs.SetCanceled();
 
-              Publish(@event);
+            Publish(@event);
 
-              return tcs.Task;
+            return tcs.Task;
         }
 
         public void Post<T>(T request) where T : class, IRequest
@@ -62,14 +62,14 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
         public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
-              var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-              if (cancellationToken.IsCancellationRequested)
-                  tcs.SetCanceled();
+            if (cancellationToken.IsCancellationRequested)
+                tcs.SetCanceled();
 
-              Post(request);
+            Post(request);
 
-              return tcs.Task;
+            return tcs.Task;
         }
 
         public Guid DepositPost<T>(T request) where T : class, IRequest

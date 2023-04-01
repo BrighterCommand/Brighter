@@ -30,7 +30,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 
         public PostgresSqlInboxConfiguration InboxConfiguration => new PostgresSqlInboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
 
-
         public void SetupMessageDb()
         {
             CreateDatabase();
@@ -42,7 +41,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             CreateDatabase();
             CreateInboxTable();
         }
-
 
         private void CreateDatabase()
         {
