@@ -22,7 +22,7 @@ public class AzureBlobArchiveProviderTests
     [SetUp]
     public void Setup()
     {
-        var options = new AzureBlobArchiveProviderOptions()
+        var options = new AzureBlobArchiveProviderOptions
         {
             BlobContainerUri = new Uri("https://brighterarchivertest.blob.core.windows.net/messagearchive"), 
             TokenCredential = new VisualStudioCredential()
@@ -31,10 +31,10 @@ public class AzureBlobArchiveProviderTests
 
         _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);
 
-        _command = new SuperAwesomeCommand() { Message = $"do the thing {Guid.NewGuid()}" };
-        _event = new SuperAwesomeEvent() { Announcement = $"The thing was done {Guid.NewGuid()}" };
+        _command = new SuperAwesomeCommand { Message = $"do the thing {Guid.NewGuid()}" };
+        _event = new SuperAwesomeEvent { Announcement = $"The thing was done {Guid.NewGuid()}" };
 
-        _topicDirectory = new Dictionary<string, string>()
+        _topicDirectory = new Dictionary<string, string>
         {
             { typeof(SuperAwesomeCommand).Name, $"{Guid.NewGuid()}-SuperAwesomeCommand" },
             { typeof(SuperAwesomeEvent).Name, $"{Guid.NewGuid()}-SuperAwesomeEvent" }

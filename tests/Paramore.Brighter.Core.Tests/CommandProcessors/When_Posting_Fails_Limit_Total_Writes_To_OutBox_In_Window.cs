@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyCommand", _fakeMessageProducer},}), 
+                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyCommand", _fakeMessageProducer},}), 
                     messageMapperRegistry), 
                     _outbox
                     )

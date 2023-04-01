@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddTransient<MyStoredCommandToFailHandlerAsync>();
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
           
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public async Task Command_Is_Not_Stored_If_The_Handler_Is_Not_Successful()
         {
             Guid id = Guid.NewGuid();
-            await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail() { Id = id }));
+            await Catch.ExceptionAsync(async () =>await _commandProcessor.SendAsync(new MyCommandToFail { Id = id }));
 
             var exists = await _inbox.ExistsAsync<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandlerAsync).FullName);
             exists.Should().BeFalse();

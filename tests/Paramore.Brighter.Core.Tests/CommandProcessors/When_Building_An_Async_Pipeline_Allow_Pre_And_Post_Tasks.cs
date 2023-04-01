@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyPreAndPostDecoratedHandlerAsync>();
             container.AddTransient<MyValidationHandlerAsync<MyCommand>>();
             container.AddTransient<MyLoggingHandlerAsync<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
             
