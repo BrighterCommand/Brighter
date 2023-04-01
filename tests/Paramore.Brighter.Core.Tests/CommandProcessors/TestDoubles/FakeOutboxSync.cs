@@ -152,16 +152,16 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
-           var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);
-           entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
+            var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);
+            entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
 
         }
 
-       public IEnumerable<Message> OutstandingMessages(
-           double millSecondsSinceSent,
-           int pageSize = 100,
-           int pageNumber = 1,
-           Dictionary<string, object> args = null)
+        public IEnumerable<Message> OutstandingMessages(
+            double millSecondsSinceSent,
+            int pageSize = 100,
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
         {
             var sentAfter = DateTime.UtcNow.AddMilliseconds(-1 * millSecondsSinceSent);
             return _posts
@@ -171,14 +171,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 .ToArray();
         }
 
-       public void Delete(params Guid[] messageIds)
-       {
-           foreach (Guid messageId in messageIds)
-           {
-               var message = _posts.First(e => e.Message.Id == messageId);
-               _posts.Remove(message);
-           }
-       }
+        public void Delete(params Guid[] messageIds)
+        {
+            foreach (Guid messageId in messageIds)
+            {
+                var message = _posts.First(e => e.Message.Id == messageId);
+                _posts.Remove(message);
+            }
+        }
 
         class OutboxEntry
         {
@@ -192,10 +192,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             foreach (Message message in messages)
             {
-                Add(message,outBoxTimeout, transactionConnectionProvider);
+                Add(message, outBoxTimeout, transactionConnectionProvider);
             }
         }
- 
+
         public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken),
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
