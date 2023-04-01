@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
         }
 
         public FeatureSwitchStatus StatusOf(Type handler)
-        {            
+        {
             var configExists = _switches.ContainsKey(handler);
 
             if (!configExists)

@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             MyDoesNotFailPolicyHandler.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());

@@ -114,9 +114,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
+
             MarkDispatched(id, dispatchedAt);
-            
+
             tcs.SetResult(new object());
 
             return tcs.Task;

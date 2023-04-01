@@ -60,9 +60,9 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
             _provider = container.BuildServiceProvider();
             ServiceProviderHandlerFactory handlerFactory = new(_provider);
-            
+
             IAmAFeatureSwitchRegistry featureSwitchRegistry = new FakeConfigRegistry();
-            
+
             featureSwitchRegistry.MissingConfigStrategy = MissingConfigStrategy.Exception;
 
             _commandProcessor = CommandProcessorBuilder
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             _exception.Should().NotBeNull();
             _exception.Message.Should().Contain($"Handler of type {nameof(MyFeatureSwitchedConfigHandler)} does not have a Feature Switch configuration!");
 
-            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeFalse(); 
+            _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeFalse();
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .ThrowAsync<ConfigurationException>()
                 .WithMessage($"Handler of type {nameof(MyFeatureSwitchedConfigHandlerAsync)} does not have a Feature Switch configuration!");
 
-            _provider.GetService<MyFeatureSwitchedConfigHandlerAsync>().DidReceive().Should().BeFalse(); 
+            _provider.GetService<MyFeatureSwitchedConfigHandlerAsync>().DidReceive().Should().BeFalse();
         }
 
         public void Dispose()

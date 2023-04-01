@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             {
                 MissingConfigStrategy = MissingConfigStrategy.SilentOff
             };
-            
+
             _commandProcessor = CommandProcessorBuilder
                 .With()
                 .ConfigureFeatureSwitches(featureSwitchRegistry)

@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             container.AddSingleton<MyFailsWithUnsupportedExceptionForFallback>();
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-             
+
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 

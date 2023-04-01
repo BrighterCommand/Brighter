@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             var policyRegistry = new PolicyRegistry();
 
             var policy = Policy

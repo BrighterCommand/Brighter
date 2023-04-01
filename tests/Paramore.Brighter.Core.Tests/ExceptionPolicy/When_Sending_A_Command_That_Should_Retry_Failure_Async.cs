@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             policyRegistry.Add("MyDivideByZeroPolicy", policy);
 
             _provider.GetService<MyFailsWithFallbackDivideByZeroHandlerAsync>().ReceivedCommand = false;
-            
+
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);
         }
 

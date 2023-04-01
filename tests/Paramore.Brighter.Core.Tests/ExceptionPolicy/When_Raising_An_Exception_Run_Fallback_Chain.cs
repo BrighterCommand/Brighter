@@ -50,10 +50,10 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
             container.AddSingleton<RequestLoggingHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-             
+
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             MyFailsWithFallbackMultipleHandlers.ReceivedCommand = false;
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), policyRegistry);

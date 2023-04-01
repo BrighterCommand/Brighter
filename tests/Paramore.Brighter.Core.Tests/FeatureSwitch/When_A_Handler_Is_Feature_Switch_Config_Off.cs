@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
             _provider = container.BuildServiceProvider();
             ServiceProviderHandlerFactory handlerFactory = new(_provider);
-            
+
             _commandProcessor = CommandProcessorBuilder
                 .With()
                 .ConfigureFeatureSwitches(featureSwitchRegistry)

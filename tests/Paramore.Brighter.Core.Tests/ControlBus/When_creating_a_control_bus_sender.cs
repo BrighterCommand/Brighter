@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             _fakeOutboxSync = A.Fake<IAmAnOutboxSync<Message>>();
             s_fakeGateway = A.Fake<IAmAMessageProducerSync>();
- 
+
             s_senderFactory = new ControlBusSenderFactory();
         }
 
