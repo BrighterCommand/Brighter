@@ -24,7 +24,7 @@ namespace Greetings.Ports.CommandHandlers
             Console.WriteLine("----------------------------------");
             Console.WriteLine("Message Ends");
 
-            return await base.HandleAsync(@event);
+            return await base.HandleAsync(@event, cancellationToken);
         }
     }
 }
