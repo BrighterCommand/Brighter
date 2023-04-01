@@ -6,5 +6,3 @@
     /// </summary>
     public interface IAmAHandlerFactory
     {
-    }
-}

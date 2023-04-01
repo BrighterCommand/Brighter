@@ -45,9 +45,8 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactory">Factory for transforms, required to release</param>
         /// <param name="transforms">The transforms applied after the message mapper</param>
         public WrapPipeline(
-            IAmAMessageMapper<TRequest> messageMapper,
-            IAmAMessageTransformerFactory messageTransformerFactory,
-            IEnumerable<IAmAMessageTransformAsync> transforms)
+            IAmAMessageMapper<TRequest> messageMapper,            IAmAMessageTransformerFactory messageTransformerFactory,
+           IEnumerable<IAmAMessageTransformAsync> transforms)
         {
             MessageMapper = messageMapper;
             Transforms = transforms;
@@ -58,8 +57,7 @@ namespace Paramore.Brighter
             }
         }
 
-        /// <summary>
-        /// Lists the wrap pipeline: message mapper and filter transforms that will be executed
+        ////// <summary>/ Lists the wrap pipeline: message mapper and filter transforms that will be executed
         /// Used for pipeline verification
         /// </summary>
         /// <param name="pipelineTracer"></param>
@@ -71,8 +69,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Transforms a <see cref="IRequest"/> into a <see cref="Message"/>
-        /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/>
-        /// </summary>
+        /// Applies/// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> </summary>
         /// <param name="request">The request to wrap</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>

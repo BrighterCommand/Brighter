@@ -32,8 +32,7 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.Inbox.Handlers
 {
     /// <summary>
-    /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay.
-    /// http://martinfowler.com/eaaDev/EventSourcing.html
+    /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay.    /// http://martinfowler.com/eaaDev/EventSourcing.html
     /// Note that without a mechanism to prevent raising events from commands the danger of replay is that if events are raised downstream that are not idempotent then replay can have undesired effects.
     /// A mitigation is not to record inputs, only changes of state to the model and replay those. Of course it is possible that publishing events is desirable.
     /// To distinguish the variants the approach is now properly Event Sourcing (because it captures events that occur because of the Command) and the Fowler
@@ -58,8 +57,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             _inbox = inbox;
         }
 
-
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+ verride void InitializeFromAttributeParams(params object[] initializerList)
         {
             _onceOnly = (bool) initializerList[0];
             _contextKey = (string)initializerList[1];
@@ -83,7 +81,7 @@ namespace Paramore.Brighter.Inbox.Handlers
                 //TODO: We should not use an infinite timeout here - how to configure
                 var exists = await _inbox.ExistsAsync<T>(command.Id, _contextKey , - 1, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
-                if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
+                if (exists && _onceOnlyAyAction.Throw)
                 {
                     s_logger.LogDebug("Command {Id} has already been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");

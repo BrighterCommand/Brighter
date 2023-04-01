@@ -51,8 +51,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         }
 
         /// <summary>
-        /// Get the Claims Check Transformer type
-        /// </summary>
+        /// Get the Claims Check Transformer type        /// </summary>
         /// <returns>The type of the Claims Check Transformer</returns>
         public override Type GetHandlerType()
         {

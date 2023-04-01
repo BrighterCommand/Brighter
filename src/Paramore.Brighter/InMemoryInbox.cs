@@ -64,8 +64,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The command body.</value>
         public string RequestBody { get; set; }
-
-        /// <summary>
+ /// <summary>
         /// Gets the type of the command.
         /// </summary>
         /// <value>The type of the command.</value>
@@ -98,7 +97,7 @@ namespace Paramore.Brighter
     }
 
 
-    /// <summary>
+    //uy>
     /// Class InMemoryInbox.
     /// A Inbox stores <see cref="Command"/>s for diagnostics or replay.
     /// This class is intended to be thread-safe, so you can use one InMemoryInbox across multiple performers. However, the state is not global i.e. static
@@ -119,8 +118,7 @@ namespace Paramore.Brighter
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
 
-        /// <summary>
-        /// Adds the specified identifier.
+        /// <su       /// Adds the specified identifier.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="command">The command.</param>

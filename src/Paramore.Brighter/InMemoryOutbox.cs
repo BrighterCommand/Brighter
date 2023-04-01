@@ -46,13 +46,12 @@ namespace Paramore.Brighter
         /// When was the message added to the outbox
         /// </summary>
         public DateTime WriteTime { get; set; }
-
-        /// <summary>
+ /// <summary>
         /// When was the message sent to the middleware
         /// </summary>
         public DateTime TimeFlushed { get; set; }
 
-        /// <summary>
+       mmary>
         /// The message to be dispatched
         /// </summary>
         public Message Message { get; set; }
@@ -112,8 +111,7 @@ namespace Paramore.Brighter
             }
         }
 
-        /// <summary>
-        /// Adds the specified message
+        /// <su       /// Adds the specified message
         /// </summary>
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
@@ -154,7 +152,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Adds the specified message
+        /// Aspecified message
         /// </summary>
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
@@ -192,9 +190,9 @@ namespace Paramore.Brighter
         public IEnumerable<Message> DispatchedMessages(
             double millisecondsDispatchedSince,
             int pageSize = 100,
-            int pageNumber = 1,
-            int outboxTimeout = -1,
-            Dictionary<string, object> args = null)
+           int pageNumber = 1,
+            nt outboxTimeout = -1,
+            Dictionary<string, object> args =null)
         {
             ClearExpiredMessages();
 
@@ -205,8 +203,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Gets the specified message
-        /// </summary>
+        /// Gets the specified messa  /// </summary>
         /// <param name="messageId">The id of the message to get</param>
         /// <param name="outBoxTimeout">How long to wait for the message before timing out</param>
         /// <returns>The message</returns>
@@ -241,7 +238,7 @@ namespace Paramore.Brighter
        /// <summary>
         /// Gets the specified message
         /// </summary>
-        /// <param name="messageId"></param>
+        / name="messageId"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>

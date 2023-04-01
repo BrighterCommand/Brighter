@@ -24,12 +24,10 @@ THE SOFTWARE. */
 using System;
 
 namespace Paramore.Brighter
-{
-    /// <summary>
+{<summary>
     /// class UnwrapWithAttribute
     /// Indicates that you want to run a <see cref="IAmAMessageTransformAsync"/> before the <see cref="Message"/> has
-    /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/>
-    /// Applied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
+    /// been /// been mapped via the <see cref="IAmAMessageMapper{TRequest}"/> to an <see cref="IRequest"/>pplied as an attribute to the <see cref="IAmAMessageMapper{TRequest}.MapToRequest"/> method
     /// </summary>
     public abstract class UnwrapWithAttribute : TransformAttribute
     {

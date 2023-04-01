@@ -56,10 +56,9 @@ namespace Paramore.Brighter
         /// <param name="handlerFactorySync">Callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
-            IAmASubscriberRegistry registry,
-            IAmAHandlerFactorySync handlerFactorySync,
+            IAmASubscriberRegistry registry,            IAmAHandlerFactorySync handlerFactorySync,
             InboxConfiguration inboxConfiguration = null)
-        {
+       {
             _handlerFactorySync = handlerFactorySync;
             _inboxConfiguration = inboxConfiguration;
             _instanceScope = new HandlerLifetimeScope(handlerFactorySync);
@@ -68,7 +67,7 @@ namespace Paramore.Brighter
 
         public PipelineBuilder(
             IAmASubscriberRegistry registry,
-            IAmAHandlerFactoryAsync asyncHandlerFactory,
+           IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration inboxConfiguration = null)
         {
             _asyncHandlerFactory = asyncHandlerFactory;
@@ -221,7 +220,7 @@ namespace Paramore.Brighter
         {
             if (
                 _inboxConfiguration == null
-                || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
+               || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
             )
                 return;
@@ -240,11 +239,11 @@ namespace Paramore.Brighter
         private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
             if (_inboxConfiguration == null
-                || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
+                || implicitandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
 
             )
-                return;
+              urn;
 
             var useInboxAttribute = new UseInboxAsyncAttribute(
                 step: 0,
@@ -297,7 +296,7 @@ namespace Paramore.Brighter
             });
         }
 
-        private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
+        private static void PushObuteList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
         {
             var attributeList = new List<RequestHandlerAttribute>();
 
@@ -312,7 +311,7 @@ namespace Paramore.Brighter
             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
         }
 
-        private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
+        private IHandleRequests<TRequest>OntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             attributes.Each(attribute =>
             {

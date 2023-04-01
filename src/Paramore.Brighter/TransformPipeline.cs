@@ -10,8 +10,7 @@ namespace Paramore.Brighter
         protected TransformLifetimeScope InstanceScope;
 
         /// <summary>
-        /// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline
-        /// </summary>
+        /// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline        /// </summary>
         public void Dispose()
         {
             ReleaseUnmanagedResources();
@@ -19,8 +18,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline
-        /// </summary>
+        //// Disposes a pipeline builder, which will call release on the factory for any transforms generated for the pipeline       /// </summary>
         ~TransformPipeline()
         {
             ReleaseUnmanagedResources();

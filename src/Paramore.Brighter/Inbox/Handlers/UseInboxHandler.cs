@@ -31,8 +31,7 @@ namespace Paramore.Brighter.Inbox.Handlers
 {
     /// <summary>
     /// Class CommandSourcingHandler.
-    /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay.
-    /// http://martinfowler.com/eaaDev/EventSourcing.html
+    /// Used with the Event Sourcing pattern that stores the commands that we send to handlers for replay.    /// http://martinfowler.com/eaaDev/EventSourcing.html
     /// Note that without a mechanism to prevent raising events from commands the danger of replay is that if events are raised downstream that are not idempotent then replay can have undesired effects.
     /// A mitigation is not to record inputs, only changes of state to the model and replay those. Of course it is possible that publishing events is desirable.
     /// To distinguish the variants the approach is now properly Event Sourcing (because it captures events that occur because of the Command) and the Fowler
@@ -57,7 +56,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             _inbox = inbox;
         }
 
-        public override void InitializeFromAttributeParams(params object[] initializerList)
+public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             _onceOnly = (bool) initializerList[0];
             _contextKey = (string)initializerList[1];
@@ -74,15 +73,15 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override T Handle(T command)
         {
-            if (_onceOnly)
+           if (_onceOnly)
             {
                  s_logger.LogDebug("Checking if command {Id} has already been seen", command.Id);
 
                  var exists = _inbox.Exists<T>(command.Id, _contextKey);
 
-                if (exists && _onceOnlyAction is OnceOnlyAction.Throw)
+                if (xAction is OnceOnlyAction.Throw)
                 {
-                    s_logger.LogDebug("Command {Id} has already been seen", command.Id);
+                    s_logger.LogDebug("eady been seen", command.Id);
                     throw new OnceOnlyException($"A command with id {command.Id} has already been handled");
                 }
 
@@ -93,9 +92,7 @@ namespace Paramore.Brighter.Inbox.Handlers
                 }
             }
 
-            T handledCommand = base.Handle(command);
-
-            s_logger.LogDebug("Writing command {Id} to the Inbox", command.Id);
+            T handledCommand = base.Handle(c      s_logger.LogDebug("Writing command {Id} to the Inbox", command.Id);
 
             _inbox.Add(command, _contextKey);
 

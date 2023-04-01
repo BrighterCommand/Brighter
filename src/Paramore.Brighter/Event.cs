@@ -50,8 +50,7 @@ namespace Paramore.Brighter
         {
             Id = id;
         }
-
-        /// <summary>
+ /// <summary>
         /// Gets or sets the span that this operation live within
         /// </summary>
         [JsonIgnore]

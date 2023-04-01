@@ -2,5 +2,3 @@
 {
     public interface IAmAnInbox
     {
-    }
-}

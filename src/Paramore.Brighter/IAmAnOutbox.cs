@@ -9,5 +9,3 @@
     /// <typeparam name="T"></typeparam>
     public interface IAmAnOutbox<in T> where T : Message
     {
-    }
-}

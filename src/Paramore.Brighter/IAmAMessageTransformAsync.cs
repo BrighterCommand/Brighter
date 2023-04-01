@@ -44,8 +44,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="initializerList">The initializer list.</param>
         void InitializeWrapFromAttributeParams(params object[] initializerList);
-
-        /// <summary>
+ /// <summary>
         /// Initializes from the <see cref="TransformAttribute"/> unwrap attribute parameters. Use when you need to provide parameter information from the
         /// attribute to the transform. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
         /// the attribute itself can only use primitives.

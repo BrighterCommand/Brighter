@@ -46,8 +46,7 @@ namespace Paramore.Brighter
         public byte[] Bytes { get; private set; }
 
         /// <summary>
-        /// The type of message encoded into Bytes.  A hint for deserialization that
-        /// will be sent with the byte[] to allow
+        /// The type of message encoded into Bytes.  A hint for deserialization that        /// will be sent with the byte[] to allow
         /// </summary>
         public string ContentType { get; private set; }
 
@@ -57,8 +56,7 @@ namespace Paramore.Brighter
         /// The message body as a string.
         /// If the message body is UTF8 or ASCII, this will be the same as the string representation of the byte array.
         /// If the message body is Base64 encoded, this will be the encoded string.
-        /// if the message body is compressed, it will throw an exception, you should decompress the bytes first.
-        /// </summary>
+        //// if the message body is compressed, it will throw an exception, you should decompress the bytes first.       /// </summary>
         /// <value>The value.</value>
         public string Value
         {

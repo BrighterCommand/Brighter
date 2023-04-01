@@ -45,17 +45,16 @@ namespace Paramore.Brighter.Transforms.Attributes
         /// <param name="compressionLevel">The level of compression <see cref="CompressionLevel"/></param>
         /// <param name="thresholdInKb">How large the payload should be before we try to compress it.</param>
         public Compress(
-            int step,
-            CompressionMethod compressionMethod = CompressionMethod.GZip,
-            CompressionLevel compressionLevel = CompressionLevel.Optimal,
-            int thresholdInKb = 0) : base(step)
+            int step,            CompressionMethod compressionMethod = CompressionMethod.GZip,
+           CompressionLevel compressionLevel = CompressionLevel.Optimal,
+           int thresholdInKb = 0) : base(step)
         {
             _compressionMethod = compressionMethod;
             _compressionLevel = compressionLevel;
             _thresholdInKb = thresholdInKb;
         }
 
-        /// <summary>
+  / <summary>
         /// Passes the parameters used to configure this attribute to the runtime type that implements it
         /// </summary>
         /// <returns>Configuration values</returns>

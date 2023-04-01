@@ -11,8 +11,7 @@ namespace Paramore.Brighter
     public class NullOutboxArchiveProvider : IAmAnArchiveProvider
     {
         private ILogger _logger;
-
-        public NullOutboxArchiveProvider()
+ public NullOutboxArchiveProvider()
         {
             _logger = ApplicationLogging.CreateLogger<NullOutboxArchiveProvider>();
         }

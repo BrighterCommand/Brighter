@@ -59,11 +59,7 @@ namespace Paramore.Brighter
                 throw new ConfigurationException(
                     "The channel buffer must have one item, and cannot have more than 10");
             }
-
-            _maxQueueLength = maxQueueLength + 1; //+1 so you can fit the quit message on the queue as well
-        }
-
-        /// <summary>
+ _maxQueueLength = maxQueueLength + 1; //+1 so you //+1 so you can fit the quit message on the queue as well       /// <summary>
         ///  Acknowledges the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
@@ -88,7 +84,7 @@ namespace Paramore.Brighter
             if (newLength > _maxQueueLength)
             {
                 throw new InvalidOperationException($"You cannot enqueue {newLength} items which larger than the buffer length {_maxQueueLength}");
-            }
+
 
             messages.Each((message) => _queue.Enqueue(message));
         }

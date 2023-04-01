@@ -44,11 +44,10 @@ namespace Paramore.Brighter.Policies.Attributes
         /// <param name="step">The step.</param>
         /// <param name="timing">The timing.</param>
         public FallbackPolicyAsyncAttribute(
-            bool backstop,
-            bool circuitBreaker,
-            int step,
-            HandlerTiming timing = HandlerTiming.Before)
-            : base(step, timing)
+            bool backstop,            bool circuitBreaker,
+           int step,
+           HandlerTiming timing = HandlerTiming.Before)
+           : base(step, timing)
         {
             _backstop = backstop;
             _circuitBreaker = circuitBreaker;

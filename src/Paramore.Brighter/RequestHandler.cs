@@ -40,10 +40,8 @@ namespace Paramore.Brighter
     /// We recommend deriving your concrete handler from <see cref="RequestHandler{T}"/> instead of implementing the interface as it provides boilerplate
     /// code for calling the next handler in sequence in the pipeline and describing the path
     /// By default the <see cref="Name"/> is based of the Type name, and the <see cref="DescribePath"/> adds that <see cref="Name"/> into the <see cref="IAmAPipelineTracer"/> list.
-    /// By default the <see cref="Handle"/> method will log the calls and forward the call to the handler's <see cref="Successor"/>. You should call
-    /// <code>
-    /// base.Handle(command);
-    /// </code>
+    /// By default the <see cref="Handle"/> method will log the calls and forward the call to the handler's <see cref="Successor"/>. You should call    /// <code>
+    //// base.Handle(command);   /// </code>
     /// within your derived class handler to forward the call to the next handler in the chain.
     /// </summary>
     /// <typeparam name="TRequest">The type of the t request.</typeparam>
@@ -115,8 +113,7 @@ namespace Paramore.Brighter
         /// This allows for graceful  degradation. Using the <see cref="FallbackPolicyAttribute"/> handler you can configure a policy to catch either all <see cref="Exception"/>'s or
         /// just <see cref="BrokenCircuitException"/> that occur later in the pipeline, and then call the <see cref="Fallback"/> path.
         /// Note that the <see cref="FallbackPolicyAttribute"/> target handler might be 'beginning of chain' and need to pass through to actual handler that is end of chain.
-        /// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had,
-        /// that could fail (such as DB access) were the cause of the failure chain being hit.
+        ///// Because of this we need to call Fallback on the chain. Later step handlers don't know the context of failure so they cannot know if any operations they had,      /// that could fail (such as DB access) were the cause of the failure chain being hit.
         /// Steps that don't know how to handle should pass through.
         /// Useful alternatives for Fallback are to try via the cache.
         /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="Fallback"/> chain to avoid an infinite loop.

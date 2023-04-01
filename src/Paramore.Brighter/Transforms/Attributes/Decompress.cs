@@ -49,8 +49,7 @@ namespace Paramore.Brighter.Transforms.Attributes
         {
             _compressionMethod = compressionMethod;
         }
-
-        /// <summary>
+ /// <summary>
         /// Passes the parameters used to configure this attribute to the runtime type that implements it
         /// </summary>
         /// <returns>Configuration values</returns>

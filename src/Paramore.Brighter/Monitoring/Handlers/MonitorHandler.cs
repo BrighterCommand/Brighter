@@ -78,12 +78,11 @@ namespace Paramore.Brighter.Monitoring.Handlers
                 {
                     _controlBusSender.Post(
                         new MonitorEvent(
-                            _instanceName,
-                            MonitorEventType.EnterHandler,
-                            _handlerName,
-                            _handlerFullAssemblyName,
+                            _instanceName,                            MonitorEventType.EnterHandler,
+                           _handlerName,
+                           _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
-                            timeBeforeHandle,
+                           timeBeforeHandle,
                             0));
 
                     base.Handle(command);
@@ -92,14 +91,14 @@ namespace Paramore.Brighter.Monitoring.Handlers
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName,
-                            MonitorEventType.ExitHandler,
-                            _handlerName,
+                           MonitorEventType.ExitHandler,
+                           _handlerName,
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
-                            timeAfterHandle,
+                           timeAfterHandle,
                             (timeAfterHandle-timeBeforeHandle).Milliseconds));
 
-                    return command;
+      mand;
                 }
                 catch (Exception e)
                 {
@@ -107,11 +106,11 @@ namespace Paramore.Brighter.Monitoring.Handlers
                     _controlBusSender.Post(
                         new MonitorEvent(
                             _instanceName,
-                            MonitorEventType.ExceptionThrown,
-                            _handlerName,
+                            MoitorEventType.ExceptionThrown,
+                            _hadlerName,
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
-                            timeOnException,
+                            timenException,
                             (timeOnException - timeBeforeHandle).Milliseconds,
                             e));
                     throw;

@@ -25,12 +25,12 @@ namespace Paramore.Brighter
              GC.SuppressFinalize(this);
          }
 
-         ~ProducerRegistry()
+        ~ProducerRegistry()
          {
              CloseAll();
          }
 
-        /// <summary>
+ / <summary>
         /// Iterates through all the producers and disposes them, as they may have unmanaged resources that should be shut down in an orderly fashion
         /// </summary>
         public void CloseAll()
