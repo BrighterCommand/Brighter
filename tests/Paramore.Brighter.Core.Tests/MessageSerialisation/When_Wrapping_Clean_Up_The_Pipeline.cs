@@ -23,7 +23,7 @@ public class MessageWrapCleanupTests
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
         _myCommand = new MyTransformableCommand();
-        
+
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
     }
 
@@ -34,7 +34,7 @@ public class MessageWrapCleanupTests
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.WrapAsync(_myCommand).Result;
         _transformPipeline.Dispose();
-        
+
         //assert
         s_released.Should().Be("|MySimpleTransformAsync");
 

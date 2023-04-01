@@ -137,8 +137,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Assert
             commandProcessor.Deposited.Count.Should().Be(4);
             commandProcessor.Dispatched.Count.Should().Be(1);
-
         }
-
     }
 }

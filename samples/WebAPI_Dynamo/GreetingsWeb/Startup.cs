@@ -206,6 +206,5 @@ namespace GreetingsWeb
                 .AddJsonQueryLogging()
                 .AddPolicies(new GreetingsPolicy());
         }
-
     }
 }

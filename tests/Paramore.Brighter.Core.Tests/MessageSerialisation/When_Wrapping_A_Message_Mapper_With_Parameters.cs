@@ -21,7 +21,7 @@ public class MessageWrapRequestWithAttributesTests
             { { typeof(MyTransformableCommand), typeof(MyParameterizedTransformAsync) } };
 
         _myCommand = new MyTransformableCommand();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -33,7 +33,7 @@ public class MessageWrapRequestWithAttributesTests
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.WrapAsync(_myCommand).Result;
-        
+
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());
         message.Header.Bag[MyParameterizedTransformAsync.HEADER_KEY].Should().Be("I am a format indicator {0}");

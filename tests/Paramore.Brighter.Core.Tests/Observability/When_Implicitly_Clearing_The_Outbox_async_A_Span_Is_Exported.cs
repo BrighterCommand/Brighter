@@ -33,24 +33,24 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
 
         var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-        
+
         var container = new ServiceCollection();
         container.AddTransient<MyEvent>();
         container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
-        
+
         _traceProvider = builder.AddSource("Paramore.Brighter.*")
             .AddInMemoryExporter(_exportedActivities)
             .Build();
 
         var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-        
+
         var retryPolicy = Policy
             .Handle<Exception>()
             .Retry();
-        
+
         var circuitBreakerPolicy = Policy
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
@@ -61,7 +61,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             {MyEvent.Topic, new FakeMessageProducer()}
         });
         producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
-        
+
         CommandProcessor.ClearExtServiceBus();
         _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
             policyRegistry, messageMapperRegistry,_outbox,producerRegistry);

@@ -6,7 +6,6 @@ namespace GreetingsPorts.Responses
     {
         public string Name { get; set; }
         public List<Salutation> Greetings { get;set; }
-
     }
 
     public class Salutation
@@ -19,6 +18,5 @@ namespace GreetingsPorts.Responses
         {
             Words = words;
         }
-
     }
 }

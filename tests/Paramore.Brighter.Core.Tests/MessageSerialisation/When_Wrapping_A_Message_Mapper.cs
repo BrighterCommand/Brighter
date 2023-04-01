@@ -21,7 +21,7 @@ public class MessageWrapRequestTests
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
         _myCommand = new MyTransformableCommand();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -33,7 +33,7 @@ public class MessageWrapRequestTests
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         var message = _transformPipeline.WrapAsync(_myCommand).Result;
-        
+
         //assert
         message.Body.Value.Should().Be(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)).ToString());
         message.Header.Bag[MySimpleTransformAsync.HEADER_KEY].Should().Be(MySimpleTransformAsync.TRANSFORM_VALUE);

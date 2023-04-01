@@ -27,7 +27,5 @@
         {
             s_response = request;
         }
-
-
     }
 }

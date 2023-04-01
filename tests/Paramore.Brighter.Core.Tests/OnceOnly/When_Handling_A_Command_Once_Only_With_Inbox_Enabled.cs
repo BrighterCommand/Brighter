@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeTests()
         {
             _inbox = new InMemoryInbox();
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandHandler>();
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _commandProcessor.Send(_command);
 
             Exception ex = Assert.Throws<OnceOnlyException>(() => _commandProcessor.Send(_command));
-            
+
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }
 

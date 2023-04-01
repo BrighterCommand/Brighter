@@ -53,14 +53,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry());
-            
+
             PipelineBuilder<MyEvent>.ClearPipelineCache();
 
             var channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper())); 
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
-            
+
             _messagePump = new MessagePumpBlocking<MyEvent>(commandProcessor, messageMapperRegistry)
                 { Channel = channel, TimeoutInMilliseconds = 5000 };
 

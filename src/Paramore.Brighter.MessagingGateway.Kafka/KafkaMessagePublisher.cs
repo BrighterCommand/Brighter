@@ -20,14 +20,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public void PublishMessage(Message message, Action<DeliveryReport<string, byte[]>> deliveryReport)
         {
             var kafkaMessage = BuildMessage(message);
-            
+
             _producer.Produce(message.Header.Topic, kafkaMessage, deliveryReport);
         }
 
         public async Task PublishMessageAsync(Message message, Action<DeliveryResult<string, byte[]>> deliveryReport)
         {
             var kafkaMessage = BuildMessage(message);
-            
+
             var deliveryResult = await _producer.ProduceAsync(message.Header.Topic, kafkaMessage);
             deliveryReport(deliveryResult);
         }

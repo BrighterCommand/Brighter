@@ -29,7 +29,7 @@ public class AzureBlobUploadTests : IDisposable
         //arrange
         await _client.CreateIfNotExistsAsync();
         var luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
-        
+
         //act
         //Upload the test stream to Azure
         var testContent = "Well, always know that you shine Brighter";
@@ -44,7 +44,7 @@ public class AzureBlobUploadTests : IDisposable
         //assert
         //do we have a claim?
         (await luggageStore.HasClaimAsync(claim, CancellationToken.None)).Should().BeTrue();
-        
+
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim, CancellationToken.None);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();

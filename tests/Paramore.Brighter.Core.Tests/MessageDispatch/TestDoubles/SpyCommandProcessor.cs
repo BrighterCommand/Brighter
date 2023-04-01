@@ -254,6 +254,5 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
-
     }
 }

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeWithWarnExceptionTests()
         {
             _inbox = new InMemoryInbox();
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandToWarnHandler>();
 
@@ -55,16 +55,16 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _command = new MyCommand {Value = "My Test String"};
-            
+
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
         [Fact]
         public void When_Handling_A_Command_Once_Only_With_Warn_Enabled()
         {
-            _commandProcessor.Send(_command);            
+            _commandProcessor.Send(_command);
             _commandProcessor.Send(_command);
 
             MyStoredCommandToWarnHandler.ReceivedCount.Should().Be(1);

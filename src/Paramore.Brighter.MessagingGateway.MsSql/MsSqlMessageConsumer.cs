@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             s_logger.LogDebug("MsSqlMessagingConsumer: re-queuing message with topic {Topic} and id {Id}", topic,
                 message.Id.ToString());
 
-            _sqlQ.Send(message, topic); 
+            _sqlQ.Send(message, topic);
             return true;
         }
 

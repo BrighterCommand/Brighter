@@ -46,10 +46,10 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <returns></returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
-            KafkaSubscription rmqSubscription = subscription as KafkaSubscription;  
+            KafkaSubscription rmqSubscription = subscription as KafkaSubscription;
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an KafkaSubscription or KafkaSubscription<T> as a parameter");
-            
+
             return new Channel(
                 subscription.ChannelName,
                 _kafkaMessageConsumerFactory.Create(subscription),

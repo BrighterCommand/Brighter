@@ -14,7 +14,7 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     public void ArchiveMessage(Message message)
     {
         var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
-        
+
         blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes));
     }
 

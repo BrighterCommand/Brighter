@@ -20,7 +20,7 @@ public class RetrieveClaimLeaveLuggage
         _store = new InMemoryStorageProviderAsync();
         _transformer = new ClaimCheckTransformer(store: _store);
         _transformer.InitializeUnwrapFromAttributeParams(true);
-        
+
         _contents = DataGenerator.CreateString(6000);
     }
 
@@ -43,10 +43,10 @@ public class RetrieveClaimLeaveLuggage
 
         //act
         var unwrappedMessage = await _transformer.UnwrapAsync(message);
-        
+
         //assert
         message.Header.Bag.TryGetValue(ClaimCheckTransformer.CLAIM_CHECK, out object _).Should().BeTrue();
         (await _store.HasClaimAsync(id)).Should().BeTrue();
-        
+
     }
 }

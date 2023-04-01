@@ -136,13 +136,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             dlqMessage.Body.Value.Should().Be(_message.Body.Value);
 
             _deadLetterConsumer.Acknowledge(dlqMessage);
-
         }
 
         public void Dispose()
         {
             _channel.Dispose();
         }
-
     }
 }

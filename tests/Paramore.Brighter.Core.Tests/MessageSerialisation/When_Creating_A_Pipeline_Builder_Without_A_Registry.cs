@@ -13,15 +13,15 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     {
          //arrange
           TransformPipelineBuilder.ClearPipelineCache();
-          
+
           var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
          //act
          var exception = Catch.Exception(() => new TransformPipelineBuilder(null, messageTransformerFactory));
-         
+
          //assert
          exception.Should().NotBeNull();
          exception.Should().BeOfType<ConfigurationException>();
-          
+
     }
 }

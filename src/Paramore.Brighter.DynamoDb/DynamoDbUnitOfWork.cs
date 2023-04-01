@@ -50,7 +50,7 @@ namespace Paramore.Brighter.DynamoDb
         {
             if (!HasTransaction())
                 throw new InvalidOperationException("No transaction to commit");
-            
+
             return DynamoDb.TransactWriteItemsAsync(_tx).GetAwaiter().GetResult();
         }
 
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.DynamoDb
         {
              if (!HasTransaction())
                  throw new InvalidOperationException("No transaction to commit");
-             
+
              return await DynamoDb.TransactWriteItemsAsync(_tx, ct);
          }
 

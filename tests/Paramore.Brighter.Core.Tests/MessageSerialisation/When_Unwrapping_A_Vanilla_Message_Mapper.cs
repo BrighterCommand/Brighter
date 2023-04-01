@@ -17,12 +17,12 @@ public class VanillaMessageUnwrapRequestTests
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-          
+
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
 
         _myCommand = new MyTransformableCommand();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -41,7 +41,7 @@ public class VanillaMessageUnwrapRequestTests
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         var request = _transformPipeline.UnwrapAsync(_message).Result;
-        
+
         //assert
         request.Value = _myCommand.Value;
     }

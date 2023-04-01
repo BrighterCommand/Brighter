@@ -150,13 +150,12 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             {
                 inbox.Add(command, contextKey);
             }
-             
+
             //Act
             var firstCommandExists = inbox.Exists<SimpleCommand>(Guid.NewGuid(), contextKey);
  
             //Assert
             firstCommandExists.Should().BeFalse();
-             
         }
 
     }

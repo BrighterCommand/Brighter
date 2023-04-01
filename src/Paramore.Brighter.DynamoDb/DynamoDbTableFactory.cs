@@ -259,7 +259,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     }
                 }
             }
-            
+
             return gsiMap;
         }
 

@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
             channel.Enqueue(message1);
             channel.Enqueue(message2);
-            
+
             //end the pump
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             channel.Enqueue(quitMessage);

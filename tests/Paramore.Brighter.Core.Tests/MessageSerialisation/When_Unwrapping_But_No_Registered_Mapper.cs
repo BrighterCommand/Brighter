@@ -22,7 +22,7 @@ public class MessageUnwrapRequestMissingMapperTests
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
         MyTransformableCommand myCommand = new();
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);

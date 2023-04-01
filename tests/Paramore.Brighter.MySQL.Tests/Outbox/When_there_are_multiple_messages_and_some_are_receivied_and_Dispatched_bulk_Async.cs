@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             //should fetch expected message
             _messages.Should().Contain(m => m.Id == _message1.Id);
             _messages.Should().Contain(m => m.Id == _message2.Id);
-            
+
             await _sqlOutbox.MarkDispatchedAsync(_messages.Select(m => m.Id), DateTime.UtcNow);
 
             await Task.Delay(TimeSpan.FromSeconds(5));
@@ -70,6 +70,5 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper.CleanUpDb();
         }
-
     }
 }

@@ -99,6 +99,5 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         {
             return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }
-
     }
 }

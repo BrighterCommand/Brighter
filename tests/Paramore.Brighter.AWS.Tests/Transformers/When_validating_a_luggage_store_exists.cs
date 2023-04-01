@@ -82,7 +82,6 @@ public class S3LuggageStoreExistsTests
 
         //teardown
         await _client.DeleteBucketAsync(bucketName);
-
     }
 
     [Fact]
@@ -106,6 +105,5 @@ public class S3LuggageStoreExistsTests
 
          doesNotExist.Should().NotBeNull();
          doesNotExist.Should().BeOfType<InvalidOperationException>();
-
     }
 }

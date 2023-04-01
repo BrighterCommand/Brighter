@@ -29,14 +29,14 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         _client = new BlobContainerClient(_bucketUrl, new AzureCliCredential());
         _client.CreateIfNotExists();
         _luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
-        
+
         TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
         {
             { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
         };
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -47,13 +47,13 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
     {
         //arrange
         await Task.Delay(3000); //allow bucket definition to propogate
-            
+
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);
         var myCommand = new MyLargeCommand(1) { Value = contents };
         var commandAsJson = JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General));
-        
-        var stream = new MemoryStream();                                                                               
+
+        var stream = new MemoryStream();
         var writer = new StreamWriter(stream);
         await writer.WriteAsync(commandAsJson);
         await writer.FlushAsync();
@@ -62,7 +62,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
- 
+
         //set the headers, so that we have a claim check listed
         var message = new Message(
             new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
@@ -74,7 +74,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
         var transformedMessage = await transformPipeline.UnwrapAsync(message);
-        
+
         //assert
         //contents should be from storage
         transformedMessage.Value.Should().Be(contents);

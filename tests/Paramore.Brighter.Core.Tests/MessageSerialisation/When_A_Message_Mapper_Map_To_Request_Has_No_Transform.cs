@@ -14,14 +14,14 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     {
         //arrange
          TransformPipelineBuilder.ClearPipelineCache();
-         
+
          var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
 
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => null));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-        
+
     }
 
     [Fact]
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        
+
         //assert
         TraceFilters().ToString().Should().Be("MyVanillaCommandMessageMapper");
     }

@@ -49,7 +49,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //assert
             var tracer = TracePipelineAsync(_chainOfResponsibility.First());
             tracer.ToString().Should().NotContain("UseInboxHandlerAsync");
-
         }
 
         public void Dispose()
@@ -63,6 +62,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-
     }
 }

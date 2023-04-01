@@ -83,7 +83,6 @@ public class S3LuggageUploadTests : IDisposable
         resultAsString.Should().Be(testContent);
 
         await luggageStore.DeleteAsync(claim);
-
     }
 
     public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
@@ -107,7 +106,6 @@ public class S3LuggageUploadTests : IDisposable
                 }
             })
             .WaitAndRetryAsync(delay);
-
     }
 
     public void Dispose()

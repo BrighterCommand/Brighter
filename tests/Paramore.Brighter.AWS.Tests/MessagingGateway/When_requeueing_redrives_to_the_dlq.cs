@@ -107,10 +107,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 }
 
                 return response.Messages.Count;
-
             }
-           
         }
-
     }
 }

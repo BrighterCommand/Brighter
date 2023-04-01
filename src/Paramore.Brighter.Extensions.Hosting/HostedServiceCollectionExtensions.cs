@@ -18,7 +18,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             var options = new TimedOutboxSweeperOptions();
             timedOutboxSweeperOptionsAction?.Invoke(options);
-            
+
             brighterBuilder.Services.TryAddSingleton<TimedOutboxSweeperOptions>(options);
             brighterBuilder.Services.AddHostedService<TimedOutboxSweeper>();
             return brighterBuilder;
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             timedOutboxArchiverOptionsAction?.Invoke(options);
             brighterBuilder.Services.TryAddSingleton<TimedOutboxArchiverOptions>(options);
             brighterBuilder.Services.AddSingleton<IAmAnArchiveProvider>(archiveProvider);
-            
+
             brighterBuilder.Services.AddHostedService<TimedOutboxArchiver>();
 
             return brighterBuilder;

@@ -27,6 +27,5 @@ namespace GreetingsEntities
             greeting.Recipient = this;
             _greetings.Add(greeting);
         }
-
     }
 }

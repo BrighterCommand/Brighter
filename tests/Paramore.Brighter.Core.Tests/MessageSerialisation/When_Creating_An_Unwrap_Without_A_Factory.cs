@@ -18,12 +18,12 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-        
+
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 
         _myCommand = new MyTransformableCommand();
-        
+
         _message = new Message(
             new MessageHeader(_myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(_myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))

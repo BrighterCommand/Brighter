@@ -15,8 +15,8 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
     public TransformPipelineMissingFactoryWrapTests()
     {
         //arrange
-        TransformPipelineBuilder.ClearPipelineCache();  
-        
+        TransformPipelineBuilder.ClearPipelineCache();
+
         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()))
             { { typeof(MyTransformableCommand), typeof(MyTransformableCommandMessageMapper) } };
 

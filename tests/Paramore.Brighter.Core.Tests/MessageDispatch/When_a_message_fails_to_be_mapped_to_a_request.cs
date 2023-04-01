@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()));
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
-             
+
             _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, messageMapperRegistry)
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
 

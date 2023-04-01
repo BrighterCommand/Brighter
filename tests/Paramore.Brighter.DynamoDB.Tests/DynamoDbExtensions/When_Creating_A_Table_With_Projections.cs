@@ -22,7 +22,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     {"GlobalSecondaryIndex", new Projection{ ProjectionType = ProjectionType.KEYS_ONLY, NonKeyAttributes = new List<string>{"Id", "Version"}}}
                 }
             );
-           
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput(
@@ -36,13 +36,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                 ),
                 gsiProjection
             );
-            
+
             //assert
             Assert.Equal(ProjectionType.KEYS_ONLY, tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.ProjectionType);
             Assert.Equal(
                 new List<string>{"Id", "Version"},
                 tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.NonKeyAttributes);
-       
+
         }
 
         [DynamoDBTable("MyEntity")]
@@ -63,6 +63,5 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryRangeKey { get; set; }
         }
-
     }
 }

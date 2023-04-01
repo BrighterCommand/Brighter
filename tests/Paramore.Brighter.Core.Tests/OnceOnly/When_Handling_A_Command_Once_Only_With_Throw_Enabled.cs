@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeWithThrowExceptionTests()
         {
             _inbox = new InMemoryInbox();
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyStoredCommandToThrowHandler>();
 
@@ -55,9 +55,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _command = new MyCommand {Value = "My Test String"};
-            
+
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
@@ -65,9 +65,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public void When_Handling_A_Command_Once_Only_With_Throw_Enabled()
         {
             _commandProcessor.Send(_command);
-            
+
             Exception ex = Assert.Throws<OnceOnlyException>(() => _commandProcessor.Send(_command));
-            
+
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
         }
 

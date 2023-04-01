@@ -22,6 +22,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             Send(message);
         }
-
     }
 }

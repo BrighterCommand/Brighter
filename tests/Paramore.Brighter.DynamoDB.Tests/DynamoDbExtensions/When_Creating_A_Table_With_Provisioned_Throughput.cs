@@ -23,16 +23,16 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                         { "GlobalSecondaryIndex", new ProvisionedThroughput(readCapacityUnits: 11,writeCapacityUnits: 11) }
                     }
            );
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(provisonedThroughput);
-            
+
             //assert
             Assert.Equal(10, tableRequest.ProvisionedThroughput.ReadCapacityUnits);
             Assert.Equal(10, tableRequest.ProvisionedThroughput.WriteCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.ReadCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.WriteCapacityUnits);
-    
+
         }
 
         [DynamoDBTable("MyEntity")]
@@ -53,6 +53,5 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryRangeKey { get; set; }
         }
-
     }
 }

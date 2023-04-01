@@ -4050,7 +4050,6 @@
        * @member Utils
        * @memberof Popper
        */
-
     }]);
     return Popper;
   }();

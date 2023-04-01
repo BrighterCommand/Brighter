@@ -171,6 +171,5 @@ namespace SalutationAnalytics
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
             return hostContext.HostingEnvironment.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : hostContext.Configuration.GetConnectionString("Salutations");
         }
-
     }
 }

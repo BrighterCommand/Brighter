@@ -70,12 +70,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Consumers.Count().Should().Be(3);
 
             _dispatcher.End().Wait();
-            
+
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);
             //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
-
     }
 }

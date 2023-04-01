@@ -28,7 +28,7 @@ public class JsonBodyMessageMapper<T> : IAmAMessageMapper<T> where T : class, IR
         }
 
         var topicName = _topicDirectory[typeof(T).Name];
-            
+
         var header = new MessageHeader(messageId: request.Id, topic: topicName, messageType: messageType);
         var body = new MessageBody(JsonSerializer.Serialize(request));
         var message = new Message(header, body);

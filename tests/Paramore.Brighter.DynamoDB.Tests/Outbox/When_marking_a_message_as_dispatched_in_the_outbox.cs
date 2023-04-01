@@ -26,32 +26,28 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
     {
         await _dynamoDbOutbox.AddAsync(_message);
         await _dynamoDbOutbox.MarkDispatchedAsync(_message.Id, DateTime.UtcNow);
-        
-        var args = new Dictionary<string, object>(); 
+
+        var args = new Dictionary<string, object>();
         args.Add("Topic", "test_topic");
 
         var messages = _dynamoDbOutbox.DispatchedMessages(0, 100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);
-
-
     }
 
     [Fact]
     public void When_Marking_A_Message_As_Dispatched_In_The_Outbox()
     {
-        _dynamoDbOutbox.Add(_message);  
+        _dynamoDbOutbox.Add(_message);
         _dynamoDbOutbox.MarkDispatched(_message.Id, DateTime.UtcNow);
-        
-        var args = new Dictionary<string, object>(); 
+
+        var args = new Dictionary<string, object>();
         args.Add("Topic", "test_topic");
 
         var messages = _dynamoDbOutbox.DispatchedMessages(0, 100, 1, args:args);
         var message = messages.Single(m => m.Id == _message.Id);
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);
-
-
     }
 }

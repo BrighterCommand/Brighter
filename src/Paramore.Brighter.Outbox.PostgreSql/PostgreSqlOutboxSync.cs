@@ -565,7 +565,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             var messageParams = new List<string>();
             var parameters = new List<NpgsqlParameter>();
-            
+
             for (int i = 0; i < messages.Count; i++)
             {
                 messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
@@ -573,9 +573,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             }
             var sql = $"INSERT INTO {_configuration.OutboxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
-            
+
             var command = connection.CreateCommand();
-            
+
             command.CommandText = sql;
             command.Parameters.AddRange(parameters.ToArray());
 

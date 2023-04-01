@@ -67,6 +67,5 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             //_should_read_the_command_from_the__dynamo_db_inbox
             AssertionExtensions.Should((object) storedCommand).NotBeNull();
         }
-
     }
 }

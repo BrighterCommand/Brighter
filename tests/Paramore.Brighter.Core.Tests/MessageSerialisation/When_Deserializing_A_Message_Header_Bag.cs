@@ -42,11 +42,11 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
              }
 
              var json = JsonSerializer.Serialize(header, JsonSerialisationOptions.Options);
-             
+
              //Act
              MessageHeader deserializedHeader = JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
              //fix the headers to pass
-             
+
              //Assert
              foreach (var key in expectedBag.Keys)
              {

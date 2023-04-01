@@ -92,10 +92,9 @@ namespace Tests
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
-
     }
 
     internal class FakeProducerSync : IAmAMessageProducerSync, IAmAMessageProducerAsync

@@ -22,7 +22,7 @@ namespace Paramore.Brighter.DynamoDb
             };
 
             return entry;
- 
+
         }
 
         public object FromEntry(DynamoDBEntry entry)
@@ -31,9 +31,9 @@ namespace Paramore.Brighter.DynamoDb
             if (primitive == null || !(primitive.Value is String) || string.IsNullOrEmpty((string) primitive.Value))
                 throw new ArgumentOutOfRangeException();
 
-            var value = Guid.Parse(primitive.AsString()); 
+            var value = Guid.Parse(primitive.AsString());
             return value;
- 
+
         }
     }
 }

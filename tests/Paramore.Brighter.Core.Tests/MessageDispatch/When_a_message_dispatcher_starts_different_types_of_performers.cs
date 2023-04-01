@@ -101,7 +101,5 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)
                 _dispatcher.End().Wait();
         }
-
     }
-
 }

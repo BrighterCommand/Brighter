@@ -66,7 +66,7 @@ namespace Paramore.Brighter.DynamoDb
             // Let us wait until all tables are created. Call DescribeTable.
             var tableStates = (from tableName in tableNames
                 select new DynamoDbTableStatus{TableName = tableName, IsReady = false}).ToList();
-            
+
             do
             {
                 await Task.Delay(5000, ct);
@@ -95,9 +95,9 @@ namespace Paramore.Brighter.DynamoDb
 
         public async Task<(bool exist, IEnumerable<string> missing)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
         {
-            
+
             var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
-            
+
             string lastEvalutatedTableName = null;
             do
             {
@@ -121,7 +121,7 @@ namespace Paramore.Brighter.DynamoDb
         public CreateTableRequest RemoveNonSchemaAttributes(CreateTableRequest tableRequest)
         {
             var keyMatchedAttributes = new List<AttributeDefinition>();
-            
+
             //get the unfiltered markup
             var existingAttributes = tableRequest.AttributeDefinitions;
 
@@ -142,7 +142,7 @@ namespace Paramore.Brighter.DynamoDb
 
             //swap for the filtered list
             tableRequest.AttributeDefinitions = keyMatchedAttributes;
-            
+
             return tableRequest;
         }
 

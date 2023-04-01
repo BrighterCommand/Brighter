@@ -15,7 +15,6 @@
             _id = id;
             Greeting = greeting;
         }
-
     }
 }
 

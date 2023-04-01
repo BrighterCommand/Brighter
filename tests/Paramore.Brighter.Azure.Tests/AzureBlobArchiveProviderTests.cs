@@ -52,15 +52,15 @@ public class AzureBlobArchiveProviderTests
         await _provider.ArchiveMessageAsync(commandMessage, CancellationToken.None);
 
         var blobClient = _containerClient.GetBlobClient(commandMessage.Id.ToString());
-        
+
         Assert.That((bool)await blobClient.ExistsAsync(), Is.True);
 
         // var tags = (await blobClient.GetTagsAsync()).Value.Tags;
 
         var body = (await blobClient.DownloadContentAsync()).Value.Content.ToString();
-        
+
         Assert.That(body, Is.EqualTo(commandMessage.Body.Value));
-        
+
         // Assert.That(tags["topic"], Is.EqualTo(commandMessage.Header.Topic));
         // Assert.That(Guid.Parse(tags["correlationId"]), Is.EqualTo(commandMessage.Header.CorrelationId));
         // Assert.That(tags["message_type"], Is.EqualTo(commandMessage.Header.MessageType.ToString()));

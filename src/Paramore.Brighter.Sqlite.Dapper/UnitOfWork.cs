@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
         private SqliteTransaction _transaction;
 
         public UnitOfWork(DbConnectionStringProvider dbConnectionStringProvider)
-        {                     
+        {
             _connection = new SqliteConnection(dbConnectionStringProvider.ConnectionString);
         }
 

@@ -30,6 +30,6 @@ public class MessageWrapRequestMissingTransformTests
         var exception = Catch.Exception(() => _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>());
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ConfigurationException>();
-        
+
     }
 }

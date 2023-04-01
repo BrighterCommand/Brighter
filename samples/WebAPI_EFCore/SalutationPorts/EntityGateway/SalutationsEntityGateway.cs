@@ -15,6 +15,5 @@ namespace SalutationPorts.EntityGateway
 
             base.OnModelCreating(modelBuilder);
         }
-
     }
 }

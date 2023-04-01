@@ -73,7 +73,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 s_released += "|" + handler.Name;
             }
         }
-
-
     }
 }

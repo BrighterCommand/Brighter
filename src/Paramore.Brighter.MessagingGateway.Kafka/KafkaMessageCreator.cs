@@ -231,7 +231,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     return new HeaderResult<string>(null, false);
                 }
             }
-           
+
             return new HeaderResult<string>(string.Empty, !dieOnMissing);
         }
     }

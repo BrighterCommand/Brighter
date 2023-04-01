@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout
             container.AddTransient<TimeoutPolicyHandler<MyCommand>>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
            _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 

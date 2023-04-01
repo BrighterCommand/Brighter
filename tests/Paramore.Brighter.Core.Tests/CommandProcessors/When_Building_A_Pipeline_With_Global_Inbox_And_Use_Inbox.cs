@@ -79,7 +79,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             //assert
             noException.Should().BeTrue();
-
         }
 
         public void Dispose()
@@ -93,6 +92,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-
     }
 }

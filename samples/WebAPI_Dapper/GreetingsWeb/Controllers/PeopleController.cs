@@ -55,6 +55,5 @@ namespace GreetingsWeb.Controllers
 
             return Ok(addedPeson);
         }
-
     }
 }

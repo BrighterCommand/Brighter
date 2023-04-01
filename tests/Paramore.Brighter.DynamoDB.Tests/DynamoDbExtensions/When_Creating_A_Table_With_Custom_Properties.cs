@@ -127,9 +127,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             var name = new Money((int)value.Amount, value.Currency);
             return name;
-
         }
-
     }
 
     public class MoneyDTO

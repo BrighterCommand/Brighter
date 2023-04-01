@@ -23,7 +23,7 @@ public class MessageUnwrapRequestWithAttributesTests
 
         var myCommand = new MyTransformableCommand();
         myCommand.Value = "Hello World";
-        
+
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
@@ -39,7 +39,7 @@ public class MessageUnwrapRequestWithAttributesTests
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
         var request = _transformPipeline.UnwrapAsync(_message).Result;
-        
+
         //assert
         request.Value.Should().Be("I am a parameterized template: Hello World");
     }

@@ -97,7 +97,6 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             return messages;
         }
-
     }
 
     public class ExampleCommand : ICommand

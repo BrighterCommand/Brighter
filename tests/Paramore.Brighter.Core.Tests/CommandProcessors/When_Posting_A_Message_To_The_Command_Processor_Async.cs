@@ -95,6 +95,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             CommandProcessor.ClearExtServiceBus();
         }
-
     }
 }

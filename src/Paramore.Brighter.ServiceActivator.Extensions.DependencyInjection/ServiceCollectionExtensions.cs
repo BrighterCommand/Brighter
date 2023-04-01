@@ -62,7 +62,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
             var messageMapperRegistry = ServiceCollectionExtensions.MessageMapperRegistry(serviceProvider);
             var messageTransformFactory = ServiceCollectionExtensions.TransformFactory(serviceProvider);
-            
+
             return dispatcherBuilder
                 .MessageMappers(messageMapperRegistry, messageTransformFactory)
                 .DefaultChannelFactory(options.ChannelFactory)

@@ -75,7 +75,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Release(IHandleRequests handler)
         {
             if (!_isTransient) return;
-            
+
             var disposal = handler as IDisposable;
             disposal?.Dispose();
         }
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Release(IHandleRequestsAsync handler)
         {
             if (!_isTransient) return;
-            
+
             var disposal = handler as IDisposable;
             disposal?.Dispose();
         }

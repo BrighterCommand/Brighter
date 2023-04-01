@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
-        {            
+        {
             AddAsync(command, contextKey)
                 .ConfigureAwait(false)
                 .GetAwaiter()
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
         public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
-        {                
+        {
             return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
         }
 
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
                 KeyExpression = new KeyIdContextExpression().Generate(id, contextKey),
                 ConsistentRead = true
             };
-           
+
             //block async to make this sync
             var messages = await PageAllMessagesAsync<T>(queryConfig).ConfigureAwait(false);
 
@@ -171,7 +171,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             where T: class, IRequest
         {
             var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig);
-            
+
             var messages = new List<CommandItem<T>>();
             do
             {

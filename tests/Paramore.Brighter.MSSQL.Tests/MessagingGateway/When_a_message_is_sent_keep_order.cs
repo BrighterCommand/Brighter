@@ -100,6 +100,5 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
 
             return messages;
         }
-
     }
 }

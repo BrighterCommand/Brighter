@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         public OnceOnlyAttributeWithWarnExceptionAsyncTests()
         {
             _inbox = new InMemoryInbox();
-            
+
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyStoredCommandToWarnHandlerAsync>();
 
@@ -57,9 +57,9 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _command = new MyCommand {Value = "My Test String"};
-            
+
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 
@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             await _commandProcessor.SendAsync(_command);
             await _commandProcessor.SendAsync(_command);
-            
+
             MyStoredCommandToWarnHandlerAsync.ReceivedCount.Should().Be(1);
         }
 

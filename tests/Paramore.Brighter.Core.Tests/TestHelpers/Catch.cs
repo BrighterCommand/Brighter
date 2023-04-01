@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Core.Tests.TestHelpers
         {
             var tcs = new TaskCompletionSource<Exception>(TaskCreationOptions.RunContinuationsAsynchronously);
             //Exception exception = null;
-            
+
             try
             {
                 await action();

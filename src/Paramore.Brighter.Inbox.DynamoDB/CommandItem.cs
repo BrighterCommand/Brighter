@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         public CommandItem(T command, string contextKey)
         {
             var type = typeof(T).Name;
-            
+
             Time = $"{TimeStamp.Ticks}";
             CommandId = command.Id.ToString();
             CommandType = typeof(T).Name;
