@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             var timeStamp = HeaderResult<DateTime>.Empty();
             var receiptHandle = HeaderResult<string>.Empty();
             var replyTo = HeaderResult<string>.Empty();
-            
+
 
             Message message;
             try
@@ -105,8 +105,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning(e, "Failed to create message from amqp message");
                 message = FailureMessage(topic, messageId);
             }
-            
-            
+
             return message;
         }
 
@@ -114,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if(contentType == CompressPayloadTransformer.GZIP || contentType == CompressPayloadTransformer.DEFLATE || contentType == CompressPayloadTransformer.BROTLI)
                 return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
-            
+
             return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
         }
 

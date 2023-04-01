@@ -92,8 +92,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
                 message = FailureMessage(topic, messageId);
             }
-            
-            
+
+
             return message;
         }
 

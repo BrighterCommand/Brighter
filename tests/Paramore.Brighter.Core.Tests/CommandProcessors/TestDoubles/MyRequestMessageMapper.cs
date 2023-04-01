@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(request.Id.ToString(), request.RequestValue), JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
-  
+
         }
 
         public MyRequest MapToRequest(Message message)

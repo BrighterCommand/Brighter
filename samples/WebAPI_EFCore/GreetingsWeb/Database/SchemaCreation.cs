@@ -45,7 +45,7 @@ namespace GreetingsWeb.Database
         public static IHost CheckDbIsUp(this IHost webHost)
         {
             using var scope = webHost.Services.CreateScope() ;
-            
+
             var services = scope.ServiceProvider;
             var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();

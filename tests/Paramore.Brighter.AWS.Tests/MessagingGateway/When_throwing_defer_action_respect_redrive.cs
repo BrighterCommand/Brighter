@@ -92,9 +92,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName))
-                ); 
+                );
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
-            
+
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
             {

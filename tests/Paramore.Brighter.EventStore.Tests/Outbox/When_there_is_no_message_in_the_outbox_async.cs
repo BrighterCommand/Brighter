@@ -38,7 +38,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
-            
+
             // act
             var messages = await eventStoreOutbox.GetAsync(StreamName, 0, 1);
 

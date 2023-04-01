@@ -57,16 +57,16 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
                 return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
             }
-            
+
             // -- Confluent supply these values, see their .NET examples for your account
             // You need to set those values as environment variables, which we then read, in order
             // to run these tests
 
             const string groupId = "Kafka Message Producer Send Test";
-            string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
+            string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER");
             string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
-            
+
             _output = output;
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -91,8 +91,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     RequestTimeoutMs = 10000,
                     MakeChannels = OnMissingChannel.Create //This will not make the topic
                 }
-                }).Create(); 
-            
+                }).Create();
+
             //This should force creation of the topic - will fail if no topic creation code
             _consumer = new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                      makeChannels: OnMissingChannel.Create
                      )
              );
-  
+
         }
 
         [Fact]
@@ -126,7 +126,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
-            
+
             //This should fail, if consumer can't create the topic as set to Assume
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
 

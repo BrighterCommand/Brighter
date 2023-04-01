@@ -46,12 +46,12 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             header.Bag.Add("impersonatorId", 123);
             header.Bag.Add("eventNumber", 0);
             header.Bag.Add("streamId", StreamName);
-            
+
             var messageToMarkAsDispatched = new Message(header, body);
-            
+
             var dispatchedAt = DateTime.UtcNow;
             var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
-            
+
             await eventStoreOutbox.AddAsync(messageToMarkAsDispatched);
 
             // act
@@ -68,10 +68,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
-            
+
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow);
-            
+
             // assert
             getWithoutArgs.Should().ThrowAsync<ArgumentNullException>();
         }
@@ -82,11 +82,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
-            
+
             // act
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow, args);
-            
+
             // assert
             getWithoutArgs.Should().ThrowAsync<ArgumentException>();
         }
@@ -97,11 +97,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object>();
-            
+
             // act
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow, args);
-            
+
             // assert
             getWithoutArgs.Should().ThrowAsync<ArgumentException>();
         }
@@ -112,11 +112,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
-            
+
             // act
             // act
             Func<Task> getWithoutArgs = async () => await eventStoreOutbox.MarkDispatchedAsync(Guid.Empty, DateTime.UtcNow, args);
-            
+
             // assert
             getWithoutArgs.Should().ThrowAsync<ArgumentException>();
         }

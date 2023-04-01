@@ -16,7 +16,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         {
             var tableRequestFactory = new DynamoDbTableFactory();
             var builder = new DynamoDbTableBuilder(CreateClient());
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             );
 
             var modifiedTableRequest = builder.RemoveNonSchemaAttributes(tableRequest);
-            
+
             //assert
             Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S);
             Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "NumberProperty" && attr.AttributeType == ScalarAttributeType.N);
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             clientConfig.ServiceURL = "http://localhost:8000";
 
             return new AmazonDynamoDBClient(credentials, clientConfig);
- 
+
         }
 
 

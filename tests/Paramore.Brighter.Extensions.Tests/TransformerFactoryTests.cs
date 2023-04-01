@@ -19,10 +19,10 @@ public class TransformerFactoryTests
        var provider = collection.BuildServiceProvider(new ServiceProviderOptions{ValidateOnBuild = true});
 
        _transformFactory = new ServiceProviderTransformerFactory(provider);
-       
+
        //act
        var testTransform = _transformFactory.Create(typeof(TestTransform));
-       
+
        //assert
        testTransform.Should().NotBeNull();
     }
@@ -36,10 +36,10 @@ public class TransformerFactoryTests
         var provider = collection.BuildServiceProvider();
 
         _transformFactory = new ServiceProviderTransformerFactory(provider);
-       
+
         //act
         var testTransform = _transformFactory.Create(typeof(TestTransform));
-       
+
         //assert
         testTransform.Should().BeNull();
     }

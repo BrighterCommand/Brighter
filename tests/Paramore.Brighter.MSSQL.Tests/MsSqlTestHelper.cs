@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MSSQL.Tests
             configuration.GetSection("Sql").Bind(_sqlSettings);
 
             _tableName = $"test_{Guid.NewGuid()}";
-            
+
             _connectionProvider = new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString));
             _masterConnectionProvider = new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsMasterConnectionString));
         }

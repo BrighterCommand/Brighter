@@ -33,17 +33,17 @@ public class RetrieveClaimLargePayloadTests
         await writer.WriteAsync(_contents);
         await writer.FlushAsync();
         stream.Position = 0;
-        
+
         var id = await _store.StoreAsync(stream);
-        
+
         var message = new Message(
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody("Claim Check {id}"));
         message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
-        
+
         //act
         var unwrappedMessage = await _transformer.UnwrapAsync(message);
-        
+
         //assert
         unwrappedMessage.Body.Value.Should().Be(_contents);
         //clean up

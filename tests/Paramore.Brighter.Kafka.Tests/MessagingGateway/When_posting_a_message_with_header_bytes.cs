@@ -74,8 +74,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
-                }}).Create(); 
-            
+                }}).Create();
+
             _consumer = new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration
                     {
@@ -91,10 +91,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                         makeChannels: OnMissingChannel.Create
                     )
                 );
-            
+
             var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
             _schemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
-  
+
             _serializer = new JsonSerializer<MyKafkaCommand>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
             _deserializer = new JsonDeserializer<MyKafkaCommand>().AsSyncOverAsync();
             _serializationContext = new SerializationContext(MessageComponentType.Value, _topic);
@@ -104,12 +104,12 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public void When_posting_a_message_via_the_messaging_gateway()
         {
             //arrange
-            
+
             var myCommand = new MyKafkaCommand{ Value = "Hello World"};
-            
+
             //use the serdes json serializer to write the message to the topic
             var body = _serializer.Serialize(myCommand, _serializationContext);
-            
+
             //grab the schema id that was written to the message by the serializer
             var schemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(body.Skip(1).Take(4).ToArray()));
 
@@ -119,19 +119,19 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody(body));
-            
+
             //act
-            
+
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(sent);
 
             var received = GetMessage();
 
             received.Body.Bytes.Length.Should().BeGreaterThan(5);
-            
+
             var receivedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(received.Body.Bytes.Skip(1).Take(4).ToArray()));
-            
+
             var receivedCommand = _deserializer.Deserialize(received.Body.Bytes, received.Body.Bytes is null, _serializationContext);
-            
+
             //assert
             received.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             received.Header.PartitionKey.Should().Be(_partitionKey);
@@ -168,10 +168,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }
 
             } while (maxTries <= 3);
-            
+
             if (messages[0].Header.MessageType == MessageType.MT_NONE)
                 throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
-            
+
             return messages[0];
         }
 

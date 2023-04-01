@@ -20,17 +20,17 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
-            
+
             var subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Assume
             );
-            
+
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
             //create the topic, we want the queue to be the issue
             //We need to create the topic at least, to check the queues
             var producer = new SqsMessageProducer(awsConnection,
@@ -38,12 +38,12 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 {
                     MakeChannels = OnMissingChannel.Create
                 });
-            
-           producer.ConfirmTopicExists(topicName); 
-            
+
+           producer.ConfirmTopicExists(topicName);
+
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
-            
+
             //We need to create the topic at least, to check the queues
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
         }
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         public void Dispose()
         {
-           _channelFactory.DeleteTopic(); 
+           _channelFactory.DeleteTopic();
         }
 
 

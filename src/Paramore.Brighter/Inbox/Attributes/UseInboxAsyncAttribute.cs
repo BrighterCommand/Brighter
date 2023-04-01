@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Inbox.Attributes
 
         public override object[] InitializerParams()
         {
-            
+
             return new object[]{OnceOnly, ContextKey, OnceOnlyAction};
         }
 

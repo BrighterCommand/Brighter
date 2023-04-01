@@ -433,7 +433,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 Channel.QueueBind(_queueName, Connection.Exchange.Name, key);
             }
-            
+
             if (_hasDlq) Channel.QueueBind(_deadLetterQueueName, GetDeadletterExchangeName(), _deadLetterRoutingKey);
         }
 

@@ -59,12 +59,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             var now = DateTime.UtcNow;
             var end = now.AddMilliseconds(timeoutInMilliseconds);
             var pause = ((timeoutInMilliseconds > 25) && (timeoutInMilliseconds / 5 > 5)) ? timeoutInMilliseconds / 5 : 5;
- 
-            
+
             var buffer = new BasicDeliverEventArgs[bufferSize];
             var bufferIndex = 0;
-            
-            
+
             while (now < end && bufferIndex < bufferSize)
             {
                 if (_messages.TryDequeue(out BasicDeliverEventArgs result))
@@ -95,7 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             //See also https://docs.microsoft.com/en-us/dotnet/standard/memory-and-spans/memory-t-usage-guidelines
             var payload = new byte[body.Length];
             body.CopyTo(payload);
-            
+
             _messages.Enqueue(new BasicDeliverEventArgs
             {
                 BasicProperties = properties,
@@ -124,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 s_logger.LogWarning("Tried to nack unhandled messages on shutdown but failed for {ErrorMessage}",
                     e.Message);
             }
-           
+
             base.OnCancel();
         }
 

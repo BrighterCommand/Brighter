@@ -116,9 +116,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             _outboxBulkChunkSize = outboxBulkChunkSize;
-            
+
             return brighterBuilder;
-             
+
         }
 
          /// <summary>
@@ -207,11 +207,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>The Brighter builder to allow chaining of requests</returns>
         public static IBrighterBuilder UseExternalBus(this IBrighterBuilder brighterBuilder, IAmAProducerRegistry producerRegistry, bool useRequestResponseQueues = false, IEnumerable<Subscription> replyQueueSubscriptions = null)
         {
-            
             brighterBuilder.Services.TryAddSingleton<IAmAProducerRegistry>(producerRegistry);
-            
+
             brighterBuilder.Services.TryAddSingleton<IUseRpc>(new UseRpc(useRequestResponseQueues, replyQueueSubscriptions));
-            
+
             return brighterBuilder;
         }
 
@@ -236,11 +235,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static IBrighterBuilder ConfigureJsonSerialisation(this IBrighterBuilder brighterBuilder, Action<JsonSerializerOptions> configure)
         {
             var options = new JsonSerializerOptions();
-            
+
             configure.Invoke(options);
 
             JsonSerialisationOptions.Options = options;
-            
+
             return brighterBuilder;
         }
 
@@ -299,7 +298,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
 
             var inboxConfiguration = provider.GetService<InboxConfiguration>();
-            
+
             var producerRegistry = provider.GetService<IAmAProducerRegistry>();
 
             var needHandlers = CommandProcessorBuilder.With();
@@ -308,7 +307,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (featureSwitchRegistry != null)
                 needHandlers = needHandlers.ConfigureFeatureSwitches(featureSwitchRegistry);
-            
+
             var policyBuilder = needHandlers.Handlers(handlerConfiguration);
 
             var messagingBuilder = options.PolicyRegistry == null

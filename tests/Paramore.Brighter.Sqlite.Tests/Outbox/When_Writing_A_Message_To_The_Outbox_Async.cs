@@ -84,7 +84,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //should read the message header type from the sql outbox
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);

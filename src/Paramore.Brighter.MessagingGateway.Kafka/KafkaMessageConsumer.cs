@@ -487,7 +487,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 return;
             }
-                
+
             if (_flushToken.Wait(TimeSpan.Zero))
             {
                 if (now - _lastFlushAt < _sweepUncommittedInterval)

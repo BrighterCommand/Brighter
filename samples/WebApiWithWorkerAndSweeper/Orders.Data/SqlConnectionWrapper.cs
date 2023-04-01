@@ -49,8 +49,8 @@ public class SqlUnitOfWork : IUnitOfWork
 
         command.CommandText = sql;
         if(parameters.Length>0)
-            command.Parameters.AddRange(parameters); 
-        
+            command.Parameters.AddRange(parameters);
+
         return command;
     }
 }

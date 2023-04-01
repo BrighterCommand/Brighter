@@ -49,7 +49,6 @@ namespace Paramore.Brighter.ServiceActivator
     /// Manages the message pump used to read messages for a channel. Creation establishes the message pump for a given subscription and channel. Open runs the
     /// message pump, which begins consuming messages from the channel; it returns the TPL Task used to run the message pump thread so that it can be
     /// Waited on by callers. Shut closes the message pump.
-    /// 
     /// </summary>
     public class Consumer : IAmAConsumer, IEquatable<Consumer>
     {

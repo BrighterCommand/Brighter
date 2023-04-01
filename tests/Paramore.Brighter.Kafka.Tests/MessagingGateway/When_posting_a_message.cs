@@ -66,8 +66,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
-                }}).Create(); 
-            
+                }}).Create();
+
             _consumer = new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration
                     {
@@ -83,30 +83,30 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                         makeChannels: OnMissingChannel.Create
                     )
                 );
-  
+
         }
 
         [Fact]
         public void When_posting_a_message()
         {
             var command = new MyCommand{Value = "Test Content"};
-            
+
             //vanilla i.e. no Kafka specific bytes at the beginning
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
-            
+
             var message = new Message(
                 new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
                 {
                     PartitionKey = _partitionKey
                 },
                 new MessageBody(body));
-            
+
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
 
             var receivedMessage = GetMessage();
-            
+
             var receivedCommand = JsonSerializer.Deserialize<MyCommand>(message.Body.Value, JsonSerialisationOptions.Options);
-            
+
             receivedMessage.Header.MessageType.Should().Be(MessageType.MT_COMMAND);
             receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
             receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
@@ -141,10 +141,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 }
 
             } while (maxTries <= 3);
-            
+
             if (messages[0].Header.MessageType == MessageType.MT_NONE)
                 throw new Exception($"Failed to read from topic:{_topic} after {maxTries} attempts");
-            
+
             return messages[0];
         }
 

@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            
+
         }
 
         [Fact]
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlOutboxSync.Add(_messageEarliest);
             _mySqlOutboxSync.Add(_message2);
             _mySqlOutboxSync.Add(_messageLatest);
-            
+
             _retrievedMessages = _mySqlOutboxSync.Get();
 
             //should read first message last from the outbox

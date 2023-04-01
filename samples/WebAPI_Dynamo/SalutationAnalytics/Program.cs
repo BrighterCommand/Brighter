@@ -225,7 +225,7 @@ namespace SalutationAnalytics
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},
                     new Dictionary<string, ProvisionedThroughput>()
                 ));
-            
+
             var tableName = createTableRequest.TableName;
             (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] {tableName}).Result;
             if (!hasTables.exist)

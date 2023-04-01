@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public async Task When_a_message_is_acknowldgede_update_offset()
         {
             var groupId = Guid.NewGuid().ToString();
-            
+
             //send x messages to Kafka
             var sentMessages = new Guid[10];
             for (int i = 0; i < 10; i++)

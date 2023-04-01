@@ -73,7 +73,7 @@ namespace Paramore.Brighter
                 cancellationToken: CancellationToken.None,
                 creationOptions: TaskCreationOptions.DenyChildAttach,
                 scheduler: TaskScheduler.Default);
-            
+
             _lastScanAt = now;
         }
 

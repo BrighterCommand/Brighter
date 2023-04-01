@@ -114,7 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                  s_logger.LogError("RedisMessageConsumer: Preparing to retrieve next message from queue {ChannelName}, but have unacked or not rejected message", _queueName);
                 throw new ChannelFailureException($"Unacked message still in flight with id: {_inflight.Keys.First().ToString()}");
             }
-            
+
             var message = new Message();
             IRedisClient client = null;
             try
@@ -167,7 +167,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             Task.Delay(delayMilliseconds).Wait();
             message.Header.DelayedMilliseconds = delayMilliseconds;
-            
+
             message.Header.HandledCount++;
             using (var client = Pool.Value.GetClient())
             {

@@ -37,14 +37,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         protected RedisMessageGateway(RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration)
         {
             _gatewayConfiguration = redisMessagingGatewayConfiguration;
-            
+
             Pool = new Lazy<RedisManagerPool>(() =>
             {
                 OverrideRedisClientDefaults();
 
                 return new RedisManagerPool(_gatewayConfiguration.RedisConnectionString, new RedisPoolConfig());
             });
- 
+
         }
 
 

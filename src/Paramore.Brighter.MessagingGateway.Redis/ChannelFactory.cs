@@ -48,10 +48,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>IAmAnInputChannel.</returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
-            RedisSubscription rmqSubscription = subscription as RedisSubscription;  
+            RedisSubscription rmqSubscription = subscription as RedisSubscription;
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
-            
+
             return new Channel(
                 subscription.ChannelName,
                 _messageConsumerFactory.Create(subscription),

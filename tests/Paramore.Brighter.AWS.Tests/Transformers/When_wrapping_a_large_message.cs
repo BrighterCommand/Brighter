@@ -84,7 +84,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();
             _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
             message.Body.Value.Should().Be($"Claim Check {_id}");
-            
+
             (await _luggageStore.HasClaimAsync(_id)).Should().BeTrue();
         }
 

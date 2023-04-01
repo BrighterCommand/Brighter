@@ -56,7 +56,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             };
 
             await Connection.ConnectAsync();
-            
+
             EnsureEventStoreNodeHasStartedAndTheClientHasConnected();
 
             StreamName = $"{Guid.NewGuid()}";
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             var timer = new Stopwatch();
             timer.Start();
-            
+
             while (!EventStoreClientConnected)
             {
                 if (timer.ElapsedMilliseconds > 10000)

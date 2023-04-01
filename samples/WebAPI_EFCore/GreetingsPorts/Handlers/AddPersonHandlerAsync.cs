@@ -23,9 +23,9 @@ namespace GreetingsPorts.Handlers
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
         {
             _uow.Add(new Person(addPerson.Name));
-            
+
             await _uow.SaveChangesAsync(cancellationToken);
-            
+
             return await base.HandleAsync(addPerson, cancellationToken);
         }
     }

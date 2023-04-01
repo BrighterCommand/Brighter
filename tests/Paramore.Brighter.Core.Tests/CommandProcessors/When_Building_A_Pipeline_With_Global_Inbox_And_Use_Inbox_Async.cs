@@ -25,29 +25,29 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PipelineGlobalInboxWhenUseInboxAsyncTests()
         {
             _inbox = new InMemoryInbox();
-            
+
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyCommandInboxedHandlerAsync>();
-            
+
             var container = new ServiceCollection();
             container.AddTransient<MyCommandInboxedHandlerAsync>();
             container.AddSingleton<IAmAnInboxAsync>((IAmAnInboxAsync)_inbox);
             container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
- 
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
- 
+
             _requestContext = new RequestContext();
-            
+
             _inboxConfiguration = new InboxConfiguration(
                 scope: InboxScope.All,
                 onceOnly: true,
                 actionOnExists: OnceOnlyAction.Throw);
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
-            
+
         }
 
         [Fact]
@@ -59,13 +59,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             // _inboxConfiguration = new InboxConfiguration(InboxScope.All, context: true, onceOnly: true);
             // so global will not allow repeated requests ans calls, but local should override this and allow
 
-            
+
             //act
             _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
 
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();
-            
+
             //First pass not impacted by UseInbox Handler
             await chain.HandleAsync(myCommand);
 

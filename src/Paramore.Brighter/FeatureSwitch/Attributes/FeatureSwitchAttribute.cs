@@ -55,7 +55,7 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
         /// </summary>
         /// <returns>System.Object[]</returns>
         public override object[] InitializerParams()
-        {           
+        {
             return new object[] { _handler, _status };
         }
 

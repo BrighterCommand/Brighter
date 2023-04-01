@@ -22,7 +22,7 @@ namespace Paramore.Brighter.Extensions.Tests
             _services = new ServiceCollection();
 
             _services.AddServiceActivator().AutoFromAssemblies();
-              
+
             _provider = _services.BuildServiceProvider();
         }
 

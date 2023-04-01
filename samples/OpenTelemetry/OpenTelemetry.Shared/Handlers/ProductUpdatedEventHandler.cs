@@ -11,13 +11,12 @@ public class ProductUpdatedEventHandler : RequestHandler<ProductUpdatedEvent>
     {
         Console.WriteLine($"Product updated to {command.Name} at {command.Date}");
 
-        
         var num = _random.Next(0, 5);
         if (num < 4)
         {
             throw new DeferMessageAction();
         }
-        
+
         return base.Handle(command);
     }
 }

@@ -66,8 +66,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
-                }}).Create(); 
-            
+                }}).Create();
+
         }
 
         //[Fact(Skip = "Does not fail on docker container as has topic creation set to true")]
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
-            
+
             bool messagePublished = false;
             var producer = _producerRegistry.LookupBy(_topic);
             var producerConfirm = producer as ISupportPublishConfirmation;
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             {
                 if (success) messagePublished = true;
             };
-            
+
             ((IAmAMessageProducerSync)producer).Send(message);
 
             //Give this a chance to succeed - will fail

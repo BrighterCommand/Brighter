@@ -31,7 +31,7 @@ namespace GreetingsPorts.Policies
                 .WaitAndRetryAsync(new[]
                 {
                     TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
-                }); 
+                });
         }
 
         public static AsyncCircuitBreakerPolicy GetDefaultCircuitBreakerPolicy()

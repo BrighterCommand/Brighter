@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }}).Create();
-            
+
             _consumer = (KafkaMessageConsumer)new KafkaMessageConsumerFactory(
                     new KafkaMessagingGatewayConfiguration
                     {
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         public void When_a_message_is_acknowldeged_but_no_batch_sent_sweep_offsets()
         {
             var groupId = Guid.NewGuid().ToString();
-            
+
             //send x messages to Kafka
             var sentMessages = new Guid[10];
             for (int i = 0; i < 10; i++)
@@ -88,18 +88,18 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
             //Let time elapse with no activity
             Task.Delay(10000).Wait();
-            
+
             //This should trigger a sweeper run (can be fragile when non scheduled in containers etc)
             consumedMessages.Add(ReadMessage());
-            
+
             //Let the sweeper run, can be slow in CI environments to run the thread
             //Let the sweeper run, can be slow in CI environments to run the thread
             Task.Delay(10000).Wait();
-            
+
 
             //Sweeper will commit these
             _consumer.StoredOffsets().Should().Be(0);
-            
+
             Message ReadMessage()
             {
                 Message[] messages = new []{new Message()};

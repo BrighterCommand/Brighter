@@ -68,13 +68,12 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             remainingMessages.Should().HaveCount(2);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
-            
+
             _sqlOutboxSync.Delete(remainingMessages.Select(m => m.Id).ToArray());
 
             var messages = _sqlOutboxSync.Get();
 
             messages.Should().HaveCount(0);
         }
-
-  }
+    }
 }

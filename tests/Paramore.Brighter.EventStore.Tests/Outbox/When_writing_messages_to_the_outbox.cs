@@ -94,7 +94,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             messages[0].Header.CorrelationId.Should().Be(message1.Header.CorrelationId);
             messages[0].Header.ReplyTo.Should().Be(message1.Header.ReplyTo);
             messages[0].Header.ContentType.Should().Be(message1.Header.ContentType);
-            
+
             //Bag serialization
             messages[0].Header.Bag["impersonatorId"].Should().Be(123);
             messages[0].Header.Bag["eventNumber"].Should().Be(0);

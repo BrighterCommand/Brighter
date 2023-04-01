@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
                 MessageTimeToLive = TimeSpan.FromMinutes(30),
                 VerifyMasterConnections = false
             };
-            
+
             using (var gateway = new TestRedisGateway(configuration))
             {
                 //Redis Config is static, so we can just look at the values we should have initialized

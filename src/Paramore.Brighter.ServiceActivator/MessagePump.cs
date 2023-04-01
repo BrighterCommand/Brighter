@@ -267,7 +267,7 @@ namespace Paramore.Brighter.ServiceActivator
         {
             var stop = false;
             var requeue = false;
-  
+
             foreach (var exception in aggregateException.InnerExceptions)
             {
                 if (exception is DeferMessageAction)

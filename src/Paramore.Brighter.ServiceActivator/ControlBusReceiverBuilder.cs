@@ -114,7 +114,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             // an internal HandlerFactory to build these for you.
             // We also need to  pass the supervised dispatcher as a dependency to our command handlers, so this allows us to manage
             // the injection of the dependency as part of our handler factory
-            
+
             var retryPolicy = Policy
                 .Handle<Exception>()
                 .WaitAndRetry(new[]
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
-            
+
             var incomingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
             incomingMessageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
             incomingMessageMapperRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandMessageMapper>();
@@ -148,7 +148,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var producerRegistry = _producerRegistryFactory.Create();
 
             var outbox = new SinkOutboxSync();
-            
+
             CommandProcessor commandProcessor = null;
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
@@ -156,7 +156,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
                 .ExternalBus(new ExternalBusConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
-            
+
             // These are the control bus channels, we hardcode them because we want to know they exist, but we use
             // a base naming scheme to allow centralized management.
             var subscriptions = new Subscription[]
@@ -208,13 +208,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
             {
-                return new Message[0]; 
+                return new Message[0];
             }
 
             public IEnumerable<Message> OutstandingMessages(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
                 Dictionary<string, object> args = null)
             {
-                return new Message[0]; 
+                return new Message[0];
             }
 
             public void Delete(params Guid[] messageIds)
@@ -224,7 +224,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
 
             public IEnumerable<Message> OutstandingMessages(TimeSpan millSecondsSinceSent)
             {
-               return new Message[0]; 
+               return new Message[0];
             }
         }
     }

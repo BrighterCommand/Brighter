@@ -54,26 +54,26 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
         private void WriteBody(MessageBody messageBody)
         {
-            _writer.WriteLine(BEGINNING_OF_BODY); 
-            
+            _writer.WriteLine(BEGINNING_OF_BODY);
+
             _writer.WriteLine(messageBody.Value);
-            
-            _writer.WriteLine(END_OF_BODY); 
+
+            _writer.WriteLine(END_OF_BODY);
         }
 
         private void WriteHeader(MessageHeader messageHeader)
         {
             _writer.WriteLine(BEGINNING_OF_HEADER);
-            
+
             _writer.WriteLine(FlattenHeader(messageHeader));
-            
+
             _writer.WriteLine(END_OF_HEADER);
         }
 
         private string FlattenHeader(MessageHeader messageHeader)
         {
             var headers = new Dictionary<string, string>();
-            
+
             //Read Message Id
             WriteMessageId(messageHeader, headers);
             //Read TimeStamp

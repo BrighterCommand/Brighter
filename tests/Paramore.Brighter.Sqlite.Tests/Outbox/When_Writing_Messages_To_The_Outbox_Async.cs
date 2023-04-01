@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
 
-            
+
         }
 
         private async Task<List<Message>> SetUpMessagesAsync(bool addMessagesToOutbox = true)
@@ -93,7 +93,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             if(addMessagesToOutbox) await _sSqlOutboxSync.AddAsync(_messageLatest);
-            
+
             return new List<Message> { _messageEarliest, _message2, _messageLatest };
         }
 

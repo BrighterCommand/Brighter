@@ -65,7 +65,7 @@ namespace Greetings.Ports.Mappers
             var deserializer = new JsonDeserializer<GreetingEvent>().AsSyncOverAsync();
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
              var greetingCommand = deserializer.Deserialize(message.Body.Bytes, message.Body.Bytes is null, _serializationContext);
-            
+
             return greetingCommand;
         }
     }

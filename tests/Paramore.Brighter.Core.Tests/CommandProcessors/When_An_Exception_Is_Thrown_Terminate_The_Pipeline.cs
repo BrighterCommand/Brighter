@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyUnusedCommandHandler>();
             container.AddTransient<MyAbortingHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-            
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());

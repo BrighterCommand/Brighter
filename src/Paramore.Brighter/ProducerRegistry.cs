@@ -21,7 +21,7 @@ namespace Paramore.Brighter
         /// </summary>
          public void Dispose()
          {
-             CloseAll(); 
+             CloseAll();
              GC.SuppressFinalize(this);
          }
 
@@ -39,7 +39,7 @@ namespace Paramore.Brighter
             {
                 producer.Value.Dispose();
             }
-            
+
             _messageProducers.Clear();
         }
 
@@ -52,7 +52,7 @@ namespace Paramore.Brighter
         {
             //TODO: We have to do this for properties that are across many producers associated with the Outbox and it should move to seperate configuration
             //The Producer Registry could store this, but probably separation of concerns implies Outbox configuration
-            
+
             if (_hasProducers)
                 return _messageProducers.First().Value;
 

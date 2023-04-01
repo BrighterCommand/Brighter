@@ -44,10 +44,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <returns>IAmAMessageConsumer.</returns>
         public IAmAMessageConsumer Create(Subscription subscription)
         {
-            RmqSubscription rmqSubscription = subscription as RmqSubscription;  
+            RmqSubscription rmqSubscription = subscription as RmqSubscription;
             if (rmqSubscription == null)
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
-            
+
             return new RmqMessageConsumer(
                 _rmqConnection,
                 rmqSubscription.ChannelName, //RMQ Queue Name

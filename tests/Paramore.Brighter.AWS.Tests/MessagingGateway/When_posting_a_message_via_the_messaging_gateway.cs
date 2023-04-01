@@ -33,13 +33,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(_topicName);
-            
+
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey
             );
-            
+
             _message = new Message(
                 new MessageHeader(_myCommand.Id, _topicName, MessageType.MT_COMMAND, _correlationId, _replyTo, _contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
@@ -48,10 +48,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
             _channelFactory = new ChannelFactory(awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
-            
+
             _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{Topic = new RoutingKey(_topicName), MakeChannels = OnMissingChannel.Create});
         }
 
@@ -62,11 +62,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         {
             //arrange
             _messageProducer.Send(_message);
-            
+
             Task.Delay(1000).Wait();
-            
+
             var message =_channel.Receive(5000);
-            
+
             //clear the queue
             _channel.Acknowledge(message);
 

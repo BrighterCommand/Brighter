@@ -98,7 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
                 message.Header.Topic, message.Id, message.Body);
-            
+
             ConfirmTopicExists(message.Header.Topic);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
@@ -135,7 +135,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
         public void Dispose()
         {
-            
+
         }
 
    }

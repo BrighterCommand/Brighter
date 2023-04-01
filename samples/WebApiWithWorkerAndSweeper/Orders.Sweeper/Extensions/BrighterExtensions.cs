@@ -20,7 +20,7 @@ public static class BrighterExtensions
         {
             var asbSettings = builder.Configuration.GetSection(AzureServiceBusSettings.SettingsKey).Get<AzureServiceBusSettings>();
             var boxSettings = builder.Configuration.GetSection(BrighterBoxSettings.SettingsKey).Get<BrighterBoxSettings>();
-            
+
             var environmentName = builder.Configuration[_hostingEnvironment];
 
             var serviceBusClientProvider = new ServiceBusChainedClientProvider(asbSettings.Endpoint,

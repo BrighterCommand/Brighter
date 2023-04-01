@@ -47,9 +47,9 @@ namespace HelloWorldAsync
                 )
                 .UseConsoleLifetime()
                 .Build();
-            
+
             var commandProcessor = host.Services.GetService<IAmACommandProcessor>();
-            
+
             await commandProcessor.SendAsync(new GreetingCommand("Ian"));
 
             await host.RunAsync();

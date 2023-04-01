@@ -22,14 +22,14 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
             _postBox = postBox;
- 
+
         }
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
-            
+
             //We span a Db outside of EF's control, so start an explicit transactional scope
             var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
             try

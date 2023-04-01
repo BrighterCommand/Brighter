@@ -44,7 +44,7 @@ namespace GreetingsSender
             _iteration++;
 
             var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid(), Greeting = $"Hello # {_iteration}"};
-            
+
             _processor.Post(greetingEvent);
 
             _logger.LogInformation("Sending message with id {Id} and greeting {Request}", greetingEvent.Id,

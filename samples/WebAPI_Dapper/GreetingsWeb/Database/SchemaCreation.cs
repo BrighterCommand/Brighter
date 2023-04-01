@@ -156,7 +156,7 @@ namespace GreetingsWeb.Database
         private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? GetDevDbConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
+            return env.IsDevelopment() ? GetDevDbConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config));
         }
 
         private static string GetDevDbConnectionString()

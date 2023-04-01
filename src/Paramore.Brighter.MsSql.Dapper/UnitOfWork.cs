@@ -72,7 +72,7 @@ namespace Paramore.Brighter.MySql.Dapper
             {
                 try { _transaction.Rollback(); } catch (Exception) { /*can't check transaction status, so it will throw if already committed*/ }
             }
-            
+
             if (_connection.State == ConnectionState.Open)
             {
                 _connection.Close();

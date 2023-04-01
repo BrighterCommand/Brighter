@@ -28,13 +28,13 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             brighterBuilder.Services.AddSingleton<MsSqlConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMsSqlConnectionProvider), connectionProvider, serviceLifetime));
-            
+
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMsSqlOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMsSqlOutbox, serviceLifetime));
-            
+
             //Set chunk size - TODO: Bring this inline
             brighterBuilder.UseExternalOutbox(null, outboxBulkChunkSize);
- 
+
             return brighterBuilder;
         }
 

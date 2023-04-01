@@ -56,15 +56,15 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
 
                 return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
             }
-            
+
             // -- Confluent supply these values, see their .NET examples for your account
             // You need to set those values as environment variables, which we then read, in order
             // to run these tests
 
-            string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
+            string bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER");
             string userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             string password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
-            
+
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
@@ -88,8 +88,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     RequestTimeoutMs = 10000,
                     MakeChannels = OnMissingChannel.Create //This will not make the topic
                 }
-                }).Create(); 
-  
+                }).Create();
+
         }
 
         [Fact]
@@ -103,15 +103,15 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 new MessageBody($"test content [{_queueName}]"));
 
             bool messagePublished = false;
-            
-            
+
+
             var producer = _producerRegistry.LookupBy(_topic);
             var producerConfirm = producer as ISupportPublishConfirmation;
             producerConfirm.OnMessagePublished += delegate(bool success, Guid id)
             {
                 if (success) messagePublished = true;
             };
-            
+
             ((IAmAMessageProducerSync)producer).Send(message);
 
             //Give this a chance to succeed - will fail

@@ -16,7 +16,7 @@ namespace Paramore.Brighter
                     return reader.GetInt32().ToString();
                 default:
                     throw new JsonException($"Unable to convert Json Type {reader.TokenType} to String, Supported Types are String, Number.");
-            }           
+            }
         }
 
         public override void Write(Utf8JsonWriter writer, string value, JsonSerializerOptions options)

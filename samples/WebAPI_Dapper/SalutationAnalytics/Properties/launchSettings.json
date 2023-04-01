@@ -13,7 +13,7 @@
         "environmentVariables": {
           "ASPNETCORE_ENVIRONMENT": "Production",
           "BRIGHTER_GREETINGS_DATABASE" : "MySQL"
-        }     
+        }
     }
   }
 }

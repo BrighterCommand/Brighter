@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     RequestTimeoutMs = 2000,
                     MakeChannels = OnMissingChannel.Create
                 }}).Create();
- 
+
                 _consumer = new KafkaMessageConsumerFactory(
                      new KafkaMessagingGatewayConfiguration
                      {
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                          makeChannels: OnMissingChannel.Create
                          )
                  );
-             
+
         }
 
         [Fact]
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     PartitionKey = _partitionKey
                 },
                 new MessageBody($"test content [{_queueName}]"));
-            
+
             //This should fail, if consumer can't create the topic as set to Assume
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
 

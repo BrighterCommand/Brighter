@@ -81,7 +81,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             throw;
         }
 
-        Assert.NotNull(response); 
+        Assert.NotNull(response);
         Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
         Assert.Equal(2, response.ContentLength);    //number of tables in the transaction
     }

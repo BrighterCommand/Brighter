@@ -148,7 +148,7 @@ namespace Paramore.Brighter
             }
 
             Add(message, outBoxTimeout);
-            
+
             tcs.SetResult(new object());
             return tcs.Task;
         }
@@ -197,7 +197,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
-            
+
             DateTime dispatchedSince = DateTime.UtcNow.AddMilliseconds( -1 * millisecondsDispatchedSince);
             return _requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
                 .Take(pageSize)
@@ -213,7 +213,7 @@ namespace Paramore.Brighter
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             ClearExpiredMessages();
-            
+
             return _requests.TryGetValue(OutboxEntry.ConvertKey(messageId), out OutboxEntry entry) ? entry.Message : null;
         }
 
@@ -282,9 +282,9 @@ namespace Paramore.Brighter
         public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            
+
             MarkDispatched(id, dispatchedAt);
-            
+
             tcs.SetResult(new object());
 
             return tcs.Task;
@@ -310,7 +310,7 @@ namespace Paramore.Brighter
          public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
-            
+
             if (_requests.TryGetValue(OutboxEntry.ConvertKey(id), out OutboxEntry entry))
             {
                 entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
@@ -327,7 +327,7 @@ namespace Paramore.Brighter
             Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
-            
+
             DateTime sentBefore = DateTime.UtcNow.AddMilliseconds( -1 * millSecondsSinceSent);
             var outstandingMessages = _requests.Values.Where(oe =>  (oe.TimeFlushed == DateTime.MinValue) && (oe.WriteTime <= sentBefore))
                 .Take(pageSize)

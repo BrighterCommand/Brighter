@@ -29,14 +29,14 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var channelName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
-            
+
             SqsSubscription<MyCommand> subscription = new(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Create
             );
-            
+
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
                 new MessageBody(JsonSerializer.Serialize((object) _myCommand, JsonSerialisationOptions.Options))
@@ -45,13 +45,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             var awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
             //We need to do this manually in a test - will create the channel from subscriber parameters
             //This doesn't look that different from our create tests - this is because we create using the channel factory in
             //our AWS transport, not the consumer (as it's a more likely to use infrastructure declared elsewhere)
             _channelFactory = new ChannelFactory(awsConnection);
             var channel = _channelFactory.CreateChannel(subscription);
-            
+
             //Now change the subscription to validate, just check what we made
             subscription = new(
                 name: new SubscriptionName(channelName),
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 routingKey: routingKey,
                 makeChannels: OnMissingChannel.Assume
             );
-            
+
             _messageProducer = new SqsMessageProducer(awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Assume});
 
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey);
@@ -70,9 +70,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         {
             //arrange
             _messageProducer.Send(_message);
-            
+
             var messages = _consumer.Receive(5000);
-            
+
             //Assert
             var message = messages.First();
             message.Id.Should().Be(_myCommand.Id);

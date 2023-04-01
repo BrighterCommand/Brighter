@@ -17,7 +17,7 @@ public class CreateOrderCommandHandler : RequestHandlerAsync<CreateOrderCommand>
         var order = new Order(0, command.Number, command.Type);
 
         await _orderRepository.CreateOrderAsync(order, cancellationToken);
-        
+
         return await base.HandleAsync(command, cancellationToken);
     }
 }

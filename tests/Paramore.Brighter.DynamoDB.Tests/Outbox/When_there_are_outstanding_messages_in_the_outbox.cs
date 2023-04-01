@@ -16,7 +16,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     private readonly DynamoDbOutbox _dynamoDbOutbox;
 
     public DynamoDbOutboxOutstandingMessageTests()
-    {                                  
+    {
         _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
     }
@@ -28,7 +28,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         await Task.Delay(1000);
 
-        var args = new Dictionary<string, object>(); 
+        var args = new Dictionary<string, object>();
         args.Add("Topic", "test_topic");
 
         var messages = await _dynamoDbOutbox.OutstandingMessagesAsync(0, 100, 1, args);
@@ -38,7 +38,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);
 
-                     
+
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
         Task.Delay(1000).Wait();
 
-        var args = new Dictionary<string, object>(); 
+        var args = new Dictionary<string, object>();
         args.Add("Topic", "test_topic");
 
         var messages =_dynamoDbOutbox.OutstandingMessages(0, 100, 1, args);
@@ -58,6 +58,6 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
         message.Should().NotBeNull();
         message.Body.Should().Be(_message.Body);
 
-                     
+
     }
 }

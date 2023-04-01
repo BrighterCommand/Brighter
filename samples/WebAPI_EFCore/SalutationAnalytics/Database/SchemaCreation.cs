@@ -47,7 +47,7 @@ namespace SalutationAnalytics.Database
         public static IHost CheckDbIsUp(this IHost host)
         {
             using var scope = host.Services.CreateScope() ;
-            
+
             var services = scope.ServiceProvider;
             var env = services.GetService<IHostEnvironment>();
             var config = services.GetService<IConfiguration>();

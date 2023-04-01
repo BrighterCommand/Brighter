@@ -48,32 +48,32 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             header.Bag.Add("eventNumber", 0);
             header.Bag.Add("streamId", StreamName);
             var message1 = new Message(header, body);
-            
+
             var body1 = new MessageBody("{companyId:123}");
             var header1 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header1.Bag.Add("impersonatorId", 123);
             header1.Bag.Add("eventNumber", 1);
             header1.Bag.Add("streamId", StreamName);
             var message2 = new Message(header1, body1);
-            
+
             var body2 = new MessageBody("{companyId:123}");
             var header2 = new MessageHeader(Guid.NewGuid(), "Topic", MessageType.MT_EVENT);
             header2.Bag.Add("impersonatorId", 123);
             header2.Bag.Add("eventNumber", 2);
             header2.Bag.Add("streamId", StreamName);
             var message3 = new Message(header2, body2);
-            
+
             eventStoreOutbox.Add(message1);
             Task.Delay(100);
             eventStoreOutbox.Add(message2);
             Task.Delay(100);
             eventStoreOutbox.Add(message3);
-            
+
             var args = new Dictionary<string, object> { { Globals.StreamArg, StreamName }};
-            
+
             // act
             var messages = eventStoreOutbox.Get(1, 3, args);
-            
+
             // assert
             messages.Should().ContainSingle().Which.Should().BeEquivalentTo(message3);
         }
@@ -83,10 +83,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
-            
+
             // act
             Action getWithoutArgs = () => eventStoreOutbox.Get(1, 1);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentNullException>();
         }
@@ -97,10 +97,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
-            
+
             // act
             Action getWithoutArgs = () => eventStoreOutbox.Get(1, 1, args);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
         }
@@ -111,10 +111,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object>();
-            
+
             // act
             Action getWithoutArgs = () => eventStoreOutbox.Get(1, 1, args);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
         }
@@ -125,10 +125,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
-            
+
             // act
             Action getWithoutArgs = () => eventStoreOutbox.Get(1, 1, args);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
         }

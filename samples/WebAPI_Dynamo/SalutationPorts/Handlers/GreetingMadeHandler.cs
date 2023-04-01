@@ -55,7 +55,7 @@ namespace SalutationPorts.Handlers
             }
 
             await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
-            
+
             return await base.HandleAsync(@event, cancellationToken);
         }
     }

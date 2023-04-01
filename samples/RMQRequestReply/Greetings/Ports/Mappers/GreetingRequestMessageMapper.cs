@@ -43,7 +43,6 @@ namespace Greetings.Ports.Mappers
             var body = new MessageBody(JsonSerializer.Serialize(new GreetingsRequestBody(request.Id.ToString(), request.Name, request.Language), JsonSerialisationOptions.Options));
             var message = new Message(header, body);
             return message;
- 
         }
 
         public GreetingRequest MapToRequest(Message message)

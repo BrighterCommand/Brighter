@@ -17,7 +17,7 @@ namespace Events.Ports.Mappers
         public CompetingConsumerCommand MapToRequest(Message message)
         {
             var greetingCommand = JsonSerializer.Deserialize<CompetingConsumerCommand>(message.Body.Value, JsonSerialisationOptions.Options);
-            
+
             return greetingCommand;
         }
     }

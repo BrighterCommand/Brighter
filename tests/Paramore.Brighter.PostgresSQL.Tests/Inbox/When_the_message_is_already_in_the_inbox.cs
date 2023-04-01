@@ -55,7 +55,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
         public void When_The_Message_Is_Already_In_The_Inbox()
         {
             _pgSqlInbox.Add(_raisedCommand, _contextKey);
-            
+
             _exception = Catch.Exception(() => _pgSqlInbox.Add(_raisedCommand, _contextKey));
 
             //_should_succeed_even_if_the_message_is_a_duplicate

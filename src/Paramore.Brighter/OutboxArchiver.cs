@@ -20,7 +20,7 @@ namespace Paramore.Brighter
             _batchSize = batchSize;
             if (outbox is IAmAnOutboxSync<Message> syncBox)
                 _outboxSync = syncBox;
-            
+
             if (outbox is IAmAnOutboxAsync<Message> asyncBox)
                 _outboxAsync = asyncBox;
 
@@ -34,18 +34,18 @@ namespace Paramore.Brighter
         public void Archive(int minimumAge)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
-            
+
             var age = TimeSpan.FromHours(minimumAge);
-            
+
             var messages = _outboxSync.DispatchedMessages(age.Milliseconds, _batchSize);
-            
+
             foreach (var message in messages)
             {
                 _archiveProvider.ArchiveMessage(message);
             }
-            
+
             _outboxSync.Delete(messages.Select(e => e.Id).ToArray());
-            
+
             if(activity?.DisplayName == ARCHIVEOUTBOX)
                 activity.Dispose();
         }
@@ -58,18 +58,18 @@ namespace Paramore.Brighter
         public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
-            
+
             var age = TimeSpan.FromHours(minimumAge);
-            
+
             var messages = await _outboxAsync.DispatchedMessagesAsync(age.Milliseconds, _batchSize, cancellationToken: cancellationToken);
 
             foreach (var message in messages)
             {
                 await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
             }
-            
+
             await _outboxAsync.DeleteAsync(cancellationToken, messages.Select(e => e.Id).ToArray());
-            
+
             if(activity?.DisplayName == ARCHIVEOUTBOX)
                 activity.Dispose();
         }

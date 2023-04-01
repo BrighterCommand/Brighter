@@ -129,7 +129,7 @@ namespace Paramore.Brighter
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
-            
+
             string key = InboxItem.CreateKey(command.Id, contextKey);
             if (!Exists<T>(command.Id, contextKey))
             {
@@ -180,7 +180,7 @@ namespace Paramore.Brighter
         public T Get<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             ClearExpiredMessages();
-            
+
             if (_requests.TryGetValue(InboxItem.CreateKey(id, contextKey), out InboxItem inboxItem))
             {
                 return JsonSerializer.Deserialize<T>(inboxItem.RequestBody, JsonSerialisationOptions.Options);

@@ -38,9 +38,9 @@ namespace GreetingsSender.Web.Controllers
 
             _context.Greetings.Add(greeting);
             _context.GreetingsAsync.Add(greetingAsync);
-            
+
             await _context.SaveChangesAsync();
-            
+
             _commandProcessor.Post(greeting);
             await _commandProcessor.PostAsync(greetingAsync);
 
@@ -57,27 +57,27 @@ namespace GreetingsSender.Web.Controllers
             _context.Greetings.Add(greeting);
             _context.GreetingsAsync.Add(greetingAsync);
             await _context.SaveChangesAsync();
-            
+
             _commandProcessor.DepositPost(greeting);
             await _commandProcessor.DepositPostAsync(greetingAsync);
-            
+
             return View("Index");
         }
 
         public async Task<IActionResult> SaveAndRollbackMessage()
         {
             var transaction = await _context.Database.BeginTransactionAsync();
-            
+
             // try
             // {
                 var greetingAsync = new GreetingAsyncEvent("Hello from the web - 1");
                 var greeting = new GreetingEvent("Hello from the web - 1");
-                
+
                 _context.Greetings.Add(greeting);
                 _context.GreetingsAsync.Add(greetingAsync);
-                
+
                 await _context.SaveChangesAsync();
-            
+
                 _commandProcessor.DepositPost(greeting);
                 await _commandProcessor.DepositPostAsync(greetingAsync);
                 //throw new Exception("Something went wrong");
@@ -85,19 +85,19 @@ namespace GreetingsSender.Web.Controllers
             // catch (Exception e)
             // {
                 await transaction.RollbackAsync();
-                
+
             // }
-            
+
             var greetingAsync2 = new GreetingAsyncEvent("Hello from the web - 2");
             var greeting2 = new GreetingEvent("Hello from the web - 2");
-            
+
             _context.Greetings.Add(greeting2);
             _context.GreetingsAsync.Add(greetingAsync2);
-            
+
             _commandProcessor.DepositPost(greeting2);
 
             await _context.SaveChangesAsync();
-            
+
             await _commandProcessor.DepositPostAsync(greetingAsync2);
 
             var msgs = new List<Guid>();
@@ -107,7 +107,7 @@ namespace GreetingsSender.Web.Controllers
             msgs.Add(greetingAsync2.Id);
 
             await _commandProcessor.ClearOutboxAsync(msgs);
-            
+
             return View("Index");
         }
 
@@ -117,7 +117,7 @@ namespace GreetingsSender.Web.Controllers
             var failingCommand = new AddGreetingCommand() { GreetingMessage = "This should never reach the DB or outbox.", ThrowError = true };
             await _commandProcessor.PostAsync(command);
             await _commandProcessor.PostAsync(failingCommand);
-            
+
             return View("Index");
         }
 

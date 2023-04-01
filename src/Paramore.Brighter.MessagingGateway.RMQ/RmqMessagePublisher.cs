@@ -75,7 +75,7 @@ internal class RmqMessagePublisher
             }
 
             _connection = connection;
-            
+
             _channel = channel;
        }
 

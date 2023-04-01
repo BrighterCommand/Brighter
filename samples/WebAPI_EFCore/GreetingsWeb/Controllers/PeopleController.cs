@@ -51,7 +51,7 @@ namespace GreetingsWeb.Controllers
 
             var addedPeson = await _queryProcessor.ExecuteAsync(new FindPersonByName(newPerson.Name));
 
-            if (addedPeson == null) return new NotFoundResult(); 
+            if (addedPeson == null) return new NotFoundResult();
 
             return Ok(addedPeson);
         }

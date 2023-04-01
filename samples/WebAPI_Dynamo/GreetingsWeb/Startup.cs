@@ -96,7 +96,7 @@ namespace GreetingsWeb
         private IAmazonDynamoDB CreateAndRegisterLocalClient(IServiceCollection services)
         {
             var credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
-            
+
             var clientConfig = new AmazonDynamoDBConfig
             {
                 ServiceURL = "http://localhost:8000"
@@ -108,7 +108,7 @@ namespace GreetingsWeb
 
             var dynamoDbConfiguration = new DynamoDbConfiguration();
             services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
-            
+
             return dynamoDb;
         }
 
@@ -121,14 +121,14 @@ namespace GreetingsWeb
         {
             var tableRequestFactory = new DynamoDbTableFactory();
             var dbTableBuilder = new DynamoDbTableBuilder(client);
-    
+
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<Person>(
                 new DynamoDbCreateProvisionedThroughput
                 (
                     new ProvisionedThroughput { ReadCapacityUnits = 10, WriteCapacityUnits = 10 }
                 )
             );
-    
+
             var entityTableName = tableRequest.TableName;
             (bool exist, IEnumerable<string> tables) hasTables = dbTableBuilder.HasTables(new string[] { entityTableName }).Result;
             if (!hasTables.exist)
@@ -142,7 +142,7 @@ namespace GreetingsWeb
         {
             var tableRequestFactory = new DynamoDbTableFactory();
             var dbTableBuilder = new DynamoDbTableBuilder(client);
-            
+
             var createTableRequest = new DynamoDbTableFactory().GenerateCreateTableRequest<MessageItem>(
                     new DynamoDbCreateProvisionedThroughput(
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10},

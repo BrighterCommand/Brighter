@@ -30,7 +30,7 @@ namespace GreetingsPorts.Handlers
             //into one entity per parent, with a collection of children. To do that we bring everything back into memory, group by parent id and collate all
             //the children for that group.
 
-            var sql = @"select p.Id, p.Name, g.Id, g.Message 
+            var sql = @"select p.Id, p.Name, g.Id, g.Message
                         from Person p
                         inner join Greeting g on g.Recipient_Id = p.Id";
             var people = await _uow.Database.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>

@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         public void When_parsing_a_good_redis_message_to_brighter()
         {
             var redisMessageCreator = new RedisMessageCreator();
-            
+
             Message message = redisMessageCreator.CreateMessage(GoodMessage);
 
             message.Id.Should().Be(Guid.Parse("18669550-2069-48c5-923d-74a2e79c0748"));

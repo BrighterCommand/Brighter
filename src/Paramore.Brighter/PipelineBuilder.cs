@@ -200,7 +200,7 @@ namespace Paramore.Brighter
 
 
             AddGlobalInboxAttributesAsync(ref preAttributes, implicitHandler);
-            
+
             var firstInPipeline = PushOntoAsyncPipeline(preAttributes, implicitHandler, requestContext, continueOnCapturedContext);
 
             if (!s_postAttributesMemento.TryGetValue(implicitHandler.Name.ToString(), out IOrderedEnumerable<RequestHandlerAttribute> postAttributes))
@@ -232,7 +232,7 @@ namespace Paramore.Brighter
                 onceOnly: _inboxConfiguration.OnceOnly,
                 timing: HandlerTiming.Before,
                 onceOnlyAction: _inboxConfiguration.ActionOnExists);
-            
+
              PushOntoAttributeList(ref preAttributes, useInboxAttribute);
         }
 

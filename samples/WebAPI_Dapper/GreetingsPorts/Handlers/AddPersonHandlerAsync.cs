@@ -24,7 +24,7 @@ namespace GreetingsPorts.Handlers
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default(CancellationToken))
         {
             await _uow.Database.InsertAsync<Person>(new Person(addPerson.Name));
-            
+
             return await base.HandleAsync(addPerson, cancellationToken);
         }
     }

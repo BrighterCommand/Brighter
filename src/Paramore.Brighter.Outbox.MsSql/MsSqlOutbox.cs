@@ -247,8 +247,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         private string GetContentType(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal)) return null; 
-            
+            if (dr.IsDBNull(ordinal)) return null;
+
             var replyTo = dr.GetString(ordinal);
             return replyTo;
         }
@@ -256,8 +256,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         private string GetReplyTo(SqlDataReader dr)
         {
              var ordinal = dr.GetOrdinal("ReplyTo");
-             if (dr.IsDBNull(ordinal)) return null; 
-             
+             if (dr.IsDBNull(ordinal)) return null;
+
              var replyTo = dr.GetString(ordinal);
              return replyTo;
         }
@@ -273,8 +273,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         private Guid? GetCorrelationId(SqlDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null; 
-            
+            if (dr.IsDBNull(ordinal)) return null;
+
             var correlationId = dr.GetGuid(ordinal);
             return correlationId;
         }

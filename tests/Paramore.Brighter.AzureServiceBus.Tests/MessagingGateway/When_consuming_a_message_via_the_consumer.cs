@@ -90,11 +90,11 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             });
 
             var producer = _producerRegistry.LookupBy(_topicName) as IAmAMessageProducerAsync;
-            
+
             await producer.SendAsync(_message);
-    
+
             var message = _channel.Receive(5000);
-            
+
             _channel.Reject(message);
 
             var deadLetter = await deadLetterReceiver.ReceiveMessageAsync();
@@ -112,17 +112,17 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         {
             //arrange
             var producer = _producerRegistry.LookupBy(_topicName) as IAmAMessageProducerAsync;
-            
+
             await producer.SendAsync(_message);
 
             var message = _channel.Receive(5000);
 
             message.Header.HandledCount++;
-            
+
             _channel.Requeue(message);
 
             var requeuedMessage = _channel.Receive(5000);
-            
+
             requeuedMessage.Id.Should().Be(message.Id);
             requeuedMessage.Redelivered.Should().BeFalse();
             requeuedMessage.Header.Id.Should().Be(message.Id);

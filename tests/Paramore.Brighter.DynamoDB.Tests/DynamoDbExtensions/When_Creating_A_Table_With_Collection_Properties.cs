@@ -15,7 +15,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         {
             //arrange
             var tableRequestFactory = new DynamoDbTableFactory();
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                 )
             );
-            
+
             //assert
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringArray" && attr.AttributeType.Value == "SS");

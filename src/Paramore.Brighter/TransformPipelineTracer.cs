@@ -40,7 +40,7 @@ namespace Paramore.Brighter
 
         public void AddTransform(string transformName)
         {
-            _transforms.Add(transformName);    
+            _transforms.Add(transformName);
         }
     }
 }

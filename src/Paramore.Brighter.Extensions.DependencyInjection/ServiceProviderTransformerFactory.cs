@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             _serviceProvider = serviceProvider;
             var options = (IBrighterOptions) serviceProvider.GetRequiredService<IBrighterOptions>();
-            if (options == null) _isTransient = false; else _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;  
+            if (options == null) _isTransient = false; else _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public void Release(IAmAMessageTransformAsync transformer)
         {
             if (!_isTransient) return;
-            
+
             var disposal = transformer as IDisposable;
             disposal?.Dispose();
         }

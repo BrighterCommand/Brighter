@@ -16,7 +16,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         {
             //arrange
             var tableRequestFactory = new DynamoDbTableFactory();
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput
@@ -30,7 +30,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     }
                 )
             );
-            
+
             //assert
             Assert.Equal("MyEntity", tableRequest.TableName);
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S);

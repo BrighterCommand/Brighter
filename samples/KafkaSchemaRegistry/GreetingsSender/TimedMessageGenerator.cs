@@ -26,7 +26,7 @@ namespace GreetingsSender
             _logger.LogInformation("Kafka Message Generator is starting.");
 
             _timer = new Timer(DoWork, null, TimeSpan.Zero, TimeSpan.FromMilliseconds(500));
-            
+
             DoWork(null);
 
             return Task.CompletedTask;
@@ -46,12 +46,11 @@ namespace GreetingsSender
             _iteration++;
 
             var greetingEvent = new GreetingEvent{ Id = Guid.NewGuid(), Greeting = $"Hello # {_iteration}"};
-            
+
             _processor.Post(greetingEvent);
 
             _logger.LogInformation("Sending message with id {Id} and greeting {Request}", greetingEvent.Id,
                 greetingEvent.Greeting);
-            
         }
 
         public void Dispose()

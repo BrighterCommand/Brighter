@@ -36,27 +36,27 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _dlqChannelName =$"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             string topicName = $"Producer-DLQ-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             var routingKey = new RoutingKey(topicName);
-            
+
             SqsSubscription<MyCommand> subscription = new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName: new ChannelName(channelName),
                 routingKey: routingKey,
                 redrivePolicy: new RedrivePolicy(_dlqChannelName, 2)
             );
-            
+
             _message = new Message(
                 new MessageHeader(myCommand.Id, topicName, MessageType.MT_COMMAND, correlationId, replyTo, contentType),
                 new MessageBody(JsonSerializer.Serialize((object) myCommand, JsonSerialisationOptions.Options))
             );
- 
+
             //Must have credentials stored in the SDK Credentials store or shared credentials file
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
-            
+
             _sender = new SqsMessageProducer(_awsConnection, new SnsPublication{MakeChannels = OnMissingChannel.Create});
-            
+
             _sender.ConfirmTopicExists(topicName);
-            
+
             //We need to do this manually in a test - will create the channel from subscriber parameters
             _channelFactory = new ChannelFactory(_awsConnection);
             _channel = _channelFactory.CreateChannel(subscription);
@@ -64,20 +64,20 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
         [Fact]
         public void When_requeueing_redrives_to_the_queue()
-        { 
+        {
             _sender.Send(_message);
-             var receivedMessage = _channel.Receive(5000); 
+             var receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage );
 
             receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage );
-            
+
             //should force us into the dlq
             receivedMessage = _channel.Receive(5000);
             _channel.Requeue(receivedMessage) ;
 
             Task.Delay(5000);
-            
+
             //inspect the dlq
             GetDLQCount(_dlqChannelName).Should().Be(1);
         }

@@ -143,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         }
 
         private void HandleUnBlocked(object sender, EventArgs args)
-        { 
+        {
             s_logger.LogInformation("RMQMessagingGateway: Subscription to {URL} unblocked", Connection.AmpqUri.GetSanitizedUri());
         }
 

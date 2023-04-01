@@ -56,7 +56,6 @@ namespace Paramore.Brighter.ServiceActivator
         public IAmACommandProcessor CommandProcessor { get => CommandProcessorFactory.Invoke().Get(); }
 
         /// <summary>
-        /// 
         /// </summary>
         public Func<IAmACommandProcessorProvider> CommandProcessorFactory { get; }
 
@@ -100,7 +99,7 @@ namespace Paramore.Brighter.ServiceActivator
             IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             CommandProcessorFactory = commandProcessorFactory;
-            
+
             Connections = subscriptions;
             _messageMapperRegistry = messageMapperRegistry;
             _messageTransformerFactory = messageTransformerFactory;

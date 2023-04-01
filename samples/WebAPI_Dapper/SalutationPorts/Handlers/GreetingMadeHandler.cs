@@ -32,7 +32,7 @@ namespace SalutationPorts.Handlers
         public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
-            
+
             var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
             try
             {
@@ -55,7 +55,7 @@ namespace SalutationPorts.Handlers
             }
 
             await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
-            
+
             return await base.HandleAsync(@event, cancellationToken);
         }
     }

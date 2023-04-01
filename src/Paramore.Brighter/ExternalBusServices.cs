@@ -62,14 +62,14 @@ namespace Paramore.Brighter
             if (disposing && ProducerRegistry != null)
                 ProducerRegistry.CloseAll();
             _disposed = true;
-            
+
         }
 
         internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
             where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
-                
+
             var written = await RetryAsync(async ct => { await AsyncOutbox.AddAsync(message, OutboxTimeout, ct, overridingTransactionConnectionProvider).ConfigureAwait(continueOnCapturedContext); },
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
@@ -108,7 +108,7 @@ namespace Paramore.Brighter
         internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
-                
+
             var written = Retry(() => { OutBox.Add(message, OutboxTimeout, overridingTransactionConnectionProvider); });
 
             if (!written)
@@ -204,7 +204,7 @@ namespace Paramore.Brighter
             {
                 _clearSemaphoreToken.Release();
             }
-            
+
             CheckOutstandingMessages();
         }
 
@@ -252,7 +252,7 @@ namespace Paramore.Brighter
             span?.AddTag("minimumAge", minimumAge);
             span?.AddTag("async", useAsync);
             span?.AddTag("bulk", useBulk);
-            
+
             if (useAsync)
             {
                 if (!HasAsyncOutbox())
@@ -525,7 +525,7 @@ namespace Paramore.Brighter
         private void OutstandingMessagesCheck()
         {
             _checkOutstandingSemaphoreToken.Wait();
-            
+
             _lastOutStandingMessageCheckAt = DateTime.UtcNow;
             s_logger.LogDebug("Begin count of outstanding messages");
             try

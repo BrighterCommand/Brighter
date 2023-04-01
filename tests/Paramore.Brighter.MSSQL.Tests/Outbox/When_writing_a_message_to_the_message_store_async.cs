@@ -91,8 +91,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_message.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_message.Header.ContentType);
-             
-            
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);

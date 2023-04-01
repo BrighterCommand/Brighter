@@ -15,7 +15,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         {
             //arrange
             var tableRequestFactory = new DynamoDbTableFactory();
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput(),

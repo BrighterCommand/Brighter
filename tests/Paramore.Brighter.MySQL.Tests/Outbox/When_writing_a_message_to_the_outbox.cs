@@ -88,8 +88,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-             
-            
+
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _storedMessage.Header.Bag[_key4].Should().Be(_value4);
             _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
             _storedMessage.Header.Bag[_key5].Should().Be(_value5);
- 
+
         }
 
         public void Dispose()

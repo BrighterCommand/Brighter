@@ -50,9 +50,7 @@ namespace Greetings.Ports.Mappers
         [Decompress(0, CompressionMethod.GZip)]
         public GreetingEvent MapToRequest(Message message)
         {
-            var greetingCommand = JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);
-            
-            return greetingCommand;
+            return JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);
         }
     }
 }

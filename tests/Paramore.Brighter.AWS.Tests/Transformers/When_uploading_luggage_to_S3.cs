@@ -32,7 +32,7 @@ public class S3LuggageUploadTests : IDisposable
     {
         //arrange
         (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
- 
+
         _client = new AmazonS3Client(credentials, region);
         _stsClient = new AmazonSecurityTokenServiceClient(credentials, region);
 
@@ -90,7 +90,7 @@ public class S3LuggageUploadTests : IDisposable
         var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst:true);
 
         //TODO: Its not worth retrying malformed XML, error code: MalformedXML
-        
+
         return Policy
             .Handle<AmazonS3Exception>(e =>
             {

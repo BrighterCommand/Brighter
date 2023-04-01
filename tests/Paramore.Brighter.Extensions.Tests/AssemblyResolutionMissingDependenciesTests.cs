@@ -19,13 +19,12 @@ public class AssemblyResolutionMissingDependenciesTests
         var services = new ServiceCollection();
 
         services.AddServiceActivator().AutoFromAssemblies();
-        
+
         //act
         var provider = factory.CreateServiceProvider(services);
-        
+
         //assert
         //we will not get here, if we have a missing dependency
         Assert.True(true);
-        
     }
 }

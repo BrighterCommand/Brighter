@@ -136,10 +136,10 @@ namespace Paramore.Brighter
         {
             if (!thePolicyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
-                
+
             if (!thePolicyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
-            
+
             _policyRegistry = thePolicyRegistry;
             return this;
         }
@@ -203,7 +203,7 @@ namespace Paramore.Brighter
             _responseChannelFactory = configuration.ResponseChannelFactory;
             _outbox = outbox;
             _transformerFactory = configuration.TransformerFactory;
-             
+
             return this;
         }
 

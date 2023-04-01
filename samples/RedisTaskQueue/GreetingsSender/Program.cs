@@ -45,7 +45,7 @@ namespace GreetingsSender
                 .Enrich.FromLogContext()
                 .WriteTo.Console()
                 .CreateLogger();
-            
+
             try
             {
                 Log.Information("Starting host");
@@ -70,7 +70,6 @@ namespace GreetingsSender
             {
                 Log.CloseAndFlush();
             }
- 
         }
 
         private static void DoWork(IHost host)

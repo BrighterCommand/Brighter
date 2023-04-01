@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             ExceptionDispatchInfo capturedException = null;
-            var timeBeforeHandle = DateTime.UtcNow; 
+            var timeBeforeHandle = DateTime.UtcNow;
             try
             {
                 if (!cancellationToken.IsCancellationRequested)

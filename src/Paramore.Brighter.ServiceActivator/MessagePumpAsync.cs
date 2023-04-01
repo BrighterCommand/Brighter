@@ -71,7 +71,7 @@ namespace Paramore.Brighter.ServiceActivator
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);
 
             var messageType = messageHeader.MessageType;
-            
+
             ValidateMessageType(messageType, request);
 
             switch (messageType)

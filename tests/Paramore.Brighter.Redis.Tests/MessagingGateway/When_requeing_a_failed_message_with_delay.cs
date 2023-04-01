@@ -27,16 +27,16 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             //clear the queue, and ensure it exists
             _redisFixture.MessageConsumer.Receive(1000);
-            
+
             //send & receive a message
             _redisFixture.MessageProducer.Send(_messageOne);
             var message = _redisFixture.MessageConsumer.Receive(1000).Single();
             message.Header.HandledCount.Should().Be(0);
             message.Header.DelayedMilliseconds.Should().Be(0);
-            
+
             //now requeue with a delay
             _redisFixture.MessageConsumer.Requeue(_messageOne, 1000);
-            
+
             //receive and assert
             message = _redisFixture.MessageConsumer.Receive(1000).Single();
             message.Header.HandledCount.Should().Be(1);

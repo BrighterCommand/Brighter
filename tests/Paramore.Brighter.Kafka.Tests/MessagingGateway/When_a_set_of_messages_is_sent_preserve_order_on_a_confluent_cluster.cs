@@ -35,10 +35,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             // You need to set those values as environment variables, which we then read, in order
             // to run these tests
 
-            _bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER"); 
+            _bootStrapServer = Environment.GetEnvironmentVariable("CONFLUENT_BOOSTRAP_SERVER");
             _userName = Environment.GetEnvironmentVariable("CONFLUENT_SASL_USERNAME");
             _password = Environment.GetEnvironmentVariable("CONFLUENT_SASL_PASSWORD");
-            
+
             _output = output;
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
@@ -183,7 +183,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             //For different platforms, we have to figure out how to get the connection right
             //see: https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/csharp.html
-                
+
             return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
         }
     }

@@ -92,7 +92,7 @@ namespace Paramore.Brighter
         {
             ContentType = contentType;
             CharacterEncoding = characterEncoding;
-            
+
             if (characterEncoding == CharacterEncoding.Raw) throw new ArgumentOutOfRangeException("characterEncoding", "Raw encoding is not supported for string constructor");
 
             Bytes = CharacterEncoding switch

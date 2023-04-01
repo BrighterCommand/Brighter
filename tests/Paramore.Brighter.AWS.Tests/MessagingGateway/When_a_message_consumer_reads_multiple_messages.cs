@@ -32,10 +32,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channelFactory = new ChannelFactory(awsConnection);
             var channelName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _topicName = $"Buffered-Consumer-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
-                
+
             //we need the channel to create the queues and notifications
             var routingKey = new RoutingKey(_topicName);
-            
+
             var channel = _channelFactory.CreateChannel(new SqsSubscription<MyCommand>(
                 name: new SubscriptionName(channelName),
                 channelName:new ChannelName(channelName),
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 bufferSize: _bufferSize,
                 makeChannels: OnMissingChannel.Create
                 ));
-            
+
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, _bufferSize);

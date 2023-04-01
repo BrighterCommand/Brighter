@@ -86,7 +86,7 @@ namespace GreetingsWeb
         private void CheckDbIsUp()
         {
             string connectionString = DbConnectionString();
-            
+
             var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
                 retryAttempt => TimeSpan.FromSeconds(2),
                 (exception, timespan) =>

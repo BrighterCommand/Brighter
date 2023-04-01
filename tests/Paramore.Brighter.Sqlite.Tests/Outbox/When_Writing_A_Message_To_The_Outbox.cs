@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             messageHeader.Bag.Add(_key3, _value3);
             messageHeader.Bag.Add(_key4, _value4);
             messageHeader.Bag.Add(_key5, _value5);
-            
+
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
             _sqlOutboxSync.Add(_messageEarliest);
         }
@@ -88,8 +88,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-             
-            
+
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         {
             string topicName = $"Producer-Send-Tests-{Guid.NewGuid().ToString()}".Truncate(45);
             _routingKey = new RoutingKey(topicName);
-            
+
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
             _awsConnection = new AWSMessagingGatewayConnection(credentials, region);
 
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 {
                     MakeChannels = OnMissingChannel.Validate
                 });
-            
+
             //act && assert
             Assert.Throws<BrokerUnreachableException>(() => producer.Send(new Message(
                 new MessageHeader{Topic = _routingKey, ContentType = "plain/text"},

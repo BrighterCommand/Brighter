@@ -62,8 +62,7 @@ namespace Greetings.Ports.CommandHandlers
 
                 Console.WriteLine($"Message {command.GreetingMessage} not Saved.");
             }
-            
-            
+
             return await base.HandleAsync(command);
         }
     }

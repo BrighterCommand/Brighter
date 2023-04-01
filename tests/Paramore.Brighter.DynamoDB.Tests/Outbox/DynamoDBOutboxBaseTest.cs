@@ -45,7 +45,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         private IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
-            
+
             var clientConfig = new AmazonDynamoDBConfig
             {
                 ServiceURL = "http://localhost:8000"
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             };
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
- 
+
         }
 
         public void Dispose()
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             var tableNames = new string[] {OutboxTableName};
             //var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
            // _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
- 
+
             _disposed = true;
        }
     }

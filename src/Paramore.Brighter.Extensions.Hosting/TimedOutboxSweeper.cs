@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Extensions.Hosting
             {
                 scope.Dispose();
             }
-            
+
             s_logger.LogInformation("Outbox Sweeper sleeping");
         }
 

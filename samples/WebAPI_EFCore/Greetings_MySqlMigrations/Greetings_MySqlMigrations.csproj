@@ -3,11 +3,10 @@
     <PropertyGroup>
         <TargetFramework>net6.0</TargetFramework>
     </PropertyGroup>
-  
+
     <ItemGroup>
       <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
       <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="7.0.0" />
     </ItemGroup>
-
 
 </Project>

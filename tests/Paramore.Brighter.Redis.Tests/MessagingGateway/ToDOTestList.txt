@@ -30,6 +30,3 @@ Running out of storage space for messages.
  Is there anyway to know we are running out of capacity on Redis?
  Do we want an upper limit? How would we know what that is?
  We use TTL to delete messages; we need to cope with pulling a message that has expired. Channel Failure Exception, hint at expiry?
-   
-   
-    

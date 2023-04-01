@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutboxSync.Add(_messageLatest);
 
             _retrievedMessages = _sqlOutboxSync.Get();
-            
+
 
             //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutboxSync.Add(new List<Message>(){_messageEarliest, _message2, _messageLatest});
 
             _retrievedMessages = _sqlOutboxSync.Get();
-            
+
             //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
             //should read last message first from the outbox

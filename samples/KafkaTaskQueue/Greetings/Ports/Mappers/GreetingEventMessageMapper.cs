@@ -34,7 +34,7 @@ namespace Greetings.Ports.Mappers
         {
             var header = new MessageHeader(messageId: request.Id, topic: "greeting.event", messageType: MessageType.MT_EVENT);
             var body = new MessageBody(JsonSerializer.Serialize(request, JsonSerialisationOptions.Options));
-            
+
             //This won't have repeats that need to go to the same partition, but it's a good example of how to set the partition key
             header.PartitionKey = request.Id.ToString();
 
@@ -44,9 +44,7 @@ namespace Greetings.Ports.Mappers
 
         public GreetingEvent MapToRequest(Message message)
         {
-            var greetingCommand = JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);
-            
-            return greetingCommand;
+            return JsonSerializer.Deserialize<GreetingEvent>(message.Body.Value, JsonSerialisationOptions.Options);
         }
     }
 }

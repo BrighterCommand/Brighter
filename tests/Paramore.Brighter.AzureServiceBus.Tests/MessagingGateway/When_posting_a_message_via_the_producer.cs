@@ -73,9 +73,9 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             string testHeader = "TestHeader";
             string testHeaderValue = "Blah!!!";
             _message.Header.Bag.Add(testHeader, testHeaderValue);
-            
+
             var producer = _producerRegistry.LookupBy(_topicName) as IAmAMessageProducerAsync;
-           
+
             await producer.SendAsync(_message);
 
             var message = _channel.Receive(5000);

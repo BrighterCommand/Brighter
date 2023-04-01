@@ -37,7 +37,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         private readonly DynamoDbInbox _dynamoDbInbox;
 
         public DynamoDbInboxEmptyWhenSearchedTests()
-        {            
+        {
             _dynamoDbInbox = new DynamoDbInbox(Client);
         }
 

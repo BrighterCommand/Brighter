@@ -24,7 +24,7 @@ namespace HelloAsyncListeners
 
             Console.BackgroundColor = ConsoleColor.Blue;
             Console.ForegroundColor = ConsoleColor.White;
-            
+
             Console.WriteLine($"Want-to-be-greeted received hello from {@event.Name}");
             Console.WriteLine(result.Success ? $"Want-to-be-greeted has public IP address is {result.Message}" : $"Call to IpFy API failed : {result.Message}");
 

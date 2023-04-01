@@ -18,13 +18,13 @@ namespace Tests
         public void BasicSetup()
         {
             var serviceCollection = new ServiceCollection();
-            
+
             serviceCollection.AddBrighter().AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
 
@@ -45,7 +45,7 @@ namespace Tests
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
 
@@ -67,7 +67,7 @@ namespace Tests
                 { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
             };
 
-            
+
             serviceCollection
                 .AddBrighter(options => options.PolicyRegistry = policyRegistry)
                 .AutoFromAssemblies();
@@ -75,7 +75,7 @@ namespace Tests
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
             var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-            
+
             Assert.NotNull(commandProcessor);
         }
 
@@ -83,7 +83,7 @@ namespace Tests
         public void WithScopedLifetime()
         {
             var serviceCollection = new ServiceCollection();
-            
+
             serviceCollection.AddBrighter(options => options.CommandProcessorLifetime = ServiceLifetime.Scoped
                 ).AutoFromAssemblies();
 

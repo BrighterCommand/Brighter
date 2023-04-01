@@ -45,12 +45,12 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             header.Bag.Add("impersonatorId", 123);
             header.Bag.Add("eventNumber", 0);
             header.Bag.Add("streamId", StreamName);
-            
+
             var messageToMarkAsDispatched = new Message(header, body);
             var dispatchedAt = DateTime.UtcNow;
-            
+
             var args = new Dictionary<string, object> {{Globals.StreamArg, StreamName}};
-            
+
             eventStoreOutbox.Add(messageToMarkAsDispatched);
 
             // act
@@ -67,10 +67,10 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
         {
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
-            
+
             // act
             Action getWithoutArgs = () => eventStoreOutbox.MarkDispatched(Guid.Empty, DateTime.UtcNow);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentNullException>();
         }
@@ -81,11 +81,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> {{Globals.StreamArg, null}};
-            
+
             // act
             // act
             Action getWithoutArgs = () => eventStoreOutbox.MarkDispatched(Guid.Empty, DateTime.UtcNow, args);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
         }
@@ -96,11 +96,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object>();
-            
+
             // act
             // act
             Action getWithoutArgs = () => eventStoreOutbox.MarkDispatched(Guid.Empty, DateTime.UtcNow, args);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
         }
@@ -111,11 +111,11 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // arrange
             var eventStoreOutbox = new EventStoreOutboxSync(Connection);
             var args = new Dictionary<string, object> { { "Foo", "Bar" }};
-            
+
             // act
             // act
             Action getWithoutArgs = () => eventStoreOutbox.MarkDispatched(Guid.Empty, DateTime.UtcNow, args);
-            
+
             // assert
             getWithoutArgs.Should().Throw<ArgumentException>();
         }

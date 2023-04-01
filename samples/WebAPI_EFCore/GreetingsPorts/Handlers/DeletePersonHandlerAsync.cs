@@ -31,7 +31,7 @@ namespace GreetingsPorts.Handlers
             _uow.Remove(person);
 
             await _uow.SaveChangesAsync(cancellationToken);
-            
+
             return await base.HandleAsync(deletePerson, cancellationToken);
         }
     }

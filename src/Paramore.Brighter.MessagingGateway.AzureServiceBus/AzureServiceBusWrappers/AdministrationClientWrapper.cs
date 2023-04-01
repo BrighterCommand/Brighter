@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public bool TopicExists(string topic)
         {
             s_logger.LogDebug("Checking if topic {Topic} exists...", topic);
-            
+
             bool result;
 
             try
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             {
                 s_logger.LogWarning("Topic {Topic} does not exist.", topic);
             }
-            
+
             return result;
         }
 
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 s_logger.LogError(e,"Failed to create topic {Topic}.", topic);
                 throw;
             }
-            
+
             s_logger.LogInformation("Topic {Topic} created.", topic);
         }
 
@@ -130,7 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 s_logger.LogError(e, "Failed to check if subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
                 throw;
             }
-            
+
             if (result)
             {
                 s_logger.LogDebug("Subscription {ChannelName} for topic {Topic} exists.", subscriptionName, topicName);
@@ -169,7 +169,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         private void Initialise()
         {
             s_logger.LogDebug("Initialising new management client wrapper...");
-            
+
             try
             {
                 _administrationClient = _clientProvider.GetServiceBusAdministrationClient();
@@ -212,7 +212,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 s_logger.LogError(e, "Failed to create subscription {ChannelName} for topic {Topic}.", subscriptionName, topicName);
                 throw;
             }
-            
+
             s_logger.LogInformation("Subscription {ChannelName} for topic {Topic} created.", subscriptionName, topicName);
         }
     }

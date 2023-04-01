@@ -10,7 +10,7 @@ public class MyDistributedEventHandler : RequestHandler<MyDistributedEvent>
     {
         Console.WriteLine($"Id: {command.Id} {Environment.NewLine}Messge: {command.Name}{Environment.NewLine}");
         command.Span.AddEvent(new ActivityEvent("Did a thing"));
-        
+
         return base.Handle(command);
     }
 }

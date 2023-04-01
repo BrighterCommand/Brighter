@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             _onceOnly = (bool) initializerList[0];
             _contextKey = (string)initializerList[1];
             _onceOnlyAction = (OnceOnlyAction)initializerList[2];
-            
+
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Inbox.Handlers
         /// <returns>The parameter to allow request handlers to be chained together in a pipeline</returns>
         public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default(CancellationToken))
         {
-            
+
             if (_onceOnly)
             {
                 s_logger.LogDebug("Checking if command {Id} has already been seen", command.Id);
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Inbox.Handlers
                     return command;
                 }
             }
-            
+
             s_logger.LogDebug("Writing command {Id} to the Inbox", command.Id);
 
             T handledCommand = await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

@@ -35,7 +35,7 @@ namespace GreetingsPorts.Handlers
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
-            
+
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'
 
