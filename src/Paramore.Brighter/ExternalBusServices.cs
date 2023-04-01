@@ -179,7 +179,7 @@ namespace Paramore.Brighter
 
             s_logger.LogDebug("Running outstanding message check at {MessageCheckTime} after {SecondsSinceLastCheck} seconds wait", DateTime.UtcNow, timeSinceLastCheck.TotalSeconds);
             //This is expensive, so use a background thread
-            Task.Run(() => OutstandingMessagesCheck());
+            Task.Run(OutstandingMessagesCheck);
         }
 
         internal void ClearOutbox(params Guid[] posts)

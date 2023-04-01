@@ -137,7 +137,7 @@ namespace Paramore.Brighter
             return ReadFromStore(
                 connection =>
                     CreatePagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber),
-                dr => MapListFunction(dr));
+                MapListFunction);
         }
 
         /// <summary>
@@ -149,7 +149,7 @@ namespace Paramore.Brighter
         public Message Get(Guid messageId, int outBoxTimeout = -1)
         {
             return ReadFromStore(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
-                dr => MapFunction(dr));
+                MapFunction);
         }
 
         /// <summary>
@@ -191,7 +191,7 @@ namespace Paramore.Brighter
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             return ReadFromStore(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
-                dr => MapListFunction(dr)).ToList();
+                MapListFunction).ToList();
         }
 
         /// <summary>
@@ -288,7 +288,7 @@ namespace Paramore.Brighter
         {
             return ReadFromStore(
                 connection => CreatePagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber),
-                dr => MapListFunction(dr));
+                MapListFunction);
         }
 
         /// <summary>
