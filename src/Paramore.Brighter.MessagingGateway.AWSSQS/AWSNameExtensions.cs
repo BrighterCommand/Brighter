@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             topic = topic.Replace(".", "_");
             if (topic.Length > 256)
                 topic = topic.Substring(0, 256);
-            
+
             return new RoutingKey(topic);
         }
 
@@ -61,8 +61,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             topic = topic.Replace(".", "_");
             if (topic.Length > 256)
                 topic = topic.Substring(0, 256);
-            
+
             return topic;
         }
-     }
+    }
 }

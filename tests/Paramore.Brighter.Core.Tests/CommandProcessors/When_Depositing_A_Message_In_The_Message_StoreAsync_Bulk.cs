@@ -14,7 +14,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 {
 
     [Collection("CommandProcessor")]
-    public class CommandProcessorBulkDepositPostTestsAsync: IDisposable
+    public class CommandProcessorBulkDepositPostTestsAsync : IDisposable
     {
 
         private readonly CommandProcessor _commandProcessor;
@@ -40,13 +40,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _message = new Message(
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
-                );
-            
+            );
+
             _message2 = new Message(
                 new MessageHeader(_myCommand2.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
-            
+
             _message3 = new Message(
                 new MessageHeader(_myEvent.Id, eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            PolicyRegistry policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
+            PolicyRegistry policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICYASYNC, retryPolicy}, {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy}};
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
@@ -86,42 +86,42 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public async Task When_depositing_a_message_in_the_outbox()
         {
             //act
-            var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
+            var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent};
             var postedMessageIds = await _commandProcessor.DepositPostAsync(requests);
-            
+
             //assert
             //message should not be posted
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
-            
+
             //message should be in the store
             var depositedPost = _fakeOutboxSync
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
-            
+
             //message should be in the store
             var depositedPost2 = _fakeOutboxSync
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message2.Id);
-            
+
             //message should be in the store
             var depositedPost3 = _fakeOutboxSync
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
 
             depositedPost.Should().NotBeNull();
-           
+
             //message should correspond to the command
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
-            
+
             //message should correspond to the command
             depositedPost2.Id.Should().Be(_message2.Id);
             depositedPost2.Body.Value.Should().Be(_message2.Body.Value);
             depositedPost2.Header.Topic.Should().Be(_message2.Header.Topic);
             depositedPost2.Header.MessageType.Should().Be(_message2.Header.MessageType);
-            
+
             //message should correspond to the command
             depositedPost3.Id.Should().Be(_message3.Id);
             depositedPost3.Body.Value.Should().Be(_message3.Body.Value);
@@ -133,5 +133,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             CommandProcessor.ClearExtServiceBus();
         }
-     }
+    }
 }

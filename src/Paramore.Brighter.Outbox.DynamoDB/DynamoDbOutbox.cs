@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             _configuration = configuration;
             _context = new DynamoDBContext(client);
-            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig {OverrideTableName = _configuration.TableName};
         }
 
         /// <summary>
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             _context = context;
             _configuration = configuration;
-            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig {OverrideTableName = _configuration.TableName};
         }
 
         /// <inheritdoc />
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             }
         }
 
-       /// <summary>
+        /// <summary>
         /// Returns messages that have been successfully dispatched. Eventually consistent.
         /// </summary>
         /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
@@ -122,26 +122,21 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
-            
+
             var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             //in theory this is all values on that index that have a Delivered data (sparse index)
             //we just need to filter for ones in the right date range
             //As it is a GSI it can't use a consistent read
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
-                ConsistentRead = false
-            };
-           
+            var queryConfig = new QueryOperationConfig {IndexName = _configuration.DeliveredIndexName, KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime), ConsistentRead = false};
+
             //block async to make this sync
             var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
-       /// <inheritdoc />
+        /// <inheritdoc />
         /// <summary>
         ///     Finds a command with the specified identifier.
         /// </summary>
@@ -228,12 +223,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 message,
                 _dynamoOverwriteTableConfig,
                 cancellationToken);
-       }
+        }
 
         public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken))
         {
-            foreach(var messageId in ids)
+            foreach (var messageId in ids)
             {
                 await MarkDispatchedAsync(messageId, dispatchedAt, args, cancellationToken);
             }
@@ -246,20 +241,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
             }
-            
+
             var sinceTime = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
             //in theory this is all values on that index that have a Delivered data (sparse index)
             //we just need to filter for ones in the right date range
             //As it is a GSI it can't use a consistent read
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.DeliveredIndexName,
-                KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime),
-                ConsistentRead = false
-            };
-           
+            var queryConfig = new QueryOperationConfig {IndexName = _configuration.DeliveredIndexName, KeyExpression = new KeyTopicDeliveredTimeExpression().Generate(topic, sinceTime), ConsistentRead = false};
+
             //block async to make this sync
             var messages = await PageAllMessagesAsync(queryConfig, cancellationToken);
             return messages.Select(msg => msg.ConvertToMessage());
@@ -276,8 +266,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             MarkMessageDispatched(dispatchedAt, message);
 
             _context.SaveAsync(
-                message,
-                _dynamoOverwriteTableConfig)
+                    message,
+                    _dynamoOverwriteTableConfig)
                 .Wait(_configuration.Timeout);
 
         }
@@ -296,13 +286,13 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="pageNumber">Which page number of messages</param>
         /// <returns>A list of messages that are outstanding for dispatch</returns>
         public IEnumerable<Message> OutstandingMessages(
-         double millisecondsDispatchedSince,
-         int pageSize = 100,
-         int pageNumber = 1,
-         Dictionary<string, object> args = null)
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
+            int pageNumber = 1,
+            Dictionary<string, object> args = null)
         {
             var now = DateTime.UtcNow;
-            
+
             if (args == null)
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
@@ -314,14 +304,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // We get all the messages for topic, added within a time range
             // There should be few enough of those that we can efficiently filter for those
             // that don't have a delivery date.
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime),
-                FilterExpression = new NoDispatchTimeExpression().Generate(),
-                ConsistentRead = false
-            };
-           
+            var queryConfig = new QueryOperationConfig {IndexName = _configuration.OutstandingIndexName, KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime), FilterExpression = new NoDispatchTimeExpression().Generate(), ConsistentRead = false};
+
             //block async to make this sync
             var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
             return messages.Select(msg => msg.ConvertToMessage());
@@ -348,7 +332,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             CancellationToken cancellationToken = default)
         {
             var now = DateTime.UtcNow;
-            
+
             if (args == null)
             {
                 throw new ArgumentException("Missing required argument", nameof(args));
@@ -360,14 +344,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             // We get all the messages for topic, added within a time range
             // There should be few enough of those that we can efficiently filter for those
             // that don't have a delivery date.
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge),
-                FilterExpression = new NoDispatchTimeExpression().Generate(),
-                ConsistentRead = false
-            };
-           
+            var queryConfig = new QueryOperationConfig {IndexName = _configuration.OutstandingIndexName, KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge), FilterExpression = new NoDispatchTimeExpression().Generate(), ConsistentRead = false};
+
             //block async to make this sync
             var messages = (await PageAllMessagesAsync(queryConfig, cancellationToken)).ToList();
             return messages.Select(msg => msg.ConvertToMessage());
@@ -379,15 +357,15 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         }
 
         private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
-       {
-           var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
-           var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
-           
-           var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
-           transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
-           tcs.SetResult(transaction);
-           return tcs.Task;
-       }
+        {
+            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
+            var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
+
+            var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
+            transaction.TransactItems.Add(new TransactWriteItem {Put = new Put {TableName = _configuration.TableName, Item = attributes}});
+            tcs.SetResult(transaction);
+            return tcs.Task;
+        }
 
         private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -398,7 +376,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private async Task<IEnumerable<MessageItem>> PageAllMessagesAsync(QueryOperationConfig queryConfig, CancellationToken cancellationToken = default)
         {
             var asyncSearch = _context.FromQueryAsync<MessageItem>(queryConfig, _dynamoOverwriteTableConfig);
-            
+
             var messages = new List<MessageItem>();
             do
             {
@@ -407,6 +385,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return messages;
         }
+
         private async Task WriteMessageToOutbox(CancellationToken cancellationToken, MessageItem messageToStore)
         {
             await _context.SaveAsync(
@@ -415,5 +394,5 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
-     }
+    }
 }

@@ -30,7 +30,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.TestDoubles
     {
         public MyCommand()
             :base(Guid.NewGuid())
-
         {}
 
         public string Value { get; set; }

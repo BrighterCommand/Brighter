@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 {
     public class RedisMessageCreator
     {
-        private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RedisMessageCreator>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageCreator>();
 
         /// <summary>
         /// Create a Brighter Message from the Redis raw content
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return message;
             }
-            
+
             using (var reader = new StringReader(redisMessage))
             {
                 var header = reader.ReadLine();
@@ -113,7 +113,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns></returns>
         private MessageHeader ReadHeader(string headersJson)
         {
-            var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
+            var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);
             //Read Message Id
             var messageId = ReadMessageId(headers);
             //Read TimeStamp
@@ -122,7 +122,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var topic = ReadTopic(headers);
             //Read MessageType
             var messageType = ReadMessageType(headers);
-           //Read HandledCount
+            //Read HandledCount
             var handledCount = ReadHandledCount(headers);
             //Read DelayedMilliseconds
             var delayedMilliseconds = ReadDelayedMilliseconds(headers);
@@ -134,7 +134,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var contentType = ReadContentType(headers);
             //correlation id
             var correlationId = ReadCorrelationId(headers);
-            
+
 
             if (!messageId.Success)
             {
@@ -173,7 +173,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
         }
 
-       /// <summary>
+        /// <summary>
         /// We return an MT_UNACCEPTABLE message because we cannot process. Really this should go on to an
         /// Invalid Message Queue provided by the Control Bus
         /// </summary>
@@ -194,13 +194,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return new HeaderResult<string>(headers[HeaderNames.CONTENT_TYPE], true);
             }
+
             return new HeaderResult<string>(String.Empty, false);
         }
 
         private HeaderResult<Guid> ReadCorrelationId(Dictionary<string, string> headers)
         {
             var messageId = Guid.Empty;
-            
+
             if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
             {
                 if (Guid.TryParse(headers[HeaderNames.CORRELATION_ID], out messageId))
@@ -208,11 +209,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return new HeaderResult<Guid>(messageId, true);
                 }
             }
-            
+
             return new HeaderResult<Guid>(messageId, false);
         }
 
-         private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
+        private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
         {
             if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS))
             {
@@ -221,8 +222,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return new HeaderResult<int>(delayedMilliseconds, true);
                 }
             }
+
             return new HeaderResult<int>(0, true);
-         }
+        }
 
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
@@ -233,7 +235,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return new HeaderResult<int>(handledCount, true);
                 }
             }
-            
+
             return new HeaderResult<int>(0, true);
         }
 
@@ -254,11 +256,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(bagJson, JsonSerialisationOptions.Options);
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
+
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
 
         }
 
-         private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
+        private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
         {
             if (headers.ContainsKey(HeaderNames.MESSAGE_TYPE))
             {
@@ -267,14 +270,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return new HeaderResult<MessageType>(messageType, true);
                 }
             }
-            
+
             return new HeaderResult<MessageType>(MessageType.MT_EVENT, true);
         }
 
         private HeaderResult<Guid> ReadMessageId(IDictionary<string, string> headers)
         {
             var messageId = Guid.Empty;
-            
+
             if (headers.ContainsKey(HeaderNames.MESSAGE_ID))
             {
                 if (Guid.TryParse(headers[HeaderNames.MESSAGE_ID], out messageId))
@@ -282,7 +285,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     return new HeaderResult<Guid>(messageId, true);
                 }
             }
-            
+
             return new HeaderResult<Guid>(messageId, false);
         }
 
@@ -292,10 +295,11 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return new HeaderResult<string>(headers[HeaderNames.REPLY_TO], true);
             }
+
             return new HeaderResult<string>(string.Empty, false);
         }
 
-       /// <summary>
+        /// <summary>
         /// Note that RMQ uses a unix timestamp, we just System.Text's JSON date format in Redis
         /// </summary>
         /// <param name="headers">The collection of headers</param>
@@ -304,11 +308,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             if (headers.ContainsKey(HeaderNames.TIMESTAMP))
             {
-                if(DateTime.TryParse(headers[HeaderNames.TIMESTAMP], out DateTime timestamp))
+                if (DateTime.TryParse(headers[HeaderNames.TIMESTAMP], out DateTime timestamp))
                 {
                     return new HeaderResult<DateTime>(timestamp, true);
                 }
             }
+
             return new HeaderResult<DateTime>(DateTime.UtcNow, true);
         }
 
@@ -319,8 +324,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 return new HeaderResult<string>(headers[HeaderNames.TOPIC], false);
             }
+
             return new HeaderResult<string>(String.Empty, false);
         }
-
-     }
+    }
 }

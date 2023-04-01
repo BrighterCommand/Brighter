@@ -30,7 +30,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests.TestDoubles
     {
         public MyCommand()
             :base(Guid.NewGuid())
-
         {}
 
         public string Value { get; set; }

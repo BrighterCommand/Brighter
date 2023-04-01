@@ -30,7 +30,6 @@ namespace Paramore.Brighter.MSSQL.Tests.TestDoubles
     {
         public MyCommand()
             :base(Guid.NewGuid())
-
         {}
 
         public string Value { get; set; }

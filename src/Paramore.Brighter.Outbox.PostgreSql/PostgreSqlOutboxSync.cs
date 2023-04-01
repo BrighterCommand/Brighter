@@ -350,7 +350,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private NpgsqlCommand CreateCommand(NpgsqlConnection connection, string sqlText, int outBoxTimeout,
             params NpgsqlParameter[] parameters)
-
         {
             var command = connection.CreateCommand();
 

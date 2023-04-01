@@ -48,5 +48,5 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         void SendWithDelay(Message message, int delayMilliseconds = 0);
-     }
+    }
 }

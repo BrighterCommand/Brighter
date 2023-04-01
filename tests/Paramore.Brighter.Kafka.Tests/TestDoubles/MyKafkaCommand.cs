@@ -30,7 +30,6 @@ namespace Paramore.Brighter.Kafka.Tests.TestDoubles
     {
         public MyKafkaCommand()
             :base(Guid.NewGuid())
-
         {}
 
         public string Value { get; set; }

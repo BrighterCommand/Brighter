@@ -26,5 +26,5 @@ public class MySqlInitialCreate : Migration
     {
         Delete.Table("Greeting");
         Delete.Table("Person");
-    }    
+    }
 }
