@@ -8,12 +8,10 @@ namespace Greetings.Ports.Commands
 
         public GreetingReply() : base(new ReplyAddress())
         {
-            
         }
 
         public GreetingReply(ReplyAddress sendersAddress) : base(sendersAddress)
         {
         }
-
     }
 }

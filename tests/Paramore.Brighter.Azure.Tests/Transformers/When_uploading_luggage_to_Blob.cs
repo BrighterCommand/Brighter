@@ -51,7 +51,6 @@ public class AzureBlobUploadTests : IDisposable
         resultAsString.Should().Be(testContent);
 
         await luggageStore.DeleteAsync(claim, CancellationToken.None);
-
     }
 
     public void Dispose()

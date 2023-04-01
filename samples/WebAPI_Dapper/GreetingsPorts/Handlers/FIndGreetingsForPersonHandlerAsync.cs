@@ -53,8 +53,6 @@ namespace GreetingsPorts.Handlers
                 Name = person.Name,
                 Greetings = person.Greetings.Select(g => new Salutation(g.Greet()))
             };
-
         }
-
     }
 }

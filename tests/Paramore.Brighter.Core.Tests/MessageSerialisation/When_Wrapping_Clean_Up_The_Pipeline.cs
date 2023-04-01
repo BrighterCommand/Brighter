@@ -37,9 +37,7 @@ public class MessageWrapCleanupTests
 
         //assert
         s_released.Should().Be("|MySimpleTransformAsync");
-
     }
-
 
     private class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {

@@ -32,8 +32,6 @@ namespace GreetingsPorts.Handlers
             var person = await context.LoadAsync<Person>(query.Name, cancellationToken);
 
             return new FindPersonsGreetings { Greetings = person.Greetings.Select(g => new Salutation(g)).ToList(), Name = query.Name };
-
         }
-
     }
 }

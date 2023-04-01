@@ -21,7 +21,6 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MySimpleTransformAsync()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-
     }
 
     [Fact]

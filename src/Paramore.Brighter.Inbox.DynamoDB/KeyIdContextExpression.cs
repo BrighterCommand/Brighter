@@ -25,6 +25,5 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             return _expression;
 
         }
-
     }
 }

@@ -22,6 +22,5 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
          //assert
          exception.Should().NotBeNull();
          exception.Should().BeOfType<ConfigurationException>();
-
     }
 }

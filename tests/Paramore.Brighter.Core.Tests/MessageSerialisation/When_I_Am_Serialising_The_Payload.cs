@@ -83,7 +83,6 @@ public class MessageValueSerializationTests
         serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);
         desBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);
         serBody.Bytes.Should().Equal(desBody.Bytes);
-
     }
 
     [Fact]
@@ -108,7 +107,6 @@ public class MessageValueSerializationTests
         serBody.CharacterEncoding.Should().Be(CharacterEncoding.Raw);
         desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);
         serBody.Bytes.Should().Equal(desBody.Bytes);
-
     }
 
     [Fact]
@@ -201,7 +199,6 @@ public class MessageValueSerializationTests
         serBody.Bytes.Should().Equal(desBody.Bytes);
         serBody.Value.Should().Be(desBody.Value);
         retrievedSchemaId.Should().Be(id);
-
     }
 
     [Fact]

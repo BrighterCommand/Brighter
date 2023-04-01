@@ -76,6 +76,5 @@ public class CompressLargePayloadTests
         compressedMessage.Header.ContentType.Should().Be(CompressPayloadTransformer.BROTLI);
         compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
         compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.BROTLI);
-
     }
 }

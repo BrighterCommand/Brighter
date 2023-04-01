@@ -21,6 +21,5 @@ namespace Paramore.Brighter.Redis.Tests.TestDoubles
         {
             throw new RedisException(SocketException, new SocketException((int) SocketError.AccessDenied));
         }
-
     }
 }

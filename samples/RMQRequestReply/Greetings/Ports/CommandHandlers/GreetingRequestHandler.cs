@@ -67,7 +67,7 @@ namespace Greetings.Ports.CommandHandlers
             };
 
             _commandProcessor.Post(response);
-            
+
             return base.Handle(request);
         }
     }
