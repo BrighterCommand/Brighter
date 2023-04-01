@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout.Test_Doubles
         public override MyCommand Handle(MyCommand command)
         {
             var ct = (CancellationToken)Context.Bag[TimeoutPolicyHandler<MyCommand>.CONTEXT_BAG_TIMEOUT_CANCELLATION_TOKEN];
-            Task.Delay(100, ct).ContinueWith((antecedent) => { command.TaskCompleted = true; }, ct).Wait(ct);
+            Task.Delay(100, ct).ContinueWith(antecedent => { command.TaskCompleted = true; }, ct).Wait(ct);
             return base.Handle(command);
         }
     }

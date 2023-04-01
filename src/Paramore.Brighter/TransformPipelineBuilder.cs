@@ -163,7 +163,7 @@ namespace Paramore.Brighter
                 return transforms;
             }
 
-            transformAttributes.Each((attribute) =>
+            transformAttributes.Each(attribute =>
             {
                 var transformType = attribute.GetHandlerType();
                 var transformer = new TransformerFactory<TRequest>(attribute, _messageTransformerFactory).CreateMessageTransformer();

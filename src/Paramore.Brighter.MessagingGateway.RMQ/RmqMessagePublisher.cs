@@ -148,7 +148,7 @@ internal class RmqMessagePublisher
             if (message.Header.CorrelationId != Guid.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString());
 
-            message.Header.Bag.Each((header) =>
+            message.Header.Bag.Each(header =>
             {
                 if (!_headersToReset.Any(htr => htr.Equals(header.Key))) headers.Add(header.Key, header.Value);
             });

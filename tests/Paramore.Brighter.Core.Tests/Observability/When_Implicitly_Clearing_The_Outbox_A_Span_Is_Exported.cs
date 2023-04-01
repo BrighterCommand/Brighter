@@ -30,7 +30,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
         var registry = new SubscriberRegistry();
         registry.Register<MyEvent, MyEventHandler>();
 
-        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyEventMessageMapper()));
+        var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
         messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
         
         var container = new ServiceCollection();

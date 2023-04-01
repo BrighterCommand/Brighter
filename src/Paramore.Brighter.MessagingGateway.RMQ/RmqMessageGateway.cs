@@ -114,7 +114,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void ConnectWithRetry(string queueName, OnMissingChannel makeExchange)
         {
-            _retryPolicy.Execute((ctx) => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName}});
+            _retryPolicy.Execute(ctx => ConnectToBroker(makeExchange), new Dictionary<string, object> {{"queueName", queueName}});
         }
 
         protected virtual void ConnectToBroker(OnMissingChannel makeExchange)

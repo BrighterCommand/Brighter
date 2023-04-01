@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// <returns>IAmAControlBusSender.</returns>
         public IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAProducerRegistry producerRegistry)
         {
-            var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MonitorEventMessageMapper()));
+            var mapper = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MonitorEventMessageMapper()));
             mapper.Register<MonitorEvent, MonitorEventMessageMapper>();
 
             return new ControlBusSender(CommandProcessorBuilder.With()

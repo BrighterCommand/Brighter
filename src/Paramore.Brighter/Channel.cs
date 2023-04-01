@@ -90,7 +90,7 @@ namespace Paramore.Brighter
                 throw new InvalidOperationException($"You cannot enqueue {newLength} items which larger than the buffer length {_maxQueueLength}"); 
             }
             
-            messages.Each((message) => _queue.Enqueue(message));
+            messages.Each(message => _queue.Enqueue(message));
         }
 
        /// <summary>

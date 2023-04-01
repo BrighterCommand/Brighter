@@ -79,7 +79,7 @@ namespace GreetingsSender
                 serviceCollection.AddHttpClient();
                 
                 //Adds a luggage store based on an S3 bucket
-                serviceCollection.AddS3LuggageStore((options) =>
+                serviceCollection.AddS3LuggageStore(options =>
                 {
                     options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
                     options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";

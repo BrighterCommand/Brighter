@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))
                 headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
 
-            message.Header.Bag.Each((header) =>
+            message.Header.Bag.Each(header =>
             {
                 if (!s_headersToReset.Any(htr => htr.Equals(header.Key)))
                 {

@@ -73,7 +73,7 @@ namespace Paramore.Brighter
 
         public void Dispose()
         {
-            _trackedObjects.Each((trackedItem) =>
+            _trackedObjects.Each(trackedItem =>
             {
                 //free disposable items
                 _handlerFactorySync.Release(trackedItem);

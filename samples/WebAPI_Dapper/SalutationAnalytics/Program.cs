@@ -94,7 +94,7 @@ namespace SalutationAnalytics
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
                 })
-                .ConfigureJsonSerialisation((options) =>
+                .ConfigureJsonSerialisation(options =>
                 {
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;

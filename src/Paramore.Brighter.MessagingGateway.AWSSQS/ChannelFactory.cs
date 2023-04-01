@@ -339,7 +339,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             catch (AggregateException ae)
             {
-                ae.Handle((e) =>
+                ae.Handle(e =>
                 {
                     if (e is QueueDoesNotExistException)
                     {

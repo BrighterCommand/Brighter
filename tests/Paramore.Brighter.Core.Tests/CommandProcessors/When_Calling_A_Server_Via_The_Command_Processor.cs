@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id.ToString(), _myRequest.RequestValue), JsonSerialisationOptions.Options));
             _message = new Message(header, body);
  
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(type =>
             {
                 if (type == typeof(MyRequestMessageMapper))
                     return new MyRequestMessageMapper();

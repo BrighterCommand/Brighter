@@ -36,7 +36,7 @@ namespace Paramore.Brighter
         
         private void ReleaseTrackedObjects()
         {
-              _trackedObjects.Each((trackedItem) =>
+              _trackedObjects.Each(trackedItem =>
               {
                   _factory.Release(trackedItem);
                   s_logger.LogDebug("Releasing handler instance {InstanceHashCode} of type {HandlerType}", trackedItem.GetHashCode(), trackedItem.GetType());

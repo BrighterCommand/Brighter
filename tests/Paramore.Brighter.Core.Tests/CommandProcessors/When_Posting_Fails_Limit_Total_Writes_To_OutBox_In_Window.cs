@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer = new FakeErroringMessageProducerSync();
 
             var messageMapperRegistry =
-                new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+                new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _commandProcessor = CommandProcessorBuilder.With()

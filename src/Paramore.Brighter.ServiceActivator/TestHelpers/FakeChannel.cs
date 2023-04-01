@@ -57,7 +57,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         
         public void Enqueue(params Message[] messages)
         {
-            messages.Each((message) => _messageQueue.Enqueue(message));
+            messages.Each(message => _messageQueue.Enqueue(message));
         }
 
         public void Purge()

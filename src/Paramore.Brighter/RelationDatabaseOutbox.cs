@@ -178,7 +178,7 @@ namespace Paramore.Brighter
         {
             return ReadFromStoreAsync(
                 connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
-                async (dr) => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+                async dr => await MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
         /// <summary>

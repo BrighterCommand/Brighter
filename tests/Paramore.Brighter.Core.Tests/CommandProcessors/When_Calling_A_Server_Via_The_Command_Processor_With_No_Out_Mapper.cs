@@ -20,7 +20,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
              _myRequest.RequestValue = "Hello World";
 
-            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
+            var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(type =>
             {
                 if (type == typeof(MyResponseMessageMapper))
                     return new MyResponseMessageMapper();
