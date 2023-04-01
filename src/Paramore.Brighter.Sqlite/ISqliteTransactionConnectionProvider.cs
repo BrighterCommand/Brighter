@@ -26,6 +26,5 @@ namespace Paramore.Brighter.Sqlite
 {
     public interface ISqliteTransactionConnectionProvider : ISqliteConnectionProvider, IAmABoxTransactionConnectionProvider
     {
-
     }
 }

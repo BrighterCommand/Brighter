@@ -90,6 +90,5 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Handlers
 
             return base.Handle(command);
         }
-
     }
 }

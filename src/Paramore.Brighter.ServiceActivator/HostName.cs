@@ -128,7 +128,5 @@ namespace Paramore.Brighter.ServiceActivator
         {
             return !Equals(left, right);
         }
-
-
     }
 }

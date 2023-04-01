@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Inbox.Handlers
             _onceOnly = (bool) initializerList[0];
             _contextKey = (string)initializerList[1];
             _onceOnlyAction = (OnceOnlyAction)initializerList[2];
-            
+
             base.InitializeFromAttributeParams(initializerList);
         }
 
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Inbox.Handlers
                     return command;
                 }
             }
-            
+
             T handledCommand = base.Handle(command);
 
             s_logger.LogDebug("Writing command {Id} to the Inbox", command.Id);
@@ -101,6 +101,5 @@ namespace Paramore.Brighter.Inbox.Handlers
 
             return handledCommand;
         }
-
     }
 }

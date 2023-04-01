@@ -26,6 +26,5 @@ namespace Paramore.Brighter.MySql
 {
     public interface IMySqlTransactionConnectionProvider : IMySqlConnectionProvider, IAmABoxTransactionConnectionProvider
     {
-
     }
 }

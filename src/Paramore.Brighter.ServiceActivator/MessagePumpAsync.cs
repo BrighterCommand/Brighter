@@ -125,6 +125,5 @@ namespace Paramore.Brighter.ServiceActivator
         {
             await CommandProcessorProvider.Get().SendAsync(request, continueOnCapturedContext: true);
         }
-
     }
 }

@@ -106,6 +106,5 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
                 requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }
-
     }
 }

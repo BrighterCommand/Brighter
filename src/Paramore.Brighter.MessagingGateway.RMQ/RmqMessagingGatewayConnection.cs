@@ -66,7 +66,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// Gets or sets whether to persist messages. Defaults to false.
         /// </summary>
         public bool PersistMessages { get; set; }
-
     }
 
     /// <summary>

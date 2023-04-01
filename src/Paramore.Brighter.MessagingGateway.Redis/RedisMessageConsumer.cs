@@ -222,10 +222,8 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                s_logger.LogDebug(
                    "RmqMessageConsumer: Time out without receiving message from queue {ChannelName} with routing key {Topic}",
                     _queueName, Topic);
-
             }
             return (latestId, msg);
         }
-
     }
 }

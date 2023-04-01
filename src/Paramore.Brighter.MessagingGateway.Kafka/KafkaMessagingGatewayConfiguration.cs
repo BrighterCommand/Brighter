@@ -103,6 +103,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          /// Password to keystore
          /// </summary>
          public string SslKeystorePassword { get; set; } = null;
-
     }
 }

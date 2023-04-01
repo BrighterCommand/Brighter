@@ -22,6 +22,5 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         {
             return JsonSerializer.Deserialize<ConfigurationCommand>(message.Body.Value, JsonSerialisationOptions.Options);
         }
-
     }
 }

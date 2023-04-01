@@ -32,19 +32,18 @@ namespace Paramore.Brighter.Tranformers.AWS
     /// </summary>
     public class AWSS3Connection
     {
-                /// <summary>
-                /// Constructs a credentials instance
-                /// </summary>
-                /// <param name="credentials">A credentials object for an AWS service</param>
-                /// <param name="region">The AWS region to connect to</param>
-                public AWSS3Connection(AWSCredentials credentials, RegionEndpoint region)
-                {
-                    Credentials = credentials;
-                    Region = region;
-                }
+        /// <summary>
+        /// Constructs a credentials instance
+        /// </summary>
+        /// <param name="credentials">A credentials object for an AWS service</param>
+        /// <param name="region">The AWS region to connect to</param>
+        public AWSS3Connection(AWSCredentials credentials, RegionEndpoint region)
+        {
+            Credentials = credentials;
+            Region = region;
+        }
 
-                public AWSCredentials Credentials { get; }
-                public RegionEndpoint Region { get; }
-
+        public AWSCredentials Credentials { get; }
+        public RegionEndpoint Region { get; }
     }
 }

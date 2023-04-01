@@ -80,6 +80,5 @@ namespace Paramore.Brighter.Inbox.Attributes
         {
             return typeof (UseInboxHandler<>);
         }
-
     }
 }
