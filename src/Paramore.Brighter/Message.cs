@@ -177,7 +177,5 @@ namespace Paramore.Brighter
         {
             return !Equals(left, right);
         }
-
-
     }
 }

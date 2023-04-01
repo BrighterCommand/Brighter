@@ -121,6 +121,5 @@ namespace Paramore.Brighter.Monitoring.Handlers
 
             return base.Handle(command);
         }
-
     }
 }

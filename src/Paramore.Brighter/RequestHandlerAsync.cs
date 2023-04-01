@@ -169,6 +169,5 @@ namespace Paramore.Brighter
                     && method.GetParameters()[0].ParameterType == typeof(TRequest)
                     && method.GetParameters()[1].ParameterType == typeof(CancellationToken));
         }
-
     }
 }

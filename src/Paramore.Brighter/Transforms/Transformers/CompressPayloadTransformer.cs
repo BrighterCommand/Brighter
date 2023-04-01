@@ -138,9 +138,7 @@ namespace Paramore.Brighter.Transforms.Transformers
                     return message.Header.ContentType == "application/br";
                 default:
                     return false;
-
             }
         }
-
     }
 }

@@ -61,7 +61,6 @@ builder.Services.AddServiceActivator(options =>
         options.Subscriptions = subscriptions;
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
-
     }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
     .UseMsSqlTransactionConnectionProvider(typeof(SqlConnectionProvider))
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(CreateOrderCommand)));

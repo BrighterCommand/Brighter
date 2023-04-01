@@ -80,7 +80,6 @@ builder.Services.AddServiceActivator(options =>
         options.Subscriptions = subscriptions;
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
-
     }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
     .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
     .AutoFromAssemblies();

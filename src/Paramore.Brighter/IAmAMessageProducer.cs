@@ -48,6 +48,5 @@ namespace Paramore.Brighter
         /// This bag provides the args required
         /// </summary>
         Dictionary<string, object> OutBoxBag { get; set; }
-
     }
 }

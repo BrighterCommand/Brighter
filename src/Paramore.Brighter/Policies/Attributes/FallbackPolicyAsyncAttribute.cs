@@ -71,5 +71,5 @@ namespace Paramore.Brighter.Policies.Attributes
         {
             return typeof (FallbackPolicyHandlerRequestHandlerAsync<>);
         }
-
-    }}
+    }
+}

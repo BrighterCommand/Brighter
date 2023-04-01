@@ -122,6 +122,5 @@ namespace Paramore.Brighter.Monitoring.Events
             TimeElapsedMs = timeElapsedMs;
             Exception = exception;
         }
-
     }
 }

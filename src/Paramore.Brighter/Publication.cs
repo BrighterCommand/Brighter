@@ -64,7 +64,5 @@ namespace Paramore.Brighter
         /// The topic this publication is for
         /// </summary>
         public RoutingKey Topic { get; set; }
-
-
     }
 }

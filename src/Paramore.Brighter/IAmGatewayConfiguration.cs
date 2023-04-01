@@ -11,6 +11,5 @@
     /// </summary>
     public interface IAmGatewayConfiguration
     {
-
     }
 }

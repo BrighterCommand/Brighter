@@ -603,6 +603,5 @@ namespace Paramore.Brighter
         if (producer is IAmAMessageProducerSync producerSync)
                 Retry(() => producerSync.Send(outMessage));
         }
-
     }
 }

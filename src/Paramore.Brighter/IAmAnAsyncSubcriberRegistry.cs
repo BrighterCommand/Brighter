@@ -41,6 +41,5 @@ namespace Paramore.Brighter
         /// <typeparam name="TImplementation">The type of the t implementation.</typeparam>
         void RegisterAsync<TRequest, TImplementation>() where TRequest : class, IRequest
             where TImplementation : class, IHandleRequestsAsync<TRequest>;
-
     }
 }
