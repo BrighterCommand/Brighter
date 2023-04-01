@@ -89,7 +89,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)));
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
-            
+
             _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3

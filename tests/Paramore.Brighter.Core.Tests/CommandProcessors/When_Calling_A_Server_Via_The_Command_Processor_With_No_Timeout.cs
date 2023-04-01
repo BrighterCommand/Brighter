@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }));
-            
+
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
 
@@ -64,17 +64,15 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyRequest", new FakeMessageProducerWithPublishConfirmation()},}),
                 replySubs,
                 responseChannelFactory: new InMemoryChannelFactory());
-            
+
             PipelineBuilder<MyRequest>.ClearPipelineCache();
-
         }
-
 
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor_With_No_Timeout()
         {
             var exception = Catch.Exception(() => _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 0));
-            
+
             //should throw an exception as we require a timeout to be set
             exception.Should().BeOfType<InvalidOperationException>();
         }

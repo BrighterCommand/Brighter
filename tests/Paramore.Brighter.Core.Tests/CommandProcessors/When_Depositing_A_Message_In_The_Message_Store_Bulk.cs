@@ -38,12 +38,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageHeader(_myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
-            
+
             _message2 = new Message(
                 new MessageHeader(_myCommand2.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(_myCommand2, JsonSerialisationOptions.Options))
             );
-            
+
             _message3 = new Message(
                 new MessageHeader(_myEvent.Id, eventTopic, MessageType.MT_EVENT),
                 new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options))
@@ -84,26 +84,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //act
             var requests = new List<IRequest> {_myCommand, _myCommand2, _myEvent } ;
             var postedMessageId = _commandProcessor.DepositPost(requests);
-            
+
             //assert
-            
+
             //message should not be posted
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
-            
+
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(_message.Id);
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
-            
+
             var depositedPost2 = _fakeOutbox.Get(_message2.Id);
             depositedPost2.Id.Should().Be(_message2.Id);
             depositedPost2.Body.Value.Should().Be(_message2.Body.Value);
             depositedPost2.Header.Topic.Should().Be(_message2.Header.Topic);
             depositedPost2.Header.MessageType.Should().Be(_message2.Header.MessageType);
-            
-            
+
+
             var depositedPost3 = _fakeOutbox
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message3.Id);
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost3.Body.Value.Should().Be(_message3.Body.Value);
             depositedPost3.Header.Topic.Should().Be(_message3.Header.Topic);
             depositedPost3.Header.MessageType.Should().Be(_message3.Header.MessageType);
-            
+
             //message should be marked as outstanding if not sent
             var outstandingMessages = _fakeOutbox.OutstandingMessages(0);
             outstandingMessages.Count().Should().Be(3);

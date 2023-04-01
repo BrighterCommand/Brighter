@@ -362,7 +362,6 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             Message[] result = _azureServiceBusConsumer.Receive(400);
 
             Assert.Equal(MessageType.MT_QUIT, result[0].Header.MessageType);
-
         }
 
         [Fact]

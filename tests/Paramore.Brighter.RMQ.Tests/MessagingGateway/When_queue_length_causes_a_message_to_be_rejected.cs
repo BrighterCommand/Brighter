@@ -45,7 +45,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
            _messageOne = new Message(
                 new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content"));
-           
+
            _messageTwo = new Message(
                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                new MessageBody("test content"));
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            
+
             _messageProducer = new RmqMessageProducer(rmqConnection);
 
             _messageConsumer = new RmqMessageConsumer(
@@ -70,8 +70,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 );
 
             //create the infrastructure
-            _messageConsumer.Receive(0); 
-             
+            _messageConsumer.Receive(0);
         }
 
         [Fact]
@@ -84,14 +83,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             var messages = _messageConsumer.Receive(5000);
             var message = messages.First();
             _messageConsumer.Acknowledge(message);
-            
+
             //should be the first message
-            
+
             //try to grab the next message
             var nextMessages = _messageConsumer.Receive(5000);
             message = nextMessages.First();
             message.Header.MessageType.Should().Be(MessageType.MT_NONE);
-
         }
 
         public void Dispose()

@@ -39,7 +39,6 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             _command = new MyCommand {Value = "My Test String"};
 
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-
         }
 
         [Fact]
@@ -50,7 +49,6 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             Exception ex = await Assert.ThrowsAsync<OnceOnlyException>(async () => await _commandProcessor.SendAsync(_command));
 
             Assert.Equal($"A command with id {_command.Id} has already been handled", ex.Message);
-
         }
 
         public void Dispose()

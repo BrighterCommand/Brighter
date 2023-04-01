@@ -79,7 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {
             await _fakeOutboxSync.AddAsync(_message);
-            
+
             await _commandProcessor.ClearOutboxAsync(new []{_message.Id});
 
             //_should_send_a_message_via_the_messaging_gateway

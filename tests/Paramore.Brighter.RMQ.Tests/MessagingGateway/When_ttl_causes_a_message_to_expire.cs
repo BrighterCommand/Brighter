@@ -45,7 +45,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
            _messageOne = new Message(
                 new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content"));
-           
+
            _messageTwo = new Message(
                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                new MessageBody("test content"));
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
-            
+
             _messageProducer = new RmqMessageProducer(rmqConnection);
 
             _messageConsumer = new RmqMessageConsumer(
@@ -69,8 +69,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 );
 
             //create the infrastructure
-            _messageConsumer.Receive(0); 
-             
+            _messageConsumer.Receive(0);
         }
 
         [Fact]
@@ -87,7 +86,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             Task.Delay(11000).Wait();
 
             var dlqMessage = _messageConsumer.Receive(10000).First();
-            
+
             //assert this is our message
             dlqMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);
         }

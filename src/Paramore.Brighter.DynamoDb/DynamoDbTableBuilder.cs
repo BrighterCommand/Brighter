@@ -115,7 +115,6 @@ namespace Paramore.Brighter.DynamoDb
             return tableCheck.Any(kv => kv.Value) ?
                 (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) :
                 (false, Enumerable.Empty<string>());
-
         }
 
         public CreateTableRequest RemoveNonSchemaAttributes(CreateTableRequest tableRequest)

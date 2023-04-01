@@ -32,7 +32,6 @@ namespace Paramore.Brighter.Transforms.Transformers
             _compressionMethod = (CompressionMethod)initializerList[0];
             _compressionLevel = (CompressionLevel)initializerList[1];
             _thresholdInBytes = (int)initializerList[2] * 1024;
-
         }
 
         public void InitializeUnwrapFromAttributeParams(params object[] initializerList)
@@ -46,10 +45,10 @@ namespace Paramore.Brighter.Transforms.Transformers
 
             //don't transform it too small
             if (bytes.Length < _thresholdInBytes) return message;
-            
+
             using var input = new MemoryStream(bytes);
             using var output = new MemoryStream();
-            
+
             (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
             await input.CopyToAsync(compressionStream);
             compressionStream.Close();
@@ -65,11 +64,11 @@ namespace Paramore.Brighter.Transforms.Transformers
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (!IsCompressed(message)) return message;
-            
+
             var bytes = message.Body.Bytes;
             using var input = new MemoryStream(bytes);
             using var output = new MemoryStream();
-            
+
             Stream deCompressionStream = CreateDecompressionStream(input);
             await deCompressionStream.CopyToAsync(output);
             deCompressionStream.Close();

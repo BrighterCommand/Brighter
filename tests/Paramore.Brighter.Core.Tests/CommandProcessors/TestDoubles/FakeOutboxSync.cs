@@ -154,7 +154,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         {
             var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);
             entry.TimeFlushed = dispatchedAt ?? DateTime.UtcNow;
-
         }
 
         public IEnumerable<Message> OutstandingMessages(

@@ -41,7 +41,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                 gsi => gsi.IndexName == "AnotherGlobalSecondaryIndex"
                        && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryId" && kse.KeyType == KeyType.HASH)
                        && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
-
         }
 
         //Required
@@ -59,7 +58,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex", "AnotherGlobalSecondaryIndex")]
             public string GlobalSecondaryRangeKey { get; set; }
-
         }
     }
 }

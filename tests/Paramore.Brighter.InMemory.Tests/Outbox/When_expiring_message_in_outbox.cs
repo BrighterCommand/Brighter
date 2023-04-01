@@ -43,25 +43,25 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
                 ExpirationScanInterval = TimeSpan.FromMilliseconds(100)
             };
-            
+
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
-            
-            
+
+
             //Act
             outbox.Add(messageToAdd);
-            
+
             Task.Delay(500).Wait(); //give the entry to time to expire
-            
+
             //Trigger a cache clean
             outbox.Get(messageId);
-            
+
             Task.Delay(500).Wait(); //Give the sweep time to run
-            
+
             var message = outbox.Get(messageId);
-            
+
             //Assert
             message.Should().BeNull();
         }
@@ -76,24 +76,22 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
                    EntryTimeToLive = TimeSpan.FromMilliseconds(50),
                    ExpirationScanInterval = TimeSpan.FromMilliseconds(10000)
                };
-               
+
                var messageId = Guid.NewGuid();
                var messageToAdd = new Message(
                    new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                    new MessageBody("message body"));
-               
-               
+
                //Act
                outbox.Add(messageToAdd);
-               
+
                Task.Delay(50).Wait(); //TTL has passed, but not expired yet
-   
+
                var message = outbox.Get(messageId);
-               
+
                //Assert
                message.Should().NotBeNull();
                message.Id.Should().Be(messageId);
-
         }
     }
 }

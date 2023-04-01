@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public void When_Clearing_The_PostBox_On_The_Command_Processor()
         {
             _fakeOutbox.Add(_message);
-            
+
             _commandProcessor.ClearOutbox(_message.Id);
 
             //_should_send_a_message_via_the_messaging_gateway

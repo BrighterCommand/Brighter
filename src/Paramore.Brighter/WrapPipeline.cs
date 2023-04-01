@@ -56,7 +56,6 @@ namespace Paramore.Brighter
                 InstanceScope = new TransformLifetimeScope(messageTransformerFactory);
                 Transforms.Each(transform => InstanceScope.Add(transform));
             }
-
         }
 
         /// <summary>

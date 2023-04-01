@@ -114,7 +114,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             };
 
             return entry;
-
         }
 
         public object FromEntry(DynamoDBEntry entry)

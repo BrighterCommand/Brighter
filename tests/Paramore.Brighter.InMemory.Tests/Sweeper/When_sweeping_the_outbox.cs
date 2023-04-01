@@ -17,7 +17,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         {
             //Arrange
             const int milliSecondsSinceSent = 500;
-            
+
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
@@ -32,7 +32,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             //Act
             Task.Delay(1000).Wait(); // -- let the messages expire
-            
+
             sweeper.Sweep();
 
             Thread.Sleep(200);
@@ -41,7 +41,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
             commandProcessor.Deposited.Count.Should().Be(3);
-
         }
 
         [Fact]
@@ -49,7 +48,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         {
             //Arrange
             const int milliSecondsSinceSent = 500;
-            
+
             var outbox = new InMemoryOutbox();
             var commandProcessor = new FakeCommandProcessor();
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
@@ -64,7 +63,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
 
             //Act
             await Task.Delay(milliSecondsSinceSent * 2); // -- let the messages expire
-            
+
             sweeper.SweepAsyncOutbox();
 
             await Task.Delay(200);
@@ -73,7 +72,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             outbox.EntryCount.Should().Be(3);
             commandProcessor.Dispatched.Count.Should().Be(3);
             commandProcessor.Deposited.Count.Should().Be(3);
-
         }
 
         [Fact]
@@ -81,15 +79,15 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         {
              //Arrange
              const int milliSecondsSinceSent = 500;
-             
+
              var commandProcessor = new FakeCommandProcessor();
              var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
-             
+
              Message oldMessage = new MessageTestDataBuilder();
              commandProcessor.DepositPost(oldMessage.ToStubRequest());
 
              var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
-            
+
              Thread.Sleep(milliSecondsSinceSent * 2);
 
              foreach (var message in messages)
@@ -105,7 +103,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             //Assert
             commandProcessor.Dispatched.Count.Should().Be(1);
              commandProcessor.Deposited.Count.Should().Be(4);
-           
         }
 
         [Fact]
@@ -113,13 +110,13 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         {
             //Arrange
             const int milliSecondsSinceSent = 500;
-            
+
             var commandProcessor = new FakeCommandProcessor();
             var sweeper = new OutboxSweeper(milliSecondsSinceSent, commandProcessor);
- 
+
             Message oldMessage = new MessageTestDataBuilder();
             commandProcessor.DepositPost(oldMessage.ToStubRequest());
-            
+
             var messages = new Message[] {new MessageTestDataBuilder(), new MessageTestDataBuilder(), new MessageTestDataBuilder()};
 
             await Task.Delay(milliSecondsSinceSent * 2);
@@ -128,7 +125,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             {
                 commandProcessor.DepositPost(message.ToStubRequest());
             }
- 
+
             //Act
             sweeper.SweepAsyncOutbox();
 

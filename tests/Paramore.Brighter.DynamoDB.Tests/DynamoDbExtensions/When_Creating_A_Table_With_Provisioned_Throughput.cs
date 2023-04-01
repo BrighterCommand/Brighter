@@ -32,7 +32,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Assert.Equal(10, tableRequest.ProvisionedThroughput.WriteCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.ReadCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.WriteCapacityUnits);
-
         }
 
         [DynamoDBTable("MyEntity")]

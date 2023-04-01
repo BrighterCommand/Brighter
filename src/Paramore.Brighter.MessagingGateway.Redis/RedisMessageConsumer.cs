@@ -202,7 +202,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var key = Topic + "." + QUEUES;
             //subscribe us
             client.AddItemToSet(key, _queueName);
-
         }
 
         private (string msgId, string rawMsg) ReadMessage(IRedisClient client, int timeoutInMilliseconds)

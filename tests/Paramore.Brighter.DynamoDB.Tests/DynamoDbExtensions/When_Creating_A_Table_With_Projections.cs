@@ -42,7 +42,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Assert.Equal(
                 new List<string>{"Id", "Version"},
                 tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.NonKeyAttributes);
-
         }
 
         [DynamoDBTable("MyEntity")]

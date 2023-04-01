@@ -46,14 +46,14 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             var deadLetterQueueName = $"{_message.Header.Topic}.DLQ";
             var deadLetterRoutingKey = $"{_message.Header.Topic}.DLQ";
-            
+
              var rmqConnection = new RmqMessagingGatewayConnection
             {
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672/%2f")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
                 DeadLetterExchange = new Exchange("paramore.brighter.exchange.dlq")
             };
-            
+
             _messageProducer = new RmqMessageProducer(rmqConnection);
 
             _messageConsumer = new RmqMessageConsumer(
@@ -76,8 +76,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 );
 
             //create the infrastructure
-            _messageConsumer.Receive(0); 
-             
+            _messageConsumer.Receive(0);
         }
 
         [Fact]
@@ -85,13 +84,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             _messageProducer.Send(_message);
 
-            var message = _messageConsumer.Receive(10000).First(); 
-            
+            var message = _messageConsumer.Receive(10000).First();
+
             //This will push onto the DLQ
             _messageConsumer.Reject(message);
 
             var dlqMessage = _deadLetterConsumer.Receive(10000).First();
-            
+
             //assert this is our message
             dlqMessage.Id.Should().Be(_message.Id);
             message.Body.Value.Should().Be(dlqMessage.Body.Value);

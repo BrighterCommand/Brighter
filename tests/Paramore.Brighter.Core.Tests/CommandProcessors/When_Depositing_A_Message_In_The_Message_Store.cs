@@ -60,19 +60,19 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             //act
             var postedMessageId = _commandProcessor.DepositPost(_myCommand);
-            
+
             //assert
-            
+
             //message should not be posted
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
-            
+
             //message should correspond to the command
             var depositedPost = _fakeOutbox.Get(postedMessageId);
             depositedPost.Id.Should().Be(_message.Id);
             depositedPost.Body.Value.Should().Be(_message.Body.Value);
             depositedPost.Header.Topic.Should().Be(_message.Header.Topic);
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
-            
+
             //message should be marked as outstanding if not sent
             var outstandingMessages = _fakeOutbox.OutstandingMessages(0);
             var outstandingMessage = outstandingMessages.Single();

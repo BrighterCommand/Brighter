@@ -87,10 +87,6 @@ namespace GreetingsReceiverConsole
                 .Build();
 
             await host.RunAsync();
-
-
-
-
         }
     }
 }

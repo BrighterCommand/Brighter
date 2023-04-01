@@ -87,14 +87,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             //_should_send_a_message_via_the_messaging_gateway
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
-            
+
             //_should_store_the_message_in_the_sent_command_message_repository
             var message = _outbox
               .DispatchedMessages(1200000, 1)
               .SingleOrDefault();
-              
+
             message.Should().NotBeNull();
-            
+
             //_should_convert_the_command_into_a_message
             message.Should().Be(_message);
         }

@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             var body = new MessageBody(JsonSerializer.Serialize(new MyRequestDTO(_myRequest.Id.ToString(), _myRequest.RequestValue), JsonSerialisationOptions.Options));
             _message = new Message(header, body);
- 
+
             var messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((type) =>
             {
                 if (type == typeof(MyRequestMessageMapper))
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             }));
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
-            
+
             var subscriberRegistry = new SubscriberRegistry();
             subscriberRegistry.Register<MyResponse, MyResponseHandler>();
             var handlerFactory = new TestHandlerFactorySync<MyResponse, MyResponseHandler>(() => new MyResponseHandler());
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             InMemoryChannelFactory inMemoryChannelFactory = new InMemoryChannelFactory();
             //we need to seed the response as the fake producer does not actually send across the wire
             inMemoryChannelFactory.SeedChannel(new[] {_message});
-            
+
             var replySubs = new List<Subscription>
             {
                 new Subscription<MyResponse>()
@@ -79,32 +79,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}),
                 replySubs,
                 responseChannelFactory: inMemoryChannelFactory);
-            
-            PipelineBuilder<MyRequest>.ClearPipelineCache();
-  
-        }
 
+            PipelineBuilder<MyRequest>.ClearPipelineCache();
+        }
 
         [Fact]
         public void When_Calling_A_Server_Via_The_Command_Processor()
         {
             _commandProcessor.Call<MyRequest, MyResponse>(_myRequest, 500);
-            
+
             //should send a message via the messaging gateway
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
 
             //should convert the command into a message
             _fakeMessageProducerWithPublishConfirmation.SentMessages[0].Should().Be(_message);
-            
+
             //should forward response to a handler
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
-
         }
 
         public void Dispose()
         {
             CommandProcessor.ClearExtServiceBus();
         }
-
-   }
+    }
 }

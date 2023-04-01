@@ -47,9 +47,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
                 RedisConfig.VerifyMasterConnections.Should().Be(configuration.VerifyMasterConnections.Value);
             }
         }
-
-
-        }
+    }
 
     /// <summary>
     /// There are some properties we want to test, use a test wrapper to expose them, instead of leaking from

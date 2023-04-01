@@ -56,7 +56,6 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
             _controlBus = _busReceiverBuilder.Build("tests");
 
             _configurationCommand = new ConfigurationCommand(ConfigurationCommandType.CM_STARTALL);
-
         }
 
         [Fact]

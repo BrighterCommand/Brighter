@@ -175,7 +175,6 @@ namespace GreetingsWeb
                     .UseOutboxSweeper()
                     .AutoFromAssemblies();
             }
-
         }
 
         private void ConfigureDarker(IServiceCollection services)
@@ -188,7 +187,6 @@ namespace GreetingsWeb
                 .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
                 .AddJsonQueryLogging()
                 .AddPolicies(new GreetingsPolicy());
-            
         }
 
         private void ConfigureEFCore(IServiceCollection services)

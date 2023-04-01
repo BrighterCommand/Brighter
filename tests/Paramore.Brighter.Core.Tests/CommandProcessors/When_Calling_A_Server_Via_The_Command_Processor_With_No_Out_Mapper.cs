@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }));
-            
+
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();
 
             var subscriberRegistry = new SubscriberRegistry();
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyRequest", new FakeMessageProducerWithPublishConfirmation()},}),
                 replySubs,
                 responseChannelFactory: new InMemoryChannelFactory());
-            
+
             PipelineBuilder<MyResponse>.ClearPipelineCache();
         }
 

@@ -22,7 +22,6 @@ namespace Paramore.Brighter.DynamoDb
             };
 
             return entry;
-
         }
 
         public object FromEntry(DynamoDBEntry entry)
@@ -33,7 +32,6 @@ namespace Paramore.Brighter.DynamoDb
 
             var value = Guid.Parse(primitive.AsString());
             return value;
-
         }
     }
 }

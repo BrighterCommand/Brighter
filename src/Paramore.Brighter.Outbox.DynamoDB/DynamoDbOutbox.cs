@@ -269,7 +269,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     message,
                     _dynamoOverwriteTableConfig)
                 .Wait(_configuration.Timeout);
-
         }
 
         private static void MarkMessageDispatched(DateTime? dispatchedAt, MessageItem message)

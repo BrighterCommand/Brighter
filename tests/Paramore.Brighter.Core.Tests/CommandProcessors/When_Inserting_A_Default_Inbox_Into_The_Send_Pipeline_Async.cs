@@ -22,11 +22,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public CommandProcessorBuildDefaultInboxSendAsyncTests()
         {
              var handler = new MyCommandHandlerAsync(new Dictionary<string, Guid>());
-            
+
              var subscriberRegistry = new SubscriberRegistry();
              //This handler has no Inbox attribute
              subscriberRegistry.RegisterAsync<MyCommand, MyCommandHandlerAsync>();
-             
+
              var container = new ServiceCollection();
              container.AddSingleton<MyCommandHandlerAsync>(handler);
              container.AddSingleton<IAmAnInboxAsync>(_inbox);
@@ -60,9 +60,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 },
                 inboxConfiguration: inboxConfiguration
                 );
-            
         }
-
 
         [Fact]
         public async Task WhenInsertingADefaultInboxIntoTheSendPipeline()
@@ -70,7 +68,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             //act
             var command = new MyCommand(){Value = "Inbox Capture"};
             await _commandProcessor.SendAsync(command);
-            
+
             //assert we are in, and auto-context added us under our name
             var boxed = await _inbox.ExistsAsync<MyCommand>(command.Id, typeof(MyCommandHandlerAsync).FullName, 100);
             boxed.Should().BeTrue();

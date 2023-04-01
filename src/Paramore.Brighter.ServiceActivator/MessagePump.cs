@@ -243,7 +243,6 @@ namespace Paramore.Brighter.ServiceActivator
             s_logger.LogInformation(
                 "MessagePump0: Finished running message loop, no longer receiving messages from {ChannelName} on thread # {ManagementThreadId}",
                 Channel.Name, Thread.CurrentThread.ManagedThreadId);
-
         }
 
         private void AcknowledgeMessage(Message message)

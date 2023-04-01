@@ -15,7 +15,6 @@ namespace GreetingsPorts.Policies
             Add(Retry.EXPONENTIAL_RETRYPOLICYASYNC, Retry.GetExponentialHandlerRetryPolicy());
             Add(Paramore.Darker.Policies.Constants.RetryPolicyName, Retry.GetDefaultRetryPolicy());
             Add(Paramore.Darker.Policies.Constants.CircuitBreakerPolicyName, Retry.GetDefaultCircuitBreakerPolicy());
-
         }
     }
 }

@@ -23,27 +23,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PipelineGlobalInboxContextTests()
         {
             _inbox = new InMemoryInbox();
-            
+
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyGlobalInboxCommandHandler>();
-            
+
             var container = new ServiceCollection();
             container.AddTransient<MyGlobalInboxCommandHandler>();
             container.AddSingleton<IAmAnInboxSync>(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
- 
+
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _requestContext = new RequestContext();
-            
+
             _inboxConfiguration = new InboxConfiguration(
                 scope: InboxScope.All,
                 context: (handlerType) => CONTEXT_KEY);
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, _inboxConfiguration);
             PipelineBuilder<MyCommand>.ClearPipelineCache();
-            
         }
 
         [Fact]
@@ -51,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             //act
             _chainOfResponsibility = _chainBuilder.Build(_requestContext);
-            
+
             var firstHandler = _chainOfResponsibility.First();
             var myCommmand = new MyCommand();
             firstHandler.Handle(myCommmand);

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             var container = new ServiceCollection();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-            
+
             _commandProcessor = new CommandProcessor(
                 new SubscriberRegistry(),
                 new ServiceProviderHandlerFactory(container.BuildServiceProvider()),

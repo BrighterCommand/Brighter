@@ -81,7 +81,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             //assert
             noException.Should().BeTrue();
-
         }
 
         public void Dispose()

@@ -258,7 +258,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
 
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
-
         }
 
         private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)

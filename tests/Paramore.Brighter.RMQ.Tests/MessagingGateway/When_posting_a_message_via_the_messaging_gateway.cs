@@ -60,7 +60,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             _messageProducer.Send(_message);
 
-            var result = _messageConsumer.Receive(10000).First(); 
+            var result = _messageConsumer.Receive(10000).First();
 
             //_should_send_a_message_via_rmq_with_the_matching_body
             result.Body.Value.Should().Be(_message.Body.Value);

@@ -23,7 +23,6 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             _expression.ExpressionAttributeValues = values;
 
             return _expression;
-
         }
     }
 }

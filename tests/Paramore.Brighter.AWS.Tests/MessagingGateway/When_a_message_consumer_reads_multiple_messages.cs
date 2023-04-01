@@ -115,7 +115,6 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
 
             messagesReceivedCount.Should().Be(4);
-
         }
 
         public void Dispose()

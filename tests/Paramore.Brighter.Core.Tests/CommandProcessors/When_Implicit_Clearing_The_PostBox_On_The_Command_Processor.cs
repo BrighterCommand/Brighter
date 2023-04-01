@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageHeader(myCommand.Id, topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
                 );
-            
+
             _message2 = new Message(
                 new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND),
                 new MessageBody(JsonSerializer.Serialize(myCommand, JsonSerialisationOptions.Options))
@@ -113,7 +113,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             sentMessage.Id.Should().Be(_message.Id);
             sentMessage.Header.Topic.Should().Be(_message.Header.Topic);
             sentMessage.Body.Value.Should().Be(_message.Body.Value);
-            
+
             var sentMessage2 = _fakeMessageProducer.SentMessages.FirstOrDefault(m => m.Id == _message2.Id);
             sentMessage2.Should().NotBeNull();
             sentMessage2.Id.Should().Be(_message2.Id);

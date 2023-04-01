@@ -73,7 +73,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 messageMapperRegistry,
                 _outbox,
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
- 
         }
 
         [Fact]

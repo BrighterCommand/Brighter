@@ -27,7 +27,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
 
         //_should_fail_because_no_handler_factories_have_been_set
         _exception.Should().BeOfType<ArgumentException>();
-        
+
         //_should_have_an_error_message_that_tells_you_why
         _exception.Should().NotBeNull();
         _exception.Message.Should().Contain("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");

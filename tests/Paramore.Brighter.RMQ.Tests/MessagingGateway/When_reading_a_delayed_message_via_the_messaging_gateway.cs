@@ -70,9 +70,9 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //_should_have_not_been_able_get_message_before_delay
             deliveredWithoutWait.Should().BeTrue();
-            
+
             var delayedResult = _messageConsumer.Receive(10000).First();
-             
+
 
            //_should_send_a_message_via_rmq_with_the_matching_body
             delayedResult.Body.Value.Should().Be(_message.Body.Value);

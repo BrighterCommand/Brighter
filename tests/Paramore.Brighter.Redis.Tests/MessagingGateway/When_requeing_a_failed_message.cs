@@ -28,9 +28,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
                 new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND),
                 new MessageBody("more test content")
             );
-
         }
-
 
         [Fact]
         public void When_requeing_a_failed_message()

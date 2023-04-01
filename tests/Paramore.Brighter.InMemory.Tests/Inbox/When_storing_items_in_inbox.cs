@@ -51,7 +51,6 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Assert
             storedCommand.Should().NotBeNull();
             storedCommand.Id.Should().Be(command.Id);
-
         }
 
         [Fact]
@@ -86,7 +85,6 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
 
             //Assert
             exists.Should().BeFalse();
-
         }
 
         [Fact]
@@ -112,7 +110,6 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
 
            firstCommand.Id.Should().Be(commands[0].Id, contextKey);
            lastCommand.Id.Should().Be(commands[4].Id, contextKey);
-
         }
 
         [Fact]
@@ -135,7 +132,6 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Assert
             firstCommandExists.Should().BeTrue();
             lastCommandExists.Should().BeTrue();
-
         }
 
         [Fact]

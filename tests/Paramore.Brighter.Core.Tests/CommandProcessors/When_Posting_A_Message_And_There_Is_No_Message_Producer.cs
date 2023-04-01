@@ -67,8 +67,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
-
         }
 
         [Fact]
@@ -79,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                  new PolicyRegistry { { CommandProcessor.RETRYPOLICY, _retryPolicy }, { CommandProcessor.CIRCUITBREAKER, _circuitBreakerPolicy } },
                  _messageMapperRegistry,
                  _fakeOutboxSync,
-                 null));               
+                 null));
 
             _exception.Should().BeOfType<ConfigurationException>();
         }

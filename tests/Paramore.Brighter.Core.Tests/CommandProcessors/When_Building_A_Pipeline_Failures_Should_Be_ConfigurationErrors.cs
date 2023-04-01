@@ -15,11 +15,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
                var registry = new SubscriberRegistry();
                registry.Register<MyCommand, MyCommandHandler>();
-               
+
                //We'll simulate an IoC error
                var handlerFactory = new TestHandlerFactorySync<MyCommand, MyCommandHandler>(() => throw new InvalidOperationException("Could no create handler"));
                _requestContext = new RequestContext();
-   
+
                _chainBuilder = new PipelineBuilder<MyCommand>(registry, handlerFactory);
                PipelineBuilder<MyCommand>.ClearPipelineCache();
         }

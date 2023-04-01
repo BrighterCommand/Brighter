@@ -54,7 +54,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             // should_received_a_message_from_test2_with_same_topic_and_body
             topic2Result.Header.Topic.Should().Be(_messageTopic2.Header.Topic);
-            topic2Result.Body.Value.Should().BeEquivalentTo(_messageTopic2.Body.Value);            
+            topic2Result.Body.Value.Should().BeEquivalentTo(_messageTopic2.Body.Value);
         }
 
         public void Dispose()

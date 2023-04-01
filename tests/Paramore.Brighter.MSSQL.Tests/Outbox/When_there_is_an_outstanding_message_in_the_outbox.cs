@@ -25,7 +25,6 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             //wait to create an oustanding period
             Task.Delay(1000).Wait();
-
         }
 
         [Fact]

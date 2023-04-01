@@ -77,7 +77,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
-            
+
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } },

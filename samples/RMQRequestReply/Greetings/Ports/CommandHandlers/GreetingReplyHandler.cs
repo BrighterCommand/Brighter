@@ -17,7 +17,6 @@ namespace Greetings.Ports.CommandHandlers
             Console.WriteLine("Message Ends");
             Console.ResetColor();
             return base.Handle(request);
-
         }
     }
 }

@@ -24,7 +24,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             _messageProducer = new RmqMessageProducer(rmqConnection);
             _messageConsumer = new RmqMessageConsumer(connection:rmqConnection, queueName:_topic, routingKey:_topic, isDurable:false, highAvailability:false, batchSize:BatchSize);
-            
+
             //create the queue, so that we can receive messages posted to it
             new QueueFactory(rmqConnection, _topic).Create(3000);
         }
@@ -41,16 +41,16 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer.Send(messageThree);
              var messageFour= new Message(new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND), new MessageBody("test content Four"));
             _messageProducer.Send(messageFour);
-            
+
             //let them arrive
             Task.Delay(5000);
-            
+
             //Now retrieve messages from the consumer
             var messages = _messageConsumer.Receive(1000);
-            
+
             //We should only have three messages
             messages.Length.Should().Be(3);
-            
+
             //ack those to remove from the queue
             foreach (var message in messages)
             {
@@ -59,13 +59,12 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //Allow ack to register
             Task.Delay(1000);
-            
+
             //Now retrieve again
             messages = _messageConsumer.Receive(500);
 
             //This time, just the one message
             messages.Length.Should().Be(1);
-
         }
 
         public void Dispose()

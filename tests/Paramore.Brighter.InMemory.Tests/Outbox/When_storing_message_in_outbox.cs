@@ -41,25 +41,24 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var outbox = new InMemoryOutbox();
-            
+
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
-            
-            
+
+
             //Act
             outbox.Add(messageToAdd);
 
             var retrievedMessage = outbox.Get(messageId);
-            
+
             //Assert
             retrievedMessage.Should().NotBeNull();
             retrievedMessage.Id.Should().Be(messageId);
             retrievedMessage.Header.Topic.Should().Be(messageToAdd.Header.Topic);
             retrievedMessage.Header.MessageType.Should().Be(messageToAdd.Header.MessageType);
             retrievedMessage.Body.Value.Should().Be(messageToAdd.Body.Value);
-
         }
 
         [Fact]
@@ -67,13 +66,13 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var outbox = new InMemoryOutbox();
-            
+
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
-            
-            
+
+
             //Act
             outbox.Add(messageToAdd);
             var dispatchedAt = DateTime.UtcNow;
@@ -84,7 +83,6 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Assert
             dispatchedMessages.Count().Should().Be(1);
             dispatchedMessages.First().Id.Should().Be(messageId);
-
         }
 
         [Fact]
@@ -92,22 +90,21 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             var outbox = new InMemoryOutbox();
-            
+
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
                 new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
-            
-            
+
+
             //Act
             outbox.Add(messageToAdd);
 
             var outstandingMessages = outbox.OutstandingMessages(0);
-            
+
             //Assert
             outstandingMessages.Count().Should().Be(1);
             outstandingMessages.First().Id.Should().Be(messageId);
-
         }
 
         [Fact]
@@ -155,10 +152,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             outstandingMessages.Any(msg => msg.Id == messageIds[1]).Should().BeTrue();
             outstandingMessages.Any(msg => msg.Id == messageIds[2]).Should().BeTrue();
             outstandingMessages.Any(msg => msg.Id == messageIds[3]).Should().BeTrue();
-
-
         }
-
 
         [Fact]
         public void When_paging_a_list_of_messages()
@@ -176,8 +170,6 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
            //Assert
            firstPage.Count().Should().Be(5);
            secondPage.Count().Should().Be(4); // -- only 4 on the second page
-
         }
-
-   }
+    }
 }

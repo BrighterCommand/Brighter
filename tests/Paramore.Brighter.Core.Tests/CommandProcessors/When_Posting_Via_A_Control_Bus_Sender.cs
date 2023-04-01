@@ -87,9 +87,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var message = _fakeOutbox
               .DispatchedMessages(120000, 1)
               .SingleOrDefault();
-              
+
             message.Should().NotBeNull();
-            
+
             //_should_convert_the_command_into_a_message
             message.Should().Be(_message);
         }

@@ -15,12 +15,12 @@ public class When_Retrieving_Messages_based_on_Age
     {
         var minimumAgeInMs = 500;
         var outbox = new InMemoryOutbox();
-        
+
         outbox.Add(new MessageTestDataBuilder());
         outbox.Add(new MessageTestDataBuilder());
-        
+
         Thread.Sleep(minimumAgeInMs);
-        
+
         outbox.Add(new MessageTestDataBuilder());
         outbox.Add(new MessageTestDataBuilder());
 
@@ -44,12 +44,12 @@ public class When_Retrieving_Messages_based_on_Age
     {
         var minimumAgeInMs = 1000;
         var outbox = new InMemoryOutbox();
-        
+
         await outbox.AddAsync(new MessageTestDataBuilder());
         await outbox.AddAsync(new MessageTestDataBuilder());
-        
+
         await Task.Delay(minimumAgeInMs * 2);
-        
+
         await outbox.AddAsync(new MessageTestDataBuilder());
         await outbox.AddAsync(new MessageTestDataBuilder());
 

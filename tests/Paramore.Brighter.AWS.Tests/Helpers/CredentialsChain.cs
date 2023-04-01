@@ -15,10 +15,9 @@ namespace Paramore.Brighter.AWS.Tests.Helpers
             {
                 return (credentials, profile.Region);
             }
-            
+
             //if not, can we grab them from environment variables - will throw
             return (new EnvironmentVariablesAWSCredentials(), new EnvironmentVariableAWSRegion().Region);
-
         }
     }
 }

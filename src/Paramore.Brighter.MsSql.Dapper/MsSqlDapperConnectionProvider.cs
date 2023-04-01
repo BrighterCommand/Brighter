@@ -43,7 +43,6 @@ namespace Paramore.Brighter.MySql.Dapper
         public bool IsSharedConnection
         {
             get { return true; }
-
         }
     }
 }

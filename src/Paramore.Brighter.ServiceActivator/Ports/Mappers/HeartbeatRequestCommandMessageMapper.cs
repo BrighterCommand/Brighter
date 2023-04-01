@@ -19,7 +19,6 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
             var body = new MessageBody(json);
             var message = new Message(header, body);
             return message;
-
         }
 
         public HeartbeatRequest MapToRequest(Message message)

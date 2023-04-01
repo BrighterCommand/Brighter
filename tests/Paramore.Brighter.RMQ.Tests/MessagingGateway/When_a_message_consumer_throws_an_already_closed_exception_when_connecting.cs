@@ -67,7 +67,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();
-            
+
             //_should_return_an_explainging_inner_exception
             _firstException.InnerException.Should().BeOfType<AlreadyClosedException>();
         }

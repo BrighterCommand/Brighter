@@ -27,7 +27,6 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
             _messageTwo = new Message(
                 new MessageHeader(Guid.NewGuid(), "key", MessageType.MT_EVENT),
                 new MessageBody("SecondMessage"));
-
         }
 
         [Fact]
@@ -76,7 +75,6 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
 
              //This should throw an exception
              Assert.Throws<InvalidOperationException>(() => _channel.Enqueue(messageOne, messageTwo, messageThree, messageFour));
-
         }
 
         [Fact]
@@ -95,7 +93,6 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         public void When_the_gateway_returns_an_array_of_messages_enqueue_them_into_the_buffer_then_retrieve_from_there()
         {
                A.CallTo(() => _gateway.Receive(10)).Returns(new Message[] {_messageOne, _messageTwo, _messageThree});
-
         }
     }
 }

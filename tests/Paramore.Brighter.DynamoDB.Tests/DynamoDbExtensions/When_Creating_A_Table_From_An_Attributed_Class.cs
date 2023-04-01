@@ -46,7 +46,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                        && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
             Assert.Contains(tableRequest.LocalSecondaryIndexes, lsi => lsi.IndexName == "LocalSecondaryIndex"
                         && Enumerable.Any<KeySchemaElement>(lsi.KeySchema, kse => kse.AttributeName == "LocalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
-
         }
 
         //Required

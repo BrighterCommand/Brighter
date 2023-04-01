@@ -42,7 +42,6 @@ namespace Paramore.Brighter.Sqlite.Dapper
         public bool IsSharedConnection
         {
             get { return true; }
-
         }
     }
 }

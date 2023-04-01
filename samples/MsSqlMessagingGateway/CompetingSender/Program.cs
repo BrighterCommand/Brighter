@@ -57,7 +57,6 @@ namespace CompetingSender
                 .Build();
 
             await host.RunAsync();
-
         }
 
         internal class RunCommandProcessor : IHostedService

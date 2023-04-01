@@ -64,7 +64,6 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
 
             _contextKey = typeof(MyStoredCommandHandler).FullName;
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
-
         }
 
         [Fact]
