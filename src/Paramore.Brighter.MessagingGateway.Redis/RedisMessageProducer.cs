@@ -153,6 +153,5 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var key = Topic + "." + NEXT_ID;
             return client.IncrementValue(key);
         }
-
-   }
+    }
 }

@@ -75,6 +75,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _pipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
-
-   }
+    }
 }

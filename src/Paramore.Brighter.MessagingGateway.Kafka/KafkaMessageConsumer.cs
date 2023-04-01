@@ -544,7 +544,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
         }
 
-
         ~KafkaMessageConsumer()
         {
            Dispose(false);
@@ -555,6 +554,5 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-
-   }
+    }
 }

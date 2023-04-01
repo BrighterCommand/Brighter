@@ -180,7 +180,5 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 
             return messages;
         }
-
-
-   }
+    }
 }

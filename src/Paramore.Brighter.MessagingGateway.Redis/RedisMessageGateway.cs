@@ -157,6 +157,5 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var key = Topic + "." + msgId.ToString();
             client.SetValue(key, redisMessage, MessageTimeToLive);
         }
-
-   }
+    }
 }

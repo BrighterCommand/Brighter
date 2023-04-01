@@ -81,6 +81,5 @@ namespace Paramore.Brighter
         /// <param name="delayMilliseconds">Number of milliseconds to delay delivery of the message.</param>
         /// <returns>True if the message should be Acked, false otherwise
         bool Requeue(Message message, int delayMilliseconds = 0);
-
-   }
+    }
 }

@@ -11,7 +11,5 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         public MyRequest(ReplyAddress replyAddress) : base(replyAddress)
         {
         }
-
-
-   }
+    }
 }

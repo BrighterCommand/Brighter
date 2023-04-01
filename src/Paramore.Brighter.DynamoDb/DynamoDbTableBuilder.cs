@@ -201,7 +201,6 @@ namespace Paramore.Brighter.DynamoDb
             public string TableName { get; set; }
             public bool IsReady { get; set; }
         }
-
-   }
+    }
 }
 

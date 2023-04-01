@@ -9,6 +9,5 @@ namespace GreetingsPorts.Responses
         {
             Name = person.Name;
         }
-
-   }
+    }
 }

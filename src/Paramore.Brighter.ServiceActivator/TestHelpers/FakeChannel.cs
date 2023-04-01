@@ -86,6 +86,5 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         {
             _messageQueue.Enqueue(MessageFactory.CreateQuitMessage());
         }
-
-   }
+    }
 }

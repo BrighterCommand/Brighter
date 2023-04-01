@@ -125,6 +125,5 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             base.OnCancel();
         }
-
-   }
+    }
 }

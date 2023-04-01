@@ -5,7 +5,5 @@
         public string ReplyValue { get; set; }
 
         public MyResponse(ReplyAddress sendersAddress) : base(sendersAddress) {}
-
-
-   }
+    }
 }

@@ -78,6 +78,5 @@ namespace Paramore.Brighter.Core.Tests.Monitoring
             //_should_have_the_correct_time_elapsed
             _monitorEvent.TimeElapsedMs.Should().Be(_elapsedMilliseconds);
         }
-
-   }
+    }
 }

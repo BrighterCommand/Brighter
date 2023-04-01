@@ -129,7 +129,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             Send(message);
         }
 
-
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
@@ -137,6 +136,5 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
 
         }
-
-   }
+    }
 }
