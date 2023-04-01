@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
     /// </summary>
     public class SqliteInboxBuilder
     {
-        const string InboxDDL = @"CREATE TABLE IF NOT EXISTS {0} 
+        const string InboxDDL = @"CREATE TABLE IF NOT EXISTS {0}
                                     (
                                         [CommandId] uniqueidentifier CONSTRAINT PK_MessageId PRIMARY KEY,
                                         [CommandType] nvarchar(256),

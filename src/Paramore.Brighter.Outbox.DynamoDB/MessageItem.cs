@@ -91,7 +91,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <summary>
         /// The Topic the message was published to
         /// </summary>
-        /// 
         [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
         [DynamoDBProperty]
         public string Topic { get; set; }

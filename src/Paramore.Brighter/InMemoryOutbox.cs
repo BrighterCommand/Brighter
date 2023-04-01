@@ -218,7 +218,6 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// 
         /// </summary>
         /// <param name="pageSize"></param>
         /// <param name="pageNumber"></param>

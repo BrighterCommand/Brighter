@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Outbox.MsSql
               [Timestamp] DATETIME NULL ,
               [CorrelationId] UNIQUEIDENTIFIER NULL,
               [ReplyTo] NVARCHAR(255) NULL,
-              [ContentType] NVARCHAR(128) NULL,  
+              [ContentType] NVARCHAR(128) NULL,
               [Dispatched] DATETIME NULL,
               [HeaderBag] NTEXT NULL ,
               [Body] NTEXT NULL ,

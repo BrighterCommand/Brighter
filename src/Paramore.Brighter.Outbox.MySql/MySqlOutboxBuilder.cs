@@ -32,21 +32,21 @@ namespace Paramore.Brighter.Outbox.MySql
      /// </summary>
      public class MySqlOutboxBuilder
     {
-        const string OutboxDdl = @"CREATE TABLE {0} ( 
-	`MessageId` CHAR(36) NOT NULL , 
-	`Topic` VARCHAR(255) NOT NULL , 
-	`MessageType` VARCHAR(32) NOT NULL , 
-	`Timestamp` TIMESTAMP(3) NOT NULL , 
-    `CorrelationId` CHAR(36) NULL ,
-    `ReplyTo` VARCHAR(255) NULL ,
-    `ContentType` VARCHAR(128) NULL ,  
-    `Dispatched` TIMESTAMP(3) NULL , 
-	`HeaderBag` TEXT NOT NULL , 
-	`Body` TEXT NOT NULL , 
+        const string OutboxDdl = @"CREATE TABLE {0} (
+    `MessageId` CHAR(36) NOT NULL,
+    `Topic` VARCHAR(255) NOT NULL,
+    `MessageType` VARCHAR(32) NOT NULL,
+    `Timestamp` TIMESTAMP(3) NOT NULL,
+    `CorrelationId` CHAR(36) NULL,
+    `ReplyTo` VARCHAR(255) NULL,
+    `ContentType` VARCHAR(128) NULL,
+    `Dispatched` TIMESTAMP(3) NULL,
+    `HeaderBag` TEXT NOT NULL,
+    `Body` TEXT NOT NULL,
     `Created` TIMESTAMP(3) NOT NULL DEFAULT NOW(3),
     `CreatedID` INT(11) NOT NULL AUTO_INCREMENT,
     UNIQUE(`CreatedID`),
-	PRIMARY KEY (`MessageId`)
+    PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
 
         const string outboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
@@ -74,7 +74,6 @@ namespace Paramore.Brighter.Outbox.MySql
             if (string.IsNullOrEmpty(inboxTableName))
                 throw new InvalidEnumArgumentException($"You must provide a tablename for the  OutBox table");
             return string.Format(outboxExistsQuery, inboxTableName);
-             
         }
     }
 }

@@ -68,7 +68,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
 
         public RestMSPipe GetPipe()
         {
-            /*TODO: Optimize this by using a repository approach with the repository checking for modification 
+            /*TODO: Optimize this by using a repository approach with the repository checking for modification
             through etag and serving existing version if not modified and grabbing new version if changed*/
 
             s_logger.LogDebug("Getting the pipe from the RestMS server: {URL}", PipeUri);

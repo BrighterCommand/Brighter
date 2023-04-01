@@ -24,8 +24,8 @@ The following is an example of how to configure a command processor with a SQL S
 
 ```csharp
 var msSqlOutbox = new MsSqlOutbox(new MsSqlOutboxConfiguration(
-        "myconnectionstring", 
-        "MyOutboxTable", 
+        "myconnectionstring",
+        "MyOutboxTable",
         MsSqlOutboxConfiguration.DatabaseType.MsSqlServer
     ), myLogger),
 

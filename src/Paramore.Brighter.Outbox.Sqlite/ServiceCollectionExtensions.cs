@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildSqliteOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildSqliteOutbox, serviceLifetime));
-             
+
             return brighterBuilder;
         }
 

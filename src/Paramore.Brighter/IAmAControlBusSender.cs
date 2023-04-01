@@ -40,7 +40,6 @@ namespace Paramore.Brighter
     //      Heartbeat - A ping to service activator node to determine if it is still 'alive'. The node returns a message over a private queue established by the caller.The message also displays diagnostic information on the health of the node.
     //      Exceptions— Any exceptions generated on the node may be sent by the Control Bus to monitoring systems.
     //      Statistics— Each service activator node broadcasts statistics about the processig of messages which can be collated by a listener to the control bus to calculate the numnber of messages proceses, average throughput, average time to process a message, and so on.This data is split out by message type, so we can aggregate results.
-    /// 
     /// </summary>
     public interface IAmAControlBusSender
     {

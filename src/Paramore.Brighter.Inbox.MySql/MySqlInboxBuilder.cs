@@ -31,13 +31,13 @@ namespace Paramore.Brighter.Inbox.MySql
     /// </summary>
     public class MySqlInboxBuilder
     {
-        private const string OutboxDDL = @"CREATE TABLE {0} 
-            ( 
-                `CommandId` CHAR(36) NOT NULL , 
-                `CommandType` VARCHAR(256) NOT NULL , 
-                `CommandBody` TEXT NOT NULL , 
-                `Timestamp` TIMESTAMP(4) NOT NULL , 
-                `ContextKey` VARCHAR(256)  NULL , 
+        private const string OutboxDDL = @"CREATE TABLE {0}
+            (
+                `CommandId` CHAR(36) NOT NULL,
+                `CommandType` VARCHAR(256) NOT NULL,
+                `CommandBody` TEXT NOT NULL,
+                `Timestamp` TIMESTAMP(4) NOT NULL,
+                `ContextKey` VARCHAR(256) NULL,
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;";
 

@@ -67,7 +67,6 @@ namespace Paramore.Brighter
         /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
         /// such as HTTPContext
         /// </summary>
-        /// 
         public bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>

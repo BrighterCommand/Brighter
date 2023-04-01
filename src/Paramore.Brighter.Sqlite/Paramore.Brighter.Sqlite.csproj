@@ -5,7 +5,7 @@
         <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
       <TargetFrameworks>netstandard2.1;net6.0</TargetFrameworks>
     </PropertyGroup>
-  
+
      <ItemGroup>
        <PackageReference Include="Microsoft.Data.Sqlite" Version="7.0.4" />
        <PackageReference Update="MinVer" Version="4.3.0">

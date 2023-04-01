@@ -29,7 +29,7 @@ The terms "reproduce," "reproduction," "derivative works," and "distribution" ha
 
 Read more about this license at http://www.codeplex.com/clrinterop/license
   
-------------------------------------------------------------------------------------------------   
+------------------------------------------------------------------------------------------------
   
 ------------------------------------------------------------------------------------------------  
 Non derivative portions are covered by the MIT Licence

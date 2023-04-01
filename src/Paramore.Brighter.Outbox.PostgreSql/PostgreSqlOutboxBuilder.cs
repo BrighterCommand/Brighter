@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 Timestamp timestamptz NULL,
                 CorrelationId uuid NULL,
                 ReplyTo VARCHAR(255) NULL,
-                ContentType VARCHAR(128) NULL,  
+                ContentType VARCHAR(128) NULL,
                 Dispatched timestamptz NULL,
                 HeaderBag TEXT NULL,
                 Body TEXT NULL

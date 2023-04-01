@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutboxBuilder
     {
-        const string OutboxDdl = @"CREATE TABLE {0} 
+        const string OutboxDdl = @"CREATE TABLE {0}
                                     (
                                         [MessageId] TEXT NOT NULL COLLATE NOCASE,
                                         [Topic] TEXT NULL,
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                                         [Timestamp] TEXT NULL,
                                         [CorrelationId] TEXT NULL,
                                         [ReplyTo] TEXT NULL,
-                                        [ContentType] TEXT NULL,  
+                                        [ContentType] TEXT NULL,
                                         [Dispatched] TEXT NULL,
                                         [HeaderBag] TEXT NULL,
                                         [Body] TEXT NULL,

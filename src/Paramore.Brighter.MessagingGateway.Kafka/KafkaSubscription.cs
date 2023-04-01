@@ -86,7 +86,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         public int SessionTimeoutMs { get; set; } = 10000;
 
         /// <summary>
-        /// 
         /// </summary>
         public int SweepUncommittedOffsetsIntervalMs { get; set; } = 30000;
 

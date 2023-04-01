@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// </summary>
         public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration)
         {
-            Configuration = configuration; 
+            Configuration = configuration;
             _timeout = Configuration.RestMS.Timeout;
         }
 
