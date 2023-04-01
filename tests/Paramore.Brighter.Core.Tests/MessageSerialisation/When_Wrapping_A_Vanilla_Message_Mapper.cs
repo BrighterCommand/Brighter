@@ -26,7 +26,7 @@ public class VanillaMessageWrapRequestTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Vanilla_Message_Mapper()
     {

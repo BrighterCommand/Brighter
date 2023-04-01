@@ -63,6 +63,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
- 
+
     }
 }

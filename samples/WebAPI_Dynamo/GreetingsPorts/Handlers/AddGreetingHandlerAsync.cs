@@ -27,7 +27,7 @@ namespace GreetingsPorts.Handlers
             _postBox = postBox;
             _logger = logger;
         }
-        
+
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
@@ -41,24 +41,24 @@ namespace GreetingsPorts.Handlers
             try
             {
                 var person = await context.LoadAsync<Person>(addGreeting.Name);
-                
+
                 person.Greetings.Add(addGreeting.Greeting);
 
                 var document = context.ToDocument(person);
                 var attributeValues = document.ToAttributeMap();
-               
+
                //write the added child entity to the Db - just replace the whole entity as we grabbed the original
                //in production code, an update expression would be faster
                transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = "People", Item = attributeValues}});
 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(addGreeting.Greeting), cancellationToken: cancellationToken));
-                
+
                 //commit both new greeting and outgoing message
                 await _unitOfWork.CommitAsync(cancellationToken);
             }
             catch (Exception e)
-            {   
+            {
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 _unitOfWork.Rollback();

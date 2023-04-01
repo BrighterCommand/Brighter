@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         Murmur2,
         Murmur2Random,
     }
-    
+
     /// <summary>
     /// When publishing to the broker, how many nodes must we replicate to before responding
     /// </summary>
@@ -46,27 +46,27 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         None = 0,
         Leader = 1,
     }
-    
+
     public class KafkaPublication : Publication
     {
         /// <summary>
-        /// The acks parameter controls how many ISR nodes must receive the 
+        /// The acks parameter controls how many ISR nodes must receive the
         /// record before the producer can consider the write successful.
         /// </summary>
         public Acks Replication { get; set; } = Acks.All;
 
         /// <summary>
-        /// Maximum number of messages batched in one MessageSet. 
+        /// Maximum number of messages batched in one MessageSet.
         /// </summary>
         public int BatchNumberMessages { get; set; } = 10;
 
         /// <summary>
         /// Messages are produced once only
         /// Will adjust the following if not set:
-        /// `max.in.flight.requests.per.connection=5` (must be less than or equal to 5), `retries=INT32_MAX` (must be greater than 0), `acks=all`, `queuing.strategy=fifo`. 
+        /// `max.in.flight.requests.per.connection=5` (must be less than or equal to 5), `retries=INT32_MAX` (must be greater than 0), `acks=all`, `queuing.strategy=fifo`.
         /// </summary>
         public bool EnableIdempotence { get; set; } = true;
-        
+
          /// <summary>
          /// Maximum time, in milliseconds, for buffering data on the producer queue.
          /// </summary>
@@ -74,7 +74,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
          /// <summary>
         /// How many times to retry sending a failing MessageSet.
-        /// Note: retrying may cause reordering, set the  max in flight to 1 if using this 
+        /// Note: retrying may cause reordering, set the  max in flight to 1 if using this
         /// </summary>
         public int MessageSendMaxRetries { get; set; } = 3;
 
@@ -95,12 +95,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How many partitions on this topic?
         /// </summary>
         public int NumPartitions { get; set; } = 1;
-        
+
         /// <summary>
         /// How do we partition - defaults to consistent random
         /// </summary>
         public Partitioner Partitioner { get; set; } = Partitioner.ConsistentRandom;
-        
+
         /// <summary>
         /// Maximum number of messages allowed on the producer queue.
         /// </summary>
@@ -126,12 +126,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// \and relies on Replication being != AcksEnum.None.",
         /// </summary>
         public int RequestTimeoutMs { get; set; } = 500;
-        
+
         /// <summary>
         /// How long to wait when asking for topic metadata
         /// </summary>
         public int TopicFindTimeoutMs { get; set; } = 5000;
-        
+
         /// <summary>
         /// The unique identifier for this producer, used with transactions
         /// </summary>

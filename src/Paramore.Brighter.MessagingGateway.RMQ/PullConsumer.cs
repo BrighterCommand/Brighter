@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
     public class PullConsumer : DefaultBasicConsumer
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RmqMessageConsumer>();
-        
+
         //we do end up creating a second buffer to the Brighter Channel, but controlling the flow from RMQ depends
         //on us being able to buffer up to the set QoS and then pull. This matches other implementations.
         private readonly ConcurrentQueue<BasicDeliverEventArgs> _messages = new ConcurrentQueue<BasicDeliverEventArgs>();
@@ -81,14 +81,14 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             return bufferIndex == 0 ? (0, null) : (bufferIndex, buffer);
         }
-        
+
          public override void HandleBasicDeliver(
-            string consumerTag, 
-            ulong deliveryTag, 
-            bool redelivered, 
-            string exchange, 
+            string consumerTag,
+            ulong deliveryTag,
+            bool redelivered,
+            string exchange,
             string routingKey,
-            IBasicProperties properties, 
+            IBasicProperties properties,
             ReadOnlyMemory<byte> body)
         {
             //We have to copy the body, before returning, as the memory in body is pooled and may be re-used after (see base class documentation)

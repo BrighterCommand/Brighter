@@ -27,8 +27,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             const string topic = "MyRequest";
             var header = new MessageHeader(
-                messageId: _myRequest.Id, 
-                topic: topic, 
+                messageId: _myRequest.Id,
+                topic: topic,
                 messageType:MessageType.MT_COMMAND,
                 correlationId: _myRequest.ReplyAddress.CorrelationId,
                 replyTo: _myRequest.ReplyAddress.Topic);
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     return new MyRequestMessageMapper();
                 if (type == typeof(MyResponseMessageMapper))
                     return new MyResponseMessageMapper();
-               
+
                 throw new ConfigurationException($"No mapper found for {type.Name}");
             }));
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             MyResponseHandler.ShouldReceive(new MyResponse(_myRequest.ReplyAddress) {Id = _myRequest.Id});
 
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearExtServiceBus();

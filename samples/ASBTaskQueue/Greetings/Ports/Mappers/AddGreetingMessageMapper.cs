@@ -7,7 +7,7 @@ namespace Greetings.Ports.Mappers
     public class AddGreetingMessageMapper : IAmAMessageMapper<AddGreetingCommand>
     {
         public const string Topic = "greeting.addGreetingCommand";
-        
+
         public Message MapToMessage(AddGreetingCommand request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: Topic, messageType: MessageType.MT_COMMAND);

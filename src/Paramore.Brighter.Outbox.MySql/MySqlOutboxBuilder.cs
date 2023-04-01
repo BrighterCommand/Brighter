@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Outbox.MySql
     UNIQUE(`CreatedID`),
 	PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
-        
+
         const string outboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
 
         /// <summary>

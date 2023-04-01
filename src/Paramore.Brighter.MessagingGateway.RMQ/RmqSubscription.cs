@@ -39,15 +39,15 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// The routing key for dead letter messages
         /// </summary>
         public string DeadLetterRoutingKey { get; }
-        
+
         /// <summary>
         /// Is the channel mirrored across node in the cluster
         /// Required when the API for queue creation in the Message Oriented Middleware needs us to set the value
         /// on channel (queue) creation. For example, RMQ version 2.X set high availability via the client API
-        /// though it has moved to policy in versions 3+ 
+        /// though it has moved to policy in versions 3+
         /// </summary>
         public bool HighAvailability { get; }
-        
+
         /// <summary>
         /// Gets a value indicating whether this channel definition should survive restarts of the broker.
         /// </summary>
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// The maximum number of messages on the queue before we begin to reject messages
         /// </summary>
         public int? MaxQueueLength { get; }
-        
+
         /// <summary>
         /// How long does a message live on the queue, in milliseconds, before expiring?
         /// A null value, the default, is infinite
@@ -90,26 +90,26 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public RmqSubscription(
-            Type dataType, 
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
-            int bufferSize = 1, 
-            int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, 
-            int requeueCount = -1, 
-            int requeueDelayInMilliseconds = 0, 
-            int unacceptableMessageLimit = 0, 
-            bool isDurable = false, 
-            bool runAsync = false, 
-            IAmAChannelFactory channelFactory = null, 
-            bool highAvailability = false, 
-            ChannelName deadLetterChannelName = null, 
-            string deadLetterRoutingKey = null, 
+            Type dataType,
+            SubscriptionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
+            bool isDurable = false,
+            bool runAsync = false,
+            IAmAChannelFactory channelFactory = null,
+            bool highAvailability = false,
+            ChannelName deadLetterChannelName = null,
+            string deadLetterRoutingKey = null,
             int? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            int channelFailureDelay = 1000)
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, runAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             DeadLetterRoutingKey = deadLetterRoutingKey;
@@ -158,8 +158,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             bool runAsync = false,
             IAmAChannelFactory channelFactory = null,
             bool highAvailability = false,
-            ChannelName deadLetterChannelName = null, 
-            string deadLetterRoutingKey = null, 
+            ChannelName deadLetterChannelName = null,
+            string deadLetterRoutingKey = null,
             int? ttl = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,

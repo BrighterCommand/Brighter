@@ -29,8 +29,8 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmAHandlerFactory
     /// We do not know how to create instances of <see cref="IHandleRequests"/> implemented by your application, but need to create instances to instantiate a pipeline.
-    /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAHandlerFactorySync"/> to provide 
-    /// instances of their <see cref="IHandleRequests"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequests"/> registered 
+    /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAHandlerFactorySync"/> to provide
+    /// instances of their <see cref="IHandleRequests"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequests"/> registered
     /// with <see cref="IAmASubscriberRegistry"/>. Typically you would use an IoC container to implement the Handler Factory.
     /// </summary>
     public interface IAmAHandlerFactorySync : IAmAHandlerFactory

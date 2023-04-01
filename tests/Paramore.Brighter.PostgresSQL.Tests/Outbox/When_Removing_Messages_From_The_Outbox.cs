@@ -84,7 +84,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         {
             _postgresSqlTestHelper.CleanUpDb();
         }
-        
+
         public void Dispose()
         {
             GC.SuppressFinalize(this);

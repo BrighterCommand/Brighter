@@ -37,20 +37,20 @@ namespace SalutationPorts.Handlers
             try
             {
                 var salutation = new Salutation(@event.Greeting);
-                
+
                 await _uow.Database.InsertAsync<Salutation>(salutation, tx);
-                
+
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
-                
+
                 await tx.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
-                
+
                 //if it went wrong rollback entity write and Outbox write
                 await tx.RollbackAsync(cancellationToken);
-                
+
                 return await base.HandleAsync(@event, cancellationToken);
             }
 

@@ -182,11 +182,11 @@ namespace GreetingsWeb.Database
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
-        
+
         private static string GetProductionConnectionString(IConfiguration config, DatabaseType databaseType)
         {
             return databaseType switch
-            { 
+            {
                 DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };

@@ -28,7 +28,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class Subscription.
-    /// A <see cref="Subscription"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>. 
+    /// A <see cref="Subscription"/> holds the configuration details of the relationship between a channel provided by a broker, and a <see cref="Command"/> or <see cref="Event"/>.
     /// It holds information on the number of threads to use to process <see cref="Message"/>s on the channel, turning them into <see cref="Command"/>s or <see cref="Event"/>s
     /// A Subscription is not Gateway specific configuration, that belongs in a class derived from <see cref="IAmGatewayConfiguration"/>
     /// </summary>
@@ -58,7 +58,7 @@ namespace Paramore.Brighter
        /// How long to pause when there is a channel failure in milliseconds
        /// </summary>
        public int ChannelFailureDelay { get; set; }
-       
+
      /// <summary>
         /// Gets the type of the <see cref="IRequest"/> that <see cref="Message"/>s on the <see cref="Channel"/> can be translated into.
         /// </summary>
@@ -69,7 +69,7 @@ namespace Paramore.Brighter
         /// How long to pause when a channel is empty in milliseconds
         /// </summary>
         public int EmptyChannelDelay { get; set; }
-       
+
     /// <summary>
         /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
         /// </summary>

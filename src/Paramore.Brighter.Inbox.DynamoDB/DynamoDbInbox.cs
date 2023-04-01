@@ -37,11 +37,11 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 {
     public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
-       
+
         private readonly DynamoDBContext _context;
 
        public bool ContinueOnCapturedContext { get; set; }
-       
+
         /// <summary>
         ///     Initialises a new instance of the <see cref="DynamoDbInbox"/> class.
         /// </summary>
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// </summary>
         /// <param name="id">The identifier</param>
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
-        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>        
+        /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
         /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
@@ -167,8 +167,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             return result;
         }
 
-        private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig) 
-            where T: class, IRequest 
+        private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig)
+            where T: class, IRequest
         {
             var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig);
             
@@ -180,7 +180,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 
             return messages;
         }
- 
-        
+
+
    }
 }

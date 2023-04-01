@@ -80,7 +80,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //clear the queue
             _consumer.Acknowledge(message);
         }
- 
+
         public void Dispose()
         {
             _channelFactory.DeleteTopic();
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _consumer.Dispose();
             _messageProducer.Dispose();
         }
-        
-    
+
+
    }
 }

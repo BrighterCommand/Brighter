@@ -34,8 +34,8 @@ namespace Greetings.Ports.Mappers
         public Message MapToMessage(GreetingRequest request)
         {
             var header = new MessageHeader(
-                messageId: request.Id, 
-                topic: "Greeting.Request", 
+                messageId: request.Id,
+                topic: "Greeting.Request",
                 messageType:MessageType.MT_COMMAND,
                 correlationId: request.ReplyAddress.CorrelationId,
                 replyTo: request.ReplyAddress.Topic);

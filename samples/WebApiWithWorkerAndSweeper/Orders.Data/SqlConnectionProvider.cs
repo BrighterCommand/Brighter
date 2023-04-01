@@ -7,12 +7,12 @@ namespace Orders.Data;
 public class SqlConnectionProvider : IMsSqlTransactionConnectionProvider
 {
     private readonly SqlUnitOfWork _sqlConnection;
-    
+
     public SqlConnectionProvider(SqlUnitOfWork sqlConnection)
     {
         _sqlConnection = sqlConnection;
     }
-    
+
     public SqlConnection GetConnection()
     {
         return _sqlConnection.Connection;

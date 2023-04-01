@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Outbox.MySql
              
             return brighterBuilder;
         }
-        
+
          /// <summary>
          /// Use this transaction provider to ensure that the Outbox and the Entity Store are correct
          /// </summary>
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Outbox.MySql
  
              return brighterBuilder;
          }
-       
+
         private static MySqlOutboxSync BuildMySqlOutboxOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<MySqlConfiguration>();

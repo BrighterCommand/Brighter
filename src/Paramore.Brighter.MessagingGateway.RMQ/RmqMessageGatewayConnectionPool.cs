@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _connectionName = connectionName;
             _connectionHeartbeat = connectionHeartbeat;
         }
-        
+
         /// <summary>
         /// Return matching RabbitMQ subscription if exist (match by amqp scheme)
         /// or create new subscription to RabbitMQ (thread-safe)

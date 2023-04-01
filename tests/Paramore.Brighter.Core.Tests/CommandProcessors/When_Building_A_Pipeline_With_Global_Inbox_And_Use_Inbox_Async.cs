@@ -42,8 +42,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _requestContext = new RequestContext();
             
             _inboxConfiguration = new InboxConfiguration(
-                scope: InboxScope.All, 
-                onceOnly: true, 
+                scope: InboxScope.All,
+                onceOnly: true,
                 actionOnExists: OnceOnlyAction.Throw);
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
@@ -95,6 +95,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
- 
+
     }
 }

@@ -28,7 +28,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// class TransformPipelineTracer
-    /// Used to determine the pipeline of transformations that would be applied to a request becoming a message or 
+    /// Used to determine the pipeline of transformations that would be applied to a request becoming a message or
     /// </summary>
     public class TransformPipelineTracer
     {

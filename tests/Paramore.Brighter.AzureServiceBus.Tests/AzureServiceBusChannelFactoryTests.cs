@@ -4,7 +4,7 @@ using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 
 namespace Paramore.Brighter.AzureServiceBus.Tests
 {
-    
+
     public class AzureServiceBusChannelFactoryTests
     {
         [Fact]

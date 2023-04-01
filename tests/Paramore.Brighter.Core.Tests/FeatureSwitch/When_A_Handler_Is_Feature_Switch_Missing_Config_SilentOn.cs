@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         private readonly MyCommandAsync _myAsyncCommand = new();
         private readonly ServiceProvider _provider;
 
-        private readonly CommandProcessor _commandProcessor;        
+        private readonly CommandProcessor _commandProcessor;
 
         public FeatureSwitchByConfigMissingConfigStrategySilentOnTests()
         {
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             _commandProcessor.Send(_myCommand);
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeTrue();
-        }  
+        }
 
         [Fact]
         public async Task When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_SilentOn()
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             await _commandProcessor.SendAsync(_myAsyncCommand);
 
             _provider.GetService<MyFeatureSwitchedConfigHandlerAsync>().DidReceive().Should().BeTrue();
-        }     
+        }
 
         public void Dispose()
         {

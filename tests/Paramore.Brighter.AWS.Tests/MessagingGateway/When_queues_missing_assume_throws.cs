@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
-    [Trait("Category", "AWS")] 
+    [Trait("Category", "AWS")]
     public class AWSAssumeQueuesTests  : IDisposable
     {
         private readonly ChannelFactory _channelFactory;
@@ -33,10 +33,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             
             //create the topic, we want the queue to be the issue
             //We need to create the topic at least, to check the queues
-            var producer = new SqsMessageProducer(awsConnection, 
+            var producer = new SqsMessageProducer(awsConnection,
                 new SnsPublication
                 {
-                    MakeChannels = OnMissingChannel.Create 
+                    MakeChannels = OnMissingChannel.Create
                 });
             
            producer.ConfirmTopicExists(topicName); 
@@ -54,12 +54,12 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //we will try to get the queue url, and fail because it does not exist
             Assert.Throws<QueueDoesNotExistException>(() => _consumer.Receive(1000));
         }
- 
+
         public void Dispose()
         {
            _channelFactory.DeleteTopic(); 
         }
-        
-    
+
+
    }
 }

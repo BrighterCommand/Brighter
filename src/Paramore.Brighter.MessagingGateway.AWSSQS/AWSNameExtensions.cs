@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
     {
         public static ChannelName ToValidSQSQueueName(this ChannelName channelName, bool isFifo = false)
         {
-            //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a 
+            //SQS only allows 80 characters alphanumeric, hyphens, and underscores, but we might use a period in a
             //default typename strategy
             var name = channelName.Value;
             name = name.Replace(".", "_");
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             
             return new RoutingKey(topic);
         }
-        
+
         public static string ToValidSNSTopicName(this string topic)
         {
             //SNS only topic names are limited to 256 characters. Alphanumeric characters plus hyphens (-) and

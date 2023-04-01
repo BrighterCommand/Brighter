@@ -19,7 +19,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.Transformers
 {
-    [Trait("Category", "AWS")] 
+    [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
     public class LargeMessagePaylodUnwrapTests : IDisposable
     {
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             {
                 { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
             };
-            
+
             (AWSCredentials credentials, RegionEndpoint region) = CredentialsChain.GetAwsCredentials();
 
             _client = new AmazonS3Client(credentials, region);
@@ -49,7 +49,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
             IHttpClientFactory httpClientFactory = provider.GetService<IHttpClientFactory>();
 
             _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
-            
+
             _luggageStore = S3LuggageStore
                 .CreateAsync(
                     client: _client,
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
                     stsClient: stsClient,
 #pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                     bucketRegion: S3Region.EUW1,
-#pragma warning restore CS0618 
+#pragma warning restore CS0618
                     tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: S3CannedACL.Private,
                     abortFailedUploadsAfterDays: 1,
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 
             _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
         }
-    
+
         [Fact]
         public async Task When_unwrapping_a_large_message()
         {

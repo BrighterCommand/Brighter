@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
             
             _fullyQualifiedNameSpace = fullyQualifiedNameSpace;
         }
-        
+
         /// <summary>
         /// Provides an Azure Service Bus Client
         /// </summary>

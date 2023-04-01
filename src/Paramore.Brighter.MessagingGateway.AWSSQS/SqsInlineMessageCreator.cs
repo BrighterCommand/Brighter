@@ -77,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage));
 
-                //deserialize the bag 
+                //deserialize the bag
                 var bag = ReadMessageBag();
                 foreach (var key in bag.Keys)
                 {

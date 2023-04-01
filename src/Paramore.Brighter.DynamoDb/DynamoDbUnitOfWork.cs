@@ -10,7 +10,7 @@ namespace Paramore.Brighter.DynamoDb
     public class DynamoDbUnitOfWork : IDynamoDbClientTransactionProvider, IDisposable
     {
         private TransactWriteItemsRequest _tx;
-        
+
         /// <summary>
         /// The AWS client for dynamoDb
         /// </summary>

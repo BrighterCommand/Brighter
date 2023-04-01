@@ -62,7 +62,7 @@ var subscriptions = new Subscription[]
 };
 
 string dbConnString = "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True";
-            
+
 //EF
 builder.Services.AddDbContext<GreetingsDataContext>(o =>
 {
@@ -80,13 +80,13 @@ builder.Services.AddServiceActivator(options =>
         options.Subscriptions = subscriptions;
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
-        
+
     }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
     .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();
-                
+
 builder.Logging.SetMinimumLevel(LogLevel.Information).AddConsole();
 
 
@@ -129,7 +129,7 @@ app.UseEndpoints(endpoints =>
             await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
         }
     });
-    
+
     endpoints.Map("Dispatcher", (IDispatcher dispatcher) => { return dispatcher.Consumers.Count(); });
 });
 

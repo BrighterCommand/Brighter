@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                         );";
 
         private const string InboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
-        
+
         /// <summary>
         /// Get the DDL statements to create an Inbox in MSSQL
         /// </summary>
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         {
             return string.Format(OutboxDDL, inboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Inbox in MSSQL
         /// </summary>

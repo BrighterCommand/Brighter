@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Outbox.EventStore
 
             return new Message(messageHeader, messageBody);
         }
-        
+
         private static MessageHeader CreateHeader(byte[] metadata, long eventNumber, string stream, DateTime? dispatchedDate = null, Guid? previousEventId = null)
         {
             MessageHeader messageHeader = DeserializeMessageHeader(metadata);
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Outbox.EventStore
             var messageHeader = JsonSerializer.Deserialize<MessageHeader>(json, JsonSerialisationOptions.Options);
             return messageHeader;
         }
-        
+
         private static void ResetEventStoreProperties(long eventNumber, string stream, DateTime? dispatchedDate, Guid? previousEventId, MessageHeader messageHeader)
         {
             messageHeader.Bag.Add("streamId", stream);

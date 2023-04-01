@@ -46,12 +46,12 @@ namespace Paramore.Brighter
         /// When was the message added to the outbox
         /// </summary>
         public DateTime WriteTime { get; set; }
-        
+
         /// <summary>
         /// When was the message sent to the middleware
         /// </summary>
         public DateTime TimeFlushed { get; set; }
-        
+
         /// <summary>
         /// The message to be dispatched
         /// </summary>
@@ -111,7 +111,7 @@ namespace Paramore.Brighter
                 }
             }
         }
-        
+
         /// <summary>
         /// Adds the specified message
         /// </summary>
@@ -152,7 +152,7 @@ namespace Paramore.Brighter
             tcs.SetResult(new object());
             return tcs.Task;
         }
-        
+
         /// <summary>
         /// Adds the specified message
         /// </summary>
@@ -190,10 +190,10 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>A list of dispatched messages</returns>
         public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
             int pageNumber = 1,
-            int outboxTimeout = -1, 
+            int outboxTimeout = -1,
             Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
@@ -203,7 +203,7 @@ namespace Paramore.Brighter
                 .Take(pageSize)
                 .Select(oe => oe.Message).ToArray();
         }
-         
+
         /// <summary>
         /// Gets the specified message
         /// </summary>
@@ -238,7 +238,7 @@ namespace Paramore.Brighter
                 return _requests.Values.Select(oe => oe.Message).Skip(skipMessageCount).Take(pageSize).ToList();
             }
         }
-         
+
        /// <summary>
         /// Gets the specified message
         /// </summary>

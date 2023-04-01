@@ -5,7 +5,7 @@ using Paramore.Brighter.Dapper;
 
 namespace Paramore.Brighter.Sqlite.Dapper
 {
-    public class SqliteDapperConnectionProvider : ISqliteTransactionConnectionProvider 
+    public class SqliteDapperConnectionProvider : ISqliteTransactionConnectionProvider
     {
         private readonly IUnitOfWork _unitOfWork;
 
@@ -13,7 +13,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
         {
             _unitOfWork = unitOfWork;
         }
-        
+
         public SqliteConnection GetConnection()
         {
             return (SqliteConnection)_unitOfWork.Database;

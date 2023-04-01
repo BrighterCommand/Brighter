@@ -27,7 +27,7 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAChannel 
+    /// Interface IAmAChannel
     /// An <see cref="IAmAChannel"/> for reading messages from a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a>
     /// and acknowledging receipt of those messages
     /// </summary>
@@ -38,7 +38,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The name.</value>
         ChannelName Name { get; }
-        
+
          /// <summary>
         /// Acknowledges the specified message.
         /// </summary>
@@ -49,7 +49,7 @@ namespace Paramore.Brighter
         /// Clears the queue
         /// </summary>
         void Purge();
-        
+
         /// <summary>
         /// Receives the specified timeout in milliseconds.
         /// </summary>
@@ -62,12 +62,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         void Reject(Message message);
-        
+
         /// <summary>
         /// Stops this instance.
         /// </summary>
         void Stop();
-        
+
         /// <summary>
         /// Adds a message to the queue
         /// </summary>

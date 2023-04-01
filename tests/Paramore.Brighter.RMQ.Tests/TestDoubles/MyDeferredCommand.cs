@@ -6,6 +6,6 @@ namespace Paramore.Brighter.RMQ.Tests.TestDoubles
     {
         public string Value { get; set; }
         public MyDeferredCommand() : base(Guid.NewGuid()) { }
-        
+
     }
 }

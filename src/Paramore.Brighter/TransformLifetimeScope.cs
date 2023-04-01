@@ -16,7 +16,7 @@ namespace Paramore.Brighter
         {
             _factory = factory;
         }
-        
+
         public void Dispose()
         {
             ReleaseTrackedObjects();
@@ -27,13 +27,13 @@ namespace Paramore.Brighter
         {
             ReleaseTrackedObjects();
         }
-        
+
         public void Add(IAmAMessageTransformAsync instance)
         {
             _trackedObjects.Add(instance);
             s_logger.LogDebug("Tracking instance {InstanceHashCode} of type {HandlerType}", instance.GetHashCode(), instance.GetType());
          }
-        
+
         private void ReleaseTrackedObjects()
         {
               _trackedObjects.Each((trackedItem) =>

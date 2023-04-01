@@ -121,7 +121,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    var timeOnException = DateTime.UtcNow; 
+                    var timeOnException = DateTime.UtcNow;
                     //can't await inside a catch block
                     await _controlBusSender.PostAsync(
                         new MonitorEvent(

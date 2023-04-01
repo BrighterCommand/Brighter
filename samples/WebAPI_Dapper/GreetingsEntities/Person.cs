@@ -9,7 +9,7 @@ namespace GreetingsEntities
         public long Id { get; set; }
         public string Name { get; set; }
         public IList<Greeting> Greetings { get; set; } = new List<Greeting>();
-        
+
         public Person(){ /*Required for DapperExtensions*/}
 
         public Person(string name)

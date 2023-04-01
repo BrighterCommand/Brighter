@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly MsSqlConfiguration _configuration;
         private readonly IMsSqlConnectionProvider _connectionProvider;
-        
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
@@ -215,7 +215,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             return new SqlParameter(parameterName, value ?? DBNull.Value);
         }
-        
+
         protected override SqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
@@ -233,7 +233,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 CreateSqlParameter($"{prefix}Body", message.Body?.Value)
             };
         }
-        
+
         #endregion
 
         #region Property Extractors
@@ -302,7 +302,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return message ?? new Message();
         }
-        
+
         protected override async Task<Message> MapFunctionAsync(SqlDataReader dr, CancellationToken cancellationToken)
         {
             Message message = null;

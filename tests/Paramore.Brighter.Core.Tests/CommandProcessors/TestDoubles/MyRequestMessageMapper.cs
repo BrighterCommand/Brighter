@@ -8,8 +8,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         public Message MapToMessage(MyRequest request)
         {
             var header = new MessageHeader(
-                messageId: request.Id, 
-                topic: "MyRequest", 
+                messageId: request.Id,
+                topic: "MyRequest",
                 messageType:MessageType.MT_COMMAND,
                 correlationId: request.ReplyAddress.CorrelationId,
                 replyTo: request.ReplyAddress.Topic);

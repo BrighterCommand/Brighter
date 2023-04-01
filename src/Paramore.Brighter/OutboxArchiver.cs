@@ -9,7 +9,7 @@ namespace Paramore.Brighter
     public class OutboxArchiver
     {
         private const string ARCHIVEOUTBOX = "Archive Outbox";
-        
+
         private readonly int _batchSize;
         private IAmAnOutboxSync<Message> _outboxSync;
         private IAmAnOutboxAsync<Message> _outboxAsync;
@@ -49,7 +49,7 @@ namespace Paramore.Brighter
             if(activity?.DisplayName == ARCHIVEOUTBOX)
                 activity.Dispose();
         }
-        
+
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>

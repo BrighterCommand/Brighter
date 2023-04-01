@@ -26,7 +26,7 @@ public class MessageWrapCleanupTests
         
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, new MyReleaseTrackingTransformFactory());
     }
-    
+
     [Fact]
     public void When_Wrapping_Clean_Up_The_Pipeline()
     {
@@ -39,8 +39,8 @@ public class MessageWrapCleanupTests
         s_released.Should().Be("|MySimpleTransformAsync");
 
     }
-    
-    
+
+
     private class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {
         public IAmAMessageTransformAsync Create(Type transformerType)

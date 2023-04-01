@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             _connection = connection;
             _publications = publications;
         }
-        
+
         /// <summary>
         /// Creates message producers.
         /// </summary>

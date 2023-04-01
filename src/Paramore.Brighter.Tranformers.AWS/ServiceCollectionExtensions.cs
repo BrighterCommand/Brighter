@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             services.TryAddSingleton<IAmAStorageProviderAsync>(sp =>
             {
                 var httpClientFactory = sp.GetService<IHttpClientFactory>();
-               
+
                 var options = new S3LuggageOptions(httpClientFactory);
 
                 configure(options);

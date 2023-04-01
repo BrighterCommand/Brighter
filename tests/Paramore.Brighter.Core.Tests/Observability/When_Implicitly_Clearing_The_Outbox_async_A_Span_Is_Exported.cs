@@ -63,7 +63,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
         producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
         CommandProcessor.ClearExtServiceBus();
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
             policyRegistry, messageMapperRegistry,_outbox,producerRegistry);
     }
 

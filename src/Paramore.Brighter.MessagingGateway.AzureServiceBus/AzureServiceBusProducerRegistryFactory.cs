@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="configuration">The configuration of the connection to ASB</param>
         /// <param name="asbPublications">A set of publications - topics on the server - to configure</param>
         public AzureServiceBusProducerRegistryFactory(
-            AzureServiceBusConfiguration configuration, 
+            AzureServiceBusConfiguration configuration,
             IEnumerable<AzureServiceBusPublication> asbPublications)
         {
              _clientProvider = new ServiceBusConnectionStringClientProvider(configuration.ConnectionString);
@@ -38,8 +38,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _asbPublications = asbPublications;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
-        
-        
+
+
         /// <summary>
         /// Creates message producers.
         /// </summary>

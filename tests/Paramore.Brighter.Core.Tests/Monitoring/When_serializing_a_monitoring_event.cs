@@ -34,7 +34,7 @@ using System.Text.Json;
 namespace Paramore.Brighter.Core.Tests.Monitoring
 {
     [Trait("Category", "Monitoring")]
-    public class MonitorEventMessageMapperTests 
+    public class MonitorEventMessageMapperTests
     {
         private const string InstanceName = "Paramore.Tests";
         private const string HandlerFullAssemblyName = "Paramore.Dummy.Handler, with some Assembly information";

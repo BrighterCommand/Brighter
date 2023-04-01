@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         TopicName = 5,
         SubscriptionId = 6
     }
-    
+
     internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageCreator>();
@@ -87,10 +87,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (contentType.Success)
                     messageHeader.ContentType = contentType.Result;
-                   
+
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
-                    
-                //deserialize the bag 
+
+                //deserialize the bag
                 var bag = ReadMessageBag(sqsMessage);
                 foreach (var key in bag.Keys)
                 {
@@ -143,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             return new HeaderResult<string>(String.Empty, true);
         }
-        
+
         private HeaderResult<DateTime> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out MessageAttributeValue value))

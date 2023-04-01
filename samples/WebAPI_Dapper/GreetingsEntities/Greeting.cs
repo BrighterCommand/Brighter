@@ -22,7 +22,7 @@ namespace GreetingsEntities
             Message = message;
             RecipientId = recipient.Id;
         }
-        
+
         public Greeting(int id, string message, Person recipient)
         {
             Id = id;

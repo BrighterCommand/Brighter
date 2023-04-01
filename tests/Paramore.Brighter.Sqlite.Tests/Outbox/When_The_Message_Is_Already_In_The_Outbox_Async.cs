@@ -46,9 +46,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             _messageEarliest = new Message(
                 new MessageHeader(
-                    Guid.NewGuid(), 
-                    "test_topic", 
-                    MessageType.MT_DOCUMENT), 
+                    Guid.NewGuid(),
+                    "test_topic",
+                    MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
         }
 

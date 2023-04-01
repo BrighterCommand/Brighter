@@ -9,10 +9,10 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Mappers
         public Message MapToMessage(HeartbeatRequest request)
         {
             var header = new MessageHeader(
-                messageId: request.Id, 
-                topic: "Heartbeat", 
+                messageId: request.Id,
+                topic: "Heartbeat",
                 messageType: MessageType.MT_COMMAND,
-                correlationId: request.ReplyAddress.CorrelationId, 
+                correlationId: request.ReplyAddress.CorrelationId,
                 replyTo: request.ReplyAddress.Topic);
 
             var json = JsonSerializer.Serialize(new HeartBeatRequestBody(request.Id.ToString()), JsonSerialisationOptions.Options);

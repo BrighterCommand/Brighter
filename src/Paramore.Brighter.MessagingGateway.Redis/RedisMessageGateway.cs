@@ -69,7 +69,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             }
             return redisMessage;
         }
-        
+
         /// <summary>
         /// Service Stack Redis provides global (static) configuration settings for how Redis behaves.
         /// We want to be able to override the defaults (or leave them if we think they are appropriate
@@ -144,7 +144,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 RedisConfig.VerifyMasterConnections = _gatewayConfiguration.VerifyMasterConnections.Value;
             }
         }
-        
+
         /// <summary>
         /// Store the actual message content to Redis - we only want one copy, regardless of number of queues
         /// </summary>

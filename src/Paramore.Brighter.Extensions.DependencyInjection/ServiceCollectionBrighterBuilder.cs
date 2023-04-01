@@ -49,9 +49,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="mapperRegistry">The register for looking up message mappers</param>
         /// <param name="transformerRegistry">The register for transforms</param>
         public ServiceCollectionBrighterBuilder(
-            IServiceCollection services, 
+            IServiceCollection services,
             ServiceCollectionSubscriberRegistry serviceCollectionSubscriberRegistry,
-            ServiceCollectionMessageMapperRegistry mapperRegistry, 
+            ServiceCollectionMessageMapperRegistry mapperRegistry,
             ServiceCollectionTransformerRegistry transformerRegistry = null)
         {
             Services = services;
@@ -168,7 +168,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection 
+        /// Scan the assemblies provided for implementations of IHandleRequests and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
         /// <returns>This builder, allows chaining calls</returns>

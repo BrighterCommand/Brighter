@@ -70,7 +70,7 @@ namespace GreetingsReceiverConsole
                             commitBatchSize: 5,
                             sweepUncommittedOffsetsIntervalMs: 10000)
                     };
-                    
+
                     //We take a direct dependency on the schema registry in the message mapper
                     var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
                     var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);

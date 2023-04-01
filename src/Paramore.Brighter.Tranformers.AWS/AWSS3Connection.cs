@@ -42,9 +42,9 @@ namespace Paramore.Brighter.Tranformers.AWS
                     Credentials = credentials;
                     Region = region;
                 }
-        
+
                 public AWSCredentials Credentials { get; }
                 public RegionEndpoint Region { get; }
-         
+
     }
 }

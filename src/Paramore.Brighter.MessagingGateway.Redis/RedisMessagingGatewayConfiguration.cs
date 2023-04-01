@@ -83,24 +83,24 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Whether Debug Logging should log detailed Redis operations (default false)
         /// </summary>
         public bool? DisableVerboseLogging { get; set; }
-        
+
         /// <summary>
         /// Exponential backoff interval for retrying connections on socker failure, default 10ms
         /// </summary>
         /// <returns></returns>
         public int? BackoffMultiplier { get; set; }
-        
+
         /// <summary>
         /// How big can the pool get (default None)?
         /// </summary>
         public int? MaxPoolSize { get; set; }
-        
+
         /// <summary>
         /// How long does the message body persist in Redis before being reclaimed
         /// Once we reclaim attempts to retrieve will fail (and message will be rejected)
         /// </summary>
         public TimeSpan? MessageTimeToLive { get; set; }
-        
+
         /// <summary>
         /// How do we connect to Redis
         /// </summary>

@@ -40,29 +40,29 @@ namespace Paramore.Brighter.ServiceActivator
     public class MessagePumpAsync<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
         /// <summary>
-        /// Constructs a message pump 
+        /// Constructs a message pump
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         public MessagePumpAsync(
             IAmACommandProcessorProvider commandProcessorProvider,
-            IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : base(commandProcessorProvider, messageMapperRegistry, messageTransformerFactory)
         {
         }
 
         /// <summary>
-        /// Constructs a message pump 
+        /// Constructs a message pump
         /// </summary>
         /// <param name="commandProcessor">A command processor</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         public MessagePumpAsync(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessor commandProcessor,
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry, messageTransformerFactory)
         {}
 
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.ServiceActivator
                 }
             }
         }
-        
+
         private static void Run(Action<TRequest> act, TRequest request)
         {
             if (act == null) throw new ArgumentNullException("act");
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.ServiceActivator
                 SynchronizationContext.SetSynchronizationContext(prevCtx);
             }
         }
-        
+
         private async void PublishAsync(TRequest request)
         {
             await CommandProcessorProvider.Get().PublishAsync(request, continueOnCapturedContext: true);

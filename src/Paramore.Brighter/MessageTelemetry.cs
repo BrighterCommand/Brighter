@@ -16,7 +16,7 @@ namespace Paramore.Brighter
         /// 123e4567-e89b-12d3-a456-426614174000; 0001
         /// </example>
         public string EventId { get;}
-        
+
         /// <summary>
         /// The source identifies the context in which an event happened.
         /// </summary>
@@ -32,7 +32,7 @@ namespace Paramore.Brighter
         /// com.github.pull_request.opened; com.example.object.deleted.v2
         /// </example>
         public string EventType { get;}
-        
+
         /// <summary>
         /// The subject of the event in the context of the event producer (identified by source).
         /// </summary>

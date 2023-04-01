@@ -20,7 +20,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         /// Message has been placed into the outbox but not sent or dispatched
         /// </summary>
         public readonly ConcurrentQueue<DepositedMessage> Deposited = new ConcurrentQueue<DepositedMessage>();
-        
+
         public void Send<T>(T command) where T : class, IRequest
         {
             Dispatched.TryAdd(command.Id, command);

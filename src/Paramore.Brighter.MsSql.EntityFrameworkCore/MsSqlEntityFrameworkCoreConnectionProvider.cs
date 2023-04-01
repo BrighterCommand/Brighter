@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
     public class MsSqlEntityFrameworkCoreConnectionProvider<T> : IMsSqlTransactionConnectionProvider where T : DbContext
     {
         private readonly T _context;
-        
+
         /// <summary>
         /// Initialise a new instance of Ms Sql Connection provider using the Database Connection from an Entity Framework Core DbContext.
         /// </summary>
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         {
             _context = context;
         }
-        
+
         public SqlConnection GetConnection()
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection

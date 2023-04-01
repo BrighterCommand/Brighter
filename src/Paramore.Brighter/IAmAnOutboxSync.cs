@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Dictionary to allow platform specific parameters to be passed to the interface</param>
         void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null);
-        
+
         /// <summary>
         /// Retrieves messages that have been sent within the window
         /// </summary>
@@ -70,9 +70,9 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>List of messages that need to be dispatched.</returns>
         IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince, 
-            int pageSize = 100, 
-            int pageNumber = 1, 
+            double millisecondsDispatchedSince,
+            int pageSize = 100,
+            int pageNumber = 1,
             int outboxTimeout = -1,
             Dictionary<string, object> args = null);
 
@@ -85,7 +85,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         [Obsolete("Removed in v10, Please use OutstandingMessages instead.")]
         IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null);
-        
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
@@ -95,8 +95,8 @@ namespace Paramore.Brighter
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <returns>Outstanding Messages</returns>
         IEnumerable<Message> OutstandingMessages(
-            double millSecondsSinceSent, 
-            int pageSize = 100, 
+            double millSecondsSinceSent,
+            int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null);
 

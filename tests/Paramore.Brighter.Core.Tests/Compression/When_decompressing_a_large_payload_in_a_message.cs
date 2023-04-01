@@ -46,7 +46,7 @@ public class UncompressLargePayloadTests
         msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
 
     }
-    
+
     [Fact]
     public async Task When_decompressing_a_large_zlib_payload_in_a_message()
     {
@@ -81,7 +81,7 @@ public class UncompressLargePayloadTests
         msg.Header.ContentType.Should().Be(MessageBody.APPLICATION_JSON);
 
     }
-    
+
     [Fact]
     public async Task When_decompressing_a_large_brotli_payload_in_a_message()
     {

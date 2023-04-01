@@ -65,7 +65,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
-        
+
         [Fact]
         public async Task When_Bulk_Writing_Messages_To_The_Outbox_Async()
         {
@@ -102,7 +102,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             _msSqlTestHelper.CleanUpDb();
         }
-        
+
         public void Dispose()
         {
             GC.SuppressFinalize(this);

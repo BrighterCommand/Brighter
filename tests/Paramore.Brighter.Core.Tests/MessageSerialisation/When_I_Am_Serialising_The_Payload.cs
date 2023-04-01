@@ -10,10 +10,10 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
-public class MessageValueSerializationTests 
+public class MessageValueSerializationTests
 {
-    
-    
+
+
     [Fact]
     public void When_I_serialise_a_vanilla_payload_as_a_utf8_string()
     {
@@ -39,7 +39,7 @@ public class MessageValueSerializationTests
         serBody.Value.Should().Be(desBody.Value);
 
     }
-    
+
     [Fact]
     public void When_I_serialise_a_vanilla_payload_as_a_base64_string()
     {
@@ -65,7 +65,7 @@ public class MessageValueSerializationTests
         serBody.Value.Should().Be(desBody.ToCharacterEncodedString(CharacterEncoding.UTF8));
 
     }
-    
+
     [Fact]
     public void When_I_serialise_a_raw_payload_as_binary()
     {
@@ -87,7 +87,7 @@ public class MessageValueSerializationTests
         serBody.Bytes.Should().Equal(desBody.Bytes); 
 
     }
-    
+
     [Fact]
     public void When_I_serialise_a_raw_payload_as_a_base64_string()
     {
@@ -112,7 +112,7 @@ public class MessageValueSerializationTests
         serBody.Bytes.Should().Equal(desBody.Bytes); 
 
     }
-    
+
     [Fact]
     public void When_I_try_to_serialise_a_raw_payload_as_a_string()
     {
@@ -136,8 +136,8 @@ public class MessageValueSerializationTests
         desBody.CharacterEncoding.Should().Be(CharacterEncoding.Base64);  
         serBody.Bytes.Should().Equal(desBody.Bytes); 
     }
-    
-    
+
+
     [Fact]
     public void When_I_serialise_a_kafka_payload_as_binary()
     {
@@ -172,7 +172,7 @@ public class MessageValueSerializationTests
         retrievedSchemaId.Should().Be(id);
 
     }
-    
+
     [Fact]
     public void When_I_serialise_a_utf8_kafka_payload_as_bytes()
     {
@@ -206,7 +206,7 @@ public class MessageValueSerializationTests
         retrievedSchemaId.Should().Be(id);
 
     }
-    
+
     [Fact]
     public void When_I_try_to_serialise_a_utf8_kafka_payload_as_a_utf8_string()
     {

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         protected AWSCredentials Credentials { get; set; }
 
         protected IAmazonDynamoDB Client { get; }
-        
+
         protected DynamoDBOutboxBaseTest ()
         {
             Client = CreateClient();

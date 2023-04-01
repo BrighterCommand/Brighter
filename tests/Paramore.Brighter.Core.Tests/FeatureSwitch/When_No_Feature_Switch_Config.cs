@@ -88,5 +88,5 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
         {
             CommandProcessor.ClearExtServiceBus();
         }
-    }    
+    }
 }

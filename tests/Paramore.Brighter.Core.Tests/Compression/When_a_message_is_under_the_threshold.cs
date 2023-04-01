@@ -14,8 +14,8 @@ public class SmallPayloadNotCompressedTests
     private readonly string _body;
     private readonly Message _message;
     private const ushort GZIP_LEAD_BYTES = 0x8b1f;
-    
-    
+
+
     public SmallPayloadNotCompressedTests()
     {
         _transformer = new CompressPayloadTransformer();
@@ -26,8 +26,8 @@ public class SmallPayloadNotCompressedTests
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow, contentType: MessageBody.APPLICATION_JSON),
             new MessageBody(_body, MessageBody.APPLICATION_JSON, CharacterEncoding.UTF8));      
     }
-    
-    
+
+
     [Fact]
     public async Task When_a_message_is_under_the_threshold()
     {

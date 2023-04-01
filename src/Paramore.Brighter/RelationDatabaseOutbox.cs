@@ -409,7 +409,7 @@ namespace Paramore.Brighter
             int pageSize, int pageNumber);
 
         #endregion
-        
+
         protected abstract TParameter CreateSqlParameter(string parameterName, object value);
         protected abstract TParameter[] InitAddDbParameters(Message message, int? position = null);
 
@@ -421,8 +421,8 @@ namespace Paramore.Brighter
 
         protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(TDataReader dr,
             CancellationToken cancellationToken);
-        
-        
+
+
         private (string inClause, TParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();

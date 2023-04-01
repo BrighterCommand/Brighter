@@ -32,7 +32,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports.Commands
         /// <summary>
         /// Initializes a new instance of the <see cref="Command" /> class.
         /// </summary>
-        public HeartbeatRequest(ReplyAddress sendersAddress) 
+        public HeartbeatRequest(ReplyAddress sendersAddress)
             : base(sendersAddress)
         {
         }

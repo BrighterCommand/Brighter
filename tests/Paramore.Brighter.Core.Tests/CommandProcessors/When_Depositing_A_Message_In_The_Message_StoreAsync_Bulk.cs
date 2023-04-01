@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
     [Collection("CommandProcessor")]
     public class CommandProcessorBulkDepositPostTestsAsync: IDisposable
     {
-        
+
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly MyCommand _myCommand2 = new MyCommand();
@@ -128,7 +128,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost3.Header.Topic.Should().Be(_message3.Header.Topic);
             depositedPost3.Header.MessageType.Should().Be(_message3.Header.MessageType);
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearExtServiceBus();

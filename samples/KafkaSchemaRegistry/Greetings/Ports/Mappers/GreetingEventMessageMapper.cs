@@ -46,7 +46,7 @@ namespace Greetings.Ports.Mappers
             //We care about ensuring that we serialize the body using the Confluent tooling, as it registers and validates schema
             _serializationContext = new SerializationContext(MessageComponentType.Value, Topic);
         }
- 
+
         public Message MapToMessage(GreetingEvent request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: Topic, messageType: MessageType.MT_EVENT);

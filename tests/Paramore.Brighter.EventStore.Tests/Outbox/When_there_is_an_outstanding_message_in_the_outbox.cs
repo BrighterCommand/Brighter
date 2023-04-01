@@ -78,7 +78,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
             // assert
             messages.First().Should().BeEquivalentTo(outstandingMessage);
         }
-        
+
         [Fact]
         public void When_null_args_are_supplied()
         {

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, messageMapperRegistry) 
+             _messagePump = new MessagePumpAsync<MyEvent>(commandProcessor, messageMapperRegistry)
                 { Channel = channel, TimeoutInMilliseconds = 5000 };
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent)));
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             MyEventHandlerAsyncWithContinuation.ShouldReceive(_myEvent).Should().BeTrue();
             MyEventHandlerAsyncWithContinuation.MonitorValue.Should().Be(2);
-            //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would 
+            //NOTE: We may want to run the continuation on the captured context, so as not to create a new thread, which means this test would
             //change once we fix the pump to exhibit that behavior
             MyEventHandlerAsyncWithContinuation.WorkThreadId.Should().NotBe(MyEventHandlerAsyncWithContinuation.ContinuationThreadId);
         }

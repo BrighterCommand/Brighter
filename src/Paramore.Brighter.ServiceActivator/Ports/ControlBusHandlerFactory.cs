@@ -8,7 +8,7 @@ namespace Paramore.Brighter.ServiceActivator.Ports
         private readonly Func<IAmACommandProcessor> _commandProcessorFactory;
         private readonly IDispatcher _worker;
 
-        public ControlBusHandlerFactorySync(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory) 
+        public ControlBusHandlerFactorySync(IDispatcher worker, Func<IAmACommandProcessor> commandProcessorFactory)
         {
             _worker = worker;
             _commandProcessorFactory = commandProcessorFactory;

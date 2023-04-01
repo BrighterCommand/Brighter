@@ -38,7 +38,7 @@ namespace GreetingsSender
 
             return Task.CompletedTask;
         }
-        
+
         private void DoWork(object state)
         {
             _iteration++;

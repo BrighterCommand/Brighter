@@ -24,7 +24,7 @@ public class MessageWrapRequestMissingMapperTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_But_No_Registered_Mapper()
     {

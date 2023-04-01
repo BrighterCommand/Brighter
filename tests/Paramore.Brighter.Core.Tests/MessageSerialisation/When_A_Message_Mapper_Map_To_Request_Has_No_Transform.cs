@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
         
     }
-    
+
     [Fact]
     public void When_A_Message_Mapper_Map_To_Request_Has_No_Transform()
     {

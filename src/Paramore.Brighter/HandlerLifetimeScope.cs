@@ -39,15 +39,15 @@ namespace Paramore.Brighter
         private readonly List<IHandleRequestsAsync> _trackedAsyncObjects = new List<IHandleRequestsAsync>();
         private readonly IAmAHandlerFactoryAsync _asyncHandlerFactory;
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync) 
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync)
             : this(handlerFactorySync, null)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        public HandlerLifetimeScope(IAmAHandlerFactoryAsync asyncHandlerFactory)
             : this(null, asyncHandlerFactory)
         {}
 
-        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory) 
+        public HandlerLifetimeScope(IAmAHandlerFactorySync handlerFactorySync, IAmAHandlerFactoryAsync asyncHandlerFactory)
         {
             _handlerFactorySync = handlerFactorySync;
             _asyncHandlerFactory = asyncHandlerFactory;

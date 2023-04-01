@@ -5,7 +5,7 @@ using Amazon.Runtime;
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbConfiguration
-    {   
+    {
         /// <summary>
         /// What AWS Credentials to use
         /// </summary>
@@ -32,10 +32,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Timeout in milliseconds
         /// </summary>
         public int Timeout { get; }
-    
+
         [Obsolete("Use the DynamoDbConfiguration without AWSCredentials and without RegionEndpoint")]
         public DynamoDbConfiguration(
-            AWSCredentials credentials, 
+            AWSCredentials credentials,
             RegionEndpoint region,
             string tableName = null,
             int timeout = 500)

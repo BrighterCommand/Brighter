@@ -58,8 +58,8 @@ namespace SalutationAnalytics
                 .UseConsoleLifetime();
 
         private static void ConfigureBrighter(
-            AWSCredentials awsCredentials, 
-            IAmazonDynamoDB dynamoDb, 
+            AWSCredentials awsCredentials,
+            IAmazonDynamoDB dynamoDb,
             HostBuilderContext hostContext,
             IServiceCollection services)
         {
@@ -239,7 +239,7 @@ namespace SalutationAnalytics
         {
             return new DynamoDbInbox(dynamoDb);
         }
-        
+
         private static IAmAnOutbox<Message> ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
         {
             return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1));

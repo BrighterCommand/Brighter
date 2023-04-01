@@ -42,7 +42,7 @@ public class S3LuggageUploadTests : IDisposable
         _httpClientFactory = provider.GetService<IHttpClientFactory>();
         _bucketName = $"brightertestbucket-{Guid.NewGuid()}";
     }
-    
+
     [Fact]
     public async Task When_uploading_luggage_to_S3()
     {
@@ -51,17 +51,17 @@ public class S3LuggageUploadTests : IDisposable
             client: _client,
             bucketName: _bucketName,
             storeCreation: S3LuggageStoreCreation.CreateIfMissing,
-            httpClientFactory: _httpClientFactory,       
+            httpClientFactory: _httpClientFactory,
             stsClient: _stsClient,
 #pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
             bucketRegion: S3Region.EUW1,
 #pragma warning restore CS0618
             tags: new List<Tag>(){new Tag{Key = "BrighterTests", Value = "S3LuggageUploadTests"}},
             acl: S3CannedACL.Private,
-            policy: GetSimpleHandlerRetryPolicy(), 
-            abortFailedUploadsAfterDays: 1, 
-            deleteGoodUploadsAfterDays: 1);    
-        
+            policy: GetSimpleHandlerRetryPolicy(),
+            abortFailedUploadsAfterDays: 1,
+            deleteGoodUploadsAfterDays: 1);
+
         //act
         //Upload the test stream to S3
         var testContent = "Well, always know that you shine Brighter";
@@ -76,7 +76,7 @@ public class S3LuggageUploadTests : IDisposable
         //assert
         //do we have a claim?
         (await luggageStore.HasClaimAsync(claim)).Should().BeTrue();
-        
+
         //check for the contents indicated by the claim id on S3
         var result = await luggageStore.RetrieveAsync(claim);
         var resultAsString = await new StreamReader(result).ReadToEndAsync();
@@ -85,7 +85,7 @@ public class S3LuggageUploadTests : IDisposable
         await luggageStore.DeleteAsync(claim);
 
     }
-    
+
     public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
     {
         var delay = Backoff.ConstantBackoff(TimeSpan.FromMilliseconds(50), retryCount: 3, fastFirst:true);

@@ -109,8 +109,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         {
             //NOTE: This test is **slow** because it needs to ensure infrastructure and then wait whilst we requeue a message a number of times,
             //then propagate to the DLQ
-            
-            //start a message pump, let it create infrastructure 
+
+            //start a message pump, let it create infrastructure
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(20000).Wait();
 
@@ -120,7 +120,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             //Let the message be handled and deferred until it reaches the DLQ
             Task.Delay(20000).Wait();
 
-            //send a quit message to the pump to terminate it 
+            //send a quit message to the pump to terminate it
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 

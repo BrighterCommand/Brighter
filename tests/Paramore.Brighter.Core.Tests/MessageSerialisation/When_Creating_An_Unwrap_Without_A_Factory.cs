@@ -31,28 +31,28 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, null);
     }
-    
+
     [Fact]
     public void When_Creating_An_Unwrap_Without_A_Factory()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        
+
         // If no factory we default to just them mapper
         TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
 
-        //wrap should just do message mapper                                          
+        //wrap should just do message mapper
         var request = _transformPipeline.UnwrapAsync(_message).Result;
-        
+
         //assert
         request.Value = _myCommand.Value;
     }
-    
+
     private TransformPipelineTracer TraceFilters()
     {
         var pipelineTracer = new TransformPipelineTracer();
         _transformPipeline.DescribePath(pipelineTracer);
         return pipelineTracer;
     }
-    
+
 }

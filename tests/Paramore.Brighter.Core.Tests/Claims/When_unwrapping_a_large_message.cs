@@ -31,7 +31,7 @@ public class LargeMessagePaylodUnwrapTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public async Task When_unwrapping_a_large_message()
     {

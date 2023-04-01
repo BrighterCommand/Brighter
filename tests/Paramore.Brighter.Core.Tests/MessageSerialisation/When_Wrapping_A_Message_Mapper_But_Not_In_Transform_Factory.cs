@@ -22,7 +22,7 @@ public class MessageWrapRequestMissingTransformTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper_But_Not_In_Transform_Factory()
     {

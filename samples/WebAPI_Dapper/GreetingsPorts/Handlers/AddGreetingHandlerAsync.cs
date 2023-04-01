@@ -47,20 +47,20 @@ namespace GreetingsPorts.Handlers
                 var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
                 var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
                 var person = people.Single();
-                
+
                 var greeting = new Greeting(addGreeting.Greeting, person);
-                
+
                //write the added child entity to the Db
                 await conn.InsertAsync<Greeting>(greeting, tx);
 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
-                
+
                 //commit both new greeting and outgoing message
                 await tx.CommitAsync(cancellationToken);
             }
             catch (Exception e)
-            {   
+            {
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);

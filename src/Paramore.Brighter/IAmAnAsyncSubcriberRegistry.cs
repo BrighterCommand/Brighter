@@ -26,10 +26,10 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAnAsyncSubscriberRegistry
-    /// In order to map an <see cref="IHandleRequestsAsync"/> supporting async/await 
-    /// to a <see cref="Command"/> or an <see cref="Event"/> we need you to register 
+    /// In order to map an <see cref="IHandleRequestsAsync"/> supporting async/await
+    /// to a <see cref="Command"/> or an <see cref="Event"/> we need you to register
     /// the association via the <see cref="SubscriberRegistry"/>
-    /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most 
+    /// The default implementation of <see cref="SubscriberRegistry"/> is usable in most
     /// instances and this is provided for testing
     /// </summary>
     public interface IAmAnAsyncSubcriberRegistry

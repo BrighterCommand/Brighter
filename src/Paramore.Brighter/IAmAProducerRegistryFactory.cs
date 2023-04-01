@@ -36,6 +36,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>A has of middleware clients by topic, for sending messages to the middleware</returns>
         IAmAProducerRegistry Create();
-        
+
     }
 }

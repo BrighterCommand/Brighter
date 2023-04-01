@@ -8,11 +8,11 @@ namespace Paramore.Brighter.Redis.Tests.TestDoubles
     {
         private const string PoolTimeoutError =
             "Redis Timeout expired. The timeout period elapsed prior to obtaining a subscription from the pool. This may have occurred because all pooled connections were in use.";
-        
+
         public RedisMessageConsumerTimeoutOnGetClient(
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-            string queueName, 
-            string topic) 
+            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
+            string queueName,
+            string topic)
                 : base(redisMessagingGatewayConfiguration, queueName, topic)
         {
         }

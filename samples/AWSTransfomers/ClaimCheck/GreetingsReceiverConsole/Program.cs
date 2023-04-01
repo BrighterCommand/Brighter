@@ -60,7 +60,7 @@ namespace GreetingsReceiverConsole
                             new ChannelName(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName()),
                             bufferSize: 10,
-                            timeoutInMs: 20, 
+                            timeoutInMs: 20,
                             lockTimeout: 30,
                             findTopicBy: TopicFindBy.Convention,
                             makeChannels: OnMissingChannel.Create)
@@ -78,19 +78,19 @@ namespace GreetingsReceiverConsole
                         })
                         .UseInMemoryOutbox()
                         .AutoFromAssemblies();
-                        
+
                         //We need this for the check as to whether an S3 bucket exists
                         services.AddHttpClient();
-                
+
                         //Adds a luggage store based on an S3 bucket
                         //Assume that the sender has already created, but validate it
                         services.AddS3LuggageStore((options) =>
                         {
                             options.Connection = new AWSS3Connection(credentials, RegionEndpoint.EUWest1);
                             options.BucketName = "brightersamplebucketb0561a06-70ec-11ed-a1eb-0242ac120002";
-#pragma warning disable CS0618 // Continue to use as it maps to a correct string identifier, which the replacement does not                    
+#pragma warning disable CS0618 // Continue to use as it maps to a correct string identifier, which the replacement does not
                             options.BucketRegion = S3Region.EUW1;
-#pragma warning restore CS0618 // Preserve obsolete warnings                    
+#pragma warning restore CS0618 // Preserve obsolete warnings
                              options.StoreCreation = S3LuggageStoreCreation.ValidateExists;
                         });
                     }

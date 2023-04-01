@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
             return messages.Select(x => new BrokeredMessageWrapper(x));
         }
-      
+
         public void Close()
         {
             s_logger.LogWarning("Closing the MessageReceiver connection");

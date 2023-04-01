@@ -35,7 +35,7 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
-    public class MySqlOutboxDeletingMessagesTests 
+    public class MySqlOutboxDeletingMessagesTests
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutboxSync _mySqlOutboxSync;
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             messages.Should().HaveCount(0);
         }
-        
+
         [Fact]
         public async Task When_Removing_Messages_From_The_OutboxAsync()
         {

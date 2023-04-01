@@ -25,7 +25,7 @@ namespace Paramore.Brighter.DynamoDb
                     {
                         Limit = pageSize,
                         ExclusiveStartTableName = startTableName
-                    }, 
+                    },
                     ct
                 );
                 var matches = response.TableNames.Intersect(tableNames);

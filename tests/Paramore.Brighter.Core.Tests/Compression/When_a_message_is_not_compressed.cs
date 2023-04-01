@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Core.Tests.Compression;
 
 public class UncompressedPayloadTests
 {
-    
+
     [Fact]
     public async Task When_a_message_is_not_gzip_compressed()
     {
@@ -31,7 +31,7 @@ public class UncompressedPayloadTests
         //assert
         msg.Body.Value.Should().Be(smallContent);
     }
-    
+
     [Fact]
     public async Task When_a_message_is_not_zlib_compressed()
     {
@@ -54,7 +54,7 @@ public class UncompressedPayloadTests
         //assert
         msg.Body.Value.Should().Be(smallContent);
     }
-    
+
     [Fact]
     public async Task When_a_message_is_not_brotli_compressed()
     {

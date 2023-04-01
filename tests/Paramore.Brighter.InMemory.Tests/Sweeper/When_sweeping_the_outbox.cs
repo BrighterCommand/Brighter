@@ -43,7 +43,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             commandProcessor.Deposited.Count.Should().Be(3);
 
         }
-        
+
         [Fact]
         public async Task When_outstanding_in_outbox_sweep_clears_them_async()
         {
@@ -107,7 +107,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              commandProcessor.Deposited.Count.Should().Be(4);
            
         }
-        
+
         [Fact]
         public async Task When_too_new_to_sweep_leaves_them_async()
         {
@@ -139,6 +139,6 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             commandProcessor.Dispatched.Count.Should().Be(1);
 
         }
-        
+
     }
 }

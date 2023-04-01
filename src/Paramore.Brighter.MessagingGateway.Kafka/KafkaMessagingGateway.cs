@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     {
                         found = true;
                         var matchingTopic = matchingTopics[0];
-                        
+
                         //was it really found?
                         found = matchingTopic.Error != null && matchingTopic.Error.Code != ErrorCode.UnknownTopicOrPart;
                         if (found)
@@ -127,7 +127,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                     if (found)
                         s_logger.LogInformation($"Topic {Topic.Value} exists");
-                    
+
                     return found;
                 }
                 catch (Exception e)

@@ -27,7 +27,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         }
 
         public PostgreSqlOutboxConfiguration OutboxConfiguration => new PostgreSqlOutboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
-        
+
         public PostgresSqlInboxConfiguration InboxConfiguration => new PostgresSqlInboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
 
 
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             CreateDatabase();
             CreateOutboxTable();
         }
-        
+
         public void SetupCommandDb()
         {
             CreateDatabase();

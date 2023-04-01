@@ -49,7 +49,7 @@ namespace Tests
             Assert.NotNull(commandProcessor);
         }
 
-        
+
         [Fact]
         public void WithCustomPolicy()
         {

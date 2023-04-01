@@ -15,7 +15,7 @@ public class SqlUnitOfWork : IUnitOfWork
         // ToDo: plumb this into config
         Connection = new SqlConnection("Server=127.0.0.1,11433;Database=BrighterOrderTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;MultipleActiveResultSets=True;encrypt=false");
     }
-    
+
     public async Task BeginTransactionAsync(CancellationToken cancellationToken,
         IsolationLevel isolationLevel = IsolationLevel.Serializable)
     {
@@ -36,7 +36,7 @@ public class SqlUnitOfWork : IUnitOfWork
     {
         return Transaction?.RollbackAsync(cancellationToken);
     }
-    
+
     public async Task<SqlCommand> CreateSqlCommandAsync(string sql, SqlParameter[] parameters, CancellationToken cancellationToken)
     {
         if (Connection.State != ConnectionState.Open)

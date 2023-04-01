@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.Claims;
 
-public class ClaimCheckLargePayloadTests 
+public class ClaimCheckLargePayloadTests
 {
     private readonly ClaimCheckTransformer _transformer;
     private readonly Message _message;
@@ -28,7 +28,7 @@ public class ClaimCheckLargePayloadTests
             new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_EVENT, DateTime.UtcNow),
             new MessageBody(_body));
     }
-    
+
     [Fact]
     public async Task When_a_message_wraps_a_large_payload()
     {

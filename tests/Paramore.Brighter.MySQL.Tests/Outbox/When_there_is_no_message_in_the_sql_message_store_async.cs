@@ -63,5 +63,5 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             GC.WaitForPendingFinalizers();
             _mySqlTestHelper.CleanUpDb();
         }
-    }    
+    }
 }

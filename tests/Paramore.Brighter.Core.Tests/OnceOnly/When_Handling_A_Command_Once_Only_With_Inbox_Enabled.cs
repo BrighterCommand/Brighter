@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         private readonly MyCommand _command;
         private readonly IAmAnInboxSync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
-        
+
         public OnceOnlyAttributeTests()
         {
             _inbox = new InMemoryInbox();

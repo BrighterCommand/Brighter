@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Inbox.Attributes
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="timing">The timing.</param>
         /// <param name="onceOnlyAction">Action to take if prevent duplicate messages, and we receive a duplicate message</param>
-        public UseInboxAttribute(int step, string contextKey = null, bool onceOnly=false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw) 
+        public UseInboxAttribute(int step, string contextKey = null, bool onceOnly=false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw)
             : base(step, timing)
         {
             ContextKey = contextKey;
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Inbox.Attributes
         /// <param name="onceOnly">Should we prevent duplicate messages i.e. seen already</param>
         /// <param name="timing">The timing.</param>
         /// <param name="onceOnlyAction">Action to take if prevent duplicate messages, and we receive a duplicate message</param>
-        public UseInboxAttribute(int step, Type contextKey, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw) 
+        public UseInboxAttribute(int step, Type contextKey, bool onceOnly = false, HandlerTiming timing = HandlerTiming.Before, OnceOnlyAction onceOnlyAction = OnceOnlyAction.Throw)
             : this(step, contextKey.FullName, onceOnly, timing, onceOnlyAction)
         {
         }

@@ -61,5 +61,5 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper.CleanUpDb();
         }
-    }    
+    }
 }

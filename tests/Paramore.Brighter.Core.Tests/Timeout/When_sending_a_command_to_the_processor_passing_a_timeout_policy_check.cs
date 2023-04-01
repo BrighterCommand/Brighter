@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout
         public MyPassesTimeoutHandlerTests()
         {
             var registry = new SubscriberRegistry();
-            //Handler is decorated with UsePolicy 
+            //Handler is decorated with UsePolicy
             registry.Register<MyCommand, MyPassesTimeoutHandler>();
 
             var container = new ServiceCollection();
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.Timeout
             container.AddTransient<TimeoutPolicyHandler<MyCommand>>();
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-            
+
             _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), new PolicyRegistry());
         }
 

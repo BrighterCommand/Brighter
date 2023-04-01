@@ -11,7 +11,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
     {
         private const string GoodMessage =
             "<HEADER\n{\"TimeStamp\":\"2018-02-07T09:38:36Z\",\"Id\":\"18669550-2069-48c5-923d-74a2e79c0748\",\"Topic\":\"test\",\"MessageType\":1,\"Bag\":\"{}\",\"HandledCount\":3,\"DelayedMilliseconds\":200,\"CorrelationId\":\"0AF88BBC-07FD-4FC3-9CA7-BF68415A2535\",\"ContentType\":\"text/plain\",\"ReplyTo\":\"reply.queue\"}\nHEADER/>\n<BODY\nmore test content\nBODY/>";
-        
+
         [Fact]
         public void When_parsing_a_good_redis_message_to_brighter()
         {

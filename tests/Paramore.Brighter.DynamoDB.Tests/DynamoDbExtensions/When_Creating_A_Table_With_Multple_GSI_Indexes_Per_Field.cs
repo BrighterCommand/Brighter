@@ -25,7 +25,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     new Dictionary<string, ProvisionedThroughput>
                     {
                         {
-                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10} 
+                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                         }
                     }
                 )
@@ -57,9 +57,9 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             [DynamoDBGlobalSecondaryIndexHashKey("GlobalSecondaryIndex", "AnotherGlobalSecondaryIndex")]
             public string GlobalSecondaryId { get; set; }
 
-            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex", "AnotherGlobalSecondaryIndex")] 
+            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex", "AnotherGlobalSecondaryIndex")]
             public string GlobalSecondaryRangeKey { get; set; }
-            
+
         }
     }
 }

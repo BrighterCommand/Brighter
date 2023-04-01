@@ -55,9 +55,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(),
-                topic: "test_topic", 
+                topic: "test_topic",
                 messageType:MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
+                timeStamp: DateTime.UtcNow.AddDays(-1),
                 handledCount:5,
                 delayedMilliseconds:5,
                 correlationId: Guid.NewGuid(),

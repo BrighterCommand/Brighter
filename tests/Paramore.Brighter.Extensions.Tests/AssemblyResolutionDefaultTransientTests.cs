@@ -74,14 +74,14 @@ namespace Paramore.Brighter.Extensions.Tests
         public void ShouldHaveCommandProcessor()
         {
             Assert.Equal(typeof(CommandProcessor), _provider.GetService<IAmACommandProcessor>().GetType());
-        } 
+        }
 
 
         [Fact]
         public void ShouldHaveServiceActivator()
         {
             Assert.Equal(typeof(Dispatcher), _provider.GetService<IDispatcher>().GetType());
-        } 
+        }
 
     }
 }

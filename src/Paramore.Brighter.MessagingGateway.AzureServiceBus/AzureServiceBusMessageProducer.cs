@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
         /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
-  
+
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
         /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _makeChannel = makeChannel;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>

@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
 [Trait("Category", "DynamoDB")]
-public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest 
+public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 {
     private readonly Message _message;
     private readonly DynamoDbOutbox _dynamoDbOutbox;
@@ -40,7 +40,7 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
 
                      
     }
-    
+
     [Fact]
     public void When_there_are_outstanding_messages_in_the_outbox()
     {

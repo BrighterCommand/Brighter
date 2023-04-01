@@ -5,7 +5,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class NoDispatchTimeExpression
     {
-        
+
         private Expression _expression;
 
         public NoDispatchTimeExpression()

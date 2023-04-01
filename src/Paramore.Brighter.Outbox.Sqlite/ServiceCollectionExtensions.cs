@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
              
             return brighterBuilder;
         }
-        
+
         /// <summary>
         /// Use this transaction provider to ensure that the Outbox and the Entity Store are correct
         /// </summary>

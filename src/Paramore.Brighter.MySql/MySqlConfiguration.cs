@@ -52,13 +52,13 @@ namespace Paramore.Brighter.MySql
         /// </summary>
         /// <value>The name of the outbox table.</value>
         public string OutBoxTableName { get; private set; }
-        
+
         /// <summary>
         /// Gets the name of the inbox table.
         /// </summary>
         /// <value>The name of the inbox table.</value>
         public string InBoxTableName { get; private set; }
-        
+
         /// <summary>
         /// Gets the name of the queue table.
         /// </summary>

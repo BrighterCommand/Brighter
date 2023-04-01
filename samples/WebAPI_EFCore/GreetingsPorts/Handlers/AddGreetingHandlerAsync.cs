@@ -17,7 +17,7 @@ namespace GreetingsPorts.Handlers
     {
         private readonly GreetingsEntityGateway _uow;
         private readonly IAmACommandProcessor _postBox;
-                
+
         public AddGreetingHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
         {
             _uow = uow;
@@ -37,14 +37,14 @@ namespace GreetingsPorts.Handlers
                 var person = await _uow.People
                     .Where(p => p.Name == addGreeting.Name)
                     .SingleAsync(cancellationToken);
-                
+
                 var greeting = new Greeting(addGreeting.Greeting);
-                
+
                 person.AddGreeting(greeting);
-                
+
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
-                
+
                 //write the changed entity to the Db
                 await _uow.SaveChangesAsync(cancellationToken);
 

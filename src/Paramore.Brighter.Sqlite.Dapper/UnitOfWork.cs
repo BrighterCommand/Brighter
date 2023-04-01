@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
                 _transaction = null;
             }
         }
-        
+
         public DbConnection Database
         {
             get { return _connection; }
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
 
             return _transaction;
         }
-        
+
         /// <summary>
         /// Begins a transaction, if one not already started. Closes connection if required
         /// </summary>

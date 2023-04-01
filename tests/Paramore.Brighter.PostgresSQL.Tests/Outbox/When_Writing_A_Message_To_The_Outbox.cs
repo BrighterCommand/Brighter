@@ -55,11 +55,11 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 
             _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(), 
-                topic: "test_topic", 
-                messageType: MessageType.MT_DOCUMENT, 
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
+                messageId:Guid.NewGuid(),
+                topic: "test_topic",
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount:5,
                 delayedMilliseconds:5,
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyTo",

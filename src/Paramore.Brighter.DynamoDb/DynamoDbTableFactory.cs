@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     {
                         globalSecondaryIndex.Projection = new Projection {ProjectionType = ProjectionType.ALL};
                     }
-                }  
+                }
             }
             else
             {
@@ -146,7 +146,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             gsi.KeySchema.Add(gsiHashKey);
             gsiMap.Add(gsi.IndexName, gsi);
         }
-         
+
         private void AddTableProvisionedThrougput<T>(DynamoDbCreateProvisionedThroughput provisonedThroughput,
             CreateTableRequest createTableRequest)
         {
@@ -180,7 +180,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 string attributeName = !hasName
                     ? item.prop.Name
                     : (string)item.attribute.ConstructorArguments.FirstOrDefault().Value;
-                
+
                 var hasNameAndConverter = argumentCount == 2 && !hasStorage;
 
                 attributeDefinitions.Add(new AttributeDefinition(attributeName, GetDynamoDbType(item.prop.PropertyType, hasConverterOnly || hasNameAndConverter)));
@@ -219,7 +219,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     {
                          indexNames = ((ReadOnlyCollection<CustomAttributeTypedArgument>)value).Select(arg => (string)arg.Value);
                     }
-                    
+
                     foreach (var indexName in indexNames)
                     {
                         AddGSIToMap(indexName, gsiHashKeyResult, gsiMap);
@@ -234,7 +234,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             foreach (var gsiRangeKeyResult in gsiRangeKeyResults)
             {
-                if (gsiRangeKeyResult.Attribute.ConstructorArguments.Count == 0) 
+                if (gsiRangeKeyResult.Attribute.ConstructorArguments.Count == 0)
                 {
                     var indexName = gsiRangeKeyResult.Prop.Name;
                     UpdateGSIMapWithRangeKey(gsiMap, indexName, gsiRangeKeyResult);
@@ -252,10 +252,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     {
                          indexNames = ((ReadOnlyCollection<CustomAttributeTypedArgument>)value).Select(arg => (string)arg.Value);
                     }
-                    
+
                     foreach (var indexName in indexNames)
                     {
-                        UpdateGSIMapWithRangeKey(gsiMap, indexName, gsiRangeKeyResult);        
+                        UpdateGSIMapWithRangeKey(gsiMap, indexName, gsiRangeKeyResult);
                     }
                 }
             }
@@ -287,7 +287,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return lsiList;
         }
-        
+
         private IEnumerable<KeySchemaElement> GetPrimaryKey<T>(Type docType)
         {
             //hash key

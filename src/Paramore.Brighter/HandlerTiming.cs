@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// </summary>
         Before = 0,
         /// <summary>
-        /// Execute this 'orthogonal' handler after the 'target' handler 
+        /// Execute this 'orthogonal' handler after the 'target' handler
         /// </summary>
         After = 1
     }

@@ -79,8 +79,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public IList<Message> Get(
-            int pageSize = 100, 
-            int pageNumber = 1, 
+            int pageSize = 100,
+            int pageNumber = 1,
             Dictionary<string, object> args = null)
         {
             return _posts.Select(outboxEntry => outboxEntry.Message).Take(pageSize).ToList();
@@ -158,8 +158,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
        public IEnumerable<Message> OutstandingMessages(
-           double millSecondsSinceSent, 
-           int pageSize = 100, 
+           double millSecondsSinceSent,
+           int pageSize = 100,
            int pageNumber = 1,
            Dictionary<string, object> args = null)
         {

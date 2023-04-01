@@ -77,7 +77,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                             delayedMilliseconds.Result)
                         : new MessageHeader(messageId.Result, topic.Result, messageType.Result);
 
-                    //this effectively transfers ownership of our buffer 
+                    //this effectively transfers ownership of our buffer
                     message = new Message(messageHeader, new MessageBody(fromQueue.Body, fromQueue.BasicProperties.Type));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header.Value)));

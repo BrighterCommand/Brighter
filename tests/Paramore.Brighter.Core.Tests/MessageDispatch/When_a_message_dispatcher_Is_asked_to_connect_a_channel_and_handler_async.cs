@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-     
+
     [Collection("CommandProcessor")]
     public class MessageDispatcherRoutingAsyncTests  : IDisposable
     {
@@ -28,10 +28,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var connection = new Subscription<MyEvent>(
                 new SubscriptionName("test"),
-                noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
+                noOfPerformers: 1,
+                timeoutInMilliseconds: 1000,
                 channelFactory: new InMemoryChannelFactory(_channel),
-                channelName: new ChannelName("fakeChannel"), 
+                channelName: new ChannelName("fakeChannel"),
                 routingKey: new RoutingKey("fakekey"),
                 runAsync: true);
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
-        
+
         [Fact(Timeout = 10000)]
         public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()
         {
@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //should have published async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.PublishAsync);
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

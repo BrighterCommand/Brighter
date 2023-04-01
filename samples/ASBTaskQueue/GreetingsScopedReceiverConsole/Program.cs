@@ -18,7 +18,7 @@ namespace GreetingsScopedReceiverConsole
 {
     class Program
     {
-        // If you run this receiver with the other receiver, and send you'll see different behaviours. 
+        // If you run this receiver with the other receiver, and send you'll see different behaviours.
         // This scoped receiver will refresh the scoped dependency for each pipeline (Event/Command dispatch)
         public static async Task Main(string[] args)
         {

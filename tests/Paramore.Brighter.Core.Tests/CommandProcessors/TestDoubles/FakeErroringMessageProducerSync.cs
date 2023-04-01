@@ -17,11 +17,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             SentCalledCount++;
             throw new Exception();
         }
-        
+
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             Send(message);
         }
-  
+
     }
 }

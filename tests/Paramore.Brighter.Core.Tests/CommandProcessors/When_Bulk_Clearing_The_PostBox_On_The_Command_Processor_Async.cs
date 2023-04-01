@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() { { topic, _fakeMessageProducerWithPublishConfirmation }, { topic2, _fakeMessageProducerWithPublishConfirmation } }));
         }
 
-        
+
         [Fact]
         public async Task When_Clearing_The_PostBox_On_The_Command_Processor_Async()
         {

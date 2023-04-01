@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 correlationId = ReadCorrelationId(consumeResult.Message.Headers);
                 partitionKey = ReadPartitionKey(consumeResult.Message.Headers);
                 replyTo = ReadReplyTo(consumeResult.Message.Headers);
-                contentType = ReadContentType(consumeResult.Message.Headers); 
+                contentType = ReadContentType(consumeResult.Message.Headers);
 
                 if (false == (topic.Success && messageId.Success && messageType.Success && timeStamp.Success))
                 {
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                     if (partitionKey.Success)
                         messageHeader.PartitionKey = partitionKey.Result;
-                    
+
                     if (contentType.Success)
                         messageHeader.ContentType =contentType.Result;
 
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     message = new Message(messageHeader, new MessageBody(consumeResult.Message.Value, messageHeader.ContentType));
 
                     headers.Each(header => message.Header.Bag.Add(header.Key, ParseHeaderValue(header)));
-                    
+
                     if (!message.Header.Bag.ContainsKey(HeaderNames.PARTITION_OFFSET))
                         message.Header.Bag.Add(HeaderNames.PARTITION_OFFSET, consumeResult.TopicPartitionOffset);
                 }
@@ -85,8 +85,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             var message = new Message(header, new MessageBody(string.Empty));
             return message;
         }
-        
-        
+
+
         private HeaderResult<string> ReadContentType(Headers headers)
         {
            return ReadHeader(headers, HeaderNames.CONTENT_TYPE,false);

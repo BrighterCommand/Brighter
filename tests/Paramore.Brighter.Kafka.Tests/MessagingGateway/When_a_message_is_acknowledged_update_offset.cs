@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Producer Send Test", 
+                    Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {"localhost:9092"}
                 },
                 new KafkaPublication[] {new KafkaPublication()
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 1,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
@@ -136,7 +136,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             return new KafkaMessageConsumerFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Consumer Test", 
+                    Name = "Kafka Consumer Test",
                     BootStrapServers = new[] {"localhost:9092"}
                 })
                 .Create(new KafkaSubscription<MyCommand>

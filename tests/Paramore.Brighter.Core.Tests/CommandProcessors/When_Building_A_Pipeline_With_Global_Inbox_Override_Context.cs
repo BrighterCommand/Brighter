@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _requestContext = new RequestContext();
             
             _inboxConfiguration = new InboxConfiguration(
-                scope: InboxScope.All, 
+                scope: InboxScope.All,
                 context: (handlerType) => CONTEXT_KEY);
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, _inboxConfiguration);

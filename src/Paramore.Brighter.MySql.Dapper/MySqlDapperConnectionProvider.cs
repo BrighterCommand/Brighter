@@ -5,7 +5,7 @@ using Paramore.Brighter.Dapper;
 
 namespace Paramore.Brighter.MySql.Dapper
 {
-    public class MySqlDapperConnectionProvider : IMySqlTransactionConnectionProvider 
+    public class MySqlDapperConnectionProvider : IMySqlTransactionConnectionProvider
     {
         private readonly IUnitOfWork _unitOfWork;
 
@@ -13,7 +13,7 @@ namespace Paramore.Brighter.MySql.Dapper
         {
             _unitOfWork = unitOfWork;
         }
-        
+
         public MySqlConnection GetConnection()
         {
             return (MySqlConnection)_unitOfWork.Database;

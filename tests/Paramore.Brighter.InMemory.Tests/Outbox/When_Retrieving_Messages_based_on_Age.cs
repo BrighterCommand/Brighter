@@ -38,7 +38,7 @@ public class When_Retrieving_Messages_based_on_Age
         Assert.Equal(4, allMessages.Count());
         Assert.Empty(messagesAfterDispatch);
     }
-    
+
     [Fact]
     public async Task When_outstanding_in_outbox_they_are_retrieved_correctly_async()
     {

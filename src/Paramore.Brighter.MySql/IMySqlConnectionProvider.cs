@@ -38,25 +38,25 @@ namespace Paramore.Brighter.MySql
         /// </summary>
         /// <returns>A Sqlite connection</returns>
         MySqlConnection GetConnection();
-        
+
         /// <summary>
         /// Gets the connections we should use for the database
         /// </summary>
         /// <param name="cancellationToken">Cancels the operation</param>
         /// <returns>A Sqlite connection</returns>
         Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
-       
+
         /// <summary>
-        /// Is there an ambient transaction? If so return it 
+        /// Is there an ambient transaction? If so return it
         /// </summary>
         /// <returns>A Sqlite Transaction</returns>
         MySqlTransaction GetTransaction();
-        
+
         /// <summary>
         /// Is there an open transaction
         /// </summary>
         bool HasOpenTransaction { get; }
-        
+
         /// <summary>
         /// Is this connection created externally? In which case don't close it as you don't own it.
         /// </summary>

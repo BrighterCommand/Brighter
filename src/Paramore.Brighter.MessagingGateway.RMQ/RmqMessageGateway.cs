@@ -138,7 +138,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
         private void HandleBlocked(object sender, ConnectionBlockedEventArgs args)
         {
-            s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}", 
+            s_logger.LogWarning("RMQMessagingGateway: Subscription to {URL} blocked. Reason: {ErrorMessage}",
                 Connection.AmpqUri.GetSanitizedUri(), args.Reason);
         }
 

@@ -35,7 +35,7 @@ using Paramore.Brighter.FeatureSwitch.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 {
-    [Collection("CommandProcessor")] 
+    [Collection("CommandProcessor")]
     public class FeatureSwitchByConfigMissingConfigStrategyExceptionTests : IDisposable
     {
         private readonly MyCommand _myCommand = new();
@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
                 .NoExternalBus()
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
-        }        
+        }
 
         [Fact]
         public void When_Sending_A_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_Exception()
@@ -85,7 +85,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             _exception.Message.Should().Contain($"Handler of type {nameof(MyFeatureSwitchedConfigHandler)} does not have a Feature Switch configuration!");
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeFalse(); 
-        }        
+        }
 
         [Fact]
         public void When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Has_No_Config_And_Strategy_Is_Exception()

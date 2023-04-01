@@ -45,14 +45,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="globalConfiguration">Configures how we connect to the broker</param>
         /// <param name="publication">How do we publish, both producer parameters and topic configuration</param>
         public KafkaProducerRegistryFactory(
-            KafkaMessagingGatewayConfiguration globalConfiguration, 
+            KafkaMessagingGatewayConfiguration globalConfiguration,
             IEnumerable<KafkaPublication> publications)
         {
             _globalConfiguration = globalConfiguration;
             _publications = publications;
             _configHook = null;
         }
-        
+
         /// <summary>
         /// Create a message producer from tne <see cref="KafkaMessagingGatewayConfiguration"/> and <see cref="KafkaPublication"/> supplied
         /// to the constructor

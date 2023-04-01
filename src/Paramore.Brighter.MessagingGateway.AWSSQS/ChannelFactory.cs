@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         ///  Creates the input channel.
         ///  With SQS we can ensure that queues exist ahead of creating the consumer, as there is no non-durable queue model
         ///  to create ephemeral queues, nor are there non-mirrored queues (on a single node in the cluster) where nodes
-        ///  failing mean we want to create anew as we recreate. So the input factory creates the queue 
+        ///  failing mean we want to create anew as we recreate. So the input factory creates the queue
         ///  </summary>
         /// <param name="subscription">An SqsSubscription, the subscription parameter so create the channel with</param>
         /// <returns>IAmAnInputChannel.</returns>
@@ -114,9 +114,9 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                         {
                             CreateDLQ(sqsClient);
                         }
-                        
+
                         CreateQueue(sqsClient);
-     
+
                     }
                     else if (_subscription.MakeChannels == OnMissingChannel.Validate)
                     {
@@ -148,7 +148,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     var policy = new {maxReceiveCount = _subscription.RedrivePolicy.MaxReceiveCount, deadLetterTargetArn = _dlqARN};
                     attributes.Add("RedrivePolicy", JsonSerializer.Serialize(policy, JsonSerialisationOptions.Options));
                 }
-                
+
                 attributes.Add("DelaySeconds", _subscription.DelaySeconds.ToString());
                 attributes.Add("MessageRetentionPeriod", _subscription.MessageRetentionPeriod.ToString());
                 if (_subscription.IAMPolicy != null )attributes.Add("Policy", _subscription.IAMPolicy);
@@ -189,7 +189,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             catch (QueueDeletedRecentlyException ex)
             {
                 //QueueDeletedRecentlyException - wait 30 seconds then retry
-                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
+                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle
                 //and assume we are halfway through
                 var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
                 s_logger.LogError(ex, "Could not create queue {ChannelName} because {ErrorMessage} waiting 60s to retry", _subscription.ChannelName.Value, ex.Message);
@@ -226,10 +226,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (!string.IsNullOrEmpty(queueUrl))
                 {
-                    //We need the ARN of the dead letter queue to configure the queue redrive policy, not the name 
+                    //We need the ARN of the dead letter queue to configure the queue redrive policy, not the name
                     var attributesRequest = new GetQueueAttributesRequest
                     {
-                        QueueUrl = queueUrl, 
+                        QueueUrl = queueUrl,
                         AttributeNames = new List<string> {"QueueArn"}
                     };
                     var attributesResponse = sqsClient.GetQueueAttributesAsync(attributesRequest).GetAwaiter().GetResult();
@@ -239,13 +239,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                     _dlqARN = attributesResponse.QueueARN;
                 }
-                else 
-                    throw new InvalidOperationException($"Could not find create DLQ, status: {createDeadLetterQueueResponse.HttpStatusCode}"); 
+                else
+                    throw new InvalidOperationException($"Could not find create DLQ, status: {createDeadLetterQueueResponse.HttpStatusCode}");
             }
             catch (QueueDeletedRecentlyException ex)
             {
                 //QueueDeletedRecentlyException - wait 30 seconds then retry
-                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle 
+                //Although timeout is 60s, we could be partway through that, so apply Copernican Principle
                 //and assume we are halfway through
                 var error = $"Could not create queue {_subscription.ChannelName.Value} because {ex.Message} waiting 60s to retry";
                 s_logger.LogError(ex,

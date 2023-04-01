@@ -46,7 +46,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// This is why you should spin up a thread for your message pump: to avoid blocking your main control path while you listen for a message and process it
     /// It is also why throughput on a queue needs multiple performers, each with their own message pump
     /// Retry and circuit breaker should be provided by exception policy using an attribute on the handler
-    /// Timeout on the handler should be provided by timeout policy using an attribute on the handler 
+    /// Timeout on the handler should be provided by timeout policy using an attribute on the handler
     /// </summary>
     public abstract class MessagePump<TRequest> : IAmAMessagePump where TRequest : class, IRequest
     {
@@ -60,14 +60,14 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
         /// <summary>
-        /// Constructs a message pump 
+        /// Constructs a message pump
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
         /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
         public MessagePump(
             IAmACommandProcessorProvider commandProcessorProvider,
-            IAmAMessageMapperRegistry messageMapperRegistry, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
             IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             CommandProcessorProvider = commandProcessorProvider;
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.ServiceActivator
         public int UnacceptableMessageLimit { get; set; }
 
         public IAmAChannel Channel { get; set; }
-        
+
         public int EmptyChannelDelay { get; set; }
         public int ChannelFailureDelay { get; set; }
 
@@ -145,7 +145,7 @@ namespace Paramore.Brighter.ServiceActivator
 
                     continue;
                 }
- 
+
                 // QUIT command
                 if (message.Header.MessageType == MessageType.MT_QUIT)
                 {
@@ -170,7 +170,7 @@ namespace Paramore.Brighter.ServiceActivator
                         span = _activitySource.StartActivity($"Process {typeof(TRequest)}", ActivityKind.Consumer);
                     }
                     request.Span = span;
-                    
+
                     CommandProcessorProvider.CreateScope();
                     DispatchRequest(message.Header, request);
 
@@ -217,7 +217,7 @@ namespace Paramore.Brighter.ServiceActivator
                         message.Id, Channel.Name, Thread.CurrentThread.ManagedThreadId);
 
                     IncrementUnacceptableMessageLimit();
-                    
+
                     span?.SetStatus(ActivityStatusCode.Error,
                         $"MessagePump: Failed to map message '{message.Id}' from {Channel.Name} on thread # {Thread.CurrentThread.ManagedThreadId}");
                 }
@@ -380,7 +380,7 @@ namespace Paramore.Brighter.ServiceActivator
                     Channel.Name,
                     Thread.CurrentThread.ManagedThreadId
                 );
-                
+
                 return true;
             }
             return false;

@@ -39,8 +39,8 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 {
     /// <summary>
     /// Class RmqMessageConsumer.
-    /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of 
-    /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching, 
+    /// The <see cref="RmqMessageConsumer"/> is used on the server to receive messages from the broker. It abstracts away the details of
+    /// inter-process communication tasks from the server. It handles subscription establishment, request reception and dispatching,
     /// result sending, and error handling.
     /// </summary>
     public class RmqMessageConsumer : RmqMessageGateway, IAmAMessageConsumer
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             int? ttl = null,
             int? maxQueueLength = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create)
-            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability, 
+            : this(connection, queueName, new string[] {routingKey}, isDurable, highAvailability,
                 batchSize, deadLetterQueueName, deadLetterRoutingKey, ttl, maxQueueLength, makeChannels)
         {
         }
@@ -192,7 +192,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             {
                 s_logger.LogDebug("RmqMessageConsumer: Re-queueing message {Id} with a delay of {Delay} milliseconds", message.Id, delayMilliseconds);
                 EnsureBroker(_queueName);
-                
+
                 var rmqMessagePublisher = new RmqMessagePublisher(Channel, Connection);
                 if (DelaySupported)
                 {
@@ -357,7 +357,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 throw;
             }
         }
-     
+
         protected virtual void EnsureChannel()
         {
             if (Channel == null || Channel.IsClosed)
@@ -390,7 +390,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 );
             }
         }
-        
+
         private void CancelConsumer()
         {
             if (_consumer != null)
@@ -426,7 +426,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             Channel.QueueDeclare(_queueName, _isDurable, false, false, SetQueueArguments());
             if (_hasDlq) Channel.QueueDeclare(_deadLetterQueueName, _isDurable, false,false);
         }
-        
+
         private void BindQueue()
         {
             foreach (var key in _routingKeys)
@@ -486,7 +486,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
 
             return arguments;
         }
-        
+
         private string GetDeadletterExchangeName()
         {
             return Connection.DeadLetterExchange == null ? Connection.Exchange.Name : Connection.DeadLetterExchange.Name;

@@ -6,11 +6,11 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.MessageSerialisation
 {
-    public class BagHelper 
+    public class BagHelper
     {
         //We use a Dictionary<string, object> for a header. System.Json.Text will serialize this as expected
         //but when deserializing it will return a a Dictionary<string, object> where the object is a JsonElement
-        //not a primitive/reference type. 
+        //not a primitive/reference type.
         //The goal here is to convert back
         [Fact]
          public void When_deserializing_a_message_header_bag()
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation
                  {
                      var expectedVals = (int[])expectedBag[key];
                      var providedVals = (List<Object>)deserializedHeader.Bag[key];
-                     
+
                      for (int i = 0; i < 4; i++)
                      {
                          expectedVals[i].Should().Be((int)providedVals[i]);

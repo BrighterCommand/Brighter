@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MySql.Dapper
                 _transaction = null;
             }
         }
-        
+
         public DbConnection Database
         {
             get { return _connection; }

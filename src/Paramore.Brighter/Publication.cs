@@ -37,8 +37,8 @@ namespace Paramore.Brighter
         /// What do we do with infrastructure dependencies for the producer?
         /// </summary>
         public OnMissingChannel MakeChannels { get; set; }
-        
-        
+
+
         /// <summary>
         /// How many outstanding messages may the outbox have before we terminate the programme with an OutboxLimitReached exception?
         /// -1 => No limit, although the Outbox may discard older entries which is implementation dependent
@@ -53,18 +53,18 @@ namespace Paramore.Brighter
         /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
         /// </summary>
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
-        
+
         /// <summary>
         /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
         /// This bag provides the args required
         /// </summary>
         public Dictionary<string, object> OutBoxBag { get; set; }
-        
+
          /// <summary>
         /// The topic this publication is for
         /// </summary>
         public RoutingKey Topic { get; set; }
-         
-         
+
+
     }
 }

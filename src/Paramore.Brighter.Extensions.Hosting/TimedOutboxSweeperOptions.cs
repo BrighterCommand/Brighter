@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Extensions.Hosting
     public class TimedOutboxSweeperOptions
     {
         /// <summary>
-        /// The timer interval in Seconds. 
+        /// The timer interval in Seconds.
         /// </summary>
         public int TimerInterval { get; set; } = 5;
         /// <summary>

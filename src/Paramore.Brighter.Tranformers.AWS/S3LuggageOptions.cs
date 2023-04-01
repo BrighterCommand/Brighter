@@ -53,9 +53,9 @@ namespace Paramore.Brighter.Tranformers.AWS
             TimeToAbortFailedUploads = 1;
             TimeToDeleteGoodUploads = 7;
         }
-        
+
         /// <summary>
-        /// How should we control access to the bucket used by the Luggage Store 
+        /// How should we control access to the bucket used by the Luggage Store
         /// </summary>
         public S3CannedACL ACLs { get; set; }
 
@@ -75,24 +75,24 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// The name of the bucket, which will need to be unique within the AWS region
         /// </summary>
         public string BucketName { get; set; }
-        
+
         /// <summary>
         /// The AWS region to create the bucket in
         /// </summary>
         public S3Region BucketRegion { get; set; }
-        
+
         /// <summary>
         /// Get the AWS client created from the credentials passed into <see cref="Connection"/>
         /// </summary>
         public IAmazonS3 Client { get; private set; }
-        
+
         /// <summary>
         /// An HTTP client factory. We use this to grab an HTTP client, so that we can check if the bucket exists.
         /// Not required if you choose a <see cref="StoreCreation"/> of Assume Exists.
         /// We obtain this from the ServiceProvider when constructing the luggage store. so you do not need to set it
         /// </summary>
         public IHttpClientFactory HttpClientFactory { get; private set; }
-        
+
         /// <summary>
         /// What Store Creation Option do you want:
         /// 1: Create
@@ -100,22 +100,22 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// 3: Assume it exists
         /// </summary>
         public S3LuggageStoreCreation StoreCreation { get; set; }
-        
+
         /// <summary>
         /// The Security Token Service created from the credentials. Used to obtain the account id of the user with those credentials
         /// </summary>
         public IAmazonSecurityTokenService StsClient { get; private set; }
-        
+
         /// <summary>
         /// Tags for the bucket. Defaults to a Creator tag of "Brighter Luggage Store"
         /// </summary>
         public List<Tag> Tags { get; set; }
-        
+
         /// <summary>
         /// How long to keep aborted uploads before deleting them in days
         /// </summary>
         public int TimeToAbortFailedUploads { get; set; }
-        
+
         /// <summary>
         /// How long to keep good uploads in days, before deleting them
         /// </summary>

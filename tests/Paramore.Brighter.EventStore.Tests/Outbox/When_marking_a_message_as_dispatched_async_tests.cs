@@ -62,7 +62,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 
             messages.Should().ContainSingle().Which.Header.Bag[Globals.DispatchedAtKey].Should().Be(dispatchedAt);
         }
-        
+
         [Fact]
         public void When_null_args_are_supplied()
         {

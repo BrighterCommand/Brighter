@@ -50,14 +50,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SaslUsername = _userName,
                     SaslPassword = _password,
                     SslCaLocation = SupplyCertificateLocation()
-                    
+
                 },
                 new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 3,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
@@ -77,11 +77,11 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 var msgId2 = SendMessage();
                 var msgId3 = SendMessage();
                 var msgId4 = SendMessage();
-                  
+
                 consumer = CreateConsumer();
-                
+
                 //Now read those messages in order
-                
+
                 var firstMessage = ConsumeMessages(consumer);
                 var message = firstMessage.First();
                 message.Id.Should().Be(msgId);
@@ -90,18 +90,18 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 var secondMessage = ConsumeMessages(consumer);
                 message = secondMessage.First();
                 message.Id.Should().Be(msgId2);
-                consumer.Acknowledge(message);               
-                
+                consumer.Acknowledge(message);
+
                 var thirdMessages = ConsumeMessages(consumer);
                 message = thirdMessages .First();
                 message.Id.Should().Be(msgId3);
-                consumer.Acknowledge(message);               
-                
+                consumer.Acknowledge(message);
+
                 var fourthMessage = ConsumeMessages(consumer);
                 message = fourthMessage .First();
                 message.Id.Should().Be(msgId4);
-                consumer.Acknowledge(message);               
- 
+                consumer.Acknowledge(message);
+
             }
             finally
             {
@@ -160,10 +160,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                         SaslUsername = _userName,
                         SaslPassword = _password,
                         SslCaLocation = SupplyCertificateLocation()
-                    
+
                     })
                 .Create(new KafkaSubscription<MyCommand>(
-                    channelName: new ChannelName(_queueName), 
+                    channelName: new ChannelName(_queueName),
                     routingKey: new RoutingKey(_topic),
                     groupId: _groupId,
                     offsetDefault: AutoOffsetReset.Earliest,
@@ -178,7 +178,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         {
             _producerRegistry?.Dispose();
         }
-        
+
         private string SupplyCertificateLocation()
         {
             //For different platforms, we have to figure out how to get the connection right

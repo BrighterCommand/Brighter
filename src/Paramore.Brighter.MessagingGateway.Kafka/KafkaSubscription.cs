@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// a crashing worker process failing to commit a batch that is then represented rises.
         /// </summary>
         public long CommitBatchSize { get; set; } = 10;
-        
+
         /// <summary>
         /// Only one consumer in a group can read from a partition at any one time; this preserves ordering
         /// We do not default this value, and expect you to set it
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Default to read only committed messages, change if you want to read uncommited messages. May cause duplicates.
         /// </summary>
         public IsolationLevel IsolationLevel { get; set; } = IsolationLevel.ReadCommitted;
-        
+
         /// <summary>
         /// How often the consumer needs to poll for new messages to be considered alive, polling greater than this interval triggers a rebalance
         /// Uses Kafka default of 300000
@@ -73,12 +73,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// How long before we time out when we are reading the committed offsets back (mainly used for debugging)
         /// </summary>
         public int ReadCommittedOffsetsTimeOutMs { get; set; } = 5000;
-        
+
         /// <summary>
         /// What is the replication factor? How many nodes is the topic copied to on the broker?
         /// </summary>
         public short ReplicationFactor { get; set; } = 1;
-        
+
         /// <summary>
         /// If Kafka does not receive a heartbeat from the consumer within this time window, trigger a re-balance
         /// Default is Kafka default of 10s
@@ -89,7 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// 
         /// </summary>
         public int SweepUncommittedOffsetsIntervalMs { get; set; } = 30000;
-        
+
         /// <summary>
         /// How long to wait when asking for topic metadata
         /// </summary>
@@ -122,31 +122,31 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public KafkaSubscription (
-            Type dataType, 
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
+            Type dataType,
+            SubscriptionName name = null,
+            ChannelName channelName = null,
             RoutingKey routingKey = null,
             string groupId = null,
-            int bufferSize = 1, 
-            int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, 
-            int requeueCount = -1, 
-            int requeueDelayInMilliseconds = 0, 
-            int unacceptableMessageLimit = 0, 
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             long commitBatchSize = 10,
             int sessionTimeoutMs = 10000,
-            int maxPollIntervalMs = 300000, 
+            int maxPollIntervalMs = 300000,
             int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool isAsync = false, 
+            bool isAsync = false,
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
-            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
+            int channelFailureDelay = 1000)
+            : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount,
                 requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
             CommitBatchSize = commitBatchSize;
@@ -190,32 +190,32 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
         public KafkaSubscription(
-            SubscriptionName name = null, 
-            ChannelName channelName = null, 
-            RoutingKey routingKey = null, 
+            SubscriptionName name = null,
+            ChannelName channelName = null,
+            RoutingKey routingKey = null,
             string groupId = null,
-            int bufferSize = 1, 
-            int noOfPerformers = 1, 
-            int timeoutInMilliseconds = 300, 
-            int requeueCount = -1, 
-            int requeueDelayInMilliseconds = 0, 
-            int unacceptableMessageLimit = 0, 
+            int bufferSize = 1,
+            int noOfPerformers = 1,
+            int timeoutInMilliseconds = 300,
+            int requeueCount = -1,
+            int requeueDelayInMilliseconds = 0,
+            int unacceptableMessageLimit = 0,
             AutoOffsetReset offsetDefault = AutoOffsetReset.Earliest,
             long commitBatchSize = 10,
             int sessionTimeoutMs = 10000,
             int maxPollIntervalMs = 300000,
             int sweepUncommittedOffsetsIntervalMs = 30000,
             IsolationLevel isolationLevel = IsolationLevel.ReadCommitted,
-            bool isAsync = false, 
+            bool isAsync = false,
             int numOfPartitions = 1,
             short replicationFactor = 1,
-            IAmAChannelFactory channelFactory = null, 
+            IAmAChannelFactory channelFactory = null,
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
-            : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
-                requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
-                sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, 
+            int channelFailureDelay = 1000)
+            : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds,
+                requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize,
+                sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync,
                 numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
         }

@@ -129,7 +129,7 @@ namespace Paramore.Brighter
                     "New unwrap pipeline created for: {message} of {pipeline}", typeof(TRequest).Name,
                     TraceUnwrapPipeline(pipeline)
                 );
-                
+
                 var wraps = FindWrapTransforms(messageMapper);
                 if (wraps.Any())
                 {

@@ -22,9 +22,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="message">Message to be scheduled.</param>
         /// <param name="scheduleEnqueueTime">The time to scheduled the message.</param>
         void ScheduleMessage(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime);
-        
+
         /// <summary>
-        /// Close the Connection. 
+        /// Close the Connection.
         /// </summary>
         void Close();
 
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <returns></returns>
         Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
             CancellationToken cancellationToken = default(CancellationToken));
-        
+
         /// <summary>
         /// Close the Connection.
         /// </summary>

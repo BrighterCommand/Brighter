@@ -76,7 +76,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// The policy that controls when we send messages to a DLQ after too many requeue attempts
         /// </summary>
         public RedrivePolicy RedrivePolicy { get; }
-        
+
         /// <summary>
         /// The attributes of the topic. If TopicARN is set we will always assume that we do not
         /// need to create or validate the SNS Topic
@@ -222,7 +222,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             int channelFailureDelay = 1000
         )
             : base(typeof(T), name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMs, pollDelayInMs,
-                noWorkPauseInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, runAsync, channelFactory, 
+                noWorkPauseInMs, requeueCount, requeueDelayInMs, unacceptableMessageLimit, runAsync, channelFactory,
                 lockTimeout, delaySeconds, messageRetentionPeriod,findTopicBy, iAmPolicy,redrivePolicy,
                 snsAttributes, tags, makeChannels, rawMessageDelivery, emptyChannelDelay, channelFailureDelay)
         {

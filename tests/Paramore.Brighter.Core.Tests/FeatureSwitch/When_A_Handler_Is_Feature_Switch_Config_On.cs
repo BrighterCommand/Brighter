@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
             ServiceProviderHandlerFactory handlerFactory = new(_provider);
             
             IAmAFeatureSwitchRegistry fluentConfig = FluentConfigRegistryBuilder
-                .With()                
+                .With()
                 .StatusOf<MyFeatureSwitchedConfigHandler>().Is(FeatureSwitchStatus.On)
                 .StatusOf<MyFeatureSwitchedConfigHandlerAsync>().Is(FeatureSwitchStatus.On)
                 .Build();
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch
 
             _provider.GetService<MyFeatureSwitchedConfigHandler>().DidReceive().Should().BeTrue();
         }
-        
+
         [Fact]
         public async Task When_Sending_A_Async_Command_To_The_Processor_When_A_Feature_Switch_Is_On_By_Fluent_Config()
         {

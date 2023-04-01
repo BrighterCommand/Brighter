@@ -223,8 +223,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
         {
             return new SqliteConnection(Configuration.ConnectionString);
         }
-        
-        public T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, 
+
+        public T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql,
             int timeoutInMilliseconds, params DbParameter[] parameters)
         {
             using (var connection = GetConnection())
@@ -240,7 +240,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
             }
         }
 
-        public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute, 
+        public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute,
             string sql, int timeoutInMilliseconds, DbParameter[] parameters, CancellationToken cancellationToken = default(CancellationToken))
         {
             using (var connection = GetConnection())
@@ -275,8 +275,8 @@ namespace Paramore.Brighter.Inbox.Sqlite
             var parameters = new[]
             {
                 CreateSqlParameter("CommandID", command.Id), //was CommandId
-                CreateSqlParameter("CommandType", typeof (T).Name), 
-                CreateSqlParameter("CommandBody", commandJson), 
+                CreateSqlParameter("CommandType", typeof (T).Name),
+                CreateSqlParameter("CommandBody", commandJson),
                 CreateSqlParameter("Timestamp", DateTime.UtcNow),
                 CreateSqlParameter("ContextKey", contextKey)
             };

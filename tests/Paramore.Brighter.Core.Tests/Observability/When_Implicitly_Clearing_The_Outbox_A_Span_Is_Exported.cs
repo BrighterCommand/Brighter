@@ -57,7 +57,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
         });
         producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
+        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(),
             policyRegistry, messageMapperRegistry,_outbox,producerRegistry);
     }
 

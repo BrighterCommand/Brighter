@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         {
             return string.Format(OutboxDdl, outboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Outbox in Sqlite
         /// </summary>

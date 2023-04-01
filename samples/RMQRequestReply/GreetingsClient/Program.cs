@@ -76,8 +76,8 @@ namespace GreetingsSender
                             {
                                 Topic = new RoutingKey("Greeting.Request")
                             }
-                        }).Create(), 
-                    true, 
+                        }).Create(),
+                    true,
                     replySubscriptions)
                 .AutoFromAssemblies();
 

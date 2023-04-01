@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
         
     }
-    
+
     [Fact]
     public void When_A_Message_Mapper_Map_To_Message_Has_A_Transform()
     {
@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         //assert
         TraceFilters().ToString().Should().Be("MySimpleTransformAsync|MyTransformableCommandMessageMapper");
     }
-    
+
     private TransformPipelineTracer TraceFilters()
     {
         var pipelineTracer = new TransformPipelineTracer();

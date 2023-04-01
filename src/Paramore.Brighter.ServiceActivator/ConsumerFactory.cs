@@ -37,7 +37,7 @@ namespace Paramore.Brighter.ServiceActivator
         public ConsumerFactory(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry,
-            Subscription subscription, 
+            Subscription subscription,
             IAmAMessageTransformerFactory messageTransformerFactory = null)
         {
             _commandProcessorProvider = commandProcessorProvider;

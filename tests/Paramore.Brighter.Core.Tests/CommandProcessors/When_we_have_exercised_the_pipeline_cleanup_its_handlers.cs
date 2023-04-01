@@ -27,7 +27,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             
             _pipelineBuilder.Build(new RequestContext()).Any();
         }
-    
+
         [Fact]
         public void When_We_Have_Exercised_The_Pipeline_Cleanup_Its_Handlers()
         {
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             CommandProcessor.ClearExtServiceBus();
         }
-        
+
         internal class CheapHandlerFactorySync : IAmAHandlerFactorySync
         {
             public IHandleRequests Create(Type handlerType)

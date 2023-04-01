@@ -10,7 +10,7 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Outbox;
 
 [Trait("Category", "DynamoDB")]
-public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest 
+public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
 {
    private readonly Message _message;
    private readonly DynamoDbOutbox _dynamoDbOutbox;
@@ -20,7 +20,7 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
           _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
           _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
    }
-    
+
     [Fact]
     public async Task When_Marking_A_Message_As_Dispatched_In_The_Outbox_Async()
     {
@@ -37,7 +37,7 @@ public class DynamoDbOutboxMessageDispatchTests : DynamoDBOutboxBaseTest
 
 
     }
-    
+
     [Fact]
     public void When_Marking_A_Message_As_Dispatched_In_The_Outbox()
     {

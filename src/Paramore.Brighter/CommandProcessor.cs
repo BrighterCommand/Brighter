@@ -42,8 +42,8 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class CommandProcessor.
-    /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a> 
-    /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns 
+    /// Implements both the <a href="http://www.hillside.net/plop/plop2001/accepted_submissions/PLoP2001/bdupireandebfernandez0/PLoP2001_bdupireandebfernandez0_1.pdf">Command Dispatcher</a>
+    /// and <a href="http://wiki.hsr.ch/APF/files/CommandProcessor.pdf">Command Processor</a> Design Patterns
     /// </summary>
     public class CommandProcessor : IAmACommandProcessor
     {
@@ -226,7 +226,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both external bus and command processor support is required 
+        /// Use this constructor when both external bus and command processor support is required
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -358,7 +358,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Publishes the specified event. We expect zero or more handlers. The events are handled synchronously, in turn
         /// Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
-        /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed, 
+        /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed,
         /// with the InnerExceptions property containing the failures.
         /// It is up the implementer of the handler that throws to take steps to make it easy to identify the handler that threw.
         /// </summary>
@@ -419,7 +419,7 @@ namespace Paramore.Brighter
         /// <summary>
         /// Publishes the specified event with async/await. We expect zero or more handlers. The events are handled synchronously and concurrently
         /// Because any pipeline might throw, yet we want to execute the remaining handler chains,  we catch exceptions on any publisher
-        /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed, 
+        /// instead of stopping at the first failure and then we throw an AggregateException if any of the handlers failed,
         /// with the InnerExceptions property containing the failures.
         /// It is up the implementer of the handler that throws to take steps to make it easy to identify the handler that threw.
         /// </summary>
@@ -530,7 +530,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited Guid to <see cref="ClearOutbox"/>
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -545,7 +545,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited Guid to <see cref="ClearOutbox"/>
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -599,7 +599,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/>
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
@@ -618,7 +618,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/>
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
@@ -746,14 +746,14 @@ namespace Paramore.Brighter
                 request.ReplyAddress.Topic = routingKey;
                 request.ReplyAddress.CorrelationId = channelName;
 
-                //we do this to create the channel on the broker, or we won't have anything to send to; we 
+                //we do this to create the channel on the broker, or we won't have anything to send to; we
                 //retry in case the subscription is poor. An alternative would be to extract the code from
                 //the channel to create the subscription, but this does not do much on a new queue
                 _bus.Retry(() => responseChannel.Purge());
 
                 var outMessage = outWrapPipeline.WrapAsync(request).GetAwaiter().GetResult();
 
-                //We don't store the message, if we continue to fail further retry is left to the sender 
+                //We don't store the message, if we continue to fail further retry is left to the sender
                 //s_logger.LogDebug("Sending request  with routingkey {0}", routingKey);
                 s_logger.LogDebug("Sending request  with routingkey {ChannelName}", channelName);
                 _bus.CallViaExternalBus<T, TResponse>(outMessage);
@@ -960,7 +960,7 @@ namespace Paramore.Brighter
 
         private bool HandlerFactoryIsNotEitherIAmAHandlerFactorySyncOrAsync(IAmAHandlerFactory handlerFactory)
         {
-            // If we do not have a subscriber registry and we do not have a handler factory 
+            // If we do not have a subscriber registry and we do not have a handler factory
             // then we're creating a control bus sender and we don't need them
             if (_subscriberRegistry is null && handlerFactory is null)
                 return false;

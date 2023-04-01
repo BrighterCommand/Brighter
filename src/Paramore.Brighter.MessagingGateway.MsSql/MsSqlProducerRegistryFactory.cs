@@ -16,7 +16,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             MsSqlConfiguration msSqlConfiguration,
             IEnumerable<Publication> publications)
         {
-            _msSqlConfiguration = 
+            _msSqlConfiguration =
                 msSqlConfiguration ?? throw new ArgumentNullException(nameof(msSqlConfiguration));
             if (string.IsNullOrEmpty(msSqlConfiguration.QueueStoreTable))
                 throw new ArgumentNullException(nameof(msSqlConfiguration.QueueStoreTable));

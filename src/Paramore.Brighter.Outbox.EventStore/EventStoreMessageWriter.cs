@@ -43,8 +43,8 @@ namespace Paramore.Brighter.Outbox.EventStore
             var eventHeader = Encoding.UTF8.GetBytes(headerJson);
 
             return new[] {new EventData(message.Id, message.Header.Topic, true, eventBody, eventHeader)};
-        } 
-        
+        }
+
         private static void RemoveEventStoreHeaderItems(Dictionary<string, object> headerBag)
         {
             headerBag.Remove("streamId");

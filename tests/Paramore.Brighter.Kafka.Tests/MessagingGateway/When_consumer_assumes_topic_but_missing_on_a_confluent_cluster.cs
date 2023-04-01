@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     [Collection("Kafka")]   //Kafka doesn't like multiple consumers of a partition
     public class KafkaConfluentProducerAssumeTests : IDisposable
     {
-        private readonly string _queueName = Guid.NewGuid().ToString(); 
+        private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly string _partitionKey = Guid.NewGuid().ToString();
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             {
                 //For different platforms, we have to figure out how to get the connection right
                 //see: https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/csharp.html
-                
+
                 return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
             }
             
@@ -75,14 +75,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SaslUsername = userName,
                     SaslPassword = password,
                     SslCaLocation = SupplyCertificateLocation()
-                    
+
                 },
                 new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 3,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,

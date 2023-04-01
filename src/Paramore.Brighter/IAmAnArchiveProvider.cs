@@ -7,7 +7,7 @@ namespace Paramore.Brighter
     public interface IAmAnArchiveProvider
     {
         void ArchiveMessage(Message message);
-        
+
         Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken);
     }
 }

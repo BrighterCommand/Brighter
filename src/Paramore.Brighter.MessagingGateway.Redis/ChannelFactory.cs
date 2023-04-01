@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 throw new ConfigurationException("We expect an RedisSubscription or RedisSubscription<T> as a parameter");
             
             return new Channel(
-                subscription.ChannelName, 
+                subscription.ChannelName,
                 _messageConsumerFactory.Create(subscription),
                 subscription.BufferSize
                 );

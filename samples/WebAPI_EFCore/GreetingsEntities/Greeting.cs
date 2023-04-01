@@ -12,7 +12,7 @@ namespace GreetingsEntities
         {
             Message = message;
         }
-        
+
         public Greeting(int id, string message, Person recipient)
         {
             _id = id;

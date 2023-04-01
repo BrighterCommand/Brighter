@@ -28,7 +28,7 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmAMessageTransformerFactory
     /// We do not know how to create instances of <see cref="IAmAMessageTransformAsync"/> implemented by your application, but need to create instances to instantiate a pipeline.
-    /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAMessageTransformerFactory"/> to provide 
+    /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAMessageTransformerFactory"/> to provide
     /// instances of their <see cref="IAmAMessageTransformAsync"/> types. You need to provide a Handler Factory to support all <see cref="IAmAMessageTransformAsync"/>
     /// referred to by a <see cref="WrapWithAttribute"/> or a <see cref="UnwrapWithAttribute"/>.
     /// Typically you would use an IoC container to implement the Transformer Factory.
@@ -45,6 +45,6 @@ namespace Paramore.Brighter
         /// Releases the specified transformer.
         /// </summary>
         /// <param name="transformerType">The transformer</param>
-        void Release(IAmAMessageTransformAsync transformer); 
+        void Release(IAmAMessageTransformAsync transformer);
     }
 }

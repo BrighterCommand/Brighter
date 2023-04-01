@@ -35,7 +35,7 @@ namespace Greetings.Ports.CommandHandlers
         {
             _commandProcessor = commandProcessor;
         }
-        
+
         public override GreetingRequest Handle(GreetingRequest request)
         {
             string salutation;

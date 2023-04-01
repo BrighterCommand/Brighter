@@ -35,12 +35,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
     public class RedisMessageCreator
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<RedisMessageCreator>();
-        
+
         /// <summary>
         /// Create a Brighter Message from the Redis raw content
         /// Expected message shape is:
         ///
-        /// <HEADER 
+        /// <HEADER
         /// {"TimeStamp":"2018-02-07T09:38:36Z","Id":"18669550-2069-48c5-923d-74a2e79c0748","Topic":"test","MessageType":"1","Bag":"{}","HandledCount":"0","DelayedMilliseconds":"0","CorrelationId":"00000000-0000-0000-0000-000000000000","ContentType":"text/plain","ReplyTo":""}
         /// HEADER/>
         /// <BODY
@@ -66,9 +66,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     s_logger.LogError("Expected message to begin with <HEADER, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
-                
+
                 var messageHeader = ReadHeader(reader.ReadLine());
-                
+
                 header = reader.ReadLine();
                 if (header.TrimStart() != "HEADER/>")
                 {
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     s_logger.LogError("Expected message to have beginning of <BODY, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
-                
+
                 var messageBody = ReadBody(reader);
 
                 body = reader.ReadLine();
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                     s_logger.LogError("Expected message to find end of BODY/>, but was {ErrorMessage}", redisMessage);
                     return message;
                 }
-                
+
                 message = new Message(messageHeader, messageBody);
 
             }
@@ -187,7 +187,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
         }
-        
+
         private HeaderResult<string> ReadContentType(Dictionary<string, string> headers)
         {
             if (headers.ContainsKey(HeaderNames.CONTENT_TYPE))
@@ -218,25 +218,25 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             {
                 if (int.TryParse(headers[HeaderNames.DELAYED_MILLISECONDS], out int delayedMilliseconds))
                 {
-                    return new HeaderResult<int>(delayedMilliseconds, true); 
+                    return new HeaderResult<int>(delayedMilliseconds, true);
                 }
             }
             return new HeaderResult<int>(0, true);
          }
-        
+
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
             if (headers.ContainsKey(HeaderNames.HANDLED_COUNT))
             {
                 if (int.TryParse(headers[HeaderNames.HANDLED_COUNT], out int handledCount))
                 {
-                    return new HeaderResult<int>(handledCount, true); 
+                    return new HeaderResult<int>(handledCount, true);
                 }
             }
             
             return new HeaderResult<int>(0, true);
         }
-        
+
         /// <summary>
         /// The bag is JSON dictionary, so we just need to serialize that dictionary and set values
         /// The one thing to watch for here is that we don't know about types in a bag, and as such
@@ -285,7 +285,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             
             return new HeaderResult<Guid>(messageId, false);
         }
-        
+
         private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)
         {
             if (headers.ContainsKey(HeaderNames.REPLY_TO))
@@ -296,7 +296,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         }
 
        /// <summary>
-        /// Note that RMQ uses a unix timestamp, we just System.Text's JSON date format in Redis 
+        /// Note that RMQ uses a unix timestamp, we just System.Text's JSON date format in Redis
         /// </summary>
         /// <param name="headers">The collection of headers</param>
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>

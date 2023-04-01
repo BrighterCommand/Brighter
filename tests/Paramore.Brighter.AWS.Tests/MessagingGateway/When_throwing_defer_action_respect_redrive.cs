@@ -135,13 +135,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(5000).Wait();
 
-            //send a quit message to the pump to terminate it 
+            //send a quit message to the pump to terminate it
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
             //wait for the pump to stop once it gets a quit message
             Task.WaitAll(new[] { task });
-            
+
             Task.Delay(5000);
 
             //inspect the dlq

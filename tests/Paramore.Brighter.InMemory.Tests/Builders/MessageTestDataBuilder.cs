@@ -7,7 +7,7 @@ namespace Paramore.Brighter.InMemory.Tests.Builders
         public MessageHeader Header { get; set; }
         public MessageBody Body { get; set; }
     }
-    
+
     public class MessageTestDataBuilder
     {
         private readonly MessageSpecification _specification = new MessageSpecification();
@@ -33,6 +33,6 @@ namespace Paramore.Brighter.InMemory.Tests.Builders
         public static implicit operator Message(MessageTestDataBuilder testDataBuilder)
         {
             return new Message(testDataBuilder._specification.Header, testDataBuilder._specification.Body);
-        } 
+        }
     }
 }

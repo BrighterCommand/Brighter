@@ -23,7 +23,7 @@ namespace GreetingsSender
                 .UseInMemoryOutbox()
                 .UseExternalBus(new AzureServiceBusProducerRegistryFactory(
                     asbClientProvider,
-                    new AzureServiceBusPublication[] 
+                    new AzureServiceBusPublication[]
                     {
                         new AzureServiceBusPublication()
                         {
@@ -52,12 +52,12 @@ namespace GreetingsSender
                 Console.WriteLine("Sending....");
                 var distroGreeting = new GreetingEvent("Paul - Distributed");
                 commandProcessor.DepositPost(distroGreeting);
-                
+
                 commandProcessor.Post(new GreetingEvent("Paul"));
                 commandProcessor.Post(new GreetingAsyncEvent("Paul - Async"));
 
                 commandProcessor.ClearOutbox(distroGreeting.Id);
-                
+
                 Console.WriteLine("Press q to Quit or any other key to continue");
 
                 var keyPress = Console.ReadKey();

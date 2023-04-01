@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var options = (IBrighterOptions) serviceProvider.GetRequiredService<IBrighterOptions>();
             if (options == null) _isTransient = false; else _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;  
         }
-    
+
         /// <summary>
         /// Creates a specific transformer on demand
         /// </summary>

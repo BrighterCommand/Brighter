@@ -10,7 +10,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
     /// <summary>
     /// Extension methods for adding a service activator to the .NET IoC container
     /// </summary>
-    public static class  ServiceActivatorServiceCollectionExtensions 
+    public static class  ServiceActivatorServiceCollectionExtensions
     {
        /// <summary>
        /// Adds a service activator to the .NET IoC Container, used to register one or more message pump for a subscription to messages on an external bus
@@ -69,5 +69,5 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
                 .Subscriptions(options.Subscriptions).Build();
         }
     }
-   
+
 }

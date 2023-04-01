@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             _redisFixture.MessageProducer.Send(_messageOne);
             _redisFixture.MessageProducer.Send(_messageTwo);
 
-            //Now receive, the first message 
+            //Now receive, the first message
             var sentMessageOne = _redisFixture.MessageConsumer.Receive(1000).Single();
 
             //now requeue the first message
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             var sentMessageTwo = _redisFixture.MessageConsumer.Receive(1000).Single();
             var messageBodyTwo = sentMessageTwo.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageTwo);
-            
+
             sentMessageOne = _redisFixture.MessageConsumer.Receive(1000).Single();
             var messageBodyOne = sentMessageOne.Body.Value;
             _redisFixture.MessageConsumer.Acknowledge(sentMessageOne);

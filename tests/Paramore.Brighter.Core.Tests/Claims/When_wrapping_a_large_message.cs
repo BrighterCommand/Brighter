@@ -32,7 +32,7 @@ public class LargeMessagePayloadWrapTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public async Task When_wrapping_a_large_message()
     {

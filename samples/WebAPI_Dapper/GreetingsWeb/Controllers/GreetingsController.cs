@@ -31,7 +31,7 @@ namespace GreetingsWeb.Controllers
  
              return Ok(personsGreetings);
         }
-        
+
         [Route("{name}/new")]
         [HttpPost]
         public async Task<ActionResult<FindPersonsGreetings>> Post(string name, NewGreeting newGreeting)

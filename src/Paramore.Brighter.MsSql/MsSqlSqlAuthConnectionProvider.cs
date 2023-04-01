@@ -32,7 +32,7 @@ namespace Paramore.Brighter.MsSql
 
         public SqlTransaction GetTransaction()
         {
-            //This Connection Factory does not support Transactions 
+            //This Connection Factory does not support Transactions
             return null;
         }
 

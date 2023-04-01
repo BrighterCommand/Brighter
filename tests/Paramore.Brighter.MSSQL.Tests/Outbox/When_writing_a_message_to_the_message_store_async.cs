@@ -56,10 +56,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(),
-                topic: "test_topic", 
-                messageType: MessageType.MT_DOCUMENT, 
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
+                topic: "test_topic",
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount:5,
                 delayedMilliseconds:5,
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyAddress",

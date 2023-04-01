@@ -13,7 +13,7 @@
         {
             ConnectionString = dbConnectionString;
         }
-        
+
         public string ConnectionString { get; }
     }
 }

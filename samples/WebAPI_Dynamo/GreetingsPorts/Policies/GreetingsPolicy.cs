@@ -2,7 +2,7 @@
 
 namespace GreetingsPorts.Policies
 {
-    public class GreetingsPolicy : DefaultPolicy 
+    public class GreetingsPolicy : DefaultPolicy
     {
         public GreetingsPolicy()
         {

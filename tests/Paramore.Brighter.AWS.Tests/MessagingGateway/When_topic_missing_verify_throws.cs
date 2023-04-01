@@ -7,8 +7,8 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
-    [Trait("Category", "AWS")] 
-    public class AWSValidateMissingTopicTests 
+    [Trait("Category", "AWS")]
+    public class AWSValidateMissingTopicTests
     {
         private readonly AWSMessagingGatewayConnection _awsConnection;
         private readonly RoutingKey _routingKey;
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public void When_topic_missing_verify_throws()
         {
             //arrange
-            var producer = new SqsMessageProducer(_awsConnection, 
+            var producer = new SqsMessageProducer(_awsConnection,
                 new SnsPublication
                 {
                     MakeChannels = OnMissingChannel.Validate

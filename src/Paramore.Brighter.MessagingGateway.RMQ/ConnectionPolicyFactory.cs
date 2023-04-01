@@ -45,7 +45,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         {}
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class. 
+        /// Initializes a new instance of the <see cref="ConnectionPolicyFactory"/> class.
         /// Use if you need to inject a test logger
         /// </summary>
         /// <param name="connection"></param>

@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
     public class KafkaConfluentProducerSendTests : IDisposable
     {
         private readonly ITestOutputHelper _output;
-        private readonly string _queueName = Guid.NewGuid().ToString(); 
+        private readonly string _queueName = Guid.NewGuid().ToString();
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly IAmAProducerRegistry _producerRegistry;
         private readonly IAmAMessageConsumer _consumer;
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             {
                 //For different platforms, we have to figure out how to get the connection right
                 //see: https://docs.confluent.io/platform/current/tutorials/examples/clients/docs/csharp.html
-                
+
                 return RuntimeInformation.IsOSPlatform(OSPlatform.OSX) ? "/usr/local/etc/openssl@1.1/cert.pem" : null;
             }
             
@@ -77,14 +77,14 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SaslUsername = userName,
                     SaslPassword = password,
                     SslCaLocation = SupplyCertificateLocation()
-                    
+
                 },
                 new KafkaPublication[] {new KafkaPublication()
                 {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 3,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 10000,
                     RequestTimeoutMs = 10000,
@@ -104,7 +104,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SslCaLocation = SupplyCertificateLocation()
                 })
                 .Create(new KafkaSubscription<MyCommand>(
-                     channelName: new ChannelName(_queueName), 
+                     channelName: new ChannelName(_queueName),
                      routingKey: new RoutingKey(_topic),
                      groupId: groupId,
                      makeChannels: OnMissingChannel.Create
@@ -134,10 +134,10 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Task.Delay(500).Wait(); //Let topic propogate in the broker
                     messages = _consumer.Receive(10000);
                     _consumer.Acknowledge(messages[0]);
-                    
+
                     if (messages[0].Header.MessageType != MessageType.MT_NONE)
                         break;
-                        
+
                 }
                 catch (ChannelFailureException cfx)
                 {

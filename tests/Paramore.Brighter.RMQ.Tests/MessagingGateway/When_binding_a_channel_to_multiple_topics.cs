@@ -8,7 +8,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 {
     [Trait("Category", "RMQ")]
     public class RmqMessageConsumerMultipleTopicTests : IDisposable
-    {        
+    {
         private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _messageTopic1, _messageTopic2;
@@ -16,10 +16,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageConsumerMultipleTopicTests()
         {
             _messageTopic1 = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content for topic test 1"));
             _messageTopic2 = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content for topic test 2"));
 
             var rmqConnection = new RmqMessagingGatewayConnection

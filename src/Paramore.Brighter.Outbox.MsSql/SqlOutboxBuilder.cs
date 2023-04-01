@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Outbox.MsSql
               PRIMARY KEY ( [Id] )
             );
         ";
-        
+
         private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
 
         /// <summary>
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             return string.Format(OutboxDdl, outboxTableName);
         }
-        
+
         /// <summary>
         /// Get the SQL statements required to test for the existence of an Inbox in MSSQL
         /// </summary>

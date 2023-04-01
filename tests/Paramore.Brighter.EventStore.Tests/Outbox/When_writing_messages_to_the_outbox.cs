@@ -42,8 +42,8 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 
             var body = new MessageBody("{companyId:123}");
             var header = new MessageHeader(
-                messageId:Guid.NewGuid(), 
-                topic: "Topic", 
+                messageId:Guid.NewGuid(),
+                topic: "Topic",
                 messageType: MessageType.MT_EVENT,
                 timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid(),
@@ -61,8 +61,8 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 
             var body1 = new MessageBody("{companyId:123}");
             var header1 = new MessageHeader(
-                messageId:Guid.NewGuid(), 
-                topic: "Topic", 
+                messageId:Guid.NewGuid(),
+                topic: "Topic",
                 messageType: MessageType.MT_EVENT,
                 timeStamp: DateTime.UtcNow,
                 correlationId: Guid.NewGuid(),

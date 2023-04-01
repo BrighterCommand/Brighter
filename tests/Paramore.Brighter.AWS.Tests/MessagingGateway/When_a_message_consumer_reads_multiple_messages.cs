@@ -18,7 +18,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
     {
         private readonly SqsMessageProducer _messageProducer;
         private readonly SqsMessageConsumer _consumer;
-        private readonly string _topicName; 
+        private readonly string _topicName;
         private readonly ChannelFactory _channelFactory;
         private const string _contentType = "text\\plain";
         private const int _bufferSize = 3;
@@ -47,13 +47,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //we want to access via a consumer, to receive multiple messages - we don't want to expose on channel
             //just for the tests, so create a new consumer from the properties
             _consumer = new SqsMessageConsumer(awsConnection, channel.Name.ToValidSQSQueueName(), routingKey, _bufferSize);
-            _messageProducer = new SqsMessageProducer(awsConnection, 
+            _messageProducer = new SqsMessageProducer(awsConnection,
                 new SnsPublication
                 {
-                    MakeChannels = OnMissingChannel.Create 
+                    MakeChannels = OnMissingChannel.Create
                 });
         }
-            
+
         [Fact]
         public void When_a_message_consumer_reads_multiple_messages()
         {
@@ -61,23 +61,23 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content one")
                 );
-            
+
             var messageTwo= new Message(
                 new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content two")
                 );
-           
+
             var messageThree= new Message(
                 new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content three")
                 );
-             
+
             var messageFour= new Message(
                 new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
                 new MessageBody("test content four")
                 );
-             
-            //send MESSAGE_COUNT messages 
+
+            //send MESSAGE_COUNT messages
             _messageProducer.Send(messageOne);
             _messageProducer.Send(messageTwo);
             _messageProducer.Send(messageThree);
@@ -94,9 +94,9 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 
                 //retrieve  messages
                 var messages = _consumer.Receive(10000);
-                
+
                 messages.Length.Should().BeLessOrEqualTo(outstandingMessageCount);
-                
+
                 //should not receive more than buffer in one hit
                 messages.Length.Should().BeLessOrEqualTo(_bufferSize);
 
@@ -106,18 +106,18 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                     messagesReceived.Add(message);
                    _consumer.Acknowledge(message);
                 }
-                 
+
                 messagesReceivedCount = messagesReceived.Count;
-                
+
                 Task.Delay(1000).Wait();
 
             } while ((iteration <= 5) && (messagesReceivedCount <  _messageCount));
-    
+
 
             messagesReceivedCount.Should().Be(4);
 
         }
-        
+
         public void Dispose()
         {
             //Clean up resources that we have created

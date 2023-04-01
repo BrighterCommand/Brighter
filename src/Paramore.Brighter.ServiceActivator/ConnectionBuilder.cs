@@ -2,9 +2,9 @@ using System;
 
 namespace Paramore.Brighter.ServiceActivator
 {
-    public class ConnectionBuilder : 
+    public class ConnectionBuilder :
         ConnectionBuilder.IConnectionBuilderName,
-        ConnectionBuilder.IConnectionBuilderChannelFactory, 
+        ConnectionBuilder.IConnectionBuilderChannelFactory,
         ConnectionBuilder.IConnectionBuilderChannelType,
         ConnectionBuilder.IConnectionBuilderChannelName,
         ConnectionBuilder.IConnectionBuilderRoutingKey,
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.ServiceActivator
             _channelName = channelName;
             return this;
         }
-        
+
         /// <summary>
         /// The routing key, or topic, that represents the channel in a broker
         /// </summary>
@@ -145,7 +145,7 @@ namespace Paramore.Brighter.ServiceActivator
             _noOfPeformers = noOfPerformers;
             return this;
         }
-        
+
 
         /// <summary>
         /// How many times to requeue a message before we give up on it. A count of -1 is infinite retries
@@ -212,7 +212,7 @@ namespace Paramore.Brighter.ServiceActivator
         public interface IConnectionBuilderOptionalBuild
         {
             Subscription Build();
-            
+
             /// <summary>
             /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
             /// or busy
@@ -244,19 +244,19 @@ namespace Paramore.Brighter.ServiceActivator
             /// Should we declare infrastructure, or should we just validate that it exists, and assume it is declared elsewhere
             /// </summary>
             IConnectionBuilderOptionalBuild MakeChannels(OnMissingChannel onMissingChannel);
-            
+
             /// <summary>
             /// Gets the no of threads that we will use to read from  this channel.
             /// </summary>
             /// <value>The no of peformers.</value>
             IConnectionBuilderOptionalBuild NoOfPeformers(int noOfPerformers);
-            
+
             /// <summary>
             /// Gets or sets the number of times that we can requeue a message before we abandon it as poison pill.
             /// </summary>
             /// <value>The requeue count.</value>
             IConnectionBuilderOptionalBuild RequeueCount(int requeueCount);
-            
+
             /// <summary>
             /// Gets or sets number of milliseconds to delay delivery of re-queued messages.
             /// </summary>

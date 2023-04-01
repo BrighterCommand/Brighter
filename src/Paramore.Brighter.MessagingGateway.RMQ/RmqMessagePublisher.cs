@@ -63,7 +63,7 @@ internal class RmqMessagePublisher
         /// or
         /// exchangeName
         /// </exception>
-        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection) 
+        public RmqMessagePublisher(IModel channel, RmqMessagingGatewayConnection connection)
         {
             if (channel is null)
             {
@@ -115,10 +115,10 @@ internal class RmqMessagePublisher
                 message.Header.Topic,
                 false,
                 CreateBasicProperties(
-                    messageId, 
-                    message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType, 
+                    messageId,
+                    message.Header.TimeStamp,
+                    message.Body.ContentType,
+                    message.Header.ContentType,
                     message.Header.ReplyTo,
                     message.Persist,
                     headers),
@@ -167,10 +167,10 @@ internal class RmqMessagePublisher
                 queueName,
                 false,
                 CreateBasicProperties(
-                    messageId, 
-                    message.Header.TimeStamp, 
-                    message.Body.ContentType, 
-                    message.Header.ContentType, 
+                    messageId,
+                    message.Header.TimeStamp,
+                    message.Body.ContentType,
+                    message.Header.ContentType,
                     message.Header.ReplyTo,
                     message.Persist,
                     headers),
@@ -203,7 +203,7 @@ internal class RmqMessagePublisher
 
             return basicProperties;
         }
-        
+
         /// <summary>
         /// Supports the AMQP 0-8/0-9 standard entry types S, I, D, T
         /// and F, as well as the QPid-0-8 specific b, d, f, l, s, t

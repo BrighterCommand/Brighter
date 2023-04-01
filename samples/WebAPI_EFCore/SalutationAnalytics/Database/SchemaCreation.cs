@@ -149,7 +149,7 @@ namespace SalutationAnalytics.Database
             command.CommandText = MySqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
             command.ExecuteScalar();
         }
-        
+
         public static IHost CreateOutbox(this IHost webHost)
         {
             using (var scope = webHost.Services.CreateScope())

@@ -190,7 +190,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
             }
         }
-        
+
         protected override SqliteCommand CreateCommand(SqliteConnection connection, string sqlText, int outBoxTimeout,
             params SqliteParameter[] parameters)
         {
@@ -229,7 +229,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 new SqliteParameter($"@{prefix}Topic", SqliteType.Text) { Value = message.Header.Topic },
                 new SqliteParameter($"@{prefix}Timestamp", SqliteType.Text) { Value = message.Header.TimeStamp.ToString("s") },
                 new SqliteParameter($"@{prefix}CorrelationId", SqliteType.Text) { Value = message.Header.CorrelationId },
-                new SqliteParameter($"@{prefix}ReplyTo", SqliteType.Text) {Value =  message.Header.ReplyTo}, 
+                new SqliteParameter($"@{prefix}ReplyTo", SqliteType.Text) {Value =  message.Header.ReplyTo},
                 new SqliteParameter($"@{prefix}ContentType", SqliteType.Text) {Value = message.Header.ContentType},
                 new SqliteParameter($"@{prefix}HeaderBag", SqliteType.Text) { Value = bagJson },
                 new SqliteParameter($"@{prefix}Body", SqliteType.Text) { Value = message.Body.Value }
@@ -391,6 +391,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 : dr.GetDateTime(ordinal);
             return timeStamp;
         }
-        
+
     }
 }

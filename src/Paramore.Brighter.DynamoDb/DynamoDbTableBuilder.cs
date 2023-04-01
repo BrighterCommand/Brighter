@@ -15,7 +15,7 @@ namespace Paramore.Brighter.DynamoDb
         {
             _client = client;
         }
-        
+
         /// <summary>
         /// Build a table from a create table request
         /// We filter out any attributes that are not B, S, or N because DynamoDB does not currently support
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.DynamoDb
             var allDeletes = tableNames.Select(tn => _client.DeleteTableAsync(tn, ct)).ToList();
             return await Task.WhenAll(allDeletes);
         }
-        
+
         //EnsureTablesGone. Deleting until cannot be found
         public async Task EnsureTablesDeleted(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
         {
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.DynamoDb
                 }
             } while (tableStates.Any(ts => !ts.IsReady));
         }
-        
+
         public async Task<(bool exist, IEnumerable<string> missing)> HasTables(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))
         {
             
@@ -108,16 +108,16 @@ namespace Paramore.Brighter.DynamoDb
                     if (tableCheck.ContainsKey(tableName))
                         tableCheck[tableName] = true;
                 }
-                
+
                 lastEvalutatedTableName = tablesResponse.LastEvaluatedTableName;
             } while (lastEvalutatedTableName != null);
 
-            return tableCheck.Any(kv => kv.Value) ? 
-                (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) : 
+            return tableCheck.Any(kv => kv.Value) ?
+                (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) :
                 (false, Enumerable.Empty<string>());
 
         }
-        
+
         public CreateTableRequest RemoveNonSchemaAttributes(CreateTableRequest tableRequest)
         {
             var keyMatchedAttributes = new List<AttributeDefinition>();
@@ -198,7 +198,7 @@ namespace Paramore.Brighter.DynamoDb
         }
 
         private class DynamoDbTableStatus
-        { 
+        {
             public string TableName { get; set; }
             public bool IsReady { get; set; }
         }

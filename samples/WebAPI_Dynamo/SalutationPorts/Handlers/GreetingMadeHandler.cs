@@ -39,18 +39,18 @@ namespace SalutationPorts.Handlers
             {
                 var salutation = new Salutation{ Greeting = @event.Greeting};
                 var attributes = context.ToDocument(salutation).ToAttributeMap();
-                
+
                 tx.TransactItems.Add(new TransactWriteItem{Put = new Put{ TableName = "Salutations", Item = attributes}});
-                
+
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
-                
+
                 await _uow.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
                 _uow.Rollback();
-                
+
                 return await base.HandleAsync(@event, cancellationToken);
             }
 

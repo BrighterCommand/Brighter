@@ -42,10 +42,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
 
-        
+
         private const string _deleteMessageCommand = "DELETE FROM {0} WHERE MessageId IN ({1})";
         private readonly string _outboxTableName;
-        
+
         public bool ContinueOnCapturedContext
         {
             get => throw new NotImplementedException();
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                     connection.Close();
             }
         }
-        
+
         /// <summary>
         /// Awaitable add the specified message.
         /// </summary>
@@ -315,7 +315,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         {
             WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
         }
-        
+
         private NpgsqlCommand InitDeleteDispatchedCommand(NpgsqlConnection connection, IEnumerable<Guid> messageIds)
         {
             var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
@@ -326,7 +326,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return CreateCommand(connection, GenerateSqlText(_deleteMessageCommand, inClause.inClause), 0,
                 inClause.parameters);
         }
-        
+
         private (string inClause, NpgsqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
@@ -339,15 +339,15 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             return (string.Join(",", paramNames), parameters);
         }
-        
+
         private NpgsqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new NpgsqlParameter(parameterName, value ?? DBNull.Value);
         }
-        
+
         private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
             => string.Format(sqlFormat, orderedParams.Prepend(_outboxTableName).ToArray());
-        
+
         private NpgsqlCommand CreateCommand(NpgsqlConnection connection, string sqlText, int outBoxTimeout,
             params NpgsqlParameter[] parameters)
 
@@ -360,7 +360,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             return command;
         }
-        
+
         private void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
@@ -560,7 +560,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             return command;
         }
-        
+
         private NpgsqlCommand InitBulkAddDbCommand(NpgsqlConnection connection, List<Message> messages)
         {
             var messageParams = new List<string>();
@@ -570,7 +570,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
                 parameters.AddRange(InitAddDbParameters(messages[i], i));
-                
+
             }
             var sql = $"INSERT INTO {_configuration.OutboxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
             

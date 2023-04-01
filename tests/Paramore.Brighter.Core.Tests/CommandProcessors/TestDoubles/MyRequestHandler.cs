@@ -8,7 +8,7 @@
         {
             s_response = null;
         }
-        
+
         public override MyResponse Handle(MyResponse command)
         {
             LogCommand(command);
@@ -17,7 +17,7 @@
 
         public static bool ShouldReceive(MyResponse expectedCommand)
         {
-            return (s_response != null) && 
+            return (s_response != null) &&
                 (expectedCommand.Id == s_response.Id) &&
                 (expectedCommand.SendersAddress.Topic == s_response.SendersAddress.Topic) &&
                 (expectedCommand.SendersAddress.CorrelationId == s_response.SendersAddress.CorrelationId);
@@ -27,7 +27,7 @@
         {
             s_response = request;
         }
- 
+
 
     }
 }

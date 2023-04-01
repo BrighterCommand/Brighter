@@ -2,6 +2,6 @@
 {
     public interface IDynamoDbClientTransactionProvider : IDynamoDbClientProvider, IAmABoxTransactionConnectionProvider
     {
-        
+
     }
 }

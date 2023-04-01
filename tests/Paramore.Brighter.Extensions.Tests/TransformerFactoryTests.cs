@@ -26,7 +26,7 @@ public class TransformerFactoryTests
        //assert
        testTransform.Should().NotBeNull();
     }
-    
+
     [Fact]
     public void When_resolving_a_missing_transformer_from_the_factory()
     {

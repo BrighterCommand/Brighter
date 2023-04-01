@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
-        
+
         [Fact]
         public async Task When_Writing_Messages_To_The_Outbox_Async_Bulk()
         {
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
            _sqliteTestHelper.CleanUpDb();
         }
-        
+
         public void Dispose()
         {
             GC.SuppressFinalize(this);

@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
-    [Trait("Category", "AWS")] 
+    [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureTests  : IDisposable
     {     private readonly Message _message;
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _messageProducer = new SqsMessageProducer(
-                awsConnection, 
+                awsConnection,
                 new SnsPublication
                 {
                     FindTopicBy = TopicFindBy.Name,
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //clear the queue
             _consumer.Acknowledge(message);
         }
- 
+
         public void Dispose()
         {
             _channelFactory.DeleteTopic();

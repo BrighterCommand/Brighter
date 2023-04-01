@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             _producerRegistry = new KafkaProducerRegistryFactory(
                 new KafkaMessagingGatewayConfiguration
                 {
-                    Name = "Kafka Producer Send Test", 
+                    Name = "Kafka Producer Send Test",
                     BootStrapServers = new[] {"localhost:9092"}
                 },
                 new KafkaPublication[] {new KafkaPublication()
@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 1,
-                    //These timeouts support running on a container using the same host as the tests, 
+                    //These timeouts support running on a container using the same host as the tests,
                     //your production values ought to be lower
                     MessageTimeoutMs = 2000,
                     RequestTimeoutMs = 2000,
@@ -56,11 +56,11 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 var msgId2 = SendMessage();
                 var msgId3 = SendMessage();
                 var msgId4 = SendMessage();
-                  
+
                 consumer = CreateConsumer();
-                
+
                 //Now read those messages in order
-                
+
                 var firstMessage = ConsumeMessages(consumer);
                 var message = firstMessage.First();
                 message.Id.Should().Be(msgId);
@@ -69,18 +69,18 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 var secondMessage = ConsumeMessages(consumer);
                 message = secondMessage.First();
                 message.Id.Should().Be(msgId2);
-                consumer.Acknowledge(message);               
-                
+                consumer.Acknowledge(message);
+
                 var thirdMessages = ConsumeMessages(consumer);
                 message = thirdMessages .First();
                 message.Id.Should().Be(msgId3);
-                consumer.Acknowledge(message);               
-                
+                consumer.Acknowledge(message);
+
                 var fourthMessage = ConsumeMessages(consumer);
                 message = fourthMessage .First();
                 message.Id.Should().Be(msgId4);
-                consumer.Acknowledge(message);               
- 
+                consumer.Acknowledge(message);
+
             }
             finally
             {

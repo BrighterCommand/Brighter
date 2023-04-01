@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Tranformers.AWS
         /// AWS to check for and/or create the bucket. This is expensive as an operation.
         /// For this reason we recommend that you use the S3LuggageStore with a singleton scope from your IoC container.
         /// Because of this, the S3LuggageStore should hold no state that is not thread-safe.
-        /// This factory will throw if exceptions occur during creation 
+        /// This factory will throw if exceptions occur during creation
         /// </summary>
         /// <param name="client">An Amazon S3 client to use to connect to S3. If you need to ensure that objects uploaded are client-side encrypted use AmazonS3EncryptionClientV2</param>
         /// <param name="bucketName">The bucket to store luggage in. The name must follows S3 bucket name rules: https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html</param>
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Tranformers.AWS
         ///     - Catch the InvalidOperationException to retry an invalid response i.e. not 200
         ///     - Otherwise catch an AmazonS3Exception to catch network errors
         ///     - If no policy is passed we will use a default policy to catch and retry an AmazonS3Exception
-        ///     - Immediate first retry, then at 50 and 100ms 
+        ///     - Immediate first retry, then at 50 and 100ms
         ///     This is not applied to the HttpClientFactory instance used to check for existence you must set that
         /// </param>
         /// <param name="abortFailedUploadsAfterDays">After what delay (in days) should we delete failed uploads. Default is 1</param>
@@ -296,7 +296,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             {
                 headRequest.Headers.Add("x-amz-expected-bucket-owner", accountId);
                 var response = await httpClient.SendAsync(headRequest);
-                //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist 
+                //If we deny public access to the bucket, but it exists we get access denied; we get not-found if it does not exist
                 return (response.IsSuccessStatusCode || response.StatusCode == HttpStatusCode.Forbidden);
             }
         }

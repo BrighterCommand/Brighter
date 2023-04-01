@@ -84,7 +84,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             _dynamoDbOutbox.Add(_messageEarliest);
             _storedMessage = _dynamoDbOutbox.Get(_messageEarliest.Id);
 
-            //assert 
+            //assert
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the header from the outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);

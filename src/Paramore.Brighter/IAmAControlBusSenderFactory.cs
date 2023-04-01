@@ -29,7 +29,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAControlBusSenderFactory. Helper for creating a control bus sender, which only requires
-    /// messaging configuration because it wraps the command processor and only supports the Post method, 
+    /// messaging configuration because it wraps the command processor and only supports the Post method,
     /// not Send and Publish and as such does not have handlers to register
     /// </summary>
     public interface IAmAControlBusSenderFactory {

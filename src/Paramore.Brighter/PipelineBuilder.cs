@@ -56,9 +56,9 @@ namespace Paramore.Brighter
         /// <param name="handlerFactorySync">Callback to the user code to create instances of handlers</param>
         /// <param name="inboxConfiguration">Do we have a global attribute to add an inbox</param>
         public PipelineBuilder(
-            IAmASubscriberRegistry registry, 
+            IAmASubscriberRegistry registry,
             IAmAHandlerFactorySync handlerFactorySync,
-            InboxConfiguration inboxConfiguration = null) 
+            InboxConfiguration inboxConfiguration = null)
         {
             _handlerFactorySync = handlerFactorySync;
             _inboxConfiguration = inboxConfiguration;
@@ -67,7 +67,7 @@ namespace Paramore.Brighter
         }
 
         public PipelineBuilder(
-            IAmASubscriberRegistry registry, 
+            IAmASubscriberRegistry registry,
             IAmAHandlerFactoryAsync asyncHandlerFactory,
             InboxConfiguration inboxConfiguration = null)
         {
@@ -220,7 +220,7 @@ namespace Paramore.Brighter
         private void AddGlobalInboxAttributes(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandler<TRequest> implicitHandler)
         {
             if (
-                _inboxConfiguration == null 
+                _inboxConfiguration == null
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
             )
@@ -239,10 +239,10 @@ namespace Paramore.Brighter
 
         private void AddGlobalInboxAttributesAsync(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAsync<TRequest> implicitHandler)
         {
-            if (_inboxConfiguration == null 
+            if (_inboxConfiguration == null
                 || implicitHandler.FindHandlerMethod().HasNoInboxAttributesInPipeline()
                 || implicitHandler.FindHandlerMethod().HasExistingUseInboxAttributesInPipeline()
-     
+
             )
                 return;
 
@@ -296,7 +296,7 @@ namespace Paramore.Brighter
                 }
             });
         }
-        
+
         private static void PushOntoAttributeList(ref IOrderedEnumerable<RequestHandlerAttribute> preAttributes, RequestHandlerAttribute requestHandlerAttribute)
         {
             var attributeList = new List<RequestHandlerAttribute>();
@@ -311,7 +311,7 @@ namespace Paramore.Brighter
 
             preAttributes = attributeList.OrderByDescending(handler => handler.Step);
         }
-     
+
         private IHandleRequests<TRequest> PushOntoPipeline(IEnumerable<RequestHandlerAttribute> attributes, IHandleRequests<TRequest> lastInPipeline, IRequestContext requestContext)
         {
             attributes.Each(attribute =>

@@ -41,7 +41,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         void Send(Message message);
-        
+
         /// <summary>
         /// Send the specified message with specified delay
         /// </summary>

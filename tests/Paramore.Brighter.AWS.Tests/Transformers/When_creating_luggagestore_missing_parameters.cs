@@ -54,8 +54,8 @@ public class S3LuggageUploadMissingParametersTests
 #pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
+                policy: null,
+                abortFailedUploadsAfterDays: 1,
                 deleteGoodUploadsAfterDays: 1);
         });
 
@@ -80,15 +80,15 @@ public class S3LuggageUploadMissingParametersTests
 #pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
+                policy: null,
+                abortFailedUploadsAfterDays: 1,
                 deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ArgumentNullException>();
     }
-    
+
     [Fact]
     public async Task When_creating_luggagestore_bad_bucketName()
     {
@@ -106,15 +106,15 @@ public class S3LuggageUploadMissingParametersTests
 #pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
+                policy: null,
+                abortFailedUploadsAfterDays: 1,
                 deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ArgumentException>();
     }
-    
+
     [Fact]
     public async Task When_creating_luggagestore_missing_httpClient()
     {
@@ -132,8 +132,8 @@ public class S3LuggageUploadMissingParametersTests
 #pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
+                policy: null,
+                abortFailedUploadsAfterDays: 1,
                 deleteGoodUploadsAfterDays: 1);
         });
 
@@ -158,15 +158,15 @@ public class S3LuggageUploadMissingParametersTests
 #pragma warning restore CS0618 // turn warning back on
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
+                policy: null,
+                abortFailedUploadsAfterDays: 1,
                 deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ArgumentNullException>();
     }
-    
+
     [Fact]
     public async Task When_creating_luggagestore_missing_bucketRegion()
     {
@@ -182,15 +182,15 @@ public class S3LuggageUploadMissingParametersTests
                 bucketRegion: null,
                 tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                 acl: S3CannedACL.Private,
-                policy: null, 
-                abortFailedUploadsAfterDays: 1, 
+                policy: null,
+                abortFailedUploadsAfterDays: 1,
                 deleteGoodUploadsAfterDays: 1);
         });
 
         exception.Should().NotBeNull();
         exception.Should().BeOfType<ArgumentNullException>();
     }
-    
+
       [Fact]
         public async Task When_creating_luggagestore_missing_ACL()
         {
@@ -208,11 +208,11 @@ public class S3LuggageUploadMissingParametersTests
 #pragma warning restore CS0618 // turn warning back on
                     tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: null,
-                    policy: null, 
-                    abortFailedUploadsAfterDays: 1, 
+                    policy: null,
+                    abortFailedUploadsAfterDays: 1,
                     deleteGoodUploadsAfterDays: 1);
             });
-    
+
             exception.Should().NotBeNull();
             exception.Should().BeOfType<ArgumentNullException>();
         }

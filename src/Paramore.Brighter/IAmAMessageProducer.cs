@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// If you set MaxOutStandingMessages to -1 or 0 this property is effectively ignored
         /// </summary>
         int MaxOutStandingCheckIntervalMilliSeconds { get; set; }
-        
+
         /// <summary>
         /// An outbox may require additional arguments before it can run its checks. The DynamoDb outbox for example expects there to be a Topic in the args
         /// This bag provides the args required

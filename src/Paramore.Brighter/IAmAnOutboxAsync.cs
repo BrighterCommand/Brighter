@@ -41,9 +41,9 @@ namespace Paramore.Brighter
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
+        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait
         /// or access the Result or otherwise block. You may need the orginating synchronization context if you need to access thread specific storage
-        /// such as HTTPContext 
+        /// such as HTTPContext
         /// </summary>
         bool ContinueOnCapturedContext { get; set; }
 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}"/>.</returns>
         Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken));
-        
+
         /// <summary>
         ///  Returns all messages in the store
         /// </summary>
@@ -76,8 +76,8 @@ namespace Paramore.Brighter
         /// <returns></returns>
         [Obsolete("Removed in v10, Please use OutstandingMessagesAsync instead.")]
         Task<IList<Message>> GetAsync(
-            int pageSize = 100, 
-            int pageNumber = 1, 
+            int pageSize = 100,
+            int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken));
 
@@ -123,7 +123,7 @@ namespace Paramore.Brighter
             int outboxTimeout = -1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default(CancellationToken));
-        
+
         /// <summary>
         /// Messages still outstanding in the Outbox because their timestamp
         /// </summary>
@@ -134,8 +134,8 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Async Cancellation Token</param>
         /// <returns>Outstanding Messages</returns>
         Task<IEnumerable<Message>> OutstandingMessagesAsync(
-            double millSecondsSinceSent, 
-            int pageSize = 100, 
+            double millSecondsSinceSent,
+            int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null,
             CancellationToken cancellationToken = default);

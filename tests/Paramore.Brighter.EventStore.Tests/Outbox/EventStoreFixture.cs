@@ -35,9 +35,9 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
     {
         protected IEventStoreConnection Connection { get; private set; }
         protected bool EventStoreClientConnected { get; private set; }
-        
+
         protected string StreamName { get; private set; }
-        
+
         public async Task InitializeAsync()
         {
             var endpoint = new Uri("tcp://127.0.0.1:1113");
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.EventStore.Tests.Outbox
 
             StreamName = $"{Guid.NewGuid()}";
         }
-        
+
         protected void EnsureEventStoreNodeHasStartedAndTheClientHasConnected()
         {
             var timer = new Stopwatch();

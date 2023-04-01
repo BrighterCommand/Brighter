@@ -40,14 +40,14 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The context.</value>
         IRequestContext Context { get; set; }
-        
+
         /// <summary>
         /// Describes the path. To support pipeline tracing. Generally return the name of this handler to <see cref="IAmAPipelineTracer"/>,
         ///  or other information to determine the path a request will take
         /// </summary>
         /// <param name="pathExplorer">The path explorer.</param>
         void DescribePath(IAmAPipelineTracer pathExplorer);
-        
+
         /// <summary>
         /// Initializes from the <see cref="RequestHandlerAttribute"/> attribute parameters. Use when you need to provide parameter information from the
         /// attribute to the handler. Note that the attribute implementation might include types other than primitives that you intend to pass across, but
@@ -94,7 +94,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// If a request cannot be completed by <see cref="Handle"/>, implementing the <see cref="Fallback"/> method provides an alternate code path that can be used
-        /// This allows for graceful  degradation.  
+        /// This allows for graceful  degradation.
         /// </summary>
         /// <param name="request">The request.</param>
         /// <returns>TRequest.</returns>

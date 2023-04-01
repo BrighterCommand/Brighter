@@ -78,11 +78,11 @@ namespace Paramore.Brighter.Monitoring.Handlers
                 {
                     _controlBusSender.Post(
                         new MonitorEvent(
-                            _instanceName, 
-                            MonitorEventType.EnterHandler, 
-                            _handlerName, 
+                            _instanceName,
+                            MonitorEventType.EnterHandler,
+                            _handlerName,
                             _handlerFullAssemblyName,
-                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeBeforeHandle,
                             0));
 
@@ -91,14 +91,14 @@ namespace Paramore.Brighter.Monitoring.Handlers
                     var timeAfterHandle = DateTime.UtcNow;
                     _controlBusSender.Post(
                         new MonitorEvent(
-                            _instanceName, 
-                            MonitorEventType.ExitHandler, 
+                            _instanceName,
+                            MonitorEventType.ExitHandler,
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeAfterHandle,
                             (timeAfterHandle-timeBeforeHandle).Milliseconds));
-                        
+
                     return command;
                 }
                 catch (Exception e)
@@ -106,11 +106,11 @@ namespace Paramore.Brighter.Monitoring.Handlers
                     var timeOnException = DateTime.UtcNow;
                     _controlBusSender.Post(
                         new MonitorEvent(
-                            _instanceName, 
-                            MonitorEventType.ExceptionThrown, 
+                            _instanceName,
+                            MonitorEventType.ExceptionThrown,
                             _handlerName,
                             _handlerFullAssemblyName,
-                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options), 
+                            JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeOnException,
                             (timeOnException - timeBeforeHandle).Milliseconds,
                             e));

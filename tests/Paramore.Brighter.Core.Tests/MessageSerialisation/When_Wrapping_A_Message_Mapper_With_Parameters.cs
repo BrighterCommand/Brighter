@@ -26,7 +26,7 @@ public class MessageWrapRequestWithAttributesTests
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper_With_Attributes()
     {

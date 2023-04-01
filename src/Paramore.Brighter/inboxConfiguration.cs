@@ -10,8 +10,8 @@ namespace Paramore.Brighter
         Events = 2,
         All = 3
     }
-    
-    
+
+
     /// <summary>
     /// Configure the inbox globally
     /// </summary>
@@ -32,14 +32,14 @@ namespace Paramore.Brighter
         /// <summary>
         /// If null, the context to pass to the Inbox will be auto-generated from the handler class name. Otherwise
         /// override with a function that takes a type name - the target handler, and returns a string, the context key
-        /// to use in the inbox to disambiguate requests (such as when an event is raised). 
+        /// to use in the inbox to disambiguate requests (such as when an event is raised).
         /// </summary>
         public Func<Type, string> Context { get; set; }
 
         public InboxConfiguration(
-            InboxScope scope = InboxScope.All, 
+            InboxScope scope = InboxScope.All,
             bool onceOnly = true,
-            OnceOnlyAction actionOnExists = OnceOnlyAction.Throw, 
+            OnceOnlyAction actionOnExists = OnceOnlyAction.Throw,
             Func<Type, string> context = null)
         {
             Scope = scope;

@@ -33,7 +33,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// </summary>
 
         public TopicFindBy FindTopicBy { get; set; } = TopicFindBy.Convention;
-        
+
         /// <summary>
         /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
         /// need to create or validate the SNS Topic

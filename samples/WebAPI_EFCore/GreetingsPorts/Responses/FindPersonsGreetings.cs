@@ -12,7 +12,7 @@ namespace GreetingsPorts.Responses
     public class Salutation
     {
         public string Words { get; set; }
-        
+
         public Salutation(string words)
         {
             Words = words;

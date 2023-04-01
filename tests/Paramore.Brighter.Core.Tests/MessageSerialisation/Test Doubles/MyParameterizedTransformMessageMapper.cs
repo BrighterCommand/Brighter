@@ -13,7 +13,7 @@ public class MyParameterizedTransformMessageMapper: IAmAMessageMapper<MyTransfor
             new MessageHeader(request.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
-    }                                                       
+    }
 
     [MyParameterizedUnwrapWith(0, template: "I am a parameterized template: {0}")]
     public MyTransformableCommand MapToRequest(Message message)

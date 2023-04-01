@@ -52,7 +52,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// Initializes a new instance of the <see cref="T:System.Object" /> class.
         /// <param name="configuration">The configuration to use with RestMS.</param>
         /// </summary>
-        public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration) 
+        public RestMSMessageGateway(RestMSMessagingGatewayConfiguration configuration)
         {
             Configuration = configuration; 
             _timeout = Configuration.RestMS.Timeout;
@@ -115,7 +115,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
             var client = new HttpClient()
             {
                 Timeout = TimeSpan.FromMilliseconds(timeout),
-                
+
             };
             client.DefaultRequestHeaders.CacheControl.MustRevalidate = true;
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("text/xml"));

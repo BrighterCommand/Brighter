@@ -12,7 +12,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqBrokerNotPreCreatedTests()
         {
             _message = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -24,7 +24,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
 
         }
-        
+
         [Fact]
         public void When_posting_a_message_but_no_broker_created()
         {

@@ -54,12 +54,12 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <value>The command processor.</value>
         public IAmACommandProcessor CommandProcessor { get => CommandProcessorFactory.Invoke().Get(); }
-        
+
         /// <summary>
         /// 
         /// </summary>
         public Func<IAmACommandProcessorProvider> CommandProcessorFactory { get; }
-        
+
         /// <summary>
         /// Gets the connections.
         /// TODO: Rename to Subscriptions in V10
@@ -114,10 +114,10 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         public Dispatcher(
-            IAmACommandProcessor commandProcessor, 
+            IAmACommandProcessor commandProcessor,
             IAmAMessageMapperRegistry messageMapperRegistry,
-            IEnumerable<Subscription> subscription, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
+            IEnumerable<Subscription> subscription,
+            IAmAMessageTransformerFactory messageTransformerFactory = null)
             : this(() => new CommandProcessorProvider(commandProcessor), messageMapperRegistry, subscription, messageTransformerFactory)
         {
         }
@@ -138,7 +138,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// Opens the specified subscription by name 
+        /// Opens the specified subscription by name
         /// </summary>
         /// <param name="connectionName">The name of the subscription</param>
         public void Open(string connectionName)

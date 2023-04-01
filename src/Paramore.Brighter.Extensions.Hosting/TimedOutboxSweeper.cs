@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         private readonly TimedOutboxSweeperOptions _options;
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
         private Timer _timer;
-        
+
         public TimedOutboxSweeper (IServiceScopeFactory serviceScopeFactory, TimedOutboxSweeperOptions options)
         {
             _serviceScopeFactory = serviceScopeFactory;

@@ -14,14 +14,14 @@ namespace Paramore.Brighter.Transforms.Transformers
         private int _thresholdInBytes;
         private const ushort GZIP_LEAD_BYTES = 0x8b1f;
         private const byte ZLIB_LEAD_BYTE = 0x78;
-        
+
         /// <summary>Compression method GZip</summary>
         public const string GZIP = "application/gzip";
         /// <summary> Compression method Deflate</summary>
         public const string DEFLATE = "application/deflate";
         /// <summary> Compression method Brotli</summary>
         public const string BROTLI = "application/br";
-        
+
         /// <summary> Original content type header name</summary>
         public const string ORIGINAL_CONTENTTYPE_HEADER = "originalContentType";
 
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Transforms.Transformers
 
             return message;
         }
-       
+
         private (Stream , string) CreateCompressionStream(MemoryStream uncompressed)
         {
             switch (_compressionMethod)
@@ -94,15 +94,15 @@ namespace Paramore.Brighter.Transforms.Transformers
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
                 case CompressionMethod.Zlib:
-                    return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);  
+                    return (new ZLibStream(uncompressed, _compressionLevel), DEFLATE);
                 case CompressionMethod.Brotli:
-                    return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);              
+                    return (new BrotliStream(uncompressed, _compressionLevel), BROTLI);
 #endif
                 default:
                     return (uncompressed, "application/json");
             }
         }
-        
+
         private Stream CreateDecompressionStream(MemoryStream compressed)
         {
             switch (_compressionMethod)
@@ -117,9 +117,9 @@ namespace Paramore.Brighter.Transforms.Transformers
                     throw new ArgumentException("Brotli is not supported in nestandard20");
 #else
                 case CompressionMethod.Zlib:
-                    return new ZLibStream(compressed, CompressionMode.Decompress); 
+                    return new ZLibStream(compressed, CompressionMode.Decompress);
                 case CompressionMethod.Brotli:
-                    return new BrotliStream(compressed, CompressionMode.Decompress);              
+                    return new BrotliStream(compressed, CompressionMode.Decompress);
 #endif
                 default:
                     return compressed;
@@ -133,12 +133,12 @@ namespace Paramore.Brighter.Transforms.Transformers
                 case CompressionMethod.GZip:
                     return message.Header.ContentType == "application/gzip" && message.Body.Bytes.Length >= 2 && BitConverter.ToUInt16(message.Body.Bytes, 0) == GZIP_LEAD_BYTES;
                 case CompressionMethod.Zlib:
-                    return  message.Header.ContentType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE; 
+                    return  message.Header.ContentType == "application/deflate" && message.Body.Bytes[0] == ZLIB_LEAD_BYTE;
                 case CompressionMethod.Brotli:
                     return message.Header.ContentType == "application/br";
                 default:
                     return false;
-                    
+
             }
         }
 

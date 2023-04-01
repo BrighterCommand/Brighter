@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
     internal class MyStoredCommandToThrowHandler : RequestHandler<MyCommand>
     {
         public static bool CommandReceived { get; set; }
-        
+
         [UseInbox(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandler))]
         public override MyCommand Handle(MyCommand command)
         {

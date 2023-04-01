@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// An item stored in an im-memory box needs to implement this, so we know if we should delete it from the box due to time or memory pressure 
+    /// An item stored in an im-memory box needs to implement this, so we know if we should delete it from the box due to time or memory pressure
     /// </summary>
     public interface IHaveABoxWriteTime
     {
@@ -17,7 +17,7 @@ namespace Paramore.Brighter
         /// </summary>
         DateTime WriteTime { get; }
     }
-     
+
     /// <summary>
     /// Base class for in-memory inboxes, handles TTL on entries and cache clearing requirements
     /// </summary>
@@ -45,10 +45,10 @@ namespace Paramore.Brighter
         public TimeSpan ExpirationScanInterval { get; set; } = TimeSpan.FromMinutes(10);
 
         /// <summary>
-        /// For diagnostics 
+        /// For diagnostics
         /// </summary>
         public int EntryCount => _requests.Count;
-     
+
         /// <summary>
         /// How many messages should we retain, before we compact the Outbox
         /// </summary>
@@ -121,7 +121,7 @@ namespace Paramore.Brighter
                         TaskScheduler.Default);
                 }
         }
-        
+
         // Compaction algorithm is to sort into date deposited order, with oldest first
         // Then remove entries until newsize is reached
         private void Compact(int entriesToRemove)

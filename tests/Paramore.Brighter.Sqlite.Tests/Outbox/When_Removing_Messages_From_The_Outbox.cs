@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqlOutboxDeletingMessagesTests 
+    public class SqlOutboxDeletingMessagesTests
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteOutboxSync _sqlOutboxSync;
@@ -75,6 +75,6 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             messages.Should().HaveCount(0);
         }
-        
+
   }
 }

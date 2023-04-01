@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         {
             _context = context;
         }
-        
+
         /// <summary>
         /// Get the current connection of the DB context
         /// </summary>

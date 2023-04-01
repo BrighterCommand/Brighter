@@ -56,23 +56,23 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
             }
 
             channel.ExchangeDeclare(
-                connection.Exchange.Name, 
-                connection.Exchange.Type, 
-                connection.Exchange.Durable, 
+                connection.Exchange.Name,
+                connection.Exchange.Type,
+                connection.Exchange.Durable,
                 autoDelete: false,
                 arguments: arguments);
 
             if (connection.DeadLetterExchange != null)
             {
                  channel.ExchangeDeclare(
-                     connection.DeadLetterExchange.Name, 
-                     connection.DeadLetterExchange.Type, 
-                     connection.DeadLetterExchange.Durable, 
+                     connection.DeadLetterExchange.Name,
+                     connection.DeadLetterExchange.Type,
+                     connection.DeadLetterExchange.Durable,
                      autoDelete: false);
             }
         }
         private static void ValidateExchange(IModel channel, RmqMessagingGatewayConnection connection)
-        
+
         {
             try
             {

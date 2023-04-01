@@ -82,7 +82,7 @@ namespace Paramore.Brighter.Monitoring.Events
         public int TimeElapsedMs { get; set; }
 
         /// <summary>
-        //What was the handler that we raised this event for? 
+        //What was the handler that we raised this event for?
         /// </summary>
         public string HandlerName { get; private set; }
 
@@ -103,7 +103,7 @@ namespace Paramore.Brighter.Monitoring.Events
 
         public MonitorEvent(
             string instanceName,
-            MonitorEventType eventType, 
+            MonitorEventType eventType,
             string handlerName,
             string handlerFullAssemblyName,
             string requestBody,

@@ -105,7 +105,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 {
                     throw new AmazonSQSException($"Failed to GetMessagesAsync for queue {queueName}. Response: {response.HttpStatusCode}");
                 }
-                
+
                 return response.Messages.Count;
 
             }

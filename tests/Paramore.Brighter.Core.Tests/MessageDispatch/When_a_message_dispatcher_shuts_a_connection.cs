@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_no_consumers
             _dispatcher.Consumers.Should().BeEmpty();
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

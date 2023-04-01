@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private const string END_OF_HEADER = " HEADER/>";
         private const string BEGINNING_OF_BODY = "<BODY";
         private const string END_OF_BODY = "BODY/>";
-        
+
         private StringWriter _writer;
 
         public RedisMessagePublisher()
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             headers.Add(HeaderNames.DELAYED_MILLISECONDS, messageHeader.DelayedMilliseconds.ToString());
         }
-        
+
         private void WriteHandledCount(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
             headers.Add(HeaderNames.HANDLED_COUNT, messageHeader.HandledCount.ToString());
@@ -128,12 +128,12 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             headers.Add(HeaderNames.MESSAGE_ID, messageHeader.Id.ToString());
         }
-        
+
         private void WriteMessageType(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
             headers.Add(HeaderNames.MESSAGE_TYPE, messageHeader.MessageType.ToString());
         }
-        
+
         private void WrtiteReplyTo(MessageHeader messageHeader, Dictionary<string, string> headers)
         {
             headers.Add(HeaderNames.REPLY_TO, messageHeader.ReplyTo);

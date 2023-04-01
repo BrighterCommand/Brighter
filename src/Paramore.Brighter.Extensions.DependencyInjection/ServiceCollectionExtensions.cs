@@ -134,8 +134,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
          /// <param name="inboxConfiguration">If this is null, configure by hand, if not, will auto-add inbox to handlers</param>
          /// <returns></returns>
          public static IBrighterBuilder UseExternalInbox(
-             this IBrighterBuilder brighterBuilder, 
-             IAmAnInbox inbox, InboxConfiguration inboxConfiguration = null, 
+             this IBrighterBuilder brighterBuilder,
+             IAmAnInbox inbox, InboxConfiguration inboxConfiguration = null,
              ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
          {
              if (inbox is IAmAnInboxSync)
@@ -226,7 +226,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             brighterBuilder.Services.TryAddSingleton(featureSwitchRegistry);
             return brighterBuilder;
         }
-        
+
         /// <summary>
         /// Config the Json Serialiser that is used inside of Brighter
         /// </summary>
@@ -243,7 +243,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             return brighterBuilder;
         }
-        
+
         /// <summary>
         /// Registers message mappers with the registry. Normally you don't need to call this, it is called by the builder for Brighter or the Service Activator
         /// Visibility is required for use from both
@@ -274,7 +274,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             return new ServiceProviderTransformerFactory(provider);
         }
-        
+
         private static CommandProcessor BuildCommandProcessor(IServiceProvider provider)
         {
             var loggerFactory = provider.GetService<ILoggerFactory>();
@@ -316,13 +316,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 : policyBuilder.Policies(options.PolicyRegistry);
 
             var commandProcessor = AddExternalBusMaybe(
-                    options, 
-                    producerRegistry, 
-                    messagingBuilder, 
-                    messageMapperRegistry, 
-                    inboxConfiguration, 
-                    outbox, 
-                    overridingConnectionProvider, 
+                    options,
+                    producerRegistry,
+                    messagingBuilder,
+                    messageMapperRegistry,
+                    inboxConfiguration,
+                    outbox,
+                    overridingConnectionProvider,
                     useRequestResponse,
                     _outboxBulkChunkSize,
                     transformFactory)
@@ -339,15 +339,15 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             FireAndForget = 1,
             RPC = 2
         }
-        
+
         private static INeedARequestContext AddExternalBusMaybe(
-            IBrighterOptions options, 
-            IAmAProducerRegistry producerRegistry, 
+            IBrighterOptions options,
+            IAmAProducerRegistry producerRegistry,
             INeedMessaging messagingBuilder,
-            MessageMapperRegistry messageMapperRegistry, 
-            InboxConfiguration inboxConfiguration, 
+            MessageMapperRegistry messageMapperRegistry,
+            InboxConfiguration inboxConfiguration,
             IAmAnOutboxSync<Message> outbox,
-            IAmABoxTransactionConnectionProvider overridingConnectionProvider, 
+            IAmABoxTransactionConnectionProvider overridingConnectionProvider,
             IUseRpc useRequestResponse,
             int outboxBulkChunkSize,
             IAmAMessageTransformerFactory transformerFactory)
@@ -359,9 +359,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             else if (externalBusType == ExternalBusType.FireAndForget)
                 return messagingBuilder.ExternalBus(
                     new ExternalBusConfiguration(
-                        producerRegistry, 
-                        messageMapperRegistry, 
-                        outboxBulkChunkSize: outboxBulkChunkSize, 
+                        producerRegistry,
+                        messageMapperRegistry,
+                        outboxBulkChunkSize: outboxBulkChunkSize,
                         useInbox: inboxConfiguration,
                         transformerFactory: transformerFactory),
                     outbox,

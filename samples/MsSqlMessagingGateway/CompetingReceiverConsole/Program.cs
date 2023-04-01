@@ -53,7 +53,7 @@ namespace CompetingReceiverConsole
 
                     services.AddSingleton<IAmACommandCounter, CommandCounter>();
                 })
-                
+
                 .UseConsoleLifetime()
                 .UseSerilog()
                 .Build();

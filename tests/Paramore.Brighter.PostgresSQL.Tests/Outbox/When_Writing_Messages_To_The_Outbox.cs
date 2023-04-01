@@ -72,7 +72,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
-        
+
         [Fact]
         public void When_Writing_Messages_To_The_Outbox_Bulk()
         {
@@ -91,7 +91,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         {
             _postgresSqlTestHelper.CleanUpDb();
         }
-        
+
         public void Dispose()
         {
             GC.SuppressFinalize(this);

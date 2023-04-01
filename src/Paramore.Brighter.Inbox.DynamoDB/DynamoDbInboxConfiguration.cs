@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         public string TableName { get; set; }
 
         public DynamoDbInboxConfiguration(
-            AWSCredentials credentials, 
+            AWSCredentials credentials,
             RegionEndpoint region,
             string tableName)
         {
@@ -52,5 +52,5 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             Region = region;
             TableName = tableName;
         }
-   }     
+   }
 }

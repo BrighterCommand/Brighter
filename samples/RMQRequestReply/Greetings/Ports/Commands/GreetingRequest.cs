@@ -31,8 +31,8 @@ namespace Greetings.Ports.Commands
     {
         public string Name { get; set; }
         public string Language { get; set; }
-        
-        
+
+
         public GreetingRequest() : base(new ReplyAddress()) { }
 
         public  GreetingRequest(ReplyAddress replyAddress) : base(replyAddress)

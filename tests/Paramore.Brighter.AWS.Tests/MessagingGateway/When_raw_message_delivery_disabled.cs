@@ -10,12 +10,12 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
-    [Trait("Category", "AWS")] 
+    [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
     public class SqsRawMessageDeliveryTests : IDisposable
     {
         private readonly SqsMessageProducer _messageProducer;
-        private readonly string _topicName; 
+        private readonly string _topicName;
         private readonly ChannelFactory _channelFactory;
         private readonly IAmAChannel _channel;
 
@@ -41,10 +41,10 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 makeChannels: OnMissingChannel.Create,
                 rawMessageDelivery: false));
 
-            _messageProducer = new SqsMessageProducer(awsConnection, 
+            _messageProducer = new SqsMessageProducer(awsConnection,
                 new SnsPublication
                 {
-                    MakeChannels = OnMissingChannel.Create 
+                    MakeChannels = OnMissingChannel.Create
                 });
         }
 
@@ -52,11 +52,11 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         public void When_raw_message_delivery_disabled()
         {
             //arrange
-            var messageHeader = new MessageHeader(Guid.NewGuid(), 
-                _topicName, 
-                MessageType.MT_COMMAND, 
-                correlationId: Guid.NewGuid(), 
-                replyTo: string.Empty, 
+            var messageHeader = new MessageHeader(Guid.NewGuid(),
+                _topicName,
+                MessageType.MT_COMMAND,
+                correlationId: Guid.NewGuid(),
+                replyTo: string.Empty,
                 contentType: "text\\plain");
 
             var customHeaderItem = new KeyValuePair<string, object>("custom-header-item", "custom-header-item-value");

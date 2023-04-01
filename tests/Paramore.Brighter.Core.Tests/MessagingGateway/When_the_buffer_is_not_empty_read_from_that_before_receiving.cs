@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
                 new MessageBody("SecondMessage"));
 
         }
-        
+
         [Fact]
         public void When_the_buffer_is_not_empty_read_from_that_before_receiving()
         {
@@ -90,7 +90,7 @@ namespace Paramore.Brighter.Core.Tests.MessagingGateway
         {
               Assert.Throws<ConfigurationException>(() => new Channel("test", _gateway, 11));
         }
-        
+
         [Fact]
         public void When_the_gateway_returns_an_array_of_messages_enqueue_them_into_the_buffer_then_retrieve_from_there()
         {

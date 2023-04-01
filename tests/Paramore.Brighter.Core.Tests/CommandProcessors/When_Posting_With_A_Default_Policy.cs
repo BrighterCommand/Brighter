@@ -62,8 +62,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}), 
-                    messageMapperRegistry), 
+                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}),
+                    messageMapperRegistry),
                     _fakeOutboxSync)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();

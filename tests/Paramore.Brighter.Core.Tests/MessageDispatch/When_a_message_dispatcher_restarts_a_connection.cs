@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             Task.Delay(1000).Wait();
             _dispatcher.Shut(_subscription);
         }
-        		 
+
         [Fact]
         public void When_A_Message_Dispatcher_Restarts_A_Connection()
         {
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

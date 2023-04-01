@@ -5,7 +5,7 @@ namespace Paramore.Brighter.Storage.Azure;
 public class AzureBlobArchiveProvider : IAmAnArchiveProvider
 {
     private BlobContainerClient _containerClient;
-    
+
     public AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options)
     {
         _containerClient = new BlobContainerClient(options.BlobContainerUri, options.TokenCredential);

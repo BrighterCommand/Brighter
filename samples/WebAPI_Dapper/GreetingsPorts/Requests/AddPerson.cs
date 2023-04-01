@@ -7,7 +7,7 @@ namespace GreetingsPorts.Requests
     {
         public string Name { get; set; }
 
-        public AddPerson(string name) 
+        public AddPerson(string name)
             : base(Guid.NewGuid())
         {
             Name = name;

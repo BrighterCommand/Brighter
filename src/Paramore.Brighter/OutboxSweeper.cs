@@ -22,8 +22,8 @@ namespace Paramore.Brighter
         /// <param name="useBulk">Use the producers bulk dispatch functionality.</param>
         /// <param name="args">Optional bag of parameters to pass to the Outbox</param>
         public OutboxSweeper(
-            int millisecondsSinceSent, 
-            IAmACommandProcessor commandProcessor, 
+            int millisecondsSinceSent,
+            IAmACommandProcessor commandProcessor,
             int batchSize = 100,
             bool useBulk = false,
             Dictionary<string, object> args = null)

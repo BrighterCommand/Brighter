@@ -32,7 +32,7 @@ public class MessageUnwrapRequestWithAttributesTests
             new MessageHeader(myCommand.Id, "transform.event", MessageType.MT_COMMAND, DateTime.UtcNow),
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General))));
     }
-    
+
     [Fact]
     public void When_Wrapping_A_Message_Mapper_With_Attributes()
     {

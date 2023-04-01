@@ -60,7 +60,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         public const string DELAYED_MILLISECONDS = "DelayedMilliseconds";
         /// <summary>
-        /// RPC, who should we reply to 
+        /// RPC, who should we reply to
         /// </summary>
         public const string REPLY_TO = "ReplyTo";
         /// <summary>

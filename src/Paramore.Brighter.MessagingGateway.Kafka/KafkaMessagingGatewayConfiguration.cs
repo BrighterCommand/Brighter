@@ -26,7 +26,7 @@ using System;
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     //Maps to Confluent's Kafka's Client Config enum, but we don't want to take a direct dependency on that here
-    
+
     /// <summary>
     /// What is the security protocol used to authenticate the client with the broker
     /// </summary>
@@ -38,7 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         ScramSha512,
         OAuthBearer,
     }
-    
+
     public enum SecurityProtocol
     {
         Plaintext,
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         SaslPlaintext,
         SaslSsl,
     }
-    
+
     public class KafkaMessagingGatewayConfiguration
     {
         /// <summary>
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// A comma-separated list of debug contexts to enable.  Producer: broker, topic, msg. Consumer: consumer, cgrp, topic, fetch
         /// </summary>
-        public string Debug { get; set; } = null; 
+        public string Debug { get; set; } = null;
 
          /// <summary>
          /// Client identifier.
@@ -73,14 +73,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          /// This client's Kerberos principal name.
          /// </summary>
          public string SaslKerberosPrincipal { get; set; } = null;
-         
+
          /// <summary>
          /// SASL username for use with PLAIN and SASL-SCRAM
          /// </summary>
          public string SaslUsername { get; set; }
-         
+
          /// <summary>
-         /// SASL password for use with PLAIN and SASL-SCRAM 
+         /// SASL password for use with PLAIN and SASL-SCRAM
          /// </summary>
          public string SaslPassword { get; set; }
 
@@ -98,7 +98,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
          /// Path to client's keystore
          /// </summary>
          public string SslKeystoreLocation { get; set; } = null;
-         
+
          /// <summary>
          /// Password to keystore
          /// </summary>

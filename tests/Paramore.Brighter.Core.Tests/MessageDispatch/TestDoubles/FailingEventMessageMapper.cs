@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         public Guid Id { get; set; }
         public string MissingStringField { get; set; }
         public int MissingIntField { get; set; }
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="T:System.Object"/> class.
         /// </summary>
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         {
             Id = new Guid();
         }
-        
+
         /// <summary>
         /// Gets or sets the span that this operation live within
         /// </summary>

@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly Message _messageEarliest;
         private Message _storedMessage;
- 
+
         public SqliteOutboxWritingMessageAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
 
             var messageHeader = new MessageHeader(
-                Guid.NewGuid(), 
-                "test_topic", 
+                Guid.NewGuid(),
+                "test_topic",
                 MessageType.MT_DOCUMENT,
                 DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(_key1, _value1);

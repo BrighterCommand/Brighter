@@ -12,7 +12,7 @@ public class OrderRepository : IOrderRepository
     {
         _sqlConnection = sqlConnection;
     }
-    
+
     public async Task CreateOrderAsync(Order order, CancellationToken cancellationToken)
     {
         var sql = "Insert Into dbo.[Orders] (Version, Number, Type, Status, ActionsPending) values (@Version, @Number, @Type, @Status, @ActionPending)";
@@ -25,7 +25,7 @@ public class OrderRepository : IOrderRepository
             new SqlParameter("@Status", order.Status),
             new SqlParameter("@ActionPending", false)
         };
-        
+
         var command = await _sqlConnection.CreateSqlCommandAsync(sql, sqlParams, cancellationToken);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
@@ -42,12 +42,12 @@ public class OrderRepository : IOrderRepository
             new SqlParameter("@ActionPending", false),
             new SqlParameter("@OrderId", order.Id)
         };
-        
+
         var command = await _sqlConnection.CreateSqlCommandAsync(sql, sqlParams, cancellationToken);
 
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
-    
+
     public async Task<Order> GetOrderAsync(int orderId, CancellationToken cancellationToken)
     {
         var sql = "Select Top(1) Id, Version, Number, Type, ActionsPending, Status From dbo.[Orders] Where Id = @OrderId Order By Version desc";
@@ -56,13 +56,13 @@ public class OrderRepository : IOrderRepository
         {
             new SqlParameter("@OrderId", orderId),
         };
-        
+
         var command = await _sqlConnection.CreateSqlCommandAsync(sql, sqlParams, cancellationToken);
 
         var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         Order order = null;
-        
+
         if (await reader.ReadAsync(cancellationToken))
         {
             var id = reader.GetInt64(reader.GetOrdinal("Id"));

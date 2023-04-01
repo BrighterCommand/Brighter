@@ -28,8 +28,8 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Interface IAmAnAsyncPipelineBuilder
-    /// Builds the pipeline that handles an <see cref="IRequest"/>, 
-    /// with a target <see cref="IHandleRequestsAsync"/> supporting async/await and 
+    /// Builds the pipeline that handles an <see cref="IRequest"/>,
+    /// with a target <see cref="IHandleRequestsAsync"/> supporting async/await and
     /// any orthogonal <see cref="IHandleRequestsAsync"/> for Quality of Service (qos)
     /// The default implementation is <see cref="PipelineBuilder{T}"/>
     /// </summary>

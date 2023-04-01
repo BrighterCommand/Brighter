@@ -40,7 +40,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The bag.</value>
         Dictionary<string, object> Bag { get; }
-        
+
         /// <summary>
         /// Gets the policies.
         /// </summary>

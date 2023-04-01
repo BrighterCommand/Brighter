@@ -11,7 +11,7 @@ using Paramore.Brighter.MessagingGateway.RMQ;
 
 var builder = WebApplication.CreateBuilder(args);
 
-using var tracerProvider = 
+using var tracerProvider =
     Sdk.CreateTracerProviderBuilder()
     .SetResourceBuilder(ResourceBuilder.CreateDefault().AddService("ProducerService"))
     .AddSource("Paramore.Brighter*", "Microsoft.*")

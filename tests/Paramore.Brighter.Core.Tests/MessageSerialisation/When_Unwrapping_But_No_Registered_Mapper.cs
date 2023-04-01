@@ -34,7 +34,7 @@ public class MessageUnwrapRequestMissingMapperTests
 
         message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
-    
+
     [Fact]
     public void When_Wrapping_But_No_Registered_Mapper()
     {

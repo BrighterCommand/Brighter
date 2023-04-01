@@ -36,9 +36,9 @@ namespace SalutationPorts.Handlers
                 var salutation = new Salutation(@event.Greeting);
 
                 _uow.Salutations.Add(salutation);
-                
+
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
-                
+
                 await _uow.SaveChangesAsync(cancellationToken);
 
                 await tx.CommitAsync(cancellationToken);
@@ -46,9 +46,9 @@ namespace SalutationPorts.Handlers
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                
+
                 await tx.RollbackAsync(cancellationToken);
-                
+
                 Console.WriteLine("Salutation analytical record not saved");
 
                 throw;

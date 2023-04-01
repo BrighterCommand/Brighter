@@ -108,7 +108,7 @@ namespace Paramore.Brighter
         public Dictionary<string, object> Bag { get; set; } = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
 
         /// <summary>
-        /// Gets the number of times this message has been seen 
+        /// Gets the number of times this message has been seen
         /// </summary>
         public int HandledCount { get; set; }
 

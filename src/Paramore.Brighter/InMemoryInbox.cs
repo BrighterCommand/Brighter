@@ -64,7 +64,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The command body.</value>
         public string RequestBody { get; set; }
-        
+
         /// <summary>
         /// Gets the type of the command.
         /// </summary>
@@ -96,8 +96,8 @@ namespace Paramore.Brighter
             return $"{id}:{contextKey}";
         }
     }
-    
-    
+
+
     /// <summary>
     /// Class InMemoryInbox.
     /// A Inbox stores <see cref="Command"/>s for diagnostics or replay.
@@ -118,7 +118,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value><c>true</c> if [continue on captured context]; otherwise, <c>false</c>.</value>
         public bool ContinueOnCapturedContext { get; set; }
-        
+
         /// <summary>
         /// Adds the specified identifier.
         /// </summary>

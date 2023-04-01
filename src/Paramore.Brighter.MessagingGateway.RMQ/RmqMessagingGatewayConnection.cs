@@ -28,7 +28,7 @@ using RabbitMQ.Client;
 
 namespace Paramore.Brighter.MessagingGateway.RMQ
 {
-    public class RmqMessagingGatewayConnection : IAmGatewayConfiguration 
+    public class RmqMessagingGatewayConnection : IAmGatewayConfiguration
     {
       public RmqMessagingGatewayConnection()
       {
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// The exchange used for any dead letter queue
         /// </summary>
         public Exchange DeadLetterExchange { get; set; }
-        
+
         /// <summary>
         /// Gets or sets the Heartbeat in seconds. Defaults to 20.
         /// </summary>
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         public int RetryWaitInMilliseconds { get; set; }
 
         /// <summary>
-        /// The time in milliseconds to wait before retrying to connect again. 
+        /// The time in milliseconds to wait before retrying to connect again.
         /// </summary>
         public int CircuitBreakTimeInMilliseconds { get; set; }
 

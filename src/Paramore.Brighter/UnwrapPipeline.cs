@@ -44,8 +44,8 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
         public UnwrapPipeline(
-            IEnumerable<IAmAMessageTransformAsync> transforms, 
-            IAmAMessageTransformerFactory messageTransformerFactory, 
+            IEnumerable<IAmAMessageTransformAsync> transforms,
+            IAmAMessageTransformerFactory messageTransformerFactory,
             IAmAMessageMapper<TRequest> messageMapper)
         {
             MessageMapper = messageMapper;
@@ -57,7 +57,7 @@ namespace Paramore.Brighter
             }
         }
 
-        /// <summary>        
+        /// <summary>
         /// Lists the unwrap pipeline: filter transforms and message mapper that will be executed
         /// Used for pipeline verification
         /// </summary>
@@ -69,8 +69,8 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/> 
-        /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
+        /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/>
+        /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/>
         /// </summary>
         /// <param name="message">The message to unwrap</param>
         /// <param name="cancellationToken">The cancellation token</param>

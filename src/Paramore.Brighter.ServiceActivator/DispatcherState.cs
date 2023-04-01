@@ -31,7 +31,7 @@ namespace Paramore.Brighter.ServiceActivator
     public enum DispatcherState
     {
         /// <summary>
-        /// Initializing, not ready to receive requests yet 
+        /// Initializing, not ready to receive requests yet
         /// </summary>
         DS_NOTREADY = 0,
         /// <summary>

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()));
             messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, messageMapperRegistry) 
+            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(_commandProcessor, messageMapperRegistry)
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3 };
 
             var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));

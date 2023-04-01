@@ -18,17 +18,17 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
              const string topic = "test";
             _redisFixture = redisFixture;
             _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND),
                 new MessageBody("test content")
                 );
             
             _messageTwo = new Message(
-                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), topic, MessageType.MT_COMMAND),
                 new MessageBody("more test content")
                  );
         }
-        
-        
+
+
         [Fact]
         public void When_posting_a_message_via_the_messaging_gateway()
         {

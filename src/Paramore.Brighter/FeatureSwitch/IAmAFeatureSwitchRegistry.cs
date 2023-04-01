@@ -27,8 +27,8 @@ using System;
 namespace Paramore.Brighter.FeatureSwitch
 {
     public interface IAmAFeatureSwitchRegistry
-    {        
-        MissingConfigStrategy MissingConfigStrategy { get; set; } 
+    {
+        MissingConfigStrategy MissingConfigStrategy { get; set; }
 
         /// <summary>
         /// Check the <see cref="FeatureSwitchStatus"/> of a Handler based on type.

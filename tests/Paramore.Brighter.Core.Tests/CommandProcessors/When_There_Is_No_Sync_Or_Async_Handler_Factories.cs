@@ -12,7 +12,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors;
 public class CommandProcessorNoHandlerFactoriesTests : IDisposable
 {
     private Exception _exception;
-    
+
     [Fact]
     public void When_There_Are_No_Command_Handlers_Async()
     {
@@ -31,8 +31,8 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
         //_should_have_an_error_message_that_tells_you_why
         _exception.Should().NotBeNull();
         _exception.Message.Should().Contain("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
-    }    
-    
+    }
+
     [Fact]
     public void When_using_IAmAHandlerFactory()
     {
@@ -52,7 +52,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
         _exception.Should().NotBeNull();
         _exception.Message.Should().Contain("No HandlerFactory has been set - either an instance of IAmAHandlerFactorySync or IAmAHandlerFactoryAsync needs to be set");
     }
-    
+
     public void Dispose()
     {
         CommandProcessor.ClearExtServiceBus();
@@ -60,6 +60,6 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
 
     class DummyHandlerFactory : IAmAHandlerFactory
     {
-        
+
     }
 }

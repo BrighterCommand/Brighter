@@ -63,12 +63,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             TracePipeline().ToString().Should().Contain("MyImplicitHandlerAsync");
             TracePipeline().ToString().Should().Contain("MyLoggingHandlerAsync");
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearExtServiceBus();
         }
- 
+
         private PipelineTracer TracePipeline()
         {
             var pipelineTracer = new PipelineTracer();

@@ -44,7 +44,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
-                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
             
             
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
-                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
             
             
@@ -95,7 +95,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             
             var messageId = Guid.NewGuid();
             var messageToAdd = new Message(
-                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT), 
+                new MessageHeader(messageId, "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
             
             
@@ -120,9 +120,9 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for(int i =0; i <= 4; i++)
                 outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
 
-            //Act 
+            //Act
             var message = outbox.Get(messageIds[2]);
-            
+
             //Assert
             message.Id.Should().Be(messageIds[2]);
         }
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             for(int i =0; i <= 4; i++)
                 outbox.Add(new MessageTestDataBuilder().WithId(messageIds[i]));
 
-            //Act 
+            //Act
             var now = DateTime.UtcNow;
             outbox.MarkDispatched(messageIds[0], now);
             outbox.MarkDispatched(messageIds[4], now);
@@ -165,11 +165,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
            //Arrange
            var outbox = new InMemoryOutbox();
-           
+
            for(int i =0; i <= 8; i++) // -- nine items
                outbox.Add(new MessageTestDataBuilder());
 
-           //Act 
+           //Act
            var firstPage = outbox.Get(5, 1);
            var secondPage = outbox.Get(5, 2);
 
@@ -178,6 +178,6 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
            secondPage.Count().Should().Be(4); // -- only 4 on the second page
 
         }
-        
+
    }
 }

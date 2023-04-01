@@ -199,7 +199,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             return new MySqlParameter { ParameterName = parameterName, Value = value };
         }
-        
+
 
         protected override MySqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
@@ -218,7 +218,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 new MySqlParameter { ParameterName = $"@{prefix}Body", DbType = DbType.String, Value = message.Body.Value }
             };
         }
-        
+
         protected override MySqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
             var offset = (pageNumber - 1) * pageSize;
@@ -229,7 +229,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
             return parameters;
         }
-        
+
         protected override Message MapFunction(MySqlDataReader dr)
         {
             if (dr.Read())

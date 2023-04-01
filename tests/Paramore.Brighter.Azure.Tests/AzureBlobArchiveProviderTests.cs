@@ -24,7 +24,7 @@ public class AzureBlobArchiveProviderTests
     {
         var options = new AzureBlobArchiveProviderOptions()
         {
-            BlobContainerUri = new Uri("https://brighterarchivertest.blob.core.windows.net/messagearchive"), 
+            BlobContainerUri = new Uri("https://brighterarchivertest.blob.core.windows.net/messagearchive"),
             TokenCredential = new VisualStudioCredential()
         };
         _provider = new AzureBlobArchiveProvider(options);

@@ -8,11 +8,11 @@ namespace Paramore.Brighter.Redis.Tests.TestDoubles
     {
         private const string SocketException =
             "localhost:6379";
-        
+
         public RedisMessageConsumerSocketErrorOnGetClient(
-            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
-            string queueName, 
-            string topic) 
+            RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
+            string queueName,
+            string topic)
                 : base(redisMessagingGatewayConfiguration, queueName, topic)
         {
         }

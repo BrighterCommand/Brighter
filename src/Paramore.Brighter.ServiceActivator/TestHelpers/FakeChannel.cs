@@ -54,7 +54,7 @@ namespace Paramore.Brighter.ServiceActivator.TestHelpers
         {
             DisposeHappened = true;
         }
-        
+
         public void Enqueue(params Message[] messages)
         {
             messages.Each((message) => _messageQueue.Enqueue(message));

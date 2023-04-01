@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
         /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
-        
+
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
         /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _disposedValue;
 
         public KafkaMessageProducer(
-            KafkaMessagingGatewayConfiguration configuration, 
+            KafkaMessagingGatewayConfiguration configuration,
             KafkaPublication publication)
         {
             if (string.IsNullOrEmpty(publication.Topic))
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             EnsureTopic();
         }
- 
+
 
         public void Send(Message message)
         {
@@ -190,26 +190,26 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     ae.Message
                 );
                 throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
-               
+
             }
             catch (KafkaException kafkaException)
             {
                 s_logger.LogError(kafkaException, $"KafkaMessageProducer: There was an error sending to topic {Topic})");
-                
+
                 if (kafkaException.Error.IsFatal) //this can't be recovered and requires a new producer
                     throw;
-                
+
                 throw new ChannelFailureException("Error connecting to Kafka, see inner exception for details", kafkaException);
             }
         }
-        
+
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
             //No delay support implemented
             Send(message);
         }
-        
-        
+
+
         public async Task SendAsync(Message message)
         {
             if (message == null)
@@ -256,7 +256,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                      ae.Message
                  );
                  throw new ChannelFailureException("Error talking to the broker, see inner exception for details", ae);
-               
+
             }
         }
 
@@ -268,7 +268,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 {
                     if (_producer != null)
                     {
-                        _producer.Flush(TimeSpan.FromMilliseconds(_producerConfig.MessageTimeoutMs.Value + 5000)); 
+                        _producer.Flush(TimeSpan.FromMilliseconds(_producerConfig.MessageTimeoutMs.Value + 5000));
                         _producer.Dispose();
                         _producer = null;
                     }
@@ -288,7 +288,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             Dispose(true);
             GC.SuppressFinalize(this);
         }
-        
+
         private void PublishResults(PersistenceStatus status, Headers headers)
         {
             if (status == PersistenceStatus.Persisted)

@@ -36,7 +36,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             _exception.InnerException.Should().BeOfType<RedisException>();
   
         }
-        
+
         public void Dispose()
         {
             _messageConsumer.Purge();

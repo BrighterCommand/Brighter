@@ -49,10 +49,10 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             
             return new RmqMessageConsumer(
-                _rmqConnection, 
-                rmqSubscription.ChannelName, //RMQ Queue Name 
-                rmqSubscription.RoutingKey, 
-                rmqSubscription.IsDurable, 
+                _rmqConnection,
+                rmqSubscription.ChannelName, //RMQ Queue Name
+                rmqSubscription.RoutingKey,
+                rmqSubscription.IsDurable,
                 rmqSubscription.HighAvailability,
                 rmqSubscription.BufferSize,
                 rmqSubscription.DeadLetterChannelName,

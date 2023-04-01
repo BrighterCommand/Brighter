@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
         public MsSqlDefaultAzureConnectionProvider(MsSqlConfiguration configuration) : base(configuration) { }
-        
+
         protected override AccessToken GetAccessTokenFromProvider()
         {
             return GetAccessTokenFromProviderAsync(CancellationToken.None).GetAwaiter().GetResult();

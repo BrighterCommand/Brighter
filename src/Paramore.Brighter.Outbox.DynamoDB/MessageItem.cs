@@ -15,7 +15,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         [DynamoDBProperty(typeof(MessageItemBodyConverter))]
         public byte[] Body { get; set; }
-        
+
         /// <summary>
         /// What is the character encoding of the body
         /// </summary>
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// What is the content type of the message
         /// </summary>
         [DynamoDBProperty]
-        public string ContentType { get; set; } 
+        public string ContentType { get; set; }
 
         // <summary>
         /// The correlation id of the message
@@ -170,7 +170,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             {
                 Value = body,
                 Type = DynamoDBEntryType.Binary
-                
+
             };
             
             return entry;

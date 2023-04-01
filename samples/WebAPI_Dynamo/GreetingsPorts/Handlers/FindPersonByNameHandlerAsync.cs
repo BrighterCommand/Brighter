@@ -23,7 +23,7 @@ namespace GreetingsPorts.Handlers
         {
             _unitOfWork = (DynamoDbUnitOfWork ) unitOfWork;
         }
-       
+
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())

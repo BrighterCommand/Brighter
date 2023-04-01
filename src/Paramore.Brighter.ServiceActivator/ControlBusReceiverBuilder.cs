@@ -174,7 +174,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             return DispatchBuilder.With()
                 .CommandProcessorFactory(() => new CommandProcessorProvider(commandProcessor))
                 .MessageMappers(incomingMessageMapperRegistry, null)
-                .DefaultChannelFactory(_channelFactory)                                        
+                .DefaultChannelFactory(_channelFactory)
                 .Subscriptions(subscriptions)
                 .Build();
         }

@@ -30,7 +30,7 @@ namespace GreetingsSender.Web.Controllers
             return View();
         }
 
-        
+
         public async Task<IActionResult> SendMessage()
         {
             var greetingAsync = new GreetingAsyncEvent("Hello from the web");
@@ -46,7 +46,7 @@ namespace GreetingsSender.Web.Controllers
 
             return View("Index");
         }
-        
+
         public async Task<IActionResult> DepositMessage()
         {
             var greetingAsync = new GreetingAsyncEvent("Deposit Hello from the web");
@@ -63,7 +63,7 @@ namespace GreetingsSender.Web.Controllers
             
             return View("Index");
         }
-        
+
         public async Task<IActionResult> SaveAndRollbackMessage()
         {
             var transaction = await _context.Database.BeginTransactionAsync();

@@ -8,13 +8,13 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private readonly IEnumerable<RedisMessagePublication> _publications;
 
         public RedisProducerRegistryFactory(
-            RedisMessagingGatewayConfiguration redisConfiguration, 
+            RedisMessagingGatewayConfiguration redisConfiguration,
             IEnumerable<RedisMessagePublication> publications)
         {
             _redisConfiguration = redisConfiguration;
             _publications = publications;
         }
-        
+
         /// <summary>
         /// Creates message producers.
         /// </summary>

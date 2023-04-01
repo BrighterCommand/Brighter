@@ -94,7 +94,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _channelFactory?.DeleteQueue();
             _messageProducer?.Dispose();
         }
-        
+
         private DateTime RoundToSeconds(DateTime dateTime)
         {
             return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);

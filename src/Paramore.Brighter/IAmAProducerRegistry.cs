@@ -11,14 +11,14 @@ namespace Paramore.Brighter
         /// Iterates through all the producers and disposes them, as they may have unmanaged resources that should be shut down in an orderly fashion
         /// </summary>
         void CloseAll();
-        
+
         /// <summary>
         /// Used to obtain values from the first producer for configuration of the Outbox. Workaround because the outbox properties are on the publication
         /// expect to be removed
         /// </summary>
         /// <returns></returns>
         IAmAMessageProducer GetDefaultProducer();
-        
+
         /// <summary>
         /// Looks up the producer associated with this message via a topic. The topic lives on the message headers
         /// </summary>

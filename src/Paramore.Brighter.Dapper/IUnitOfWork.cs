@@ -15,24 +15,24 @@ namespace Paramore.Brighter.Dapper
         /// </summary>
         /// <returns>A transaction</returns>
         DbTransaction BeginOrGetTransaction();
-        
+
         /// <summary>
         /// Begins a new transaction asynchronously against the database. Will open the connection if it is not already open,
         /// </summary>
         /// <param name="cancellationToken"></param>
         /// <returns>A transaction</returns>
         Task<DbTransaction> BeginOrGetTransactionAsync(CancellationToken cancellationToken);
-        
+
         /// <summary>
         /// Commits any pending transactions
         /// </summary>
         void Commit();
-        
+
         /// <summary>
         /// The .NET DbConnection to the Database
         /// </summary>
         DbConnection Database { get; }
-        
+
         /// <summary>
         /// Is there an extant transaction
         /// </summary>

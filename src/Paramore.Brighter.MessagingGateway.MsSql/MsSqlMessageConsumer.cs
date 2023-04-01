@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
         public MsSqlMessageConsumer(
-            MsSqlConfiguration msSqlConfiguration, 
+            MsSqlConfiguration msSqlConfiguration,
             string topic, IMsSqlConnectionProvider connectionProvider)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
             _sqlQ.Send(message, topic); 
             return true;
         }
-        
+
         public void Dispose()
         {
         }

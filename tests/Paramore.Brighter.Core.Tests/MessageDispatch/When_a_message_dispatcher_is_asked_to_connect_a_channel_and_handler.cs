@@ -50,11 +50,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
 
             var connection = new Subscription<MyEvent>(
-                new SubscriptionName("test"), 
-                noOfPerformers: 1, 
-                timeoutInMilliseconds: 1000, 
+                new SubscriptionName("test"),
+                noOfPerformers: 1,
+                timeoutInMilliseconds: 1000,
                 channelFactory: new InMemoryChannelFactory(_channel),
-                channelName: new ChannelName("fakeChannel"), 
+                channelName: new ChannelName("fakeChannel"),
                 routingKey: new RoutingKey("fakekey"));
             _dispatcher = new Dispatcher(_commandProcessor, messageMapperRegistry, new List<Subscription> { connection });
 
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_published_async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.Publish);
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

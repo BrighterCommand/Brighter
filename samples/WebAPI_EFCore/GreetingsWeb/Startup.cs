@@ -36,7 +36,7 @@ namespace GreetingsWeb
     {
         private const string _outBoxTableName = "Outbox";
         private IWebHostEnvironment _env;
-        
+
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
@@ -82,7 +82,7 @@ namespace GreetingsWeb
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
-        
+
         private void CheckDbIsUp()
         {
             string connectionString = DbConnectionString();
@@ -200,7 +200,7 @@ namespace GreetingsWeb
                 services.AddDbContext<GreetingsEntityGateway>(
                     builder =>
                     {
-                        builder.UseSqlite(connectionString, 
+                        builder.UseSqlite(connectionString,
                             optionsBuilder =>
                             {
                                 optionsBuilder.MigrationsAssembly("Greetings_SqliteMigrations");

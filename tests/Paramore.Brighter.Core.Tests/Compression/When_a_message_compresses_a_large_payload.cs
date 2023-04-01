@@ -44,7 +44,7 @@ public class CompressLargePayloadTests
         
 
     }
-    
+
     [Fact]
     public async Task When_a_message_zlib_compresses_a_large_payload()
     {
@@ -62,7 +62,7 @@ public class CompressLargePayloadTests
         compressedMessage.Header.Bag[CompressPayloadTransformer.ORIGINAL_CONTENTTYPE_HEADER].Should().Be(MessageBody.APPLICATION_JSON);
         compressedMessage.Body.ContentType.Should().Be(CompressPayloadTransformer.DEFLATE);
     }
-    
+
     [Fact]
     public async Task When_a_message_brotli_compresses_a_large_payload()
     {

@@ -31,12 +31,12 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
     {
         public MissingConfigStrategy MissingConfigStrategy { get; set; } = MissingConfigStrategy.Exception;
 
-        private readonly IDictionary<Type, FeatureSwitchStatus> _switches;        
+        private readonly IDictionary<Type, FeatureSwitchStatus> _switches;
 
         public FluentConfigRegistry(IDictionary<Type, FeatureSwitchStatus> switches)
         {
             _switches = switches;
-        }        
+        }
 
         public FeatureSwitchStatus StatusOf(Type handler)
         {
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.FeatureSwitch.Providers
             }
 
             return _switches[handler];
-        }        
+        }
     }
 
     public class FluentConfigRegistryBuilder : INeedAStatus, INeedAHandler

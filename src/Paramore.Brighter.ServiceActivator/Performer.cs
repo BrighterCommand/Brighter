@@ -34,7 +34,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly IAmAMessagePump _messagePump;
 
         public Performer(
-            IAmAChannel channel, 
+            IAmAChannel channel,
             IAmAMessagePump messagePump)
         {
             _channel = channel;

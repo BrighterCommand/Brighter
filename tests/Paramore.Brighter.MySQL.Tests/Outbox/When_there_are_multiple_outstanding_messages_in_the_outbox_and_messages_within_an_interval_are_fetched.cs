@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             messages.Should().HaveCount(3);
         }
-        
+
         [Fact]
         public async Task When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched_async()
         {

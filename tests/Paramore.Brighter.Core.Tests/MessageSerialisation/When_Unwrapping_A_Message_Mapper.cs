@@ -33,7 +33,7 @@ public class MessageUnwrapRequestTests
 
         _message.Header.Bag[MySimpleTransformAsync.HEADER_KEY] = MySimpleTransformAsync.TRANSFORM_VALUE;
     }
-    
+
     [Fact]
     public void When_Unwrapping_A_Message_Mapper()
     {

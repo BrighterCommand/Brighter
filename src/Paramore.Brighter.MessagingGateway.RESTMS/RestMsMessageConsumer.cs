@@ -53,7 +53,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         /// <param name="configuration">The configuration of the RestMS broker</param>
         /// <param name="queueName">Name of the queue.</param>
         /// <param name="routingKey">The routing key.</param>
-        public RestMsMessageConsumer(RestMSMessagingGatewayConfiguration configuration, string queueName, string routingKey) 
+        public RestMsMessageConsumer(RestMSMessagingGatewayConfiguration configuration, string queueName, string routingKey)
             : base(configuration)
         {
             _queueName = queueName;
@@ -178,7 +178,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         {
             return false;
         }
- 
+
 
         /// <summary>
         /// Rejects the specified message.

@@ -46,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         protected string EnsureTopic(RoutingKey topic, SnsAttributes attributes, TopicFindBy topicFindBy, OnMissingChannel makeTopic)
         {
             //on validate or assume, turn a routing key into a topicARN
-            if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate)) 
+            if ((makeTopic == OnMissingChannel.Assume) || (makeTopic == OnMissingChannel.Validate))
                 ValidateTopic(topic, topicFindBy, makeTopic);
             else if (makeTopic == OnMissingChannel.Create) CreateTopic(topic, attributes);
             return ChannelTopicArn;
@@ -68,10 +68,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     Attributes = attributes,
                     Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
                 };
-                
+
                 //create topic is idempotent, so safe to call even if topic already exists
                 var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
-                
+
                 if (!string.IsNullOrEmpty(createTopic.TopicArn))
                     ChannelTopicArn = createTopic.TopicArn;
                 else

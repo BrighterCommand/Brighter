@@ -50,8 +50,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
 
             var commandProcessor = new CommandProcessor(
                 subscriberRegistry,
-                handlerFactory, 
-                new InMemoryRequestContextFactory(), 
+                handlerFactory,
+                new InMemoryRequestContextFactory(),
                 new PolicyRegistry());
             
             PipelineBuilder<MyEvent>.ClearPipelineCache();
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper())); 
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(commandProcessor, messageMapperRegistry) 
+            _messagePump = new MessagePumpBlocking<MyEvent>(commandProcessor, messageMapperRegistry)
                 { Channel = channel, TimeoutInMilliseconds = 5000 };
 
             var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_myEvent, JsonSerialisationOptions.Options)));

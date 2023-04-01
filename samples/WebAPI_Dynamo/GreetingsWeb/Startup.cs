@@ -30,7 +30,7 @@ namespace GreetingsWeb
     {
         private const string _outBoxTableName = "Outbox";
         private IWebHostEnvironment _env;
-        
+
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
@@ -110,8 +110,8 @@ namespace GreetingsWeb
             services.Add(new ServiceDescriptor(typeof(DynamoDbConfiguration), dynamoDbConfiguration));
             
             return dynamoDb;
-        }     
-        
+        }
+
         private IAmazonDynamoDB CreateAndRegisterRemoteClient(IServiceCollection services)
         {
             throw new NotImplementedException();
@@ -137,7 +137,7 @@ namespace GreetingsWeb
                 dbTableBuilder.EnsureTablesReady(new[] { tableRequest.TableName }, TableStatus.ACTIVE).Wait();
             }
         }
-            
+
         private void CreateOutbox(IAmazonDynamoDB client, IServiceCollection services)
         {
             var tableRequestFactory = new DynamoDbTableFactory();

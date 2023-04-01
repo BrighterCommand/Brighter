@@ -7,7 +7,7 @@ namespace GreetingsPorts.Requests
     {
         public string Name { get; }
 
-        public DeletePerson(string name) 
+        public DeletePerson(string name)
             : base(Guid.NewGuid())
         {
             Name = name;

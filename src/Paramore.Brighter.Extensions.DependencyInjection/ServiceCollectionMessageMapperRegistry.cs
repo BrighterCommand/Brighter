@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             _serviceCollection = serviceCollection;
             _lifetime = lifetime;
         }
-        
+
         /// <summary>
         /// Register a mapper with the collection (generic version)
         /// </summary>
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             Add(typeof(TRequest), typeof(TMessageMapper));
         }
-        
+
         /// <summary>
         /// Add a mapper to the collection
         /// </summary>

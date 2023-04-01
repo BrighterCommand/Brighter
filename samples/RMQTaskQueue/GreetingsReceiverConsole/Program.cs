@@ -86,7 +86,7 @@ namespace GreetingsReceiverConsole
                     .UseInMemoryOutbox()
                     .AutoFromAssemblies();
 
-                    
+
                     services.AddHostedService<ServiceActivatorHostedService>();
                 })
                 .UseConsoleLifetime()

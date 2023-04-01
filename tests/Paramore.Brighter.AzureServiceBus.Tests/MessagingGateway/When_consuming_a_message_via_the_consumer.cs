@@ -106,7 +106,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
             //allow for clock drift in the following test, more important to have a contemporary timestamp than anything
             deadLetter.Body.ToString().Should().Be(message.Body.Value);
         }
-        
+
         [Fact]
         public async Task When_Requeueing_a_message_via_the_consumer()
         {

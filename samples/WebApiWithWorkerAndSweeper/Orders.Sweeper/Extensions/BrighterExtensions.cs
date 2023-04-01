@@ -15,7 +15,7 @@ public static class BrighterExtensions
     {
         private const string _hostingEnvironment = "ASPNETCORE_ENVIRONMENT";
         private const string _developmentEnvironemntName = "Development";
-        
+
         public static WebApplicationBuilder AddBrighter(this WebApplicationBuilder builder)
         {
             var asbSettings = builder.Configuration.GetSection(AzureServiceBusSettings.SettingsKey).Get<AzureServiceBusSettings>();

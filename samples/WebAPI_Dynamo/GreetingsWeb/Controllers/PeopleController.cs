@@ -22,7 +22,7 @@ namespace GreetingsWeb.Controllers
             _queryProcessor = queryProcessor;
         }
 
-        
+
          [Route("{name}")]
          [HttpGet]
          public async Task<ActionResult<FindPersonResult>> Get(string name)
@@ -55,6 +55,6 @@ namespace GreetingsWeb.Controllers
 
             return Ok(addedPeson);
         }
-        
+
     }
 }

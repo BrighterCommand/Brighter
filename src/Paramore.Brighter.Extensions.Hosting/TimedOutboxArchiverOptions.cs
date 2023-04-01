@@ -3,7 +3,7 @@ namespace Paramore.Brighter.Extensions.Hosting
     public class TimedOutboxArchiverOptions
     {
         /// <summary>
-        /// The timer interval in seconds. 
+        /// The timer interval in seconds.
         /// </summary>
         public int TimerInterval { get; set; } = 15;
 

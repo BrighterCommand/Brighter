@@ -5,7 +5,7 @@ using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
 {
-    
+
     /// <summary>
     /// Provides Azure Service Bus Clients using Managed Identity Credentials.
     /// </summary>
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
             
             _fullyQualifiedNameSpace = fullyQualifiedNameSpace;
         }
-        
+
         /// <summary>
         /// Provides an Azure Service Bus Client
         /// </summary>

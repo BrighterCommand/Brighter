@@ -22,7 +22,7 @@ public class AzureBlobUploadTests : IDisposable
 
         _client = new BlobContainerClient(_bucketUrl, new AzureCliCredential());
     }
-    
+
     [Test]
     public async Task When_uploading_luggage_to_Blob()
     {

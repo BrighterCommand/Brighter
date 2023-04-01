@@ -73,7 +73,7 @@ namespace GreetingsSender
                             MaxOutStandingCheckIntervalMilliSeconds = 500,
                             WaitForConfirmsTimeOutInMilliseconds = 1000,
                             MakeChannels =OnMissingChannel.Create,
-                            Topic = new RoutingKey("farewell.event")                            
+                            Topic = new RoutingKey("farewell.event")
                         }
                     }).Create())
                 .AutoFromAssemblies();

@@ -33,7 +33,7 @@ namespace Paramore.Brighter
     public class ExternalBusConfiguration
     {
         /// <summary>
-        /// The registry is a collection of producers 
+        /// The registry is a collection of producers
         /// </summary>
         /// <value>The registry of producers</value>
         public IAmAProducerRegistry ProducerRegistry { get; }
@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <value>The message mapper registry.</value>
         public IAmAMessageMapperRegistry MessageMapperRegistry { get; }
-        
+
         /// <summary>
         /// The maximum amount of messages to deposit into the outbox in one transmissions.
         /// This is to stop insert statements getting too big
@@ -54,13 +54,13 @@ namespace Paramore.Brighter
         /// When do we timeout writing to the outbox
         /// </summary>
         public int OutboxWriteTimeout { get; }
-        
+
         /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
-        /// this tends to he handled by a Dispatcher not a Command Processor. 
+        /// this tends to he handled by a Dispatcher not a Command Processor.
         /// </summary>
         public IAmAChannelFactory ResponseChannelFactory { get; }
-        
+
         /// <summary>
         /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
         /// of your MessageMappers

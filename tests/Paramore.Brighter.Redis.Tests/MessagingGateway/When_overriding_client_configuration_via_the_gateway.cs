@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
 {
     [Collection("Redis Shared Pool")]   //shared connection pool so run sequentially
     [Trait("Category", "Redis")]
-    public class RedisGatewayConfigurationTests 
+    public class RedisGatewayConfigurationTests
     {
         [Fact]
         public void When_overriding_client_configuration_via_the_gateway()
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
         {
             OverrideRedisClientDefaults();
         }
-        
+
 
         public new TimeSpan MessageTimeToLive => base.MessageTimeToLive;
 

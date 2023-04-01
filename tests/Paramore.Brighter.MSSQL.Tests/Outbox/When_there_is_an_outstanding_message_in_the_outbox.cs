@@ -8,7 +8,7 @@ using Xunit;
 namespace Paramore.Brighter.MSSQL.Tests.Outbox
 {
     [Trait("Category", "MSSQL")]
-    public class OutstandingMessagesTests 
+    public class OutstandingMessagesTests
     {
         private readonly Message _dispatchedMessage;
         private readonly MsSqlOutbox _sqlOutbox;
@@ -27,7 +27,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             Task.Delay(1000).Wait();
 
         }
-        
+
         [Fact]
         public void When_there_is_an_outstanding_message_in_the_outbox()
         {
@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             outstandingMessage.Should().NotBeNull();
             outstandingMessage.Id.Should().Be(_dispatchedMessage.Id);
         }
-        
+
         [Fact]
         public async Task When_there_is_an_outstanding_message_in_the_outbox_async()
         {

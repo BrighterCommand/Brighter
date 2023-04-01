@@ -10,12 +10,12 @@ namespace Orders.API.Controllers;
 public class OrdersControllers : ControllerBase
 {
     private readonly IAmACommandProcessor _commandProcessor;
-    
+
     public OrdersControllers(IAmACommandProcessor commandProcessor)
     {
         _commandProcessor = commandProcessor;
     }
-    
+
     [HttpGet("{orderId}")]
     public async Task<IActionResult> GetOrder(int orderId, CancellationToken cancellationToken)
     {
@@ -32,7 +32,7 @@ public class OrdersControllers : ControllerBase
 
         return Ok();
     }
-    
+
     [HttpPatch("{orderId}")]
     public async Task<IActionResult> UpdateOrder([FromBody]UpdateOrderRequest request, int orderId, CancellationToken cancellationToken)
     {

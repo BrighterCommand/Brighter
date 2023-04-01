@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             _exception.InnerException.Should().BeOfType<TimeoutException>();
   
         }
-        
+
         public void Dispose()
         {
             _messageConsumer.Purge();

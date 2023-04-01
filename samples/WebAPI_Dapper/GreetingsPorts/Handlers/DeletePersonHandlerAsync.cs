@@ -21,7 +21,7 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
-        
+
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default(CancellationToken))
@@ -36,7 +36,7 @@ namespace GreetingsPorts.Handlers
 
                 var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
                 await _uow.Database.DeleteAsync(deleteById, tx);
-                
+
                 await tx.CommitAsync(cancellationToken);
             }
             catch (Exception)

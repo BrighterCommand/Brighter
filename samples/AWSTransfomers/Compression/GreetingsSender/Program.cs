@@ -57,7 +57,7 @@ namespace GreetingsSender
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
                 var topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName());
-                
+
                 serviceCollection.AddBrighter()
                     .UseInMemoryOutbox()
                     .UseExternalBus(new SnsProducerRegistryFactory(
@@ -78,23 +78,23 @@ namespace GreetingsSender
                 var serviceProvider = serviceCollection.BuildServiceProvider();
 
                 var commandProcessor = serviceProvider.GetService<IAmACommandProcessor>();
-                
+
                 Console.WriteLine($"Sending Event to SNS topic {topic} ");
 
                 //create a string that is too large for a payload, that needs compression but will give some good compression
                 var largeString = new string('a', 512000);
                 //var largeString = "hello world";
                 commandProcessor.Post(new GreetingEvent($"Hi -{largeString}"));
-                
+
                 Console.WriteLine($"Sent Event to SNS topic {topic} ");
             }
         }
-        
+
         public static string CreateString(int length)
         {
             const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             return new string(Enumerable.Repeat(chars, length)
                 .Select(s => s[new Random().Next(s.Length)]).ToArray());
-        }    
+        }
     }
 }

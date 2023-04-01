@@ -10,11 +10,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         private readonly IAmAMessageProducerSync _messageProducer;
         private readonly IAmAMessageConsumer _messageConsumer;
         private readonly Message _message;
-        
-        public RmqValidateExistingInfrastructureTests() 
+
+        public RmqValidateExistingInfrastructureTests()
         {
             _message = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content"));
 
             var rmqConnection = new RmqMessagingGatewayConnection
@@ -25,17 +25,17 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             _messageProducer = new RmqMessageProducer(rmqConnection, new RmqPublication{MakeChannels = OnMissingChannel.Validate});
             _messageConsumer = new RmqMessageConsumer(
-                connection:rmqConnection, 
-                queueName:_message.Header.Topic, 
-                routingKey:_message.Header.Topic, 
-                isDurable: false, 
-                highAvailability:false, 
+                connection:rmqConnection,
+                queueName:_message.Header.Topic,
+                routingKey:_message.Header.Topic,
+                isDurable: false,
+                highAvailability:false,
                 makeChannels: OnMissingChannel.Validate);
 
             //This creates the infrastructure we want
             new QueueFactory(rmqConnection, _message.Header.Topic).Create(3000);
         }
-        
+
         [Fact]
         public void When_infrastructure_exists_can_validate_producer()
         {

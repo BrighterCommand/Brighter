@@ -33,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.MySQL.Tests.Outbox
 {
     [Trait("Category", "MySql")]
-    public class MySqlOutboxWritngMessagesTests 
+    public class MySqlOutboxWritngMessagesTests
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutboxSync _mySqlOutboxSync;
@@ -70,7 +70,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
-        
+
         [Fact]
         public void When_Writing_Messages_To_The_Outbox_Bulk()
         {

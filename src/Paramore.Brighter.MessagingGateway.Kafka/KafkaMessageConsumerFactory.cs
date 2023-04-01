@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 {
     /// <inheritdoc />
     /// <summary>
-    /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>> 
+    /// A factory for creating a Kafka message consumer from a <see cref="Subscription{T}"/>>
     /// </summary>
     public class KafkaMessageConsumerFactory : IAmAMessageConsumerFactory
     {
@@ -54,9 +54,9 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException("We expect an SQSConnection or SQSConnection<T> as a parameter");
             
             return new KafkaMessageConsumer(
-                configuration: _configuration, 
+                configuration: _configuration,
                 routingKey:kafkaSubscription.RoutingKey, //topic
-                groupId: kafkaSubscription.GroupId, 
+                groupId: kafkaSubscription.GroupId,
                 offsetDefault: kafkaSubscription.OffsetDefault,
                 sessionTimeoutMs: kafkaSubscription.SessionTimeoutMs,
                 maxPollIntervalMs: kafkaSubscription.MaxPollIntervalMs,

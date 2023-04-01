@@ -194,7 +194,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
                 sqlCmd.ExecuteNonQuery();
             }
         }
-        
+
         private static SqlParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqlParameter(parameterName, value);

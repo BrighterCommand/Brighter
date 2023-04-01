@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Sqlite.Tests
                 Directory.Delete(connectionStringPathDir, true);
             }
             catch (Exception e)
-            {                
+            {
                 Console.WriteLine($"{e.Message}{Environment.NewLine}{e.StackTrace}");
                 throw;
             }

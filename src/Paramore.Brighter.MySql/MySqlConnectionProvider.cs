@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MySql
 
         public MySqlTransaction GetTransaction()
         {
-            //This Connection Factory does not support Transactions 
+            //This Connection Factory does not support Transactions
             return null;
         }
 

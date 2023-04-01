@@ -95,7 +95,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_of_had_2_consumers_when_running
             _numberOfConsumers.Should().Be(2);
         }
-        
+
         public void Dispose()
         {
             if (_dispatcher?.State == DispatcherState.DS_RUNNING)

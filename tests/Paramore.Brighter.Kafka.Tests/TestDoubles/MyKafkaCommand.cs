@@ -29,8 +29,8 @@ namespace Paramore.Brighter.Kafka.Tests.TestDoubles
     internal class MyKafkaCommand : Command
     {
         public MyKafkaCommand()
-            :base(Guid.NewGuid()) 
-            
+            :base(Guid.NewGuid())
+
         {}
 
         public string Value { get; set; }

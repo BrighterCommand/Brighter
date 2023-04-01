@@ -29,7 +29,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
     public class ChannelFactory : IAmAChannelFactory
     {
         private readonly KafkaMessageConsumerFactory _kafkaMessageConsumerFactory;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ChannelFactory"/> class.
         /// </summary>
@@ -51,8 +51,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 throw new ConfigurationException("We expect an KafkaSubscription or KafkaSubscription<T> as a parameter");
             
             return new Channel(
-                subscription.ChannelName, 
-                _kafkaMessageConsumerFactory.Create(subscription), 
+                subscription.ChannelName,
+                _kafkaMessageConsumerFactory.Create(subscription),
                 subscription.BufferSize);
         }
     }

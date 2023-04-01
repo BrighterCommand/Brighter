@@ -13,6 +13,6 @@ public class GreetingsMapper : ClassMapper<Greeting>
         Map(g => g.Message).Column("Message");
         Map(g => g.RecipientId).Column("Recipient_Id").Key(KeyType.ForeignKey);
     }
-    
+
 }
 

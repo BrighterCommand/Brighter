@@ -42,9 +42,9 @@ namespace Paramore.Brighter
     ///     <item>
     ///         <description>
     ///             A <see cref="IPolicyRegistry{TKey}"/> containing a list of policies that you want to be accessible to the <see cref="CommandProcessor"/>. You can use
-    ///             <see cref="PolicyRegistry"/> to provide the <see cref="IPolicyRegistry{TKey}"/>. Policies are expected to be Polly <see cref="!:https://github.com/michael-wolfenden/Polly"/> 
+    ///             <see cref="PolicyRegistry"/> to provide the <see cref="IPolicyRegistry{TKey}"/>. Policies are expected to be Polly <see cref="!:https://github.com/michael-wolfenden/Polly"/>
     ///             <see cref="Paramore.Brighter.Policies"/> references.
-    ///             If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for 
+    ///             If you do not need any policies around quality of service (QoS) concerns - you do not have Work Queues and/or do not intend to use Polly Policies for
     ///             QoS concerns - you can use <see cref="DefaultPolicy"/> to indicate you do not need them or just want a simple retry.
     ///         </description>
     ///      </item>
@@ -52,10 +52,10 @@ namespace Paramore.Brighter
     ///         <description>
     ///             A <see cref="ExternalBusConfiguration"/> describing how you want to configure Task Queues for the <see cref="CommandProcessor"/>. We store messages in a <see cref="IAmAnOutbox{T}"/>
     ///             for later replay (in case we need to compensate by trying a message again). We send messages to a Task Queue via a <see cref="IAmAMessageProducer"/> and we  want to know how
-    ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using 
-    ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to 
+    ///             to map the <see cref="IRequest"/> (<see cref="Command"/> or <see cref="Event"/>) to a <see cref="Message"/> using a <see cref="IAmAMessageMapper"/> using
+    ///             an <see cref="IAmAMessageMapperRegistry"/>. You can use the default <see cref="MessageMapperRegistry"/> to register the association. You need to
     ///             provide a <see cref="IAmAMessageMapperFactory"/> so that we can create instances of your  <see cref="IAmAMessageMapper"/>. You need to provide a <see cref="IAmAMessageMapperFactory"/>
-    ///             when using <see cref="MessageMapperRegistry"/> so that we can create instances of your mapper. 
+    ///             when using <see cref="MessageMapperRegistry"/> so that we can create instances of your mapper.
     ///             If you don't want to use Task Queues i.e. you are just using a synchronous Command Dispatcher approach, then use the <see cref="NoExternalBus"/> method to indicate your intent
     ///         </description>
     ///     </item>
@@ -66,7 +66,7 @@ namespace Paramore.Brighter
     ///             to provide a <see cref="RequestContext"/> unless you have a requirement to replace this, such as in testing.
     ///         </description>
     ///     </item>
-    /// </list> 
+    /// </list>
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
@@ -156,7 +156,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
+        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/>
         /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
         /// 
         /// </summary>
@@ -187,7 +187,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Call{T}(T)"/> using RPC between client and server 
+        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Call{T}(T)"/> using RPC between client and server
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="outbox">The outbox</param>
@@ -228,7 +228,7 @@ namespace Paramore.Brighter
             if (!(_useExternalBus || _useRequestReplyQueues))
             {
                 return new CommandProcessor(
-                    
+
                     subscriberRegistry: _registry,
                     handlerFactory: _handlerFactory,
                     requestContextFactory: _requestContextFactory,
@@ -284,7 +284,7 @@ namespace Paramore.Brighter
         /// <param name="theRegistry">The registry.</param>
         /// <returns>INeedPolicy.</returns>
         INeedPolicy Handlers(HandlerConfiguration theRegistry);
-        
+
         /// <summary>
         /// Configure Feature Switches for the Handlers
         /// </summary>
@@ -311,7 +311,7 @@ namespace Paramore.Brighter
         INeedMessaging DefaultPolicy();
     }
 
-  
+
     /// <summary>
     /// Interface INeedMessaging
     /// Note that a single command builder does not support both task queues and rpc, using the builder
@@ -353,7 +353,7 @@ namespace Paramore.Brighter
         /// <returns>IAmACommandProcessorBuilder.</returns>
         IAmACommandProcessorBuilder RequestContextFactory(IAmARequestContextFactory requestContextFactory);
     }
-    
+
     /// <summary>
     /// Interface IAmACommandProcessorBuilder
     /// </summary>

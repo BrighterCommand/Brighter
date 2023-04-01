@@ -11,6 +11,6 @@ public class FakeMessageProducer : IAmAMessageProducer
 
     public int MaxOutStandingMessages { get; set; }
     public int MaxOutStandingCheckIntervalMilliSeconds { get; set; }
-    
+
     public Dictionary<string, object> OutBoxBag { get; set; }
 }

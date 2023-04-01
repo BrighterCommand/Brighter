@@ -11,7 +11,7 @@ using Paramore.Brighter.Inbox.Handlers;
 
 namespace Paramore.Brighter.Core.Tests.OnceOnly
 {
-    
+
     [Trait("Fragile", "CI")]
     [Collection("CommandProcessor")]
     public class OnceOnlyAttributeAsyncTests : IDisposable
@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         private readonly MyCommand _command;
         private readonly IAmAnInboxAsync _inbox;
         private readonly IAmACommandProcessor _commandProcessor;
-        
+
         public OnceOnlyAttributeAsyncTests()
         {
             _inbox = new InMemoryInbox();

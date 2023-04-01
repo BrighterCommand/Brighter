@@ -20,8 +20,8 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
-       
-        [QueryLogging(0)] 
+
+        [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
@@ -34,11 +34,11 @@ namespace GreetingsPorts.Handlers
 
             return new FindPersonsGreetings
             {
-                Name = person.Name, 
+                Name = person.Name,
                 Greetings = person.Greetings.Select(g => new Salutation(g.Greet()))
             };
 
         }
-        
+
     }
 }

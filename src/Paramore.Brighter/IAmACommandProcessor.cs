@@ -32,8 +32,8 @@ namespace Paramore.Brighter
     /// <summary>
     /// Interface IAmACommandProcessor
     /// Paramore.Brighter provides the default implementation of this interface <see cref="CommandProcessor"/> and it is unlikely you need
-    /// to override this for anything other than testing purposes. The usual need is that in a <see cref="RequestHandler{T}"/> you intend to publish an  
-    /// <see cref="Event"/> to indicate the handler has completed to other components. In this case your tests should only verify that the correct 
+    /// to override this for anything other than testing purposes. The usual need is that in a <see cref="RequestHandler{T}"/> you intend to publish an
+    /// <see cref="Event"/> to indicate the handler has completed to other components. In this case your tests should only verify that the correct
     /// event was raised by listening to <see cref="Publish{T}"/> calls on this interface, using a mocking framework of your choice or bespoke
     /// Test Double.
     /// </summary>
@@ -95,7 +95,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutbox"/> 
+        /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutbox"/>
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -107,7 +107,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited Guid to <see cref="ClearOutbox"/>
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -119,7 +119,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutboxAsync"/> 
+        /// Pass deposited Guid to <see cref="CommandProcessor.ClearOutboxAsync"/>
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <typeparam name="T">The type of the request</typeparam>
@@ -131,7 +131,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/>
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>

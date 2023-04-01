@@ -10,10 +10,10 @@ namespace Paramore.Brighter.MsSql.Azure
     {
         private const string _azureUserNameKey = "AZURE_USERNAME";
         private const string _azureTenantIdKey = "AZURE_TENANT_ID";
-        
+
         private readonly string _azureUserName;
         private readonly string _azureTenantId;
-        
+
         /// <summary>
         /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
         /// </summary>
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MsSql.Azure
             _azureUserName = Environment.GetEnvironmentVariable(_azureUserNameKey);
             _azureTenantId = Environment.GetEnvironmentVariable(_azureTenantIdKey);
         }
-        
+
         /// <summary>
         /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
         /// </summary>
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MsSql.Azure
             var credential = GetCredential();
             return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
         }
-        
+
         private SharedTokenCacheCredential GetCredential()
         {
             return new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()

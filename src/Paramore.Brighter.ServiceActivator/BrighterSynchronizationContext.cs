@@ -13,7 +13,7 @@ namespace Paramore.Brighter.ServiceActivator
        private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object>> _queue = new BlockingCollection<KeyValuePair<SendOrPostCallback, object>>();
        private readonly Thread _thread = Thread.CurrentThread;
        private int _operationCount = 0;
-       
+
        /// <summary>
        /// When we have completed the opeerations, we can exit
        /// </summary>
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.ServiceActivator
            if (Interlocked.Decrement(ref _operationCount) == 0)
                Complete();
        }
-       
+
        /// <summary>
        /// Tracks the number of ongoing operations so we know when 'done'
        /// </summary>

@@ -61,5 +61,5 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         {
             _msSqlTestHelper.CleanUpDb();
         }
-    }    
+    }
 }

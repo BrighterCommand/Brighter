@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
-    public class DynamoDbCollectionProperties 
+    public class DynamoDbCollectionProperties
     {
         [Fact]
         public void When_Creating_A_Table_With_Collection_Properties()
@@ -32,29 +32,29 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GenericList" && attr.AttributeType.Value == "L");
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GenericMap" && attr.AttributeType.Value == "M");
         }
-        
+
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
             [DynamoDBHashKey]
             [DynamoDBProperty]
             public string Id { get; set; }
-             
+
             [DynamoDBProperty]
             public string[] StringArray { get; set; }
 
             [DynamoDBProperty]
             public int[] IntArray { get; set; }
-            
+
             [DynamoDBProperty]
             public double[] DoubleArray { get; set; }
-            
+
             [DynamoDBProperty]
             public List<string> GenericList { get; set; }
-            
+
             [DynamoDBProperty]
             public Dictionary<string, object> GenericMap{ get; set; }
-            
+
        }
     }
 }

@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ServiceLifetime HandlerLifetime { get; set; }
 
         /// <summary>
-        /// Configures the lifetime of mappers. 
+        /// Configures the lifetime of mappers.
         /// </summary>
         ServiceLifetime MapperLifetime { get; set; }
 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///     Configures the request context factory. Defaults to <see cref="InMemoryRequestContextFactory" />.
         /// </summary>
         IAmARequestContextFactory RequestContextFactory { get; set; }
-        
+
         /// <summary>
         /// Configures the lifetime of any transformers.
         /// </summary>

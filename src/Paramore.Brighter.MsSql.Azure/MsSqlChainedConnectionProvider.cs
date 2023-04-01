@@ -9,7 +9,7 @@ namespace Paramore.Brighter.MsSql.Azure
     public class ServiceBusChainedClientProvider : MsSqlAzureConnectionProviderBase
     {
         private readonly ChainedTokenCredential _credential;
-        
+
         /// <summary>
         /// Initialise a new instance of Ms Sql Connection provider using Default Azure Credentials to acquire Access Tokens.
         /// </summary>
@@ -26,7 +26,7 @@ namespace Paramore.Brighter.MsSql.Azure
 
             _credential = new ChainedTokenCredential(credentialSources);
         }
-        
+
         protected override AccessToken GetAccessTokenFromProvider()
         {
             return GetAccessTokenFromProviderAsync(CancellationToken.None).GetAwaiter().GetResult();

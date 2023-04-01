@@ -41,7 +41,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
-    
+
     [Test]
     public async Task When_unwrapping_a_large_message()
     {
@@ -80,7 +80,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         transformedMessage.Value.Should().Be(contents);
         (await _luggageStore.HasClaimAsync(id, CancellationToken.None)).Should().BeFalse();
     }
-    
+
     public void Dispose()
     {
         _client.Delete();

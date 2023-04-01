@@ -48,7 +48,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             _client.CreateIfNotExists();
     }
-    
+
     [Test]
     public async Task When_wrapping_a_large_message()
     {
@@ -63,7 +63,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
             
         (await _luggageStore.HasClaimAsync(_id, CancellationToken.None)).Should().BeTrue();
     }
-    
+
     public void Dispose()
     {
         _client.Delete();

@@ -27,14 +27,14 @@ using System;
 
 namespace Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguration
 {
-    public class RestMSMessagingGatewayConfiguration  
+    public class RestMSMessagingGatewayConfiguration
     {
         public RestMsSpecification RestMS { get; set; }
 
         public Feed Feed { get; set; }
     }
 
-    public class RestMsSpecification 
+    public class RestMsSpecification
     {
         public Uri Uri { get; set; }
 
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS.MessagingGatewayConfiguratio
         public double Timeout { get; set; }
     }
 
-    public class Feed 
+    public class Feed
     {
         public string Name { get; set; }
 

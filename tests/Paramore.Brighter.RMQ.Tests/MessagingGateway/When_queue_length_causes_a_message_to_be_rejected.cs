@@ -43,11 +43,11 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
         public RmqMessageProducerQueueLengthTests()
         {
            _messageOne = new Message(
-                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+                new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                 new MessageBody("test content"));
            
            _messageTwo = new Message(
-               new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND), 
+               new MessageHeader(Guid.NewGuid(), Guid.NewGuid().ToString(), MessageType.MT_COMMAND),
                new MessageBody("test content"));
 
              var rmqConnection = new RmqMessagingGatewayConnection
@@ -59,10 +59,10 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageProducer = new RmqMessageProducer(rmqConnection);
 
             _messageConsumer = new RmqMessageConsumer(
-                connection: rmqConnection, 
-                queueName: _messageOne.Header.Topic, 
-                routingKey: _messageOne.Header.Topic, 
-                isDurable: false, 
+                connection: rmqConnection,
+                queueName: _messageOne.Header.Topic,
+                routingKey: _messageOne.Header.Topic,
+                isDurable: false,
                 highAvailability: false,
                 batchSize: 5,
                 maxQueueLength: 1,

@@ -15,8 +15,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// You will need to register the following BEFORE calling this extension
         ///  - IAmazonDynamoDb
         ///  - DynamoDbConfiguration
-        /// We do not register these, as we assume you will need to register them for your code's access to DynamoDb  
-        /// So we assume that prerequisite has taken place beforehand 
+        /// We do not register these, as we assume you will need to register them for your code's access to DynamoDb
+        /// So we assume that prerequisite has taken place beforehand
         /// </summary>
         /// <param name="serviceLifetime">The lifetime of the outbox connection</param>
         /// <returns></returns>

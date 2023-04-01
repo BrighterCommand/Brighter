@@ -51,7 +51,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         private static IEnumerable<Message> GetMessagesFromOutBox(IAmAnOutboxSync<Message> outBox, IReadOnlyCollection<string> messageIds)
         {
-            IEnumerable<Message> foundMessages = messageIds 
+            IEnumerable<Message> foundMessages = messageIds
                 .Select(messageId => outBox.Get(Guid.Parse(messageId)))
                 .Where(fm => fm != null)
                 .ToList();

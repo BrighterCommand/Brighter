@@ -5,7 +5,7 @@ namespace Paramore.Brighter
     public abstract class TransformAttribute : Attribute
     {
         /// <summary>
-        /// The order in which we run this 
+        /// The order in which we run this
         /// </summary>
         /// <value>The step.</value>
         public int Step { get; set; }
@@ -15,7 +15,7 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>Type.</returns>
         public abstract Type GetHandlerType();
-        
+
         //We use this to pass params from the attribute into the instance of the handler
         //if you need to pass additional params to your handler, use this
         /// <summary>

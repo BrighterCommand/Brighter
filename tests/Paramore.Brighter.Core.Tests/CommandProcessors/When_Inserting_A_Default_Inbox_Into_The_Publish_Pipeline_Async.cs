@@ -51,20 +51,20 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             );
 
            _commandProcessor = new CommandProcessor(
-                subscriberRegistry, 
-                handlerFactory, 
+                subscriberRegistry,
+                handlerFactory,
                 new InMemoryRequestContextFactory(),
                 new PolicyRegistry
                 {
-                    { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, 
+                    { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
                     { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
                 },
                 inboxConfiguration: inboxConfiguration
                 );
             
         }
- 
-        
+
+
         [Fact]
         public async Task WhenInsertingADefaultInboxIntoTheSendPipeline()
         {
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var boxed = await _inbox.ExistsAsync<MyCommand>(@event.Id, typeof(MyEventHandlerAsync).FullName, 100);
             boxed.Should().BeTrue();
         }
-        
+
         public void Dispose()
         {
             CommandProcessor.ClearExtServiceBus();

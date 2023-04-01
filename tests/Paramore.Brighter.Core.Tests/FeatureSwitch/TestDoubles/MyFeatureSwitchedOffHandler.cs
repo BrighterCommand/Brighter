@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.FeatureSwitch.TestDoubles
             return CommandReceived;
         }
     }
-    
+
     class MyFeatureSwitchedOffHandlerAsync : RequestHandlerAsync<MyCommandAsync>
     {
         public static bool CommandReceived { get; set; }

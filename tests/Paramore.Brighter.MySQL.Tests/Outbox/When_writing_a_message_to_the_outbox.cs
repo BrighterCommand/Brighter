@@ -53,11 +53,11 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(), 
-                topic: "test_topic", 
+                messageId:Guid.NewGuid(),
+                topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount:5,
                 delayedMilliseconds: 5,
                 correlationId: new Guid(),
                 replyTo: "ReplyTo",

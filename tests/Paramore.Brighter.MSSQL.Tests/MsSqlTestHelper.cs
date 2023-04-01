@@ -79,7 +79,7 @@ namespace Paramore.Brighter.MSSQL.Tests
         public MsSqlConfiguration OutboxConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName);
 
         public MsSqlConfiguration QueueConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
-        
+
         private void CreateQueueTable()
         {
             _tableName = $"queue_{_tableName}";

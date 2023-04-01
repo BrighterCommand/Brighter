@@ -10,7 +10,7 @@ namespace GreetingsEntities
         [DynamoDBHashKey]
         [DynamoDBProperty]
         public string Name { get; set; }
-        
+
         public List<string> Greetings { get; set; } = new List<string>();
 
         //[DynamoDBVersion]

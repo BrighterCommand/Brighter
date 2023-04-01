@@ -13,7 +13,7 @@ using Xunit;
 
 namespace Paramore.Brighter.AWS.Tests.MessagingGateway
 {
-    [Trait("Category", "AWS")] 
+    [Trait("Category", "AWS")]
     [Trait("Fragile", "CI")]
     public class AWSValidateInfrastructureByArnTests  : IDisposable
     {     private readonly Message _message;
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
             
             _messageProducer = new SqsMessageProducer(
-                awsConnection, 
+                awsConnection,
                 new SnsPublication
                 {
                     Topic = new RoutingKey(topicName),
@@ -96,7 +96,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             //clear the queue
             _consumer.Acknowledge(message);
         }
- 
+
         public void Dispose()
         {
             _channelFactory.DeleteTopic();
@@ -104,13 +104,13 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             _consumer.Dispose();
             _messageProducer.Dispose();
         }
-        
+
         private string FindTopicArn(AWSCredentials credentials, RegionEndpoint region, string topicName)
         {
             var snsClient = new AmazonSimpleNotificationServiceClient(credentials, region);
             var topicResponse = snsClient.FindTopicAsync(topicName).GetAwaiter().GetResult();
             return topicResponse.TopicArn;
         }
-    
+
    }
 }

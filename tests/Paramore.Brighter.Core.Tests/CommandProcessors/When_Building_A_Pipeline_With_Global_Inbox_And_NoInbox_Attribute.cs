@@ -56,13 +56,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             CommandProcessor.ClearExtServiceBus();
         }
-        
+
         private PipelineTracer TracePipeline(IHandleRequests<MyCommand> firstInPipeline)
         {
             var pipelineTracer = new PipelineTracer();
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
- 
+
     }
 }

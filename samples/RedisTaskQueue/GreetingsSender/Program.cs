@@ -53,12 +53,12 @@ namespace GreetingsSender
                     .UseSerilog()
                     .UseConsoleLifetime()
                     .Build();
-                
-                
+
+
                 DoWork(host);
 
                 host.WaitForShutdown();
-                
+
                 return 0;
             }
             catch (Exception ex)
@@ -90,7 +90,7 @@ namespace GreetingsSender
                         MaxPoolSize = 10,
                         MessageTimeToLive = TimeSpan.FromMinutes(10)
                     };
-                    
+
                     collection.AddBrighter()
                         .UseInMemoryOutbox()
                         .UseExternalBus(new RedisProducerRegistryFactory(

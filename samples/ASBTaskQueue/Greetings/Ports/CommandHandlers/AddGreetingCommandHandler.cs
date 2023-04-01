@@ -22,7 +22,7 @@ namespace Greetings.Ports.CommandHandlers
             _commandProcessor = commandProcessor;
             _unitOfWork = unitOfWork;
         }
-        
+
         public async override Task<AddGreetingCommand> HandleAsync(AddGreetingCommand command,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -48,10 +48,10 @@ namespace Greetings.Ports.CommandHandlers
                 }
 
                 await _unitOfWork.CommitAsync(cancellationToken);
-                
+
                 //In Case there is no outbox Sweeper
                 await _commandProcessor.ClearOutboxAsync(new[] {eventId}, cancellationToken: cancellationToken);
-                
+
                 Console.WriteLine($"Message {command.GreetingMessage} Saved.");
             }
             catch (Exception e)
@@ -59,7 +59,7 @@ namespace Greetings.Ports.CommandHandlers
                 Console.WriteLine(e);
 
                 await _unitOfWork.RollbackAsync(cancellationToken);
-                
+
                 Console.WriteLine($"Message {command.GreetingMessage} not Saved.");
             }
             

@@ -25,7 +25,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     new Dictionary<string, ProvisionedThroughput>
                     {
                         {
-                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10} 
+                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                         }
                     }
                 )
@@ -44,7 +44,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                 gsi => gsi.IndexName == "GlobalSecondaryIndex"
                        && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryId" && kse.KeyType == KeyType.HASH)
                        && Enumerable.Any<KeySchemaElement>(gsi.KeySchema, kse => kse.AttributeName == "GlobalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
-            Assert.Contains(tableRequest.LocalSecondaryIndexes, lsi => lsi.IndexName == "LocalSecondaryIndex" 
+            Assert.Contains(tableRequest.LocalSecondaryIndexes, lsi => lsi.IndexName == "LocalSecondaryIndex"
                         && Enumerable.Any<KeySchemaElement>(lsi.KeySchema, kse => kse.AttributeName == "LocalSecondaryRangeKey" && kse.KeyType == KeyType.RANGE));
 
         }
@@ -58,19 +58,19 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             [DynamoDBProperty]
             public int NumberProperty { get; set; }
-            
+
             [DynamoDBProperty]
             public byte[] ByteArrayProperty { get; set; }
-            
+
             //We only issue create table statements for explicitly marked fields; others can still be persisted though
             public string UnMarkedProperty { get; set; }
-           
+
             [DynamoDBProperty("MappedName")]
             public string RenamedProperty { get; set; }
-            
+
             [DynamoDBIgnore]
             public string IgnoredProperty { get; set; }
-            
+
             //Required
             [DynamoDBHashKey]
             public string Id { get; set; }
@@ -80,13 +80,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             [DynamoDBVersion]
             public int? Version { get; set; }
-            
+
             [DynamoDBGlobalSecondaryIndexHashKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryId { get; set; }
 
-            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")] 
+            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryRangeKey { get; set; }
-            
+
             [DynamoDBLocalSecondaryIndexRangeKey(indexName:"LocalSecondaryIndex")]
             public string LocalSecondaryRangeKey { get; set; }
         }

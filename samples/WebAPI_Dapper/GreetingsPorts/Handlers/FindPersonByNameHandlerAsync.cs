@@ -22,7 +22,7 @@ namespace GreetingsPorts.Handlers
         {
             _uow = uow;
         }
-       
+
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())

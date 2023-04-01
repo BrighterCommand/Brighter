@@ -124,7 +124,7 @@ namespace SalutationAnalytics
             //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
             return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         }
-        
+
         private static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)
         {
             string connectionString = DbConnectionString(hostContext);
@@ -134,7 +134,7 @@ namespace SalutationAnalytics
                 services.AddDbContext<SalutationsEntityGateway>(
                     builder =>
                     {
-                        builder.UseSqlite(connectionString, 
+                        builder.UseSqlite(connectionString,
                             optionsBuilder =>
                             {
                                 optionsBuilder.MigrationsAssembly("Salutations_SqliteMigrations");
@@ -165,7 +165,7 @@ namespace SalutationAnalytics
 
             return new MySqlInbox(new MySqlInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
         }
-        
+
         private static string DbConnectionString(HostBuilderContext hostContext)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
