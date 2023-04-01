@@ -60,7 +60,7 @@ namespace Paramore.Brighter.ServiceActivator
         private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
         /// <summary>
-        /// Constructs a message pump 
+        /// Constructs a message pump
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
         /// <param name="messageMapperRegistry">The registry of mappers</param>
