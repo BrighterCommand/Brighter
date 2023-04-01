@@ -180,7 +180,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
            }
        }
 
-       class OutboxEntry
+        class OutboxEntry
         {
             public DateTime? TimeDeposited { get; set; }
             public DateTime? TimeFlushed { get; set; }
@@ -195,7 +195,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 Add(message,outBoxTimeout, transactionConnectionProvider);
             }
         }
-
+ 
         public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken),
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
