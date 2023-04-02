@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             // Settings for UseInbox on MyCommandInboxedHandler
             // [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
-            // Settings for InboxConfifguration as above
+            // Settings for InboxConfiguration as above
             // _inboxConfiguration = new InboxConfiguration(InboxScope.All, context: true, onceOnly: true);
             // so global will not allow repeated requests ans calls, but local should override this and allow
 

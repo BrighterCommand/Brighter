@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Monitoring.Events
         public string InstanceName { get; set; }
 
         /// <summary>
-        /// The serialied request - what were the parameters to this command?
+        /// The serialised request - what were the parameters to this command?
         /// </summary>
         public string RequestBody { get; private set; }
 

@@ -67,7 +67,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         }
 
         /// <summary>
-        /// The Control Bus may use a Request-Reply pattern over a Publish-Subscribe pattern, frr example a Heartbear ot Trace
+        /// The Control Bus may use a Request-Reply pattern over a Publish-Subscribe pattern, frr example a Heartbeat ot Trace
         /// Message. To enable us to reply we need to have an <see cref="IAmAMessageProducer"/> instance that lets us respond to
         /// the sender (over the control bus).
         /// </summary>

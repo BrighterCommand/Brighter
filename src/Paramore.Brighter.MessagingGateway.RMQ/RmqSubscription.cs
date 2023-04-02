@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="lockTimeout">How long should a message remain locked for processing</param>
         /// <param name="deadLetterChannelName">The dead letter channel </param>
         /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
-        /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is inifinite</param>
+        /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is infinite</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
@@ -141,7 +141,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// <param name="lockTimeout">How long should a message remain locked for processing</param>
         /// <param name="deadLetterChannelName">The dead letter channel </param>
         /// <param name="deadLetterRoutingKey">The routing key for dead letters</param>
-        /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is inifinite</param>
+        /// <param name="ttl">Time to live in ms of a message on a queue; null (the default) is infinite</param>
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>

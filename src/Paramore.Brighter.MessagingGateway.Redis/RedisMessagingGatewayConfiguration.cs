@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public bool? DisableVerboseLogging { get; set; }
         
         /// <summary>
-        /// Exponential backoff interval for retrying connections on socker failure, default 10ms
+        /// Exponential backoff interval for retrying connections on socket failure, default 10ms
         /// </summary>
         /// <returns></returns>
         public int? BackoffMultiplier { get; set; }
