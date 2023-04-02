@@ -76,7 +76,7 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
             Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
-                tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
+                tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
 
         internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
@@ -114,7 +114,7 @@ namespace Paramore.Brighter
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
             Activity.Current?.AddEvent(new ActivityEvent(ADDMESSAGETOOUTBOX,
-                tags: new ActivityTagsCollection() {{"MessageId", message.Id}}));
+                tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
         
         internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) 
@@ -281,7 +281,7 @@ namespace Paramore.Brighter
                     
                     var messages = OutBox.OutstandingMessages(minimumAge, amountToClear, args:args);
                     span?.AddEvent(new ActivityEvent(GETMESSAGESFROMOUTBOX,
-                        tags: new ActivityTagsCollection() {{"Outstanding Messages", messages.Count()}}));
+                        tags: new ActivityTagsCollection {{"Outstanding Messages", messages.Count()}}));
                     s_logger.LogInformation("Found {NumberOfMessages} to clear out of amount {AmountToClear}",
                         messages.Count(), amountToClear);
                     Dispatch(messages);
@@ -365,7 +365,7 @@ namespace Paramore.Brighter
             foreach (var message in posts)
             {
                 Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
-                    tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
+                    tags: new ActivityTagsCollection {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
 
                 var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
@@ -394,7 +394,7 @@ namespace Paramore.Brighter
             foreach (var message in posts)
             {
                 Activity.Current?.AddEvent(new ActivityEvent(DISPATCHMESSAGE,
-                    tags: new ActivityTagsCollection() {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
+                    tags: new ActivityTagsCollection {{"Topic", message.Header.Topic}, {"MessageId", message.Id}}));
                 s_logger.LogInformation("Decoupled invocation of message: Topic:{Topic} Id:{Id}", message.Header.Topic, message.Id.ToString());
                 
                 var producer = ProducerRegistry.LookupByOrDefault(message.Header.Topic);
@@ -446,7 +446,7 @@ namespace Paramore.Brighter
                     var messages = topicBatch.ToArray();
                     s_logger.LogInformation("Bulk Dispatching {NumberOfMessages} for Topic {TopicName}", messages.Length, topicBatch.Key);
                     span?.AddEvent(new ActivityEvent(BULKDISPATCHMESSAGE,
-                        tags: new ActivityTagsCollection() {{"Topic", topicBatch.Key}, {"Number Of Messages", messages.Length}}));
+                        tags: new ActivityTagsCollection {{"Topic", topicBatch.Key}, {"Number Of Messages", messages.Length}}));
                     var dispatchesMessages = bulkMessageProducer.SendAsync(messages, cancellationToken);
 
                     await foreach (var successfulMessage in dispatchesMessages.WithCancellation(cancellationToken))

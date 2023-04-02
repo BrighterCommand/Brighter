@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
                 messageMapperRegistry,
                 null,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyCommand", _fakeMessageProducerWithPublishConfirmation},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyCommand", _fakeMessageProducerWithPublishConfirmation},}));
         }
 
         [Fact]

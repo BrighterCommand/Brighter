@@ -17,9 +17,9 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             var tableRequestFactory = new DynamoDbTableFactory();
             var provisonedThroughput = new DynamoDbCreateProvisionedThroughput
             (
-                table: new ProvisionedThroughput() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                gsiThroughputs: new Dictionary<string, ProvisionedThroughput>() 
-                    {
+                table: new ProvisionedThroughput {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                gsiThroughputs: new Dictionary<string, ProvisionedThroughput>
+                {
                         { "GlobalSecondaryIndex", new ProvisionedThroughput(readCapacityUnits: 11,writeCapacityUnits: 11) }
                     }
            );

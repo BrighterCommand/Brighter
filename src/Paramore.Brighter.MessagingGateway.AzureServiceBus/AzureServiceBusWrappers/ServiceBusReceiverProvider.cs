@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         public IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, ServiceBusReceiveMode receiveMode)
         {
             var messageReceiver = _client.CreateReceiver(topicName, subscriptionName,
-                new ServiceBusReceiverOptions() {ReceiveMode = receiveMode,});
+                new ServiceBusReceiverOptions {ReceiveMode = receiveMode,});
             return new ServiceBusReceiverWrapper(messageReceiver);
         }
     }

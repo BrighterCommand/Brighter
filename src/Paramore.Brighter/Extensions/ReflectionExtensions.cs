@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Extensions
             var customAttributes = targetMethod.GetCustomAttributes(true);
             return customAttributes
                 .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().GetTypeInfo().BaseType == typeof (RequestHandlerAttribute))
+                .Where(a => a.GetType().BaseType == typeof (RequestHandlerAttribute))
                 .Cast<RequestHandlerAttribute>()
                 .ToList();
         }
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Extensions
             var customAttributes = targetMethod.GetCustomAttributes(true);
             return customAttributes
                 .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().GetTypeInfo().BaseType == typeof (WrapWithAttribute))
+                .Where(a => a.GetType().BaseType == typeof (WrapWithAttribute))
                 .Cast<WrapWithAttribute>()
                 .ToList();
         }
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Extensions
             var customAttributes = targetMethod.GetCustomAttributes(true);
             return customAttributes
                 .Select(attr => (Attribute) attr)
-                .Where(a => a.GetType().GetTypeInfo().BaseType == typeof (UnwrapWithAttribute))
+                .Where(a => a.GetType().BaseType == typeof (UnwrapWithAttribute))
                 .Cast<UnwrapWithAttribute>()
                 .ToList();
         } 
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Extensions
              var customAttributes = targetMethod.GetCustomAttributes(true);
              return customAttributes
                 .Select(attr => (Attribute) attr)
-                .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (NoGlobalInboxAttribute));
+                .Any(a => a.GetType() == typeof (NoGlobalInboxAttribute));
         }
 
         internal static bool HasExistingUseInboxAttributesInPipeline(this MethodInfo targetMethod)
@@ -75,8 +75,8 @@ namespace Paramore.Brighter.Extensions
               var customAttributes = targetMethod.GetCustomAttributes(true);
               return customAttributes
                 .Select(attr => (Attribute) attr)
-                .Any(a => IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (UseInboxAttribute)
-                          || IntrospectionExtensions.GetTypeInfo(a.GetType()) == typeof (UseInboxAsyncAttribute));
+                .Any(a => a.GetType() == typeof (UseInboxAttribute)
+                          || a.GetType() == typeof (UseInboxAsyncAttribute));
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyCommandInboxedHandler>();
             container.AddSingleton<IAmAnInboxSync>(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
  
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 

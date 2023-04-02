@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyEventHandler>();
             container.AddTransient<MyOtherEventHandler>();
             container.AddSingleton(_receivedMessages);
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());

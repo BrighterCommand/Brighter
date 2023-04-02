@@ -337,7 +337,7 @@ namespace Paramore.Brighter.Tranformers.AWS
 
                 if (deleteGoodUploadsAfterDays != -1)
                 {
-                    var goodUploadLifeCycleRule = new LifecycleRule()
+                    var goodUploadLifeCycleRule = new LifecycleRule
                     {
                         Expiration = new LifecycleRuleExpiration { Days = deleteGoodUploadsAfterDays },
                         Filter = new LifecycleFilter { LifecycleFilterPredicate = new LifecyclePrefixPredicate { Prefix = luggagePrefix } },
@@ -362,7 +362,7 @@ namespace Paramore.Brighter.Tranformers.AWS
                 {
                     BucketName = bucketName,
                     ExpectedBucketOwner = accountId,
-                    PublicAccessBlockConfiguration = new PublicAccessBlockConfiguration() { BlockPublicPolicy = true, IgnorePublicAcls = true }
+                    PublicAccessBlockConfiguration = new PublicAccessBlockConfiguration { BlockPublicPolicy = true, IgnorePublicAcls = true }
                 });
                 if (blockAccessResponse.HttpStatusCode != HttpStatusCode.OK)
                     throw new InvalidOperationException($"Could not block public access to {bucketName}");

@@ -31,11 +31,11 @@ namespace Greetings.Ports.CommandHandlers
             try
             {
                 //Save  the new Greeting
-                var greeting = new Greeting() {GreetingMessage = command.GreetingMessage};
+                var greeting = new Greeting {GreetingMessage = command.GreetingMessage};
                 await _dataContext.GreetingsRegister.AddAsync(greeting, cancellationToken);
 
                 //Create an Event for externals
-                var newGreetingAddedEvent = new GreetingAsyncEvent() {Greeting = command.GreetingMessage};
+                var newGreetingAddedEvent = new GreetingAsyncEvent {Greeting = command.GreetingMessage};
                 var eventId = await _commandProcessor.DepositPostAsync(newGreetingAddedEvent, cancellationToken: cancellationToken);
 
                 await _dataContext.SaveChangesAsync(cancellationToken);
