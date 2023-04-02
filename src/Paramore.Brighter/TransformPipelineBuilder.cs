@@ -242,7 +242,7 @@ namespace Paramore.Brighter
 
         private static MethodInfo[] FindMethods<TRequest>(IAmAMessageMapper<TRequest> messageMapper) where TRequest : class, IRequest
         {
-            return messageMapper.GetType().GetTypeInfo().GetMethods();
+            return messageMapper.GetType().GetMethods();
         }
 
         private TransformPipelineTracer TraceWrapPipeline<TRequest>(WrapPipeline<TRequest> pipeline) where TRequest : class, IRequest
