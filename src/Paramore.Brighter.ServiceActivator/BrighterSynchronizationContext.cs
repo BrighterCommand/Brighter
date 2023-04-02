@@ -11,7 +11,6 @@ namespace Paramore.Brighter.ServiceActivator
     internal class BrighterSynchronizationContext : SynchronizationContext
     {
        private readonly BlockingCollection<KeyValuePair<SendOrPostCallback, object>> _queue = new BlockingCollection<KeyValuePair<SendOrPostCallback, object>>();
-       private readonly Thread _thread = Thread.CurrentThread;
        private int _operationCount = 0;
        
        /// <summary>

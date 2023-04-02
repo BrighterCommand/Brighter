@@ -41,11 +41,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// </summary>
     public class SqliteOutboxSync : RelationDatabaseOutboxSync<SqliteConnection, SqliteCommand, SqliteDataReader, SqliteParameter>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutboxSync>();
-
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteConfiguration _configuration;
         private readonly ISqliteConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -56,7 +53,6 @@ namespace Paramore.Brighter.Outbox.Sqlite
         public SqliteOutboxSync(SqliteConfiguration configuration, ISqliteConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutboxSync>())
         {
-            _configuration = configuration;
             ContinueOnCapturedContext = false;
             _connectionProvider = connectionProvider;
         }

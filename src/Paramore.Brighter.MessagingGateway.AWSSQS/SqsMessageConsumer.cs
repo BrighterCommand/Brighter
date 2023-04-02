@@ -260,17 +260,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
         }
 
-        private string FindTopicArnByName(RoutingKey topicName)
-        {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
-            {
-                var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-                if (topic == null)
-                    throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
-                return topic.TopicArn;
-            }
-        }
-
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
