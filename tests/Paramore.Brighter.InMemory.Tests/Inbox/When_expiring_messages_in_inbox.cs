@@ -17,7 +17,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
             
-            var inbox = new InMemoryInbox()
+            var inbox = new InMemoryInbox
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(50),
@@ -57,7 +57,7 @@ namespace Paramore.Brighter.InMemory.Tests.Inbox
             //Arrange
             const string contextKey = "Inbox_Cache_Expiry_Tests";
             
-            var inbox = new InMemoryInbox()
+            var inbox = new InMemoryInbox
             {
                 //set some aggressive outbox reclamation times for the test
                 EntryTimeToLive = TimeSpan.FromMilliseconds(500),

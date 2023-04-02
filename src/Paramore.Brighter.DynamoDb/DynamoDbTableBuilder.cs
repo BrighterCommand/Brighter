@@ -101,7 +101,7 @@ namespace Paramore.Brighter.DynamoDb
             string lastEvalutatedTableName = null;
             do
             {
-                var tablesResponse = await _client.ListTablesAsync();
+                var tablesResponse = await _client.ListTablesAsync(ct);
 
                 foreach (var tableName in tablesResponse.TableNames)
                 {
