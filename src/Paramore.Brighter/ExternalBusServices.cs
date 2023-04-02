@@ -475,7 +475,7 @@ namespace Paramore.Brighter
                     {
                         s_logger.LogInformation("Sent message: Id:{Id}", id.ToString());
                         if (AsyncOutbox != null)
-                            await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow));
+                            await RetryAsync(async ct => await AsyncOutbox.MarkDispatchedAsync(id, DateTime.UtcNow, cancellationToken: ct));
                     }
                 };
                 return true;

@@ -64,7 +64,7 @@ namespace Greetings.Ports.CommandHandlers
             }
             
             
-            return await base.HandleAsync(command);
+            return await base.HandleAsync(command, cancellationToken);
         }
     }
 }

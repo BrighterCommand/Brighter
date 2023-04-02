@@ -31,7 +31,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if (cancellationToken.IsCancellationRequested)
-                tcs.SetCanceled();
+                tcs.SetCanceled(cancellationToken);
             
             Send(command);
 
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
               if (cancellationToken.IsCancellationRequested)
-                  tcs.SetCanceled();
+                  tcs.SetCanceled(cancellationToken);
          
               Publish(@event);
 
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
               var tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
               
               if (cancellationToken.IsCancellationRequested)
-                  tcs.SetCanceled();
+                  tcs.SetCanceled(cancellationToken);
               
               Post(request);
 
@@ -94,7 +94,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
-                tcs.SetCanceled();
+                tcs.SetCanceled(cancellationToken);
             
             DepositPost(request);
             
@@ -142,7 +142,7 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             var tcs = new TaskCompletionSource<Guid>(TaskCreationOptions.RunContinuationsAsynchronously);
             
             if(cancellationToken.IsCancellationRequested)
-                tcs.SetCanceled();
+                tcs.SetCanceled(cancellationToken);
 
             ClearOutbox(posts.ToArray());
 
