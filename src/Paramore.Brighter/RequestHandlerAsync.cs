@@ -162,7 +162,7 @@ namespace Paramore.Brighter
 
         internal MethodInfo FindHandlerMethod()
         {
-            var methods = GetType().GetTypeInfo().GetMethods();
+            var methods = GetType().GetMethods();
             return methods
                 .Where(method => method.Name == nameof(HandleAsync))
                 .SingleOrDefault(method => method.GetParameters().Length == 2 

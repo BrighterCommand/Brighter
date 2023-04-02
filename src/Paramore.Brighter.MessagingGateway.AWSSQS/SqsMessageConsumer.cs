@@ -90,8 +90,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds,
-                    MessageAttributeNames = new List<string>() {"All"},
-                    AttributeNames = new List<string>() {"All"}
+                    MessageAttributeNames = new List<string> {"All"},
+                    AttributeNames = new List<string> {"All"}
                 };
 
                 var receiveResponse = client.ReceiveMessageAsync(request).GetAwaiter().GetResult();

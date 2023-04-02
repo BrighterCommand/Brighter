@@ -25,7 +25,7 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
         {
             s_sender = s_senderFactory.Create(
                 _fakeOutboxSync, 
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyTopic", s_fakeGateway},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyTopic", s_fakeGateway},}));
 
             //_should_create_a_control_bus_sender
             s_sender.Should().NotBeNull();
