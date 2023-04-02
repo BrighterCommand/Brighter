@@ -117,7 +117,15 @@ namespace Paramore.Brighter
         /// or busy
         /// </summary>
         /// <value>The timeout in miliseconds.</value>
-        public int TimeoutInMiliseconds { get; }
+        [Obsolete("Use TimeoutInMilliseconds")]
+        public int TimeoutInMiliseconds { get => TimeoutInMilliseconds; }
+
+        /// <summary>
+        /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
+        /// or busy
+        /// </summary>
+        /// <value>The timeout in mi;liseconds.</value>
+        public int TimeoutInMilliseconds { get; }
 
         /// <summary>
         /// Gets the number of messages before we will terminate the channel due to high error rates
@@ -166,7 +174,7 @@ namespace Paramore.Brighter
             RoutingKey = routingKey ?? new RoutingKey(dataType.FullName);
             BufferSize = bufferSize;
             NoOfPeformers = noOfPerformers;
-            TimeoutInMiliseconds = timeoutInMilliseconds;
+            TimeoutInMilliseconds = timeoutInMilliseconds;
             RequeueCount = requeueCount;
             RequeueDelayInMilliseconds = requeueDelayInMilliseconds;
             UnacceptableMessageLimit = unacceptableMessageLimit;
