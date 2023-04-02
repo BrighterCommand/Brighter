@@ -112,7 +112,7 @@ namespace Paramore.Brighter.MessagingGateway.RESTMS
         private HttpClient CreateClient( double timeout)
         {
 
-            var client = new HttpClient()
+            var client = new HttpClient
             {
                 Timeout = TimeSpan.FromMilliseconds(timeout),
                 

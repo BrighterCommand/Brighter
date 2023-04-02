@@ -40,7 +40,7 @@ namespace GreetingsPorts.Handlers
             var transaction = _unitOfWork.BeginOrGetTransaction();
             try
             {
-                var person = await context.LoadAsync<Person>(addGreeting.Name);
+                var person = await context.LoadAsync<Person>(addGreeting.Name, cancellationToken);
                 
                 person.Greetings.Add(addGreeting.Greeting);
 

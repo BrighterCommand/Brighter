@@ -77,7 +77,7 @@ namespace GreetingsSender
                     var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
                         .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
 
-                    var policyRegistry = new PolicyRegistry()
+                    var policyRegistry = new PolicyRegistry
                     {
                         {CommandProcessor.RETRYPOLICY, retryPolicy},
                         {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
@@ -92,14 +92,14 @@ namespace GreetingsSender
                         .UseInMemoryOutbox()
                         .UseExternalBus(
                             new KafkaProducerRegistryFactory(
-                                    new KafkaMessagingGatewayConfiguration()
+                                    new KafkaMessagingGatewayConfiguration
                                     {
                                         Name = "paramore.brighter.greetingsender",
                                         BootStrapServers = new[] {"localhost:9092"}
                                     },
                                     new KafkaPublication[]
                                     {
-                                        new KafkaPublication()
+                                        new KafkaPublication
                                         {
                                             Topic = new RoutingKey("greeting.event"),
                                             NumPartitions = 3,
