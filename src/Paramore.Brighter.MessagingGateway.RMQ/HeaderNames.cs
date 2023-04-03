@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         public const string DELAYED_MILLISECONDS = "x-delay";
         /// <summary>
-        /// Indicates the original id of this message given a historic scenario (e.g. re-queueuing).
+        /// Indicates the original id of this message given a historic scenario (e.g. re-queueing).
         /// </summary>
         public const string ORIGINAL_MESSAGE_ID = Message.OriginalMessageIdHeaderName;
         /// <summary>

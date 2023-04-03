@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Receives the specified queue name.
         /// </summary>
-        /// <param name="timeoutInMilliseconds">The timeout in milliseconds. Anytyhing greater than 0 uses long-polling  </param>
+        /// <param name="timeoutInMilliseconds">The timeout in milliseconds. Anything greater than 0 uses long-polling  </param>
         public Message[] Receive(int timeoutInMilliseconds)
         {
             AmazonSQSClient client = null;
@@ -90,8 +90,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 {
                     MaxNumberOfMessages = _batchSize,
                     WaitTimeSeconds = (int)TimeSpan.FromMilliseconds(timeoutInMilliseconds).TotalSeconds,
-                    MessageAttributeNames = new List<string>() {"All"},
-                    AttributeNames = new List<string>() {"All"}
+                    MessageAttributeNames = new List<string> {"All"},
+                    AttributeNames = new List<string> {"All"}
                 };
 
                 var receiveResponse = client.ReceiveMessageAsync(request).GetAwaiter().GetResult();

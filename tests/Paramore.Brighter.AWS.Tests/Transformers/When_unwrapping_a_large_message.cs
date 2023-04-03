@@ -60,7 +60,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
 #pragma warning disable CS0618 // although obsolete, the region string on the replacement is wrong for our purpose
                     bucketRegion: S3Region.EUW1,
 #pragma warning restore CS0618 
-                    tags: new List<Tag>() { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
+                    tags: new List<Tag> { new Tag { Key = "BrighterTests", Value = "S3LuggageUploadTests" } },
                     acl: S3CannedACL.Private,
                     abortFailedUploadsAfterDays: 1,
                     deleteGoodUploadsAfterDays: 1)
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         public async Task When_unwrapping_a_large_message()
         {
             //arrange
-            await Task.Delay(3000); //allow bucket definition to propogate
+            await Task.Delay(3000); //allow bucket definition to propagate
             
             //store our luggage and get the claim check
             var contents = DataGenerator.CreateString(6000);

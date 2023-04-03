@@ -36,8 +36,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 {
                     MonitorValue = 2;
                     ContinuationThreadId = Thread.CurrentThread.ManagedThreadId; 
-                })
-                );
+                }), cancellationToken);
 
             return await base.HandleAsync(command, cancellationToken);
         }

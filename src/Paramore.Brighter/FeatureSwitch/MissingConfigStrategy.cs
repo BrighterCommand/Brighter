@@ -31,7 +31,7 @@ namespace Paramore.Brighter.FeatureSwitch
         /// </summary>
         SilentOn,
         /// <summary>
-        /// Siently handle missing feature switch by treating it as <see cref="FeatureSwitchStatus.Off"/>
+        /// Silently handle missing feature switch by treating it as <see cref="FeatureSwitchStatus.Off"/>
         /// </summary>
         SilentOff,
         /// <summary>

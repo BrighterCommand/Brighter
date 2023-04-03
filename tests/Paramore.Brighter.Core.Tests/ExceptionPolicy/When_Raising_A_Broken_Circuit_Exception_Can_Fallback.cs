@@ -47,7 +47,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             var container = new ServiceCollection();
             container.AddSingleton<MyFailsWithFallbackBrokenCircuitHandler>();
             container.AddSingleton<FallbackPolicyHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
              
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyFailsWithFallbackBrokenCircuitHandler.ShouldReceive(_myCommand);
             //_should_call_the_fallback_chain
             MyFailsWithFallbackBrokenCircuitHandler.ShouldFallback(_myCommand);
-            //_should_set_the_exeception_into_context
+            //_should_set_the_exception_into_context
             MyFailsWithFallbackBrokenCircuitHandler.ShouldSetException(_myCommand);
         }
 

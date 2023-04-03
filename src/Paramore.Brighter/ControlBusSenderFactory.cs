@@ -30,7 +30,7 @@ using Paramore.Brighter.Monitoring.Mappers;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subcribers).
+    /// Class ControlBusSenderFactory. Helper for creating instances of a control bus (which requires messaging, but not subscribers).
     /// </summary>
     public class ControlBusSenderFactory : IAmAControlBusSenderFactory
     {

@@ -39,7 +39,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox()
+            var outbox = new InMemoryOutbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             //Arrange
             const int limit = 5;
             
-            var outbox = new InMemoryOutbox()
+            var outbox = new InMemoryOutbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5

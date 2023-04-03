@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
                 from i in ti.ImplementedInterfaces
-                where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
+                where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
 
             foreach (var mapper in mappers)
@@ -126,7 +126,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         }
 
         /// <summary>
-        /// Register handers with the built in subscriber registry
+        /// Register handlers with the built in subscriber registry
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>
@@ -147,13 +147,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>This builder, allows chaining calls</returns>
         public IBrighterBuilder HandlersFromAssemblies(params Assembly[] assemblies)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).GetTypeInfo().Assembly);
+            RegisterHandlersFromAssembly(typeof(IHandleRequests<>), assemblies, typeof(IHandleRequests<>).Assembly);
             return this;
         }
 
 
         /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequestsAsyn and register them with ServiceCollection
+        /// Scan the assemblies provided for implementations of IHandleRequestsAsync and register them with ServiceCollection
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>
@@ -174,7 +174,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>This builder, allows chaining calls</returns>
         public IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies)
         {
-            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).GetTypeInfo().Assembly);
+            RegisterHandlersFromAssembly(typeof(IHandleRequestsAsync<>), assemblies, typeof(IHandleRequestsAsync<>).Assembly);
             return this;
         }
 
@@ -212,7 +212,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
                 where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
                 from i in ti.ImplementedInterfaces
-                where i.GetTypeInfo().IsGenericType && i.GetGenericTypeDefinition() == interfaceType
+                where i.IsGenericType && i.GetGenericTypeDefinition() == interfaceType
                 select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
 
             foreach (var subscriber in subscribers)

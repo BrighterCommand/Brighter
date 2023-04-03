@@ -61,7 +61,7 @@ namespace Paramore.Brighter.ServiceActivator
             var messagePump = new MessagePumpBlocking<TRequest>(_commandProcessorProvider, _messageMapperRegistry, _messageTransformerFactory)
             {
                 Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                TimeoutInMilliseconds = _subscription.TimeoutInMilliseconds,
                 RequeueCount = _subscription.RequeueCount,
                 RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.ServiceActivator
             var messagePump = new MessagePumpAsync<TRequest>(_commandProcessorProvider, _messageMapperRegistry, _messageTransformerFactory)
             {
                 Channel = channel,
-                TimeoutInMilliseconds = _subscription.TimeoutInMiliseconds,
+                TimeoutInMilliseconds = _subscription.TimeoutInMilliseconds,
                 RequeueCount = _subscription.RequeueCount,
                 RequeueDelayInMilliseconds = _subscription.RequeueDelayInMilliseconds,
                 UnacceptableMessageLimit = _subscription.UnacceptableMessageLimit,

@@ -17,7 +17,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
     public void When_There_Are_No_Command_Handlers_Async()
     {
         var container = new ServiceCollection();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
         _exception = Catch.Exception(() => new CommandProcessor(
             new SubscriberRegistry(),
@@ -37,7 +37,7 @@ public class CommandProcessorNoHandlerFactoriesTests : IDisposable
     public void When_using_IAmAHandlerFactory()
     {
         var container = new ServiceCollection();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
         _exception = Catch.Exception(() => new CommandProcessor(
             new SubscriberRegistry(),
