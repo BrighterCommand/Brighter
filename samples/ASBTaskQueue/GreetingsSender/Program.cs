@@ -25,15 +25,15 @@ namespace GreetingsSender
                     asbClientProvider,
                     new AzureServiceBusPublication[] 
                     {
-                        new AzureServiceBusPublication()
+                        new AzureServiceBusPublication
                         {
                             Topic = new RoutingKey("greeting.event")
                         },
-                        new AzureServiceBusPublication()
+                        new AzureServiceBusPublication
                         {
                             Topic = new RoutingKey("greeting.addGreetingCommand")
                         },
-                        new AzureServiceBusPublication()
+                        new AzureServiceBusPublication
                         {
                             Topic = new RoutingKey("greeting.Asyncevent")
                         }

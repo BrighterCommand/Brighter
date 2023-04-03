@@ -262,7 +262,7 @@ namespace Paramore.Brighter
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
                         new HandlerFactory<TRequest>(attribute, _handlerFactorySync, requestContext).CreateRequestHandler();
@@ -283,7 +283,7 @@ namespace Paramore.Brighter
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
                     var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext);
                     lastInPipeline.SetSuccessor(decorator);
@@ -317,7 +317,7 @@ namespace Paramore.Brighter
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequests)))
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequests)))
                 {
                     var decorator =
                         new HandlerFactory<TRequest>(attribute, _handlerFactorySync, requestContext).CreateRequestHandler();
@@ -338,7 +338,7 @@ namespace Paramore.Brighter
             attributes.Each(attribute =>
             {
                 var handlerType = attribute.GetHandlerType();
-                if (handlerType.GetTypeInfo().GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
+                if (handlerType.GetInterfaces().Contains(typeof(IHandleRequestsAsync)))
                 {
                     var decorator = _asyncHandlerFactory.CreateAsyncRequestHandler<TRequest>(attribute, requestContext);
                     decorator.ContinueOnCapturedContext = continueOnCapturedContext;

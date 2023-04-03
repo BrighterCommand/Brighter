@@ -184,7 +184,7 @@ namespace GreetingsWeb
                             MaxOutStandingMessages = 5,
                             MaxOutStandingCheckIntervalMilliSeconds = 500,
                             WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            OutBoxBag = new Dictionary<string, object>(){{"Topic", "GreetingMade"}},
+                            OutBoxBag = new Dictionary<string, object> {{"Topic", "GreetingMade"}},
                             MakeChannels = OnMissingChannel.Create
                         }}
                  ).Create()

@@ -74,7 +74,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public void When_Writing_Messages_To_The_Outbox_Bulk()
         {
-            var messages = new List<Message>() { _messageEarliest, _message2, _messageLatest };
+            var messages = new List<Message> { _messageEarliest, _message2, _messageLatest };
             _mySqlOutboxSync.Add(messages);
             _retrievedMessages = _mySqlOutboxSync.Get();
 
