@@ -49,11 +49,11 @@ namespace GreetingsWeb.Controllers
         {
             await _commandProcessor.SendAsync(new AddPerson(newPerson.Name));
 
-            var addedPeson = await _queryProcessor.ExecuteAsync(new FindPersonByName(newPerson.Name));
+            var addedPerson = await _queryProcessor.ExecuteAsync(new FindPersonByName(newPerson.Name));
 
-            if (addedPeson == null) return new NotFoundResult(); 
+            if (addedPerson == null) return new NotFoundResult(); 
 
-            return Ok(addedPeson);
+            return Ok(addedPerson);
         }
         
     }
