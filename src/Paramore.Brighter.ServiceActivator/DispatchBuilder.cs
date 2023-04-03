@@ -187,14 +187,12 @@ namespace Paramore.Brighter.ServiceActivator
     /// Interface INeedAListOfSubcriptions
     /// </summary>
     public interface INeedAListOfSubcriptions
-    { 
-        ///// <summary>
-        ///// A list of connections i.e. mappings of channels to commands or events
-        ///// </summary>
-        ///// <param name="connections"></param>
-        ///// <returns>IAmADispatchBuilder.</returns>
+    {
+        /// <summary>
+        /// A list of connections i.e. mappings of channels to commands or events
+        /// </summary>
+        /// <returns>IAmADispatchBuilder.</returns>
         IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subsriptions);
-       
         // TODO: Remove in V10
         [Obsolete("Will be removed in V10, use Subscriptions instead")]
         IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);
