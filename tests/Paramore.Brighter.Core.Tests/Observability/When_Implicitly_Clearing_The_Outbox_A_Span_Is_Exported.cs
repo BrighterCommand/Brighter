@@ -35,7 +35,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
         
         var container = new ServiceCollection();
         container.AddTransient<MyEvent>();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -50,8 +50,8 @@ public class ImplicitClearingObservabilityTests : IDisposable
             .Handle<Exception>()
             .Retry();
 
-        var policyRegistry = new PolicyRegistry() {{CommandProcessor.RETRYPOLICY, retryPolicy}};
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>()
+        var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}};
+        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
             {MyEvent.Topic, new FakeMessageProducer()}
         });

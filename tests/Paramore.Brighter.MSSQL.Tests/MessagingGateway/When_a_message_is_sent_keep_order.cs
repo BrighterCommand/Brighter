@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
                 testHelper.QueueConfiguration, 
-                new Publication[] {new Publication() {Topic = new RoutingKey(_topic)}}
+                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }

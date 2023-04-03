@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             container.AddSingleton(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddTransient<UseInboxHandler<MyCommandToFail>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
@@ -81,7 +81,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
         {
             Guid id = Guid.NewGuid();
 
-            Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail() { Id = id}));
+            Assert.Throws<NotImplementedException>(() => _commandProcessor.Send(new MyCommandToFail { Id = id}));
 
             _inbox.Exists<MyCommandToFail>(id, typeof(MyStoredCommandToFailHandler).FullName).Should().BeFalse();
         }

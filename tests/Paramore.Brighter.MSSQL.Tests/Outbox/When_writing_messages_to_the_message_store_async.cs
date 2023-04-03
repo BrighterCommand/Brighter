@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             
-            var messages = new List<Message>() { _messageEarliest, _message2, _messageLatest };
+            var messages = new List<Message> { _messageEarliest, _message2, _messageLatest };
             await _sqlOutbox.AddAsync(messages);
 
             _retrievedMessages = await _sqlOutbox.GetAsync();

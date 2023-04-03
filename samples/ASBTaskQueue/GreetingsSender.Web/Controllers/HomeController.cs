@@ -113,8 +113,8 @@ namespace GreetingsSender.Web.Controllers
 
         public async Task<IActionResult> AddGreeting()
         {
-            var command = new AddGreetingCommand() {GreetingMessage = "Welcome to the Example.", ThrowError = false};
-            var failingCommand = new AddGreetingCommand() { GreetingMessage = "This should never reach the DB or outbox.", ThrowError = true };
+            var command = new AddGreetingCommand {GreetingMessage = "Welcome to the Example.", ThrowError = false};
+            var failingCommand = new AddGreetingCommand { GreetingMessage = "This should never reach the DB or outbox.", ThrowError = true };
             await _commandProcessor.PostAsync(command);
             await _commandProcessor.PostAsync(failingCommand);
             

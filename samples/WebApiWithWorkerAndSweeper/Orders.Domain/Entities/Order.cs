@@ -27,7 +27,7 @@ public class Order
         Status = newStatus;
         Version++;
 
-        var updatedEvent = new NewOrderVersionEvent()
+        var updatedEvent = new NewOrderVersionEvent
         {
             OrderId = this.Id.ToString(),
             Version = this.Version,
