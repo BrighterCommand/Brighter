@@ -14,7 +14,8 @@ using Xunit;
 
 namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 {
-    public class CommandProcessorWithBothRetryAndCircuitBreaker : IDisposable
+    [Collection("CommandProcessor")]
+     public class CommandProcessorWithBothRetryAndCircuitBreaker : IDisposable
     {
         private readonly CommandProcessor _commandProcessor;
         private Exception _thirdException;
