@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// <param name="serviceLifetime">What is the lifetime of the services that we add</param>
         /// <returns>Allows fluent syntax</returns>
         /// -- Registers the following
-        /// -- MsSqlConfigutation: connection string and outbox name
+        /// -- MsSqlConfiguration: connection string and outbox name
         /// -- IMsSqlConnectionProvider: lets us get a connection for the outbox that matches the entity store
         /// -- IAmAnOutbox<Message>: an outbox to store messages we want to send
         /// -- IAmAnOutboxAsync<Message>: an outbox to store messages we want to send
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Outbox.MsSql
          /// Use this transaction provider to ensure that the Outbox and the Entity Store are correct
          /// </summary>
          /// <param name="brighterBuilder">Allows extension method</param>
-         /// <param name="connectionProvider">What is the tyoe of the connection provider</param>
+         /// <param name="connectionProvider">What is the type of the connection provider</param>
          /// <param name="serviceLifetime">What is the lifetime of registered interfaces</param>
          /// <returns>Allows fluent syntax</returns>
          /// This is paired with Use Outbox (above) when required

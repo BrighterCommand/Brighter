@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// Steps that don't know how to handle should pass through.
         /// Useful alternatives for Fallback are to try via the cache.
         /// Note that a Fallback handler implementation should not catch exceptions in the <see cref="RequestHandler{TRequest}.Fallback"/> chain to avoid an infinite loop.
-        /// Call <see cref="RequestHandler{TRequest}.Successor"/>.<see cref="RequestHandler{TRequest}.Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Excerise caution here though
+        /// Call <see cref="RequestHandler{TRequest}.Successor"/>.<see cref="RequestHandler{TRequest}.Handle"/> if having provided a Fallback you want the chain to return to the 'happy' path. Exercise caution here though
         /// as you do not know who generated the exception that caused the fallback chain.
         /// For this reason, the <see cref="FallbackPolicyHandler{TRequest}"/> puts the exception in the request context.
         /// When the <see cref="FallbackPolicyAttribute"/> is set on the <see cref="RequestHandler{TRequest}.Handle"/> method of a derived class

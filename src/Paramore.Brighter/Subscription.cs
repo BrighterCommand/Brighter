@@ -116,7 +116,7 @@ namespace Paramore.Brighter
         /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
         /// or busy
         /// </summary>
-        /// <value>The timeout in miliseconds.</value>
+        /// <value>The timeout in milliseconds.</value>
         public int TimeoutInMiliseconds { get; }
 
         /// <summary>

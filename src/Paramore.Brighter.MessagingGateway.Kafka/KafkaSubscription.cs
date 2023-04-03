@@ -63,7 +63,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
         /// <summary>
         /// What do we do if there is no offset stored in ZooKeeper for this consumer
-        /// AutoOffsetReset.Earlist -  (default) Begin reading the stream from the start
+        /// AutoOffsetReset.Earliest -  (default) Begin reading the stream from the start
         /// AutoOffsetReset.Latest - Start from now i.e. only consume messages after we start
         /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
         /// </summary>

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.DynamoDb
         /// <summary>
         /// Delete the specified tables. Note that tables will be in TableStatus.Deleting until gone
         /// </summary>
-        /// <param name="tableNames">The list of tables to delette</param>
+        /// <param name="tableNames">The list of tables to delete</param>
         /// <param name="ct">A cancellation token</param>
         /// <returns>The response to table deletion</returns>
         public async Task<DeleteTableResponse[]> Delete(IEnumerable<string> tableNames, CancellationToken ct = default(CancellationToken))

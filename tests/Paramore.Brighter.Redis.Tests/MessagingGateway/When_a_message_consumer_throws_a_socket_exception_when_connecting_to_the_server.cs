@@ -32,7 +32,7 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             //_should_return_a_channel_failure_exception
             _exception.Should().BeOfType<ChannelFailureException>();
             
-            //_should_return_an_explainging_inner_exception
+            //_should_return_an_explaining_inner_exception
             _exception.InnerException.Should().BeOfType<RedisException>();
   
         }
