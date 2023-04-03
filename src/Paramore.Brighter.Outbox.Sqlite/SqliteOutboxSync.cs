@@ -41,10 +41,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// <summary>
     /// Implements an outbox using Sqlite as a backing store
     /// </summary>
-    public class SqliteOutboxSync : RelationDatabaseOutboxSync<SqliteConnection, SqliteCommand, SqliteDataReader,
+    public class SqliteOutbox : RelationDatabaseOutbox<SqliteConnection, SqliteCommand, SqliteDataReader,
         SqliteParameter>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutboxSync>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutbox>();
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
@@ -52,12 +52,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private readonly ISqliteConnectionProvider _connectionProvider;
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SqliteOutboxSync" /> class.
+        /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        public SqliteOutboxSync(SqliteConfiguration configuration, ISqliteConnectionProvider connectionProvider) : base(
-            configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutboxSync>())
+        public SqliteOutbox(SqliteConfiguration configuration, ISqliteConnectionProvider connectionProvider) : base(
+            configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -65,10 +65,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="SqliteOutboxSync" /> class.
+        /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public SqliteOutboxSync(SqliteConfiguration configuration) : this(configuration,
+        public SqliteOutbox(SqliteConfiguration configuration) : this(configuration,
             new SqliteConnectionProvider(configuration))
         {
         }

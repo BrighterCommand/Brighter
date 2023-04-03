@@ -18,13 +18,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         private readonly Message _message2;
         private readonly Message _message3;
         private readonly Message _message;
-        private readonly SqliteOutboxSync _sqlOutbox;
+        private readonly SqliteOutbox _sqlOutbox;
 
         public SqliteOutboxBulkGetAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutbox = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableNameMessages));
 
             _message = new Message(new MessageHeader(Guid.NewGuid(), _Topic1, MessageType.MT_COMMAND),
                 new MessageBody("message body"));

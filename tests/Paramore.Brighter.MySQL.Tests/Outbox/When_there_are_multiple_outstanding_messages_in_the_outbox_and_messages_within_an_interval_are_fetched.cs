@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxFetchOutstandingMessageTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutboxSync _mySqlOutboxSync;
+        private readonly MySqlOutbox _mySqlOutbox;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private readonly Message _message1;
@@ -23,16 +23,16 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _mySqlOutboxSync.Add(_messageEarliest);
+            _mySqlOutbox.Add(_messageEarliest);
             Thread.Sleep(100);
-            _mySqlOutboxSync.Add(_message1);
+            _mySqlOutbox.Add(_message1);
             Thread.Sleep(100);
-            _mySqlOutboxSync.Add(_message2);
+            _mySqlOutbox.Add(_message2);
 
             // Not sure why (assuming time skew) but needs time to settle
             Thread.Sleep(7000);
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public void When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched()
         {
-            var messages = _mySqlOutboxSync.OutstandingMessages(millSecondsSinceSent: 0);
+            var messages = _mySqlOutbox.OutstandingMessages(millSecondsSinceSent: 0);
 
             messages.Should().NotBeNullOrEmpty();
 
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_there_are_multiple_outstanding_messages_in_the_outbox_and_messages_within_an_interval_are_fetched_async()
         {
-            var messages = await _mySqlOutboxSync.OutstandingMessagesAsync(millSecondsSinceSent: 0);
+            var messages = await _mySqlOutbox.OutstandingMessagesAsync(millSecondsSinceSent: 0);
 
             messages.Should().NotBeNullOrEmpty();
 

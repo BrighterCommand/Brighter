@@ -37,7 +37,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxWritingMessagesAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutboxSync _mySqlOutboxSync;
+        private readonly MySqlOutbox _mySqlOutbox;
         private Message _message2;
         private Message _messageEarliest;
         private Message _messageLatest;
@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
         }
 
         [Fact]
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             await SetUpMessagesAsync();
 
-            _retrievedMessages = await _mySqlOutboxSync.GetAsync();
+            _retrievedMessages = await _mySqlOutbox.GetAsync();
 
             //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
@@ -69,9 +69,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         public async Task When_Writing_Messages_To_The_Outbox_Async_Bulk()
         {
             var messages = await SetUpMessagesAsync(false);
-            await _mySqlOutboxSync.AddAsync(messages);
+            await _mySqlOutbox.AddAsync(messages);
 
-            _retrievedMessages = await _mySqlOutboxSync.GetAsync();
+            _retrievedMessages = await _mySqlOutbox.GetAsync();
 
             //should read first message last from the outbox
             _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
@@ -84,13 +84,13 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private async Task<List<Message>> SetUpMessagesAsync(bool addMessagesToOutbox = true)
         {
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            if(addMessagesToOutbox) await _mySqlOutboxSync.AddAsync(_messageEarliest);
+            if(addMessagesToOutbox) await _mySqlOutbox.AddAsync(_messageEarliest);
 
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            if(addMessagesToOutbox) await _mySqlOutboxSync.AddAsync(_message2);
+            if(addMessagesToOutbox) await _mySqlOutbox.AddAsync(_message2);
 
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            if(addMessagesToOutbox) await _mySqlOutboxSync.AddAsync(_messageLatest);
+            if(addMessagesToOutbox) await _mySqlOutbox.AddAsync(_messageLatest);
             
             return new List<Message> { _messageEarliest, _message2, _messageLatest };
         }

@@ -42,6 +42,7 @@ namespace Paramore.Brighter.Sqlite
             bool binaryMessagePayload = false)
             : base(connectionString, outBoxTableName, queueStoreTable, binaryMessagePayload)
         {
+            InBoxTableName = inboxTableName;
         }
 
 

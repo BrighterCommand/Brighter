@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// Class MsSqlOutbox.
     /// </summary>
     public class MsSqlOutbox :
-        RelationDatabaseOutboxSync<SqlConnection, SqlCommand, SqlDataReader, SqlParameter>
+        RelationDatabaseOutbox<SqlConnection, SqlCommand, SqlDataReader, SqlParameter>
     {
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;

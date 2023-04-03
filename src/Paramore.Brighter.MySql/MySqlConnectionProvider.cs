@@ -39,7 +39,7 @@ namespace Paramore.Brighter.MySql
         /// Initialise a new instance of Sqlte Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MySqlConnectionProvider(MySqlConfiguration configuration)
+        public MySqlConnectionProvider(RelationalDatabaseOutboxConfiguration configuration)
         {
             _connectionString = configuration.ConnectionString;
         }

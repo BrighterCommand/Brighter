@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
     public class MySqlOutboxWritingMessageAsyncTests : IDisposable
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
-        private readonly MySqlOutboxSync _mySqlOutboxSync;
+        private readonly MySqlOutbox _mySqlOutbox;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
-            _mySqlOutboxSync = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
+            _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
 
             var messageHeader = new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT,DateTime.UtcNow.AddDays(-1), 5, 5);
             messageHeader.Bag.Add(_key1, _value1);
@@ -66,9 +66,9 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_Writing_A_Message_To_The_Outbox_Async()
         {
-            await _mySqlOutboxSync.AddAsync(_messageEarliest);
+            await _mySqlOutbox.AddAsync(_messageEarliest);
 
-            _storedMessage = await _mySqlOutboxSync.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _mySqlOutbox.GetAsync(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

@@ -39,37 +39,41 @@ namespace Paramore.Brighter.Outbox.MySql
     /// <summary>
     ///     Class MySqlOutbox.
     /// </summary>
-    public class MySqlOutboxSync : RelationDatabaseOutboxSync<MySqlConnection, MySqlCommand, MySqlDataReader, MySqlParameter>
+    public class
+        MySqlOutbox : RelationDatabaseOutbox<MySqlConnection, MySqlCommand, MySqlDataReader, MySqlParameter>
     {
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutboxSync>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
         private readonly MySqlConfiguration _configuration;
         private readonly IMySqlConnectionProvider _connectionProvider;
 
-        public MySqlOutboxSync(MySqlConfiguration configuration, IMySqlConnectionProvider connectionProvider) : base(
-            configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutboxSync>())
+        public MySqlOutbox(MySqlConfiguration configuration, IMySqlConnectionProvider connectionProvider) : base(
+            configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;
             ContinueOnCapturedContext = false;
         }
 
-        public MySqlOutboxSync(MySqlConfiguration configuration) : this(configuration, new MySqlConnectionProvider(configuration))
+        public MySqlOutbox(MySqlConfiguration configuration) : this(configuration,
+            new MySqlConnectionProvider(configuration))
         {
         }
 
-        protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<MySqlConnection, MySqlCommand> commandFunc,
+        protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
+            Func<MySqlConnection, MySqlCommand> commandFunc,
             Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
+            if (transactionConnectionProvider != null &&
+                transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = connectionProvider.GetConnection();
 
             if (connection.State != ConnectionState.Open)
-                 connection.Open();
+                connection.Open();
             using (var command = commandFunc.Invoke(connection))
             {
                 try
@@ -99,14 +103,18 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override async Task WriteToStoreAsync(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<MySqlConnection, MySqlCommand> commandFunc,
+        protected override async Task WriteToStoreAsync(
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider,
+            Func<MySqlConnection, MySqlCommand> commandFunc,
             Action loggingAction, CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
+            if (transactionConnectionProvider != null &&
+                transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
                 connectionProvider = provider;
 
-            var connection = await connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken);
@@ -139,7 +147,8 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override T ReadFromStore<T>(Func<MySqlConnection, MySqlCommand> commandFunc, Func<MySqlDataReader, T> resultFunc)
+        protected override T ReadFromStore<T>(Func<MySqlConnection, MySqlCommand> commandFunc,
+            Func<MySqlDataReader, T> resultFunc)
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -161,7 +170,8 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override async Task<T> ReadFromStoreAsync<T>(Func<MySqlConnection, MySqlCommand> commandFunc, Func<MySqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<MySqlConnection, MySqlCommand> commandFunc,
+            Func<MySqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -199,7 +209,7 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             return new MySqlParameter { ParameterName = parameterName, Value = value };
         }
-        
+
 
         protected override MySqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
@@ -207,19 +217,57 @@ namespace Paramore.Brighter.Outbox.MySql
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                new MySqlParameter { ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.ToString() },
-                new MySqlParameter { ParameterName = $"@{prefix}MessageType", DbType = DbType.String, Value = message.Header.MessageType.ToString() },
-                new MySqlParameter { ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic, },
-                new MySqlParameter { ParameterName = $"@{prefix}Timestamp", DbType = DbType.DateTime2, Value = message.Header.TimeStamp.ToUniversalTime() }, //always store in UTC, as this is how we query messages
-                new MySqlParameter { ParameterName = $"@{prefix}CorrelationId", DbType = DbType.String, Value = message.Header.CorrelationId.ToString() },
-                new MySqlParameter { ParameterName = $"@{prefix}ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo },
-                new MySqlParameter { ParameterName = $"@{prefix}ContentType", DbType = DbType.String, Value = message.Header.ContentType },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}MessageId", DbType = DbType.String, Value = message.Id.ToString()
+                },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}MessageType",
+                    DbType = DbType.String,
+                    Value = message.Header.MessageType.ToString()
+                },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}Topic", DbType = DbType.String, Value = message.Header.Topic,
+                },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}Timestamp",
+                    DbType = DbType.DateTime2,
+                    Value = message.Header.TimeStamp.ToUniversalTime()
+                }, //always store in UTC, as this is how we query messages
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}CorrelationId",
+                    DbType = DbType.String,
+                    Value = message.Header.CorrelationId.ToString()
+                },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}ReplyTo", DbType = DbType.String, Value = message.Header.ReplyTo
+                },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}ContentType",
+                    DbType = DbType.String,
+                    Value = message.Header.ContentType
+                },
                 new MySqlParameter { ParameterName = $"@{prefix}HeaderBag", DbType = DbType.String, Value = bagJson },
-                new MySqlParameter { ParameterName = $"@{prefix}Body", DbType = DbType.String, Value = message.Body.Value }
+                _configuration.BinaryMessagePayload
+                    ? new MySqlParameter
+                    {
+                        ParameterName = $"@{prefix}Body", DbType = DbType.Binary, Value = message.Body.Value
+                    }
+                    : new MySqlParameter
+                    {
+                        ParameterName = $"@{prefix}Body", DbType = DbType.String, Value = message.Body.Value
+                    }
             };
         }
-        
-        protected override MySqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded, int pageSize, int pageNumber)
+
+        protected override MySqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
+            int pageSize, int pageNumber)
         {
             var offset = (pageNumber - 1) * pageSize;
             var parameters = new MySqlParameter[3];
@@ -229,7 +277,7 @@ namespace Paramore.Brighter.Outbox.MySql
 
             return parameters;
         }
-        
+
         protected override Message MapFunction(MySqlDataReader dr)
         {
             if (dr.Read())
@@ -257,18 +305,21 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 messages.Add(MapAMessage(dr));
             }
+
             dr.Close();
 
             return messages;
         }
 
-        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(MySqlDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(MySqlDataReader dr,
+            CancellationToken cancellationToken)
         {
             var messages = new List<Message>();
             while (await dr.ReadAsync(cancellationToken))
             {
                 messages.Add(MapAMessage(dr));
             }
+
             dr.Close();
 
             return messages;
@@ -315,9 +366,21 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
             }
 
-            var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr))
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
+        }
+
+        private byte[] GetBodyAsBytes(MySqlDataReader dr)
+        {
+            var i = dr.GetOrdinal("Body");
+            var body = dr.GetStream(i);
+            long bodyLength = body.Length;
+            var buffer = new byte[bodyLength];
+            body.Read(buffer,0, (int)bodyLength);
+            return buffer;
         }
 
         private static string GetTopic(IDataReader dr)
@@ -357,7 +420,8 @@ namespace Paramore.Brighter.Outbox.MySql
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
+            var dictionaryBag =
+                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
             return dictionaryBag;
         }
 

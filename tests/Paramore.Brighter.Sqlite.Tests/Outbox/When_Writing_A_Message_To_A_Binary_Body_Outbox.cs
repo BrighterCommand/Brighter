@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     public class SqliteOutboxWritingBinaryMessageTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper(binaryMessagePayload: true);
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages, binaryMessagePayload: true));
+            _sqlOutbox = new SqliteOutbox(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableNameMessages, binaryMessagePayload: true));
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(),
                 topic: "test_topic", 
@@ -74,13 +74,13 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             var bytes = System.Text.Encoding.UTF8.GetBytes("message body"); 
             
             _messageEarliest = new Message(messageHeader, new MessageBody(bytes, contentType:"application/octet-stream", CharacterEncoding.Raw));
-            _sqlOutboxSync.Add(_messageEarliest);
+            _sqlOutbox.Add(_messageEarliest);
         }
         
         [Fact]
         public void When_Writing_A_Message_To_The_Outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
             //should read the message from the sql outbox
             _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);
             var bodyAsString =  Encoding.UTF8.GetString(_storedMessage.Body.Bytes);

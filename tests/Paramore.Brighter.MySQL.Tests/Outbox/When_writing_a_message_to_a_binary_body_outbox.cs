@@ -1,37 +1,11 @@
-#region Licence
-
-/* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.MySql;
 using Xunit;
 
-namespace Paramore.Brighter.MySQL.Tests.Outbox
+namespace Paramore.Brighter.MySQL.Tests
 {
-    [Trait("Category", "MySql")]
-    public class MySqlOutboxWritingMessageTests : IDisposable
+    public class MySqlOutboxWritingBinaryMessageTests
     {
         private readonly MySqlTestHelper _mySqlTestHelper;
         private readonly MySqlOutbox _mySqlOutbox;
@@ -47,33 +21,34 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly int _value3 = 123;
         private readonly Guid _value4 = Guid.NewGuid();
         private readonly DateTime _value5 = DateTime.UtcNow;
-        public MySqlOutboxWritingMessageTests()
+
+        public MySqlOutboxWritingBinaryMessageTests()
         {
-            _mySqlTestHelper = new MySqlTestHelper();
+            _mySqlTestHelper = new MySqlTestHelper(binaryMessagePayload: true);
             _mySqlTestHelper.SetupMessageDb();
             _mySqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(), 
-                topic: "test_topic", 
+                messageId: Guid.NewGuid(),
+                topic: "test_topic",
                 messageType: MessageType.MT_DOCUMENT,
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
                 delayedMilliseconds: 5,
                 correlationId: new Guid(),
                 replyTo: "ReplyTo",
-                contentType: "text/plain");
+                contentType: "application/octet-stream");
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
             messageHeader.Bag.Add(_key4, _value4);
             messageHeader.Bag.Add(_key5, _value5);
 
-            _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
+            _messageEarliest = new Message(messageHeader, new MessageBody(new byte[] { 1, 2, 3, 4, 5 }));
             _mySqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
-        public void When_Writing_A_Message_To_The_Outbox()
+        public void When_writing_a_message_to_a_binary_body_outbox()
         {
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id);
 
@@ -88,8 +63,8 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-             
-            
+
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);
@@ -101,12 +76,6 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _storedMessage.Header.Bag[_key4].Should().Be(_value4);
             _storedMessage.Header.Bag.ContainsKey(_key5).Should().BeTrue();
             _storedMessage.Header.Bag[_key5].Should().Be(_value5);
- 
-        }
-
-        public void Dispose()
-        {
-            _mySqlTestHelper.CleanUpDb();
         }
     }
 }
