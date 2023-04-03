@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IBrighterBuilder AutoFromAssemblies(params Assembly[] assemblies);
         
         /// <summary>
-        /// Scan the assemblies provided for implementations of IHandleRequestsAsyn and register them with ServiceCollection
+        /// Scan the assemblies provided for implementations of IHandleRequestsAsync and register them with ServiceCollection
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IBrighterBuilder AsyncHandlersFromAssemblies(params Assembly[] assemblies);
         
         /// <summary>
-        /// Register handers with the built in subscriber registry
+        /// Register handlers with the built in subscriber registry
         /// </summary>
         /// <param name="registerHandlers">A callback to register handlers</param>
         /// <returns>This builder, allows chaining calls</returns>

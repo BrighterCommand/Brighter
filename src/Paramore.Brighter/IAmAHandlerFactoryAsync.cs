@@ -27,7 +27,7 @@ using System;
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAnAysyncHandlerFactory
+    /// Interface IAmAnAsyncHandlerFactory
     /// We do not know how to create instances of <see cref="IHandleRequestsAsync"/> implemented by your application, but need to create instances to instantiate a pipeline.
     /// To achieve this we require clients of the Paramore.Brighter library need to implement <see cref="IAmAHandlerFactoryAsync"/> to provide 
     /// instances of their <see cref="IHandleRequestsAsync"/> types. You need to provide a Handler Factory to support all <see cref="IHandleRequestsAsync"/> registered 

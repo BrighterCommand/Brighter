@@ -80,7 +80,7 @@ namespace Paramore.Brighter
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
         /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
-        /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipelie</param>
+        /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipeline</param>
         /// <param name="transformerFactory">The factory that builds instances of a transforms for us</param>
         /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
         public ExternalBusConfiguration(IAmAProducerRegistry producerRegistry,

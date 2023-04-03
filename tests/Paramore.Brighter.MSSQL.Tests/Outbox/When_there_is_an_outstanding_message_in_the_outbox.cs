@@ -23,7 +23,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _dispatchedMessage = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _sqlOutbox.Add(_dispatchedMessage);
 
-            //wait to create an oustanding period
+            //wait to create an outstanding period
             Task.Delay(1000).Wait();
 
         }
