@@ -339,7 +339,7 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Updates the number of times the message has been seen by the dispatcher; used to determine if it is poisioned and should be discarded.
+        /// Updates the number of times the message has been seen by the dispatcher; used to determine if it is poisoned and should be discarded.
         /// </summary>
         public void UpdateHandledCount()
         {

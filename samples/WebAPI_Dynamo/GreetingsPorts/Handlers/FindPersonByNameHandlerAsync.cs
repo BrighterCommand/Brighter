@@ -30,7 +30,7 @@ namespace GreetingsPorts.Handlers
         {
             var context = new DynamoDBContext(_unitOfWork.DynamoDb);
 
-            var person = await context.LoadAsync<Person>(query.Name);
+            var person = await context.LoadAsync<Person>(query.Name, cancellationToken);
 
             if (person == null)
             {

@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
              container.AddSingleton<MyCommandHandlerAsync>(handler);
              container.AddSingleton<IAmAnInboxAsync>(_inbox);
              container.AddTransient<UseInboxHandlerAsync<MyCommand>>();
-             container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public async Task WhenInsertingADefaultInboxIntoTheSendPipeline()
         {
             //act
-            var command = new MyCommand(){Value = "Inbox Capture"};
+            var command = new MyCommand {Value = "Inbox Capture"};
             await _commandProcessor.SendAsync(command);
 
             //assert we are in, and auto-context added us under our name

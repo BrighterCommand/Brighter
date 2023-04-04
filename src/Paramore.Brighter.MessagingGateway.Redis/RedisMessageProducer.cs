@@ -32,20 +32,21 @@ using ServiceStack.Redis;
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     /*Why don't we simply use Redis Pub-Sub here?
-     We don't want to use pub-sub because you can't support competing consumers and messages 'dissapper'
-     if no consumer is connected. Instead, we want to implement a dynamic recipient list instead,
+     We don't want to use pub-sub because you can't support competing consumers and messages 'disappear'
+     if no consumer is connected. Instead, we want to implement a dynamic recipient list instead, 
      so that we can have a 'logical' queue that has multiple possible consumers.
-     Each queue subscribes to a topic and has a copy of the message, but each queue might
+     Each queue subscribes to a topic and has a copy of the message, but each queue might 
      have multiple consumers.
-
+     
      See: http://blog.radiant3.ca/2013/01/03/reliable-delivery-message-queues-with-redis/
-
-     We end with a
+     
+     We end with a 
          Recipient List: Set
          Next Topic Item No: Number
          Message: String
      And for each consumer
          Message Queue: List
+         
     */
 
     public class RedisMessageProducer : RedisMessageGateway, IAmAMessageProducerSync
@@ -71,14 +72,14 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         public Dictionary<string, object> OutBoxBag { get; set; } = new Dictionary<string, object>();
 
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<RedisMessageProducer>();
-        private readonly Publication _publication;
+        private readonly Publication _publication; 
         private const string NEXT_ID = "nextid";
         private const string QUEUES = "queues";
 
          public RedisMessageProducer(
-             RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration,
+             RedisMessagingGatewayConfiguration redisMessagingGatewayConfiguration, 
              RedisMessagePublication publication)
-
+         
             : base(redisMessagingGatewayConfiguration)
          {
              _publication = publication;
@@ -105,10 +106,10 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 Topic = message.Header.Topic;
 
                 s_logger.LogDebug("RedisMessageProducer: Preparing to send message");
-
+  
                 var redisMessage = CreateRedisMessage(message);
 
-                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}",
+                s_logger.LogDebug("RedisMessageProducer: Publishing message with topic {Topic} and id {Id} and body: {Request}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value);
                 //increment a counter to get the next message id
                 var nextMsgId = IncrementMessageCounter(client);
@@ -116,7 +117,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
                 StoreMessage(client, redisMessage, nextMsgId);
                 //If there are subscriber queues, push the message to the subscriber queues
                 var pushedTo = PushToQueues(client, nextMsgId);
-                s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}",
+                s_logger.LogDebug("RedisMessageProducer: Published message with topic {Topic} and id {Id} and body: {Request} to queues: {3}", 
                     message.Header.Topic, message.Id.ToString(), message.Body.Value, string.Join(", ", pushedTo));
             }
         }
@@ -132,7 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             //No delay support implemented
             Send(message);
         }
-
+ 
 
         private IEnumerable<string> PushToQueues(IRedisClient client, long nextMsgId)
         {
@@ -153,5 +154,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
             var key = Topic + "." + NEXT_ID;
             return client.IncrementValue(key);
         }
-    }
+
+   }
 }

@@ -309,7 +309,7 @@ namespace Paramore.Brighter
     public interface INeedMessaging
     {
         /// <summary>
-        /// Configure a task queue to send messags out of process
+        /// Configure a task queue to send messages out of process
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="outbox">The outbox.</param>

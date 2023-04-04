@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <summary>
         /// Creates a specific transformer on demand
         /// </summary>
-        /// <param name="transformerType">The type of transformer to creeate</param>
+        /// <param name="transformerType">The type of transformer to create</param>
         /// <returns></returns>
         public IAmAMessageTransformAsync Create(Type transformerType)
         {

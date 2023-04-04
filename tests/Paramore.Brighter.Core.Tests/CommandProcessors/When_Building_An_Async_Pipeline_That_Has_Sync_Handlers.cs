@@ -24,8 +24,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var container = new ServiceCollection();
             container.AddTransient<MyMixedImplicitHandlerAsync>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
 
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-           CommandProcessor.ClearExtServiceBus();
+           CommandProcessor.ClearExtServiceBus(); 
         }
     }
 }

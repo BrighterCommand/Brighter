@@ -33,7 +33,7 @@ using var tracerProvider = Sdk.CreateTracerProviderBuilder()
     .AddJaegerExporter()
     .Build();
 
-IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>()
+IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
 {
     {"default", new FakeMessageProducer()}
 });

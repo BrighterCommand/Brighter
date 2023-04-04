@@ -39,11 +39,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         private static int _outboxBulkChunkSize = 100;
 
         /// <summary>
-        /// Will add Brighter into the .NET IoC Contaner - ServiceCollection
+        /// Will add Brighter into the .NET IoC Container - ServiceCollection
         /// Registers singletons with the service collection :-
         ///  - BrighterOptions - how should we configure Brighter
         ///  - SubscriberRegistry - what handlers subscribe to what requests
-        ///  - MapperRegistry - what mapppers translate what messages
+        ///  - MapperRegistry - what mappers translate what messages
         ///  - InMemoryOutbox - Optional - if an in memory outbox is selected
         /// </summary>
         /// <param name="services">The IoC container to update</param>
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Normally you want to call AddBrighter from client code, and not this method. Public only to support Service Activator extensions
         /// Registers singletons with the service collection :-
         ///  - SubscriberRegistry - what handlers subscribe to what requests
-        ///  - MapperRegistry - what mapppers translate what messages
+        ///  - MapperRegistry - what mappers translate what messages
         /// </summary>
         /// <param name="services">The IoC container to update</param>
         /// <param name="configure">A callback that defines what options to set when Brighter is built</param>
@@ -125,7 +125,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
          /// Uses an external Brighter Inbox to record messages received to allow "once only" or diagnostics (how did we get here?)
          /// Advantages: by using an external inbox then you can share "once only" across multiple threads/processes and support a competing consumer
          /// model; an internal inbox is useful for testing but outside of single consumer scenarios won't work as intended
-         /// If not null, registers singletons with the service collecion :-
+         /// If not null, registers singletons with the service collection :-
          ///  - IAmAnInboxSync - what messages have we received
          ///  - IAmAnInboxAsync - what messages have we received (async pipeline compatible)
          /// </summary>
@@ -181,7 +181,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///                The inbox will not work across threads/processes so only works with a single performer/consumer.
         /// Registers singletons with the service collection:
         ///  - InMemoryInboxSync - what messages have we received
-        ///  - InMemoryInboxAsync - what messages have we recived (async pipeline compatible)
+        ///  - InMemoryInboxAsync - what messages have we received (async pipeline compatible)
         /// </summary>
         /// <param name="brighterBuilder"></param>
         /// <returns></returns>

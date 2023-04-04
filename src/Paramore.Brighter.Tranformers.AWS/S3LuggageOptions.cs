@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Tranformers.AWS
             StoreCreation = S3LuggageStoreCreation.CreateIfMissing;
             ACLs = S3CannedACL.Private;
             HttpClientFactory = httpClientFactory;
-            Tags = new List<Tag>() { new Tag { Key = "Creator", Value = " Brighter Luggage Store" } };
+            Tags = new List<Tag> { new Tag { Key = "Creator", Value = " Brighter Luggage Store" } };
             TimeToAbortFailedUploads = 1;
             TimeToDeleteGoodUploads = 7;
         }

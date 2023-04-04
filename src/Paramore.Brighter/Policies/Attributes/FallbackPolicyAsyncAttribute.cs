@@ -30,7 +30,7 @@ namespace Paramore.Brighter.Policies.Attributes
     /// <summary>
     /// Class FallbackPolicyAttribute.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Method)]
     public class FallbackPolicyAsyncAttribute : RequestHandlerAttribute
     {
         private readonly bool _backstop;

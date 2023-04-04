@@ -30,7 +30,7 @@ namespace Paramore.Brighter.ServiceActivator
 {
     /// <summary>
     /// Class DispatchBuilder.
-    /// A fluent builder used to simplify construction of instances of the Dispatcher. Begin by calling With() and the syntax will then provide you with
+    /// A fluent builder used to simplify construction of instances of the Dispatcher. Begin by calling With() and the syntax will then provide you with 
     /// progressive interfaces to manage the requirements for a complete Dispatcher via Intellisense in the IDE. The intent is to make it easier to
     /// recognize those dependencies that you need to configure
     /// </summary>
@@ -45,7 +45,7 @@ namespace Paramore.Brighter.ServiceActivator
         private DispatchBuilder() { }
 
         /// <summary>
-        /// Begins the fluent interface
+        /// Begins the fluent interface 
         /// </summary>
         /// <returns>INeedALogger.</returns>
         public static INeedACommandProcessorFactory With()
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.ServiceActivator
         }
 
         /// <summary>
-        /// The default channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
+        /// The default channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
@@ -108,8 +108,8 @@ namespace Paramore.Brighter.ServiceActivator
 
             return this;
         }
-
-
+        
+        
         /// <summary>
         /// A list of connections i.e. mappings of channels to commands or events
         /// </summary>
@@ -174,7 +174,7 @@ namespace Paramore.Brighter.ServiceActivator
     public interface INeedAChannelFactory
     {
         /// <summary>
-        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP
+        /// The channel factory - used to create channels. Generally an implementation of a specific Application Layer i.e.RabbitMQ for AMQP 
         /// needs to provide an implementation of this factory to provide input and output channels that support sending messages over that
         /// layer. We provide an implementation for RabbitMQ for example.
         /// </summary>
@@ -188,13 +188,11 @@ namespace Paramore.Brighter.ServiceActivator
     /// </summary>
     public interface INeedAListOfSubcriptions
     {
-        ///// <summary>
-        ///// A list of connections i.e. mappings of channels to commands or events
-        ///// </summary>
-        ///// <param name="connections"></param>
-        ///// <returns>IAmADispatchBuilder.</returns>
+        /// <summary>
+        /// A list of connections i.e. mappings of channels to commands or events
+        /// </summary>
+        /// <returns>IAmADispatchBuilder.</returns>
         IAmADispatchBuilder Subscriptions(IEnumerable<Subscription> subsriptions);
-
         // TODO: Remove in V10
         [Obsolete("Will be removed in V10, use Subscriptions instead")]
         IAmADispatchBuilder Connections(IEnumerable<Subscription> connections);

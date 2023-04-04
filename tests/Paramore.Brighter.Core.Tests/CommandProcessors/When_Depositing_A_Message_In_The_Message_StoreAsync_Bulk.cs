@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 policyRegistry,
                 messageMapperRegistry,
                 _fakeOutboxSync,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{topic, _fakeMessageProducerWithPublishConfirmation},}));
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}));
         }
 
 

@@ -13,7 +13,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     {
         private readonly string _topic = Guid.NewGuid().ToString();
         private readonly string _queueName = Guid.NewGuid().ToString();
-        private readonly IAmAProducerRegistry _producerRegistry;
+        private readonly IAmAProducerRegistry _producerRegistry; 
         private readonly IAmAMessageConsumer _consumer;
 
         public OrderTest()
@@ -24,8 +24,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             var sub = new Subscription<MyCommand>(new SubscriptionName(_queueName),
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
-                testHelper.QueueConfiguration,
-                new Publication[] {new Publication() {Topic = new RoutingKey(_topic)}}
+                testHelper.QueueConfiguration, 
+                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
             ).Create();
             _consumer = new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration).Create(sub);
         }
@@ -41,7 +41,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 var msgId2 = SendMessage();
                 var msgId3 = SendMessage();
                 var msgId4 = SendMessage();
-
+                
                 //Now read those messages in order
 
                 var firstMessage = ConsumeMessages(consumer);
@@ -93,12 +93,13 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
                 }
                 catch (ChannelFailureException)
                 {
-                    //Lots of reasons to be here as Kafka propogates a topic, or the test cluster is still initializing
+                    //Lots of reasons to be here as Kafka propagates a topic, or the test cluster is still initializing
                     //_output.WriteLine($" Failed to read from topic:{_topic} because {cfx.Message} attempt: {maxTries}");
                 }
             } while (maxTries <= 3);
 
             return messages;
         }
+
     }
 }

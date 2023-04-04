@@ -29,7 +29,7 @@ using Paramore.Brighter.RMQ.Tests.TestDoubles;
 using RabbitMQ.Client.Exceptions;
 using Xunit;
 
-namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
+namespace Paramore.Brighter.RMQ.Tests.MessagingGateway 
 {
     [Trait("Category", "RMQ")]
     public class RmqMessageConsumerConnectionClosedTests : IDisposable
@@ -67,8 +67,8 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
 
             //_should_return_a_channel_failure_exception
             _firstException.Should().BeOfType<ChannelFailureException>();
-
-            //_should_return_an_explainging_inner_exception
+            
+            //_should_return_an_explaining_inner_exception
             _firstException.InnerException.Should().BeOfType<AlreadyClosedException>();
         }
 

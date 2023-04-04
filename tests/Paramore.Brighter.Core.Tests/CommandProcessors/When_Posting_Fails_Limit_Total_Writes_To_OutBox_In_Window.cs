@@ -52,8 +52,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
                 .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() {{"MyCommand", _fakeMessageProducer},}),
-                    messageMapperRegistry),
+                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyCommand", _fakeMessageProducer},}), 
+                    messageMapperRegistry), 
                     _outbox
                     )
                 .RequestContextFactory(new InMemoryRequestContextFactory())
@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducer.MaxOutStandingMessages = 3;
             _fakeMessageProducer.MaxOutStandingCheckIntervalMilliSeconds = 250;
 
-            var sentList = new List<Guid>();
+            var sentList = new List<Guid>(); 
             bool shouldThrowException = false;
             try
             {
@@ -86,10 +86,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             {
                 shouldThrowException = true;
             }
-
+            
             //We should error before the end
             shouldThrowException.Should().BeTrue();
-
+            
             //should store the message in the sent outbox
             foreach (var id in sentList)
             {

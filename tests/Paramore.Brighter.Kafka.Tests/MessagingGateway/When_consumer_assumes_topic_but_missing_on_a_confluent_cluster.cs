@@ -77,8 +77,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     SslCaLocation = SupplyCertificateLocation()
 
                 },
-                new KafkaPublication[] {new KafkaPublication()
-                {
+                new KafkaPublication[] {new KafkaPublication
+                    {
                     Topic = new RoutingKey(_topic),
                     NumPartitions = 1,
                     ReplicationFactor = 3,

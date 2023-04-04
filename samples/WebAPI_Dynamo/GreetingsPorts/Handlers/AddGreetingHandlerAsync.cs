@@ -27,38 +27,38 @@ namespace GreetingsPorts.Handlers
             _postBox = postBox;
             _logger = logger;
         }
-
+        
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default(CancellationToken))
         {
             var posts = new List<Guid>();
-
+            
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'
             var context = new DynamoDBContext(_unitOfWork.DynamoDb);
             var transaction = _unitOfWork.BeginOrGetTransaction();
             try
             {
-                var person = await context.LoadAsync<Person>(addGreeting.Name);
-
+                var person = await context.LoadAsync<Person>(addGreeting.Name, cancellationToken);
+                
                 person.Greetings.Add(addGreeting.Greeting);
 
                 var document = context.ToDocument(person);
                 var attributeValues = document.ToAttributeMap();
-
+               
                //write the added child entity to the Db - just replace the whole entity as we grabbed the original
                //in production code, an update expression would be faster
                transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = "People", Item = attributeValues}});
 
                 //Now write the message we want to send to the Db in the same transaction.
                 posts.Add(await _postBox.DepositPostAsync(new GreetingMade(addGreeting.Greeting), cancellationToken: cancellationToken));
-
+                
                 //commit both new greeting and outgoing message
                 await _unitOfWork.CommitAsync(cancellationToken);
             }
             catch (Exception e)
-            {
+            {   
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
                 _unitOfWork.Rollback();

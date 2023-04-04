@@ -28,7 +28,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// Class ReplyAddress.
-    /// The addrees to reply to when doing request-reply and not publish-subscribe
+    /// The address to reply to when doing request-reply and not publish-subscribe
     /// </summary>
     public class ReplyAddress
     {

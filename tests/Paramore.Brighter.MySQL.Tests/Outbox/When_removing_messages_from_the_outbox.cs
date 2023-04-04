@@ -81,7 +81,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         [Fact]
         public async Task When_Removing_Messages_From_The_OutboxAsync()
         {
-            var messages = new List<Message>() { _messageEarliest, _message2, _messageLatest };
+            var messages = new List<Message> { _messageEarliest, _message2, _messageLatest };
             _mySqlOutboxSync.Add(messages);
             _retrievedMessages = await _mySqlOutboxSync.GetAsync();
 

@@ -59,7 +59,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         private bool _disposedValue;
 
         /// <summary>
-        /// Constructs a KafkaMessageConsumer using Confluent's Consumer Biulder. We set up callbacks to handle assigned, revoked or lost partitions as
+        /// Constructs a KafkaMessageConsumer using Confluent's Consumer Builder. We set up callbacks to handle assigned, revoked or lost partitions as
         /// well as errors. We handle storing and committing offsets, using a batch strategy to commit, with a sweeper thread to prevent partially complete
         /// batches lingering beyond a timeout threshold.
         /// </summary>
@@ -84,7 +84,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
         /// <param name="topicFindTimeoutMs">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
-        /// <param name="makeChannels">Should we create infrastructure (topics) where it does not existk or check. Defaults to Create</param>
+        /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
         /// <exception cref="ConfigurationException">Throws an exception if required parameters missing</exception>
         public KafkaMessageConsumer(
             KafkaMessagingGatewayConfiguration configuration,
@@ -388,7 +388,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             }
             catch (KafkaException ke)
             {
-                //This is only loggin for debug, so skip errors here
+                //This is only login for debug, so skip errors here
                 s_logger.LogDebug("kafka error logging the offsets: {ErrorMessage}", ke.Message);
             }
         }

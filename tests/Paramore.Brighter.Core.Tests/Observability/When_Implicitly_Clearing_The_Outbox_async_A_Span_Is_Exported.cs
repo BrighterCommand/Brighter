@@ -36,7 +36,7 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
 
         var container = new ServiceCollection();
         container.AddTransient<MyEvent>();
-        container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
+        container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
         var builder = Sdk.CreateTracerProviderBuilder();
         _exportedActivities = new List<Activity>();
@@ -55,8 +55,8 @@ public class ImplicitClearingAsyncObservabilityTests : IDisposable
             .Handle<Exception>()
             .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-        var policyRegistry = new PolicyRegistry() {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.RETRYPOLICYASYNC, circuitBreakerPolicy}};
-        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>()
+        var policyRegistry = new PolicyRegistry {{CommandProcessor.RETRYPOLICY, retryPolicy}, {CommandProcessor.RETRYPOLICYASYNC, circuitBreakerPolicy}};
+        var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
         {
             {MyEvent.Topic, new FakeMessageProducer()}
         });

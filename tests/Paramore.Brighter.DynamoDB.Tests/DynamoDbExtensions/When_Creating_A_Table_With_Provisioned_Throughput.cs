@@ -17,23 +17,24 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             var tableRequestFactory = new DynamoDbTableFactory();
             var provisonedThroughput = new DynamoDbCreateProvisionedThroughput
             (
-                table: new ProvisionedThroughput() {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
-                gsiThroughputs: new Dictionary<string, ProvisionedThroughput>()
-                    {
+                table: new ProvisionedThroughput {ReadCapacityUnits = 10, WriteCapacityUnits = 10},
+                gsiThroughputs: new Dictionary<string, ProvisionedThroughput>
+                {
                         { "GlobalSecondaryIndex", new ProvisionedThroughput(readCapacityUnits: 11,writeCapacityUnits: 11) }
                     }
            );
-
+            
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(provisonedThroughput);
-
+            
             //assert
             Assert.Equal(10, tableRequest.ProvisionedThroughput.ReadCapacityUnits);
             Assert.Equal(10, tableRequest.ProvisionedThroughput.WriteCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.ReadCapacityUnits);
             Assert.Equal(11,tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").ProvisionedThroughput.WriteCapacityUnits);
+    
         }
-
+    
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
@@ -45,12 +46,13 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             [DynamoDBVersion]
             public int? Version { get; set; }
-
+            
             [DynamoDBGlobalSecondaryIndexHashKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryId { get; set; }
 
-            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")]
+            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")] 
             public string GlobalSecondaryRangeKey { get; set; }
         }
+ 
     }
 }

@@ -150,7 +150,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <summary>
         /// How many times to requeue a message before we give up on it. A count of -1 is infinite retries
         /// </summary>
-        /// <param name="requeueCount">The number of retries. Defauls to -1</param>
+        /// <param name="requeueCount">The number of retries. Defaults to -1</param>
         public IConnectionBuilderOptionalBuild RequeueCount(int requeueCount)
         {
             _requeueCount = requeueCount;
@@ -217,7 +217,7 @@ namespace Paramore.Brighter.ServiceActivator
             /// Gets the timeout in milliseconds that we use to infer that nothing could be read from the channel i.e. is empty
             /// or busy
             /// </summary>
-            /// <value>The timeout in miliseconds.</value>
+            /// <value>The timeout in milliseconds.</value>
             IConnectionBuilderOptionalBuild Timeout(int millisecondTimeout);
 
             /// <summary>
@@ -248,7 +248,7 @@ namespace Paramore.Brighter.ServiceActivator
             /// <summary>
             /// Gets the no of threads that we will use to read from  this channel.
             /// </summary>
-            /// <value>The no of peformers.</value>
+            /// <value>The no of performers.</value>
             IConnectionBuilderOptionalBuild NoOfPeformers(int noOfPerformers);
 
             /// <summary>

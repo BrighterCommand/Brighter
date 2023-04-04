@@ -72,7 +72,7 @@ namespace GreetingsSender
                         rmqConnection,
                         new RmqPublication[]
                         {
-                            new RmqPublication()
+                            new RmqPublication
                             {
                                 Topic = new RoutingKey("Greeting.Request")
                             }

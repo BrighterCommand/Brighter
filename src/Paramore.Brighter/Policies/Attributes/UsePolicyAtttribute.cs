@@ -23,7 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Policies.Handlers;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Policies.Attributes
 {
@@ -33,10 +36,10 @@ namespace Paramore.Brighter.Policies.Attributes
     /// thrown from subsequent steps in the handler pipeline. A Polly Policy can be used to support a Retry or Circuit Breaker approach to exception handling
     /// Policies used by the attribute are identified by a string based key, which is used as a lookup into an <see cref="IAmAPolicyRegistry"/> and it is    //// assumed that you have registered required policies with a Policy Registry such as <see cref="PolicyRegistry"/> and configured that as a   /// dependency of the <see cref="CommandProcessor"/> using the <see cref="CommandProcessorBuilder"/>
     /// </summary>
-    [AttributeUsage(AttributeTargets.Method, AllowMultiple = true)]
+    [AttributeUsage(AttributeTargets.Method)]
     public class UsePolicyAttribute : RequestHandlerAttribute
     {
-        private readonly string _policy;
+        private readonly List<string> _policies = new List<string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UsePolicyAttribute"/> class.
@@ -45,7 +48,17 @@ namespace Paramore.Brighter.Policies.Attributes
         /// <param name="step">The step.</param>
         public UsePolicyAttribute(string policy, int step) : base(step, HandlerTiming.Before)
         {
-            _policy = policy;
+            _policies.Add(policy);
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UsePolicyAttribute"/> class.
+        /// </summary>
+        /// <param name="policies">A list of policies, The policies wrap each other and our evaluated left to right</param>
+        /// <param name="step">The step.</param>
+        public UsePolicyAttribute(string[] policies, int step) : base(step, HandlerTiming.Before)
+        {
+            policies.Each(p => _policies.Add(p));
         }
 
         /// <summary>
@@ -54,7 +67,7 @@ namespace Paramore.Brighter.Policies.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] { _policy };
+            return new object[] { _policies };
         }
 
         /// <summary>

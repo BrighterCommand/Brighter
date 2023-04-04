@@ -47,7 +47,7 @@ namespace Paramore.Brighter.MsSql.Azure
 
         private SharedTokenCacheCredential GetCredential()
         {
-            return new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions()
+            return new SharedTokenCacheCredential(new SharedTokenCacheCredentialOptions
             {
                 Username = _azureUserName,
                 TenantId = _azureTenantId,

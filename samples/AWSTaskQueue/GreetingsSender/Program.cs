@@ -58,7 +58,7 @@ namespace GreetingsSender
                         awsConnection,
                         new SnsPublication[]
                         {
-                            new SnsPublication()
+                            new SnsPublication
                             {
                                Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName())
                             }

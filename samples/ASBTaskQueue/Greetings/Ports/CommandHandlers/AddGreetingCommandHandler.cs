@@ -22,7 +22,7 @@ namespace Greetings.Ports.CommandHandlers
             _commandProcessor = commandProcessor;
             _unitOfWork = unitOfWork;
         }
-
+        
         public async override Task<AddGreetingCommand> HandleAsync(AddGreetingCommand command,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -31,11 +31,11 @@ namespace Greetings.Ports.CommandHandlers
             try
             {
                 //Save  the new Greeting
-                var greeting = new Greeting() {GreetingMessage = command.GreetingMessage};
+                var greeting = new Greeting {GreetingMessage = command.GreetingMessage};
                 await _dataContext.GreetingsRegister.AddAsync(greeting, cancellationToken);
 
                 //Create an Event for externals
-                var newGreetingAddedEvent = new GreetingAsyncEvent() {Greeting = command.GreetingMessage};
+                var newGreetingAddedEvent = new GreetingAsyncEvent {Greeting = command.GreetingMessage};
                 var eventId = await _commandProcessor.DepositPostAsync(newGreetingAddedEvent, cancellationToken: cancellationToken);
 
                 await _dataContext.SaveChangesAsync(cancellationToken);
@@ -48,10 +48,10 @@ namespace Greetings.Ports.CommandHandlers
                 }
 
                 await _unitOfWork.CommitAsync(cancellationToken);
-
+                
                 //In Case there is no outbox Sweeper
                 await _commandProcessor.ClearOutboxAsync(new[] {eventId}, cancellationToken: cancellationToken);
-
+                
                 Console.WriteLine($"Message {command.GreetingMessage} Saved.");
             }
             catch (Exception e)
@@ -59,11 +59,12 @@ namespace Greetings.Ports.CommandHandlers
                 Console.WriteLine(e);
 
                 await _unitOfWork.RollbackAsync(cancellationToken);
-
+                
                 Console.WriteLine($"Message {command.GreetingMessage} not Saved.");
             }
-
-            return await base.HandleAsync(command);
+            
+            
+            return await base.HandleAsync(command, cancellationToken);
         }
     }
 }

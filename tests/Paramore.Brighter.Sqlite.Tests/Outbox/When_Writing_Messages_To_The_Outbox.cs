@@ -74,7 +74,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public void When_Writing_Messages_To_The_Outbox_Bulk()
         {
-            _sqlOutboxSync.Add(new List<Message>(){_messageEarliest, _message2, _messageLatest});
+            _sqlOutboxSync.Add(new List<Message> {_messageEarliest, _message2, _messageLatest});
 
             _retrievedMessages = _sqlOutboxSync.Get();
 

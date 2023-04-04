@@ -24,7 +24,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public ASBProducerTests()
         {
-            _command = new ASBTestCommand()
+            _command = new ASBTestCommand
             {
                 CommandValue = "Do the things.",
                 CommandNumber = 26

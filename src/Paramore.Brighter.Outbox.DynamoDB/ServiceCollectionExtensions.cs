@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Use this transaction provider to ensure that the Outbox and the Entity Store are correct
         /// </summary>
         /// <param name="brighterBuilder">Allows extension method</param>
-        /// <param name="connectionProvider">What is the tyoe of the connection provider</param>
+        /// <param name="connectionProvider">What is the type of the connection provider</param>
         /// <param name="serviceLifetime">What is the lifetime of registered interfaces</param>
         /// <returns>Allows fluent syntax</returns>
         /// This is paired with Use Outbox (above) when required

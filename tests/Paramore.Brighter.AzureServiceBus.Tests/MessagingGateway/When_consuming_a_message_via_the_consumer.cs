@@ -28,7 +28,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
 
         public ASBConsumerTests()
         {
-            var command = new ASBTestCommand()
+            var command = new ASBTestCommand
             {
                 CommandValue = "Do the things.",
                 CommandNumber = 26
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
                 new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options))
             );
 
-            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration()
+            _subscriptionConfiguration = new AzureServiceBusSubscriptionConfiguration
             {
                 DeadLetteringOnMessageExpiration = true,
                 DefaultMessageTimeToLive = TimeSpan.FromDays(4),
@@ -85,7 +85,8 @@ namespace Paramore.Brighter.AzureServiceBus.Tests.MessagingGateway
         public async Task When_Rejecting_a_message_via_the_consumer()
         {
             //arrange
-            var deadLetterReceiver = _serviceBusClient.CreateReceiver(_topicName, _channelName, new ServiceBusReceiverOptions(){
+            var deadLetterReceiver = _serviceBusClient.CreateReceiver(_topicName, _channelName, new ServiceBusReceiverOptions
+            {
                 SubQueue = SubQueue.DeadLetter
             });
 

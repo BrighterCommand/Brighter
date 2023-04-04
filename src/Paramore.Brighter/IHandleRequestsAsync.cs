@@ -46,8 +46,10 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// If false we use a thread from the thread pool to run any continuation, if true we use the originating thread.
-        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait        /// or access the Result or otherwise block. You may need the orginating thread if you need to access thread specific storage
-        //// such as HTTPContext       /// </summary>
+        /// Default to false unless you know that you need true, as you risk deadlocks with the originating thread if you Wait 
+        /// or access the Result or otherwise block. You may need the originating thread if you need to access thread specific storage
+        /// such as HTTPContext 
+        /// </summary>
         bool ContinueOnCapturedContext { get; set; }
 
         /// <summary>
@@ -104,7 +106,8 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// If a request cannot be completed by <see cref="HandleAsync"/>, implementing the <see cref="FallbackAsync"/> method provides an alternate code path that can be used
-        ///// This allows for graceful  degradation.     /// </summary>
+        /// This allows for graceful  degradation.  
+        /// </summary>
         /// <param name="request">The request.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>

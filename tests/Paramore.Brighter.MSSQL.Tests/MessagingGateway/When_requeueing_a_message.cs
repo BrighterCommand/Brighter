@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
     public class MsSqlMessageConsumerRequeueTests
     {
         private readonly Message _message;
-        private readonly IAmAProducerRegistry _producerRegistry;
+        private readonly IAmAProducerRegistry _producerRegistry; 
         private readonly IAmAChannelFactory _channelFactory;
         private readonly MsSqlSubscription<MyCommand> _subscription;
         private readonly string _topic;
@@ -36,8 +36,8 @@ namespace Paramore.Brighter.MSSQL.Tests.MessagingGateway
             _subscription = new MsSqlSubscription<MyCommand>(new SubscriptionName(channelName),
                 new ChannelName(_topic), new RoutingKey(_topic));
             _producerRegistry = new MsSqlProducerRegistryFactory(
-                testHelper.QueueConfiguration,
-                new Publication[] {new Publication() {Topic = new RoutingKey(_topic)}}
+                testHelper.QueueConfiguration, 
+                new Publication[] {new Publication {Topic = new RoutingKey(_topic)}}
             ).Create();
             _channelFactory = new ChannelFactory(new MsSqlMessageConsumerFactory(testHelper.QueueConfiguration));
         }

@@ -121,7 +121,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
+        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
         public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
        {
            try
@@ -143,7 +143,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout is ignored as DynamoDB handles timeout and retries</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
-        /// <returns><see cref="bool.True"/> if Commadn exists, otherwise <see cref="bool.False"/></returns>
+        /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
         public bool Exists<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
             return ExistsAsync<T>(id, contextKey).Result;

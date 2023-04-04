@@ -47,10 +47,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<MyDoubleDecoratedHandler>();
             container.AddTransient<MyValidationHandler<MyCommand>>();
             container.AddTransient<MyLoggingHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-
+            
             _pipelineBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory);
         }
 
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
         public void Dispose()
         {
-           CommandProcessor.ClearExtServiceBus();
+           CommandProcessor.ClearExtServiceBus(); 
         }
 
         private PipelineTracer PipelineTracer()

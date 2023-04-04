@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Policies.Handlers
 
         /// <summary>
         /// Runs the remainder of the pipeline within a task that will timeout if it does not complete within the
-        /// configured numbere of milliseconds
+        /// configured number of milliseconds
         /// </summary>
         /// <param name="command">The command.</param>
         /// <returns>TRequest.</returns>

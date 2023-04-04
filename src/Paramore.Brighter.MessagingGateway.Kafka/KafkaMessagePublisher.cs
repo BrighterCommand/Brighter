@@ -36,7 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var headers = _headerBuilder.Build(message);
 
-            var kafkaMessage = new Message<string, byte[]>()
+            var kafkaMessage = new Message<string, byte[]>
             {
                 Headers = headers,
                 Key = message.Header.PartitionKey,

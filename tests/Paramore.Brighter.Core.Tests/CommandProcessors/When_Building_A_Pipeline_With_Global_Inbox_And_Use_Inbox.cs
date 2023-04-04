@@ -24,26 +24,28 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PipelineGlobalInboxWhenUseInboxTests()
         {
             _inbox = new InMemoryInbox();
-
+            
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandInboxedHandler>();
-
+            
             var container = new ServiceCollection();
             container.AddTransient<MyCommandInboxedHandler>();
             container.AddSingleton<IAmAnInboxSync>(_inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
+            
             _requestContext = new RequestContext();
-
+            
             _inboxConfiguration = new InboxConfiguration(
-                scope: InboxScope.All,
-                onceOnly: true,
+                scope: InboxScope.All, 
+                onceOnly: true, 
                 actionOnExists: OnceOnlyAction.Throw);
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, _inboxConfiguration);
+            
         }
 
         [Fact]
@@ -51,17 +53,17 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             // Settings for UseInbox on MyCommandInboxedHandler
             // [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
-            // Settings for InboxConfifguration as above
+            // Settings for InboxConfiguration as above
             // _inboxConfiguration = new InboxConfiguration(InboxScope.All, context: true, onceOnly: true);
             // so global will not allow repeated requests ans calls, but local should override this and allow
 
-
+            
             //act
             _chainOfResponsibility = _chainBuilder.Build(_requestContext);
 
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();
-
+            
             //First pass not impacted by UseInbox Handler
             chain.Handle(myCommand);
 
@@ -77,6 +79,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
 
             //assert
             noException.Should().BeTrue();
+
         }
 
         public void Dispose()
@@ -90,5 +93,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
+ 
     }
 }

@@ -15,7 +15,7 @@ namespace Paramore.Brighter.ServiceActivator
        private int _operationCount = 0;
 
        /// <summary>
-       /// When we have completed the opeerations, we can exit
+       /// When we have completed the operations, we can exit
        /// </summary>
        public override void OperationCompleted()
        {

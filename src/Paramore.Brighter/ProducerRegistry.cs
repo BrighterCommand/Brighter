@@ -50,7 +50,7 @@ namespace Paramore.Brighter
         /// <returns></returns>
         public IAmAMessageProducer GetDefaultProducer()
         {
-            //TODO: We have to do this for properties that are across many producers associated with the Outbox and it should move to seperate configuration
+            //TODO: We have to do this for properties that are across many producers associated with the Outbox and it should move to separate configuration
             //The Producer Registry could store this, but probably separation of concerns implies Outbox configuration
 
             if (_hasProducers)

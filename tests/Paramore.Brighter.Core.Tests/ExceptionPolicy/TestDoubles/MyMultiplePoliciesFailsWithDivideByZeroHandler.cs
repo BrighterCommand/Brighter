@@ -22,29 +22,31 @@ THE SOFTWARE. */
 
 #endregion
 
-using FakeItEasy;
-using Xunit;
+using System;
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
+using Paramore.Brighter.Policies.Attributes;
 
-namespace Paramore.Brighter.Core.Tests.MessagingGateway
+namespace Paramore.Brighter.Core.Tests.ExceptionPolicy.TestDoubles
 {
-    public class ChannelDisposalTests
+    internal class MyMultiplePoliciesFailsWithDivideByZeroHandler : RequestHandler<MyCommand>
     {
-        private readonly IAmAChannel _channel;
-        private readonly IAmAMessageConsumer _messageConsumer;
+        public static bool ReceivedCommand { get; set; }
 
-        public ChannelDisposalTests()
+        static MyMultiplePoliciesFailsWithDivideByZeroHandler()
         {
-            _messageConsumer = A.Fake<IAmAMessageConsumer>();
-            _channel = new Channel("test", _messageConsumer);
+            ReceivedCommand = false;
         }
 
-        [Fact]
-        public void When_Disposing_Channel()
+        [UsePolicy(new [] {"MyDivideByZeroBreakerPolicy", "MyDivideByZeroRetryPolicy", }, 1)]
+        public override MyCommand Handle(MyCommand command)
         {
-            _channel.Dispose();
+            ReceivedCommand = true;
+            throw new DivideByZeroException();
+        }
 
-            //_should_call_dispose_on_messaging_gateway
-            A.CallTo(() => _messageConsumer.Dispose()).MustHaveHappened();
+        public static bool ShouldReceive(MyCommand myCommand)
+        {
+            return ReceivedCommand;
         }
     }
 }

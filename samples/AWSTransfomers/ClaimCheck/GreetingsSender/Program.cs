@@ -64,7 +64,7 @@ namespace GreetingsSender
                         awsConnection,
                         new SnsPublication[]
                         {
-                            new SnsPublication()
+                            new SnsPublication
                             {
                                Topic = topic,
                                FindTopicBy = TopicFindBy.Convention,

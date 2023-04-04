@@ -64,7 +64,7 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
-
+        
         [Fact]
         public async Task When_Writing_Messages_To_The_Outbox_Async_Bulk()
         {
@@ -91,10 +91,10 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
 
             _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             if(addMessagesToOutbox) await _mySqlOutboxSync.AddAsync(_messageLatest);
-
-            return new List<Message>(){ _messageEarliest, _message2, _messageLatest };
+            
+            return new List<Message> { _messageEarliest, _message2, _messageLatest };
         }
-
+        
         public void Dispose()
         {
             _mySqlTestHelper.CleanUpDb();

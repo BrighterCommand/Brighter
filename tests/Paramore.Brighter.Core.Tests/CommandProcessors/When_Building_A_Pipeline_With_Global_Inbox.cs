@@ -19,24 +19,24 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PipelineGlobalInboxTests()
         {
             IAmAnInboxSync inbox = new InMemoryInbox();
-
+            
             var registry = new SubscriberRegistry();
             registry.Register<MyCommand, MyCommandHandler>();
-
+            
             var container = new ServiceCollection();
             container.AddTransient<MyCommandHandler>();
             container.AddSingleton<IAmAnInboxSync>(inbox);
             container.AddTransient<UseInboxHandler<MyCommand>>();
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
-
+            
             _requestContext = new RequestContext();
-
+            
             InboxConfiguration inboxConfiguration = new InboxConfiguration();
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactorySync)handlerFactory, inboxConfiguration);
-            PipelineBuilder<MyCommand>.ClearPipelineCache();
+            PipelineBuilder<MyCommand>.ClearPipelineCache(); 
         }
 
         [Fact]
@@ -44,10 +44,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             //act
             _chainOfResponsibility = _chainBuilder.Build(_requestContext);
-
+            
             //assert
             var tracer = TracePipeline(_chainOfResponsibility.First());
             tracer.ToString().Should().Contain("UseInboxHandler");
+
         }
 
         public void Dispose()
@@ -61,5 +62,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
+ 
     }
 }

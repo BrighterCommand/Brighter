@@ -59,7 +59,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
             _exception = await Catch.ExceptionAsync(() => _sqlOutboxSync.AddAsync(_messageEarliest));
 
-            //should ignore the duplcate key and still succeed
+            //should ignore the duplicate key and still succeed
             _exception.Should().BeNull();
         }
 

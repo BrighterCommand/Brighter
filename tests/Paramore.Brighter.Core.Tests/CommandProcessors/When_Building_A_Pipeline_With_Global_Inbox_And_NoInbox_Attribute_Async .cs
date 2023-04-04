@@ -21,22 +21,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         public PipelineGlobalInboxNoInboxAttributeAsyncTests()
         {
             _inbox = new InMemoryInbox();
-
+            
             var registry = new SubscriberRegistry();
             registry.RegisterAsync<MyCommand, MyNoInboxCommandHandlerAsync>();
-
+            
             var container = new ServiceCollection();
             container.AddTransient<MyNoInboxCommandHandlerAsync>();
             container.AddSingleton<IAmAnInboxSync>(_inbox);
-            container.AddSingleton<IBrighterOptions>(new BrighterOptions() {HandlerLifetime = ServiceLifetime.Transient});
-
+            container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
+ 
             var handlerFactory = new ServiceProviderHandlerFactory(container.BuildServiceProvider());
 
             _requestContext = new RequestContext();
-
+            
             _inboxConfiguration = new InboxConfiguration();
 
             _chainBuilder = new PipelineBuilder<MyCommand>(registry, (IAmAHandlerFactoryAsync)handlerFactory, _inboxConfiguration);
+            
         }
 
         [Fact]
@@ -44,10 +45,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         {
             //act
             _chainOfResponsibility = _chainBuilder.BuildAsync(_requestContext, false);
-
+            
             //assert
             var tracer = TracePipelineAsync(_chainOfResponsibility.First());
             tracer.ToString().Should().NotContain("UseInboxHandlerAsync");
+
         }
 
         public void Dispose()
@@ -61,5 +63,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             firstInPipeline.DescribePath(pipelineTracer);
             return pipelineTracer;
         }
+ 
     }
 }

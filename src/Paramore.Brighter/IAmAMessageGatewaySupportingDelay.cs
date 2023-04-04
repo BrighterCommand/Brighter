@@ -25,7 +25,7 @@ THE SOFTWARE. */
 namespace Paramore.Brighter
 {
     /// <summary>
-    /// Interface IAmAMessagingGatewaySuppotingDelay
+    /// Interface IAmAMessagingGatewaySupportingDelay
     /// Does the Message Broker support the sending of delayed messages
     /// </summary>
     public interface IAmAMessageGatewaySupportingDelay

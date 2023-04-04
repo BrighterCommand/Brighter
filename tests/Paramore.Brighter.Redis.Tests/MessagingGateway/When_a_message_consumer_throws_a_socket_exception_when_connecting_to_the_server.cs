@@ -21,20 +21,22 @@ namespace Paramore.Brighter.Redis.Tests.MessagingGateway
             var configuration = RedisFixture.RedisMessagingGatewayConfiguration();
 
             _messageConsumer = new RedisMessageConsumerSocketErrorOnGetClient(configuration, QueueName, Topic);
+
         }
 
         [Fact]
         public void When_a_message_consumer_throws_a_socket_exception_when_connecting_to_the_server()
         {
-            _exception = Catch.Exception(() => _messageConsumer.Receive(1000));
-
+            _exception = Catch.Exception(() => _messageConsumer.Receive(1000)); 
+            
             //_should_return_a_channel_failure_exception
             _exception.Should().BeOfType<ChannelFailureException>();
-
-            //_should_return_an_explainging_inner_exception
+            
+            //_should_return_an_explaining_inner_exception
             _exception.InnerException.Should().BeOfType<RedisException>();
+  
         }
-
+        
         public void Dispose()
         {
             _messageConsumer.Purge();

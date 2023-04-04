@@ -38,23 +38,23 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             const int limit = 5;
-
-            var outbox = new InMemoryOutbox()
+            
+            var outbox = new InMemoryOutbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
             };
-
+            
             for(int i =1; i <= limit; i++)
                 outbox.Add(new MessageTestDataBuilder());
 
             //Act
             outbox.EntryCount.Should().Be(5);
-
+            
             outbox.Add(new MessageTestDataBuilder());
 
             Task.Delay(500).Wait(); //Allow time for compaction to run
-
+            
             //should clear compaction percentage from the outbox, and then add  the  new one
             outbox.EntryCount.Should().Be(3);
         }
@@ -64,8 +64,8 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         {
             //Arrange
             const int limit = 5;
-
-            var outbox = new InMemoryOutbox()
+            
+            var outbox = new InMemoryOutbox
             {
                 EntryLimit = limit,
                 CompactionPercentage = 0.5
@@ -81,11 +81,11 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
 
             //Act
             outbox.EntryCount.Should().Be(5);
-
+            
             outbox.Add(new MessageTestDataBuilder());
 
             Task.Delay(500).Wait(); //Allow time for compaction to run
-
+            
             //should clear compaction percentage from the outbox, and then add  the  new one
             outbox.Get(messageIds[0]).Should().BeNull();
             outbox.Get(messageIds[1]).Should().BeNull();

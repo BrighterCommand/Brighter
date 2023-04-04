@@ -16,7 +16,7 @@ namespace Paramore.Brighter
         public ReplyAddress ReplyAddress { get; private set; }
 
         /// <summary>
-        /// Constucts a reply
+        /// Constructs a reply
         /// </summary>
         /// <param name="replyAddress"></param>
         public Request(ReplyAddress replyAddress)

@@ -32,7 +32,7 @@ namespace Tests
         public void WithProducerRegistry()
         {
             var serviceCollection = new ServiceCollection();
-            var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>() { { "MyTopic", new FakeProducerSync() }, });
+            var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducerSync() }, });
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
@@ -59,7 +59,7 @@ namespace Tests
             var circuitBreakerPolicy = Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
             var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[] { TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150) });
             var circuitBreakerPolicyAsync = Policy.Handle<Exception>().CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-            var policyRegistry = new PolicyRegistry()
+            var policyRegistry = new PolicyRegistry
             {
                 { CommandProcessor.RETRYPOLICY, retryPolicy },
                 { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
