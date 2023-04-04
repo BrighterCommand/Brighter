@@ -105,13 +105,13 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            AssertionExtensions.Should((object) _dispatcher).NotBeNull();
+            AssertionExtensions.Should(_dispatcher).NotBeNull();
             //_should_have_a_foo_connection
             GetConnection("foo").Should().NotBeNull();
             //_should_have_a_bar_connection
             GetConnection("bar").Should().NotBeNull();
             //_should_be_in_the_awaiting_state
-            AssertionExtensions.Should((object) _dispatcher.State).Be(DispatcherState.DS_AWAITING);
+            AssertionExtensions.Should(_dispatcher.State).Be(DispatcherState.DS_AWAITING);
         }
 
         public void Dispose()

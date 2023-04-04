@@ -89,7 +89,7 @@ namespace Paramore.Brighter
                 if (Header.Bag.ContainsKey(DeliveryTagHeaderName))
                     return (ulong) Header.Bag[DeliveryTagHeaderName];
                 else
-                    return (ulong) 0;
+                    return 0;
             }
             set { Header.Bag[DeliveryTagHeaderName] = value; }
         }
