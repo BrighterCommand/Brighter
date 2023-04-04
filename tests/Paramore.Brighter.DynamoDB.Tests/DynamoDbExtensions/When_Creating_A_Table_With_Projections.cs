@@ -9,7 +9,7 @@ using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
-    public class DynamoDbFactoryProjectionsTests 
+    public class DynamoDbFactoryProjectionsTests
     {
         [Fact]
         public void When_Creating_A_Table_With_Projections()
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     {"GlobalSecondaryIndex", new Projection{ ProjectionType = ProjectionType.KEYS_ONLY, NonKeyAttributes = new List<string>{"Id", "Version"}}}
                 }
             );
-           
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput(
@@ -30,21 +30,20 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     new Dictionary<string, ProvisionedThroughput>
                     {
                         {
-                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10} 
+                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                         }
                     }
                 ),
                 gsiProjection
             );
-            
+
             //assert
             Assert.Equal(ProjectionType.KEYS_ONLY, tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.ProjectionType);
             Assert.Equal(
-                new List<string>{"Id", "Version"}, 
+                new List<string>{"Id", "Version"},
                 tableRequest.GlobalSecondaryIndexes.First(gsi => gsi.IndexName == "GlobalSecondaryIndex").Projection.NonKeyAttributes);
-       
         }
-        
+
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
@@ -56,13 +55,12 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             [DynamoDBVersion]
             public int? Version { get; set; }
-            
+
             [DynamoDBGlobalSecondaryIndexHashKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryId { get; set; }
 
-            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")] 
+            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")]
             public string GlobalSecondaryRangeKey { get; set; }
         }
-    
     }
 }
