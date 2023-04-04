@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
-    public class DynamoDbImboxDuplicateMessageTests : DynamoDBInboxBaseTest
+    public class DynamoDbInboxDuplicateMessageTests : DynamoDBInboxBaseTest
     {
         private readonly DynamoDbInbox _dynamoDbInbox;
         private readonly string _contextKey;
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
         private Exception _exception;
 
-        public DynamoDbImboxDuplicateMessageTests()
+        public DynamoDbInboxDuplicateMessageTests()
         {
             _dynamoDbInbox = new DynamoDbInbox(Client);
             _raisedCommand = new MyCommand { Value = "Test" };
@@ -67,6 +67,5 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             //_should_read_the_command_from_the__dynamo_db_inbox
             AssertionExtensions.Should((object) storedCommand).NotBeNull();
         }
-
     }
 }

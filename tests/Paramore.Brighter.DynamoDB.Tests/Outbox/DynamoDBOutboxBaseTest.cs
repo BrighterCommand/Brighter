@@ -17,7 +17,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         protected AWSCredentials Credentials { get; set; }
 
         protected IAmazonDynamoDB Client { get; }
-        
+
         protected DynamoDBOutboxBaseTest ()
         {
             Client = CreateClient();
@@ -41,19 +41,16 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             }
         }
 
-
         private IAmazonDynamoDB CreateClient()
         {
             Credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
-            
+
             var clientConfig = new AmazonDynamoDBConfig
             {
                 ServiceURL = "http://localhost:8000"
-
             };
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
- 
         }
 
         public void Dispose()
@@ -78,10 +75,10 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
                 // IDisposable only
             }
 
-            var tableNames = new string[] {OutboxTableName};
+            var tableNames = new[] {OutboxTableName};
             //var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
            // _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
- 
+
             _disposed = true;
        }
     }

@@ -114,7 +114,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             };
 
             return entry;
-
         }
 
         public object FromEntry(DynamoDBEntry entry)
@@ -127,9 +126,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             var name = new Money((int)value.Amount, value.Currency);
             return name;
-
         }
-
     }
 
     public class MoneyDTO
@@ -143,5 +140,4 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Currency = currency;
         }
     }
-
 }

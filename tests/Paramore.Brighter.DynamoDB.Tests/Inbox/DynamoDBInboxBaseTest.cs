@@ -24,7 +24,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         {
             //required by AWS 2.2
             Environment.SetEnvironmentVariable("AWS_ENABLE_ENDPOINT_DISCOVERY", "false");
-            
+
             Client = CreateClient();
             _dynamoDbTableBuilder = new DynamoDbTableBuilder(Client);
             //create a table request
@@ -50,7 +50,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             clientConfig.ServiceURL = "http://localhost:8000";
 
             return new AmazonDynamoDBClient(Credentials, clientConfig);
- 
         }
 
         public void Dispose()
@@ -78,7 +77,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             var tableNames = new string[] {TableName};
             //var deleteTables =_dynamoDbTableBuilder.Delete(tableNames).Result;
            // _dynamoDbTableBuilder.EnsureTablesDeleted(tableNames).Wait();
- 
+
             _disposed = true;
        }
     }
