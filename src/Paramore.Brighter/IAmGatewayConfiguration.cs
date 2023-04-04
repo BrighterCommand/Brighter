@@ -1,7 +1,7 @@
 ﻿namespace Paramore.Brighter
 {
     /// <summary>
-    /// A marker interface. Transports will need configuration that lets them talk to the message-orientedd-middleware they use. That is common to
+    /// A marker interface. Transports will need configuration that lets them talk to the message-oriented-middleware they use. That is common to
     /// both a consumer and a producer. Use this interface to indicate the class that has that role
     /// Use <see cref="Subscription "/>for consumer specific logic, specializing it for your platform
     /// Use <see cref="Publication"/> for producer specific logic, specializing it for your platform.

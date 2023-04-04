@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
             MyFailsWithFallbackDivideByZeroHandler.ShouldReceive(_myCommand);
             //_should_call_the_fallback_chain
             MyFailsWithFallbackDivideByZeroHandler.ShouldFallback(_myCommand);
-            //_should_set_the_exeception_into_context
+            //_should_set_the_exception_into_context
             MyFailsWithFallbackDivideByZeroHandler.ShouldSetException(_myCommand);
         }
 

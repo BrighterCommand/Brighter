@@ -32,7 +32,7 @@ using ServiceStack.Redis;
 namespace Paramore.Brighter.MessagingGateway.Redis
 {
     /*Why don't we simply use Redis Pub-Sub here?
-     We don't want to use pub-sub because you can't support competing consumers and messages 'dissapper'
+     We don't want to use pub-sub because you can't support competing consumers and messages 'disappear'
      if no consumer is connected. Instead, we want to implement a dynamic recipient list instead, 
      so that we can have a 'logical' queue that has multiple possible consumers.
      Each queue subscribes to a topic and has a copy of the message, but each queue might 

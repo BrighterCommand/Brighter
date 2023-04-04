@@ -46,7 +46,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
     public async Task When_unwrapping_a_large_message()
     {
         //arrange
-        await Task.Delay(3000); //allow bucket definition to propogate
+        await Task.Delay(3000); //allow bucket definition to propagate
             
         //store our luggage and get the claim check
         var contents = DataGenerator.CreateString(6000);

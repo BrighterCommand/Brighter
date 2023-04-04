@@ -31,7 +31,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// Used when the message pump should block for I/O
     /// Will guarantee strict ordering of the messages on the queue
     /// Predictable performance as only one thread, allows you to configure number of performers for number of threads to use
-    /// Lower throughput than asuync
+    /// Lower throughput than async
     /// </summary>
     /// <typeparam name="TRequest"></typeparam>
     public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
