@@ -43,7 +43,10 @@ namespace Paramore.Brighter.MySQL.Tests
             messageHeader.Bag.Add(_key4, _value4);
             messageHeader.Bag.Add(_key5, _value5);
 
-            _messageEarliest = new Message(messageHeader, new MessageBody(new byte[] { 1, 2, 3, 4, 5 }));
+            _messageEarliest = new Message(
+                messageHeader, 
+                new MessageBody(new byte[] { 1, 2, 3, 4, 5 }, "application/octet-stream", CharacterEncoding.Raw )
+                );
             _mySqlOutbox.Add(_messageEarliest);
         }
 
@@ -53,7 +56,8 @@ namespace Paramore.Brighter.MySQL.Tests
             _storedMessage = _mySqlOutbox.Get(_messageEarliest.Id);
 
             //should read the message from the sql outbox
-            _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
+            _storedMessage.Body.Bytes.Should().Equal(_messageEarliest.Body.Bytes);
+            
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);

@@ -257,7 +257,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 _configuration.BinaryMessagePayload
                     ? new MySqlParameter
                     {
-                        ParameterName = $"@{prefix}Body", DbType = DbType.Binary, Value = message.Body.Value
+                        ParameterName = $"@{prefix}Body", DbType = DbType.Binary, Value = message.Body.Bytes
                     }
                     : new MySqlParameter
                     {
