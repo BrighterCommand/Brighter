@@ -16,7 +16,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
         {
             var tableRequestFactory = new DynamoDbTableFactory();
             var builder = new DynamoDbTableBuilder(CreateClient());
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput
@@ -25,14 +25,14 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     new Dictionary<string, ProvisionedThroughput>
                     {
                         {
-                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10} 
+                            "GlobalSecondaryIndex", new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                         }
                     }
                 )
             );
 
             var modifiedTableRequest = builder.RemoveNonSchemaAttributes(tableRequest);
-            
+
             //assert
             Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringProperty" && attr.AttributeType == ScalarAttributeType.S);
             Assert.DoesNotContain(modifiedTableRequest.AttributeDefinitions, attr => attr.AttributeName == "NumberProperty" && attr.AttributeType == ScalarAttributeType.N);
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GlobalSecondaryRangeKey" && attr.AttributeType == ScalarAttributeType.S);
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "LocalSecondaryRangeKey" && attr.AttributeType == ScalarAttributeType.S);
         }
-        
+
         private AmazonDynamoDBClient CreateClient()
         {
             var credentials = new BasicAWSCredentials("FakeAccessKey", "FakeSecretKey");
@@ -52,10 +52,8 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             clientConfig.ServiceURL = "http://localhost:8000";
 
             return new AmazonDynamoDBClient(credentials, clientConfig);
- 
         }
 
-        
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
@@ -64,10 +62,10 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 
             [DynamoDBProperty]
             public int NumberProperty { get; set; }
-            
+
             [DynamoDBProperty]
             public byte[] ByteArrayProperty { get; set; }
-            
+
             [DynamoDBHashKey]
             [DynamoDBProperty]
             public string Id { get; set; }
@@ -80,10 +78,10 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             [DynamoDBProperty]
             public string GlobalSecondaryId { get; set; }
 
-            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")] 
+            [DynamoDBGlobalSecondaryIndexRangeKey("GlobalSecondaryIndex")]
             [DynamoDBProperty]
             public string GlobalSecondaryRangeKey { get; set; }
-            
+
             [DynamoDBLocalSecondaryIndexRangeKey(indexName:"LocalSecondaryIndex")]
             [DynamoDBProperty]
             public string LocalSecondaryRangeKey { get; set; }
