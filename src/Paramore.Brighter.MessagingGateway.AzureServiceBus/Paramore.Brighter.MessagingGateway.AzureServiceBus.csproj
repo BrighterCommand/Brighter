@@ -4,7 +4,6 @@
     <Authors>Yiannis Triantafyllopoulos</Authors>
     <TargetFrameworks>netstandard2.0;net6.0</TargetFrameworks>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Azure.Identity" Version="1.8.2" />
