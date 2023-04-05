@@ -44,7 +44,7 @@ namespace GreetingsSender
     {
         static async Task Main(string[] args)
         {
-            var host = (IHost)Host.CreateDefaultBuilder(args)
+            var host = Host.CreateDefaultBuilder(args)
                 .ConfigureHostConfiguration(configurationBuilder =>
                 {
                     configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());

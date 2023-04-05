@@ -91,7 +91,7 @@ namespace Paramore.Brighter
                 if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object value))
                     return (ulong) value;
                 else
-                    return (ulong) 0;
+                    return 0;
             }
             set { Header.Bag[DeliveryTagHeaderName] = value; }
         }

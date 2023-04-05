@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
         {
             Guid commandId = Guid.NewGuid();
             var exception = await Catch.ExceptionAsync(() => _sqlInbox.GetAsync<MyCommand>(commandId, _contextKey));
-            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]
