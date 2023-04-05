@@ -22,6 +22,8 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
+
 namespace Paramore.Brighter.Outbox.MsSql
 {
     /// <summary>
@@ -29,7 +31,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     /// </summary>
     public class SqlOutboxBuilder
     {
-        const string OutboxDdl = @"
+        const string TextOutboxDdl = @"
         CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
@@ -47,16 +49,39 @@ namespace Paramore.Brighter.Outbox.MsSql
             );
         ";
         
+        const string BinaryOutboxDdl = @"
+        CREATE TABLE {0}
+            (
+              [Id] [BIGINT] NOT NULL IDENTITY ,
+              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
+              [Topic] NVARCHAR(255) NULL ,
+              [MessageType] NVARCHAR(32) NULL ,
+              [Timestamp] DATETIME NULL ,
+              [CorrelationId] UNIQUEIDENTIFIER NULL,
+              [ReplyTo] NVARCHAR(255) NULL,
+              [ContentType] NVARCHAR(128) NULL,  
+              [Dispatched] DATETIME NULL,
+              [HeaderBag] NTEXT NULL ,
+              [Body] VARBINARY(MAX) NULL ,
+              PRIMARY KEY ( [Id] )
+            );
+        ";
+ 
+        
         private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
 
         /// <summary>
         /// Gets the DDL statements required to create an Outbox in MSSQL
         /// </summary>
         /// <param name="outboxTableName">The name of the Outbox table</param>
+        /// <param name="hasBinaryMessagePayload">Should the message body be stored as binary? Conversion of binary data to/from UTF-8 is lossy</param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName)
+        public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
-            return string.Format(OutboxDdl, outboxTableName);
+            if (string.IsNullOrEmpty(outboxTableName))
+                throw new ArgumentNullException(outboxTableName, $"You must provide a tablename for the OutBox table");
+
+            return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
         }
         
         /// <summary>

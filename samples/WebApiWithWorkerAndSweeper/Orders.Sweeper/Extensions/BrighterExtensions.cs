@@ -32,7 +32,7 @@ public static class BrighterExtensions
                     new() {MakeChannels = OnMissingChannel.Validate, Topic = new RoutingKey("default")}
                 }, boxSettings.BatchChunkSize).Create();
 
-            var outboxSettings = new MsSqlConfiguration(boxSettings.ConnectionString, boxSettings.OutboxTableName);
+            var outboxSettings = new MsSqlConfiguration(boxSettings.ConnectionString, outBoxTableName: boxSettings.OutboxTableName);
             Type outboxType;
 
             if (boxSettings.UseMsi)

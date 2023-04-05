@@ -69,7 +69,7 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
     o.UseSqlServer(dbConnString);
 });
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
+var outboxConfig = new MsSqlConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");

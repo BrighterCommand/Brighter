@@ -23,6 +23,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.ComponentModel;
 
 namespace Paramore.Brighter.Outbox.MySql
@@ -77,7 +78,7 @@ namespace Paramore.Brighter.Outbox.MySql
         public static string GetDDL(string outboxTableName, bool hasBinaryMessagePayload = false)
         {
             if (string.IsNullOrEmpty(outboxTableName))
-                throw new InvalidEnumArgumentException($"You must provide a tablename for the OutBox table");
+                throw new ArgumentNullException(outboxTableName, $"You must provide a tablename for the OutBox table");
 
             return string.Format(hasBinaryMessagePayload ? BinaryOutboxDdl : TextOutboxDdl, outboxTableName);
         }

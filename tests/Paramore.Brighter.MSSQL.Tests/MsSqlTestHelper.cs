@@ -9,12 +9,13 @@ namespace Paramore.Brighter.MSSQL.Tests
 {
     public class MsSqlTestHelper
     {
+        private readonly bool _binaryMessagePayload;
         private string _tableName;
         private SqlSettings _sqlSettings;
         private IMsSqlConnectionProvider _connectionProvider;
         private IMsSqlConnectionProvider _masterConnectionProvider;
 
-        private const string _queueDDL = @"CREATE TABLE [dbo].[{0}](
+        private const string _textQueueDDL = @"CREATE TABLE [dbo].[{0}](
                 [Id][bigint] IDENTITY(1, 1) NOT NULL,
                 [Topic] [nvarchar](255) NOT NULL,
                 [MessageType] [nvarchar](1024) NOT NULL,
@@ -24,9 +25,21 @@ namespace Paramore.Brighter.MSSQL.Tests
                 [Id] ASC
                 )WITH(PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON[PRIMARY]
                 ) ON[PRIMARY] TEXTIMAGE_ON[PRIMARY]";
+        
+        private const string _binaryQueueDDL = @"CREATE TABLE [dbo].[{0}](
+                [Id][bigint] IDENTITY(1, 1) NOT NULL,
+                [Topic] [nvarchar](255) NOT NULL,
+                [MessageType] [nvarchar](1024) NOT NULL,
+                [Payload] [varbinary](max)NOT NULL,
+                CONSTRAINT[PK_QueueData_{1}] PRIMARY KEY CLUSTERED
+                    (
+                [Id] ASC
+                )WITH(PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON[PRIMARY]
+                ) ON[PRIMARY] TEXTIMAGE_ON[PRIMARY]";
 
-        public MsSqlTestHelper()
+        public MsSqlTestHelper(bool binaryMessagePayload = false)
         {
+            _binaryMessagePayload = binaryMessagePayload;
             var builder = new ConfigurationBuilder().AddEnvironmentVariables();
             var configuration = builder.Build();
 
@@ -34,13 +47,15 @@ namespace Paramore.Brighter.MSSQL.Tests
             configuration.GetSection("Sql").Bind(_sqlSettings);
 
             _tableName = $"test_{Guid.NewGuid()}";
-            
-            _connectionProvider = new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString));
-            _masterConnectionProvider = new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsMasterConnectionString));
+
+            _connectionProvider =
+                new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString));
+            _masterConnectionProvider =
+                new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsMasterConnectionString));
         }
 
-       public void CreateDatabase()
-       {
+        public void CreateDatabase()
+        {
             using (var connection = _masterConnectionProvider.GetConnection())
             {
                 connection.Open();
@@ -74,17 +89,22 @@ namespace Paramore.Brighter.MSSQL.Tests
             CreateQueueTable();
         }
 
-        public MsSqlConfiguration InboxConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+        public MsSqlConfiguration InboxConfiguration =>
+            new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public MsSqlConfiguration OutboxConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName);
+        public MsSqlConfiguration OutboxConfiguration => new MsSqlConfiguration(
+            _sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName,
+            binaryMessagePayload: _binaryMessagePayload);
 
-        public MsSqlConfiguration QueueConfiguration => new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
-        
+        public MsSqlConfiguration QueueConfiguration =>
+            new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
+
         private void CreateQueueTable()
         {
             _tableName = $"queue_{_tableName}";
             using var connection = _connectionProvider.GetConnection();
-            var createTableSql = string.Format(_queueDDL, _tableName, Guid.NewGuid().ToString());
+            var ddl = _binaryMessagePayload ? _binaryQueueDDL : _textQueueDDL;
+            var createTableSql = string.Format(ddl, _tableName, Guid.NewGuid().ToString());
 
             connection.Open();
             using (var command = connection.CreateCommand())
@@ -92,8 +112,10 @@ namespace Paramore.Brighter.MSSQL.Tests
                 command.CommandText = createTableSql;
                 command.ExecuteNonQuery();
             }
+
             connection.Close();
         }
+
         public void CleanUpDb()
         {
             using (var connection = _connectionProvider.GetConnection())
@@ -116,7 +138,7 @@ namespace Paramore.Brighter.MSSQL.Tests
             using (var connection = _connectionProvider.GetConnection())
             {
                 _tableName = $"[message_{_tableName}]";
-                var createTableSql = SqlOutboxBuilder.GetDDL(_tableName);
+                var createTableSql = SqlOutboxBuilder.GetDDL(_tableName, _binaryMessagePayload);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
