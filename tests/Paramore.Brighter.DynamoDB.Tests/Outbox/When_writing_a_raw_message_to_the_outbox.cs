@@ -69,12 +69,11 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 
             var messageEarliest = new Message(
                 messageHeader,
-                new MessageBody(serdesBody, MediaTypeNames.Application.Octet, CharacterEncoding.Raw));     
-            
-            //act
+                new MessageBody(serdesBody, MediaTypeNames.Application.Octet, CharacterEncoding.Raw));
 
+            //act
             dynamoDbOutbox.Add(messageEarliest);
-            
+
             var storedMessage = dynamoDbOutbox.Get(messageEarliest.Id);
             var retrievedSchemaId = IPAddress.NetworkToHostOrder(BitConverter.ToInt32(storedMessage.Body.Bytes.Skip(1).Take(4).ToArray()));
 
@@ -82,7 +81,6 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
             retrievedSchemaId.Should().Be(schemaId);
             storedMessage.Body.Bytes.Should().Equal(messageEarliest.Body.Bytes);
             storedMessage.Body.Value.Should().Be(messageEarliest.Body.Value);
-            
         }
     }
 }
