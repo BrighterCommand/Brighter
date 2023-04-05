@@ -80,7 +80,9 @@ namespace Paramore.Brighter
     /// This class is intended to be thread-safe, so you can use one InMemoryOutbox across multiple performers. However, the state is not global i.e. static
     /// so you can use multiple instances safely as well
     /// </summary>
+#pragma warning disable CS0618
     public class InMemoryOutbox : InMemoryBox<OutboxEntry>, IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
+#pragma warning restore CS0618
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
