@@ -84,7 +84,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
         {
             //act
             await _dynamoDbOutbox.AddAsync(_messageEarliest);
-            
+
             _storedMessage = await _dynamoDbOutbox.GetAsync(_messageEarliest.Id);
 
             //assert

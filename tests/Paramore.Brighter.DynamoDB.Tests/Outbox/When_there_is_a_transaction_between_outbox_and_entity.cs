@@ -72,7 +72,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             var transaction = uow.BeginOrGetTransaction();
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = attributes, } });
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = OutboxTableName, Item = messageAttributes}});
-            
+
             response = await uow.CommitAsync();
         }
         catch (Exception e)
@@ -81,7 +81,7 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             throw;
         }
 
-        Assert.NotNull(response); 
+        Assert.NotNull(response);
         Assert.Equal(HttpStatusCode.OK, response.HttpStatusCode);
         Assert.Equal(2, response.ContentLength);    //number of tables in the transaction
     }
