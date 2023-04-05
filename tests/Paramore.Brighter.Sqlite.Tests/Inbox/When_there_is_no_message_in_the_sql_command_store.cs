@@ -51,14 +51,14 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
         {
             Guid commandId = Guid.NewGuid();
             var exception = Catch.Exception(() => _sqlInbox.Get<MyCommand>(commandId, _contextKey));
-            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Inbox_Exists()
         {
             Guid commandId = Guid.NewGuid();
-            AssertionExtensions.Should((bool) _sqlInbox.Exists<MyCommand>(commandId, _contextKey)).BeFalse();
+            AssertionExtensions.Should(_sqlInbox.Exists<MyCommand>(commandId, _contextKey)).BeFalse();
         }
 
         public void Dispose()

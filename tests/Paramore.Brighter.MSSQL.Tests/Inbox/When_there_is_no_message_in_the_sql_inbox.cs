@@ -54,7 +54,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Inbox
             Guid commandId = Guid.NewGuid();
             var exception = Catch.Exception(() => _storedCommand = _sqlInbox.Get<MyCommand>(commandId, _contextKey));
 
-            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
 
         [Fact]
