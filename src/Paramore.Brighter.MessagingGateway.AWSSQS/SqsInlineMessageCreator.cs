@@ -85,7 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
 
                 if (receiptHandle.Success)
-                    message.Header.Bag.Add("ReceiptHandle", ((Amazon.SQS.Model.Message)sqsMessage).ReceiptHandle);
+                    message.Header.Bag.Add("ReceiptHandle", sqsMessage.ReceiptHandle);
             }
             catch (Exception e)
             {

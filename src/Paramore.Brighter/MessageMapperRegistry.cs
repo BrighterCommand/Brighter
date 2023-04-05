@@ -63,7 +63,7 @@ namespace Paramore.Brighter
             }
             else
             {
-                return (IAmAMessageMapper<TRequest>)null;
+                return null;
             }
         }
 

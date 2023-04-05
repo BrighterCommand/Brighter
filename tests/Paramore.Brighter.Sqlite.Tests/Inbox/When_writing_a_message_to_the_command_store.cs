@@ -56,11 +56,11 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             _storedCommand = _sqlInbox.Get<MyCommand>(_raisedCommand.Id, _contextKey);
 
             //_should_read_the_command_from_the__sql_inbox
-            AssertionExtensions.Should((object) _storedCommand).NotBeNull();
+            AssertionExtensions.Should(_storedCommand).NotBeNull();
             //_should_read_the_command_value
-            AssertionExtensions.Should((string) _storedCommand.Value).Be(_raisedCommand.Value);
+            AssertionExtensions.Should(_storedCommand.Value).Be(_raisedCommand.Value);
             //_should_read_the_command_id
-            AssertionExtensions.Should((Guid) _storedCommand.Id).Be(_raisedCommand.Id);
+            AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
         }
 
         public void Dispose()

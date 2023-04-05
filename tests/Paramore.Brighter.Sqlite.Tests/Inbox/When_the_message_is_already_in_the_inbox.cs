@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
 
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
-            AssertionExtensions.Should((bool) _sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey)).BeTrue();
+            AssertionExtensions.Should(_sqlInbox.Exists<MyCommand>(_raisedCommand.Id, _contextKey)).BeTrue();
         }
 
         public void Dispose()
