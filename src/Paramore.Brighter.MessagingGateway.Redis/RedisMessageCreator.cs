@@ -190,9 +190,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<string> ReadContentType(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.CONTENT_TYPE))
+            if (headers.TryGetValue(HeaderNames.CONTENT_TYPE, out string header))
             {
-                return new HeaderResult<string>(headers[HeaderNames.CONTENT_TYPE], true);
+                return new HeaderResult<string>(header, true);
             }
             return new HeaderResult<string>(String.Empty, false);
         }
@@ -201,9 +201,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var messageId = Guid.Empty;
             
-            if (headers.ContainsKey(HeaderNames.CORRELATION_ID))
+            if (headers.TryGetValue(HeaderNames.CORRELATION_ID, out string header))
             {
-                if (Guid.TryParse(headers[HeaderNames.CORRELATION_ID], out messageId))
+                if (Guid.TryParse(header, out messageId))
                 {
                     return new HeaderResult<Guid>(messageId, true);
                 }
@@ -214,9 +214,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
          private HeaderResult<int> ReadDelayedMilliseconds(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.DELAYED_MILLISECONDS))
+            if (headers.TryGetValue(HeaderNames.DELAYED_MILLISECONDS, out string header))
             {
-                if (int.TryParse(headers[HeaderNames.DELAYED_MILLISECONDS], out int delayedMilliseconds))
+                if (int.TryParse(header, out int delayedMilliseconds))
                 {
                     return new HeaderResult<int>(delayedMilliseconds, true); 
                 }
@@ -226,9 +226,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<int> ReadHandledCount(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.HANDLED_COUNT))
+            if (headers.TryGetValue(HeaderNames.HANDLED_COUNT, out string header))
             {
-                if (int.TryParse(headers[HeaderNames.HANDLED_COUNT], out int handledCount))
+                if (int.TryParse(header, out int handledCount))
                 {
                     return new HeaderResult<int>(handledCount, true); 
                 }
@@ -248,10 +248,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<Dictionary<string, object>> ReadMessageBag(Dictionary<string, string> headers)
         {
 
-            if (headers.ContainsKey(HeaderNames.BAG))
+            if (headers.TryGetValue(HeaderNames.BAG, out string header))
             {
-                var bagJson = headers[HeaderNames.BAG];
-                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(bagJson, JsonSerialisationOptions.Options);
+                var bag = JsonSerializer.Deserialize<Dictionary<string, object>>(header, JsonSerialisationOptions.Options);
                 return new HeaderResult<Dictionary<string, object>>(bag, true);
             }
             return new HeaderResult<Dictionary<string, object>>(new Dictionary<string, object>(), false);
@@ -260,9 +259,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
 
          private HeaderResult<MessageType> ReadMessageType(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.MESSAGE_TYPE))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_TYPE, out string header))
             {
-                if (Enum.TryParse(headers[HeaderNames.MESSAGE_TYPE], out MessageType messageType))
+                if (Enum.TryParse(header, out MessageType messageType))
                 {
                     return new HeaderResult<MessageType>(messageType, true);
                 }
@@ -275,9 +274,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         {
             var messageId = Guid.Empty;
             
-            if (headers.ContainsKey(HeaderNames.MESSAGE_ID))
+            if (headers.TryGetValue(HeaderNames.MESSAGE_ID, out string header))
             {
-                if (Guid.TryParse(headers[HeaderNames.MESSAGE_ID], out messageId))
+                if (Guid.TryParse(header, out messageId))
                 {
                     return new HeaderResult<Guid>(messageId, true);
                 }
@@ -288,9 +287,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         
         private HeaderResult<string> ReadReplyTo(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.REPLY_TO))
+            if (headers.TryGetValue(HeaderNames.REPLY_TO, out string header))
             {
-                return new HeaderResult<string>(headers[HeaderNames.REPLY_TO], true);
+                return new HeaderResult<string>(header, true);
             }
             return new HeaderResult<string>(string.Empty, false);
         }
@@ -302,9 +301,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <returns>The result, always a success because we don't break for missing timestamp, just use now</returns>
         private HeaderResult<DateTime> ReadTimeStamp(Dictionary<string, string> headers)
         {
-            if (headers.ContainsKey(HeaderNames.TIMESTAMP))
+            if (headers.TryGetValue(HeaderNames.TIMESTAMP, out string header))
             {
-                if(DateTime.TryParse(headers[HeaderNames.TIMESTAMP], out DateTime timestamp))
+                if(DateTime.TryParse(header, out DateTime timestamp))
                 {
                     return new HeaderResult<DateTime>(timestamp, true);
                 }
@@ -315,9 +314,9 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         private HeaderResult<string> ReadTopic(Dictionary<string, string> headers)
         {
             var topic = string.Empty;
-            if (headers.ContainsKey(HeaderNames.TOPIC))
+            if (headers.TryGetValue(HeaderNames.TOPIC, out string header))
             {
-                return new HeaderResult<string>(headers[HeaderNames.TOPIC], false);
+                return new HeaderResult<string>(header, false);
             }
             return new HeaderResult<string>(String.Empty, false);
         }
