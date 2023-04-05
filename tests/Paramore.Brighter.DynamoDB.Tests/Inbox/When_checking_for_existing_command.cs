@@ -8,20 +8,20 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 {
     [Trait("Category", "DynamoDB")]
     public class DynamoDbCommandExistsTests : DynamoDBInboxBaseTest
-    {       
+    {
         private readonly MyCommand _command;
-       
+
         private readonly DynamoDbInbox _dynamoDbInbox;
         private readonly Guid _guid = Guid.NewGuid();
         private string _contextKey;
 
         public DynamoDbCommandExistsTests()
-        {                        
+        {
             _command = new MyCommand { Id = _guid, Value = "Test Earliest"};
             _contextKey = "test-context-key";
 
             _dynamoDbInbox = new DynamoDbInbox(Client);
-            
+
             _dynamoDbInbox.Add(_command, _contextKey);
         }
 

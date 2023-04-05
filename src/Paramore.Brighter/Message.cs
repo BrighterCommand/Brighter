@@ -78,8 +78,10 @@ namespace Paramore.Brighter
             Header = header;
             Body = body;
             Header.ContentType = string.IsNullOrEmpty(Header.ContentType) ? Body.ContentType: Header.ContentType;
-            
+
+#pragma warning disable CS0618
             Header.UpdateTelemetryFromHeaders();
+#pragma warning restore CS0618
         }
 
         public ulong DeliveryTag

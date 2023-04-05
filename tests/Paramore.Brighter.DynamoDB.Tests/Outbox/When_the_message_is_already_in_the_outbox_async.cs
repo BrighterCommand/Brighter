@@ -33,14 +33,14 @@ namespace Paramore.Brighter.DynamoDB.Tests.Outbox
 {
     [Trait("Category", "DynamoDB")]
     public class DynamoDbOutboxMessageAlreadyExistsAsyncTests : DynamoDBOutboxBaseTest
-    {        
+    {
         private readonly Message _messageEarliest;
 
         private Exception _exception;
         private DynamoDbOutbox _dynamoDbOutbox;
 
         public DynamoDbOutboxMessageAlreadyExistsAsyncTests()
-        {                                  
+        {
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _dynamoDbOutbox = new DynamoDbOutbox(Client, new DynamoDbConfiguration(Credentials, RegionEndpoint.EUWest1, OutboxTableName));
         }

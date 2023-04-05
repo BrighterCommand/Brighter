@@ -37,7 +37,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         private readonly DynamoDbInbox _dynamoDbInbox;
 
         public DynamoDbInboxEmptyWhenSearchedTests()
-        {            
+        {
             _dynamoDbInbox = new DynamoDbInbox(Client);
         }
 
@@ -47,5 +47,5 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             var exception = Catch.Exception(() => _dynamoDbInbox.Get<MyCommand>(Guid.NewGuid(), "some key"));
             AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
-   }
+    }
 }

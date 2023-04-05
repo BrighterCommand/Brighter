@@ -8,14 +8,14 @@ using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
-    public class DynamoDbCollectionProperties 
+    public class DynamoDbCollectionProperties
     {
         [Fact]
         public void When_Creating_A_Table_With_Collection_Properties()
         {
             //arrange
             var tableRequestFactory = new DynamoDbTableFactory();
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput
@@ -23,7 +23,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
                     new ProvisionedThroughput{ReadCapacityUnits = 10, WriteCapacityUnits = 10}
                 )
             );
-            
+
             //assert
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "Id" && attr.AttributeType == ScalarAttributeType.S);
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "StringArray" && attr.AttributeType.Value == "SS");
@@ -32,29 +32,28 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GenericList" && attr.AttributeType.Value == "L");
             Assert.Contains(tableRequest.AttributeDefinitions, attr => attr.AttributeName == "GenericMap" && attr.AttributeType.Value == "M");
         }
-        
+
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
             [DynamoDBHashKey]
             [DynamoDBProperty]
             public string Id { get; set; }
-             
+
             [DynamoDBProperty]
             public string[] StringArray { get; set; }
 
             [DynamoDBProperty]
             public int[] IntArray { get; set; }
-            
+
             [DynamoDBProperty]
             public double[] DoubleArray { get; set; }
-            
+
             [DynamoDBProperty]
             public List<string> GenericList { get; set; }
-            
+
             [DynamoDBProperty]
             public Dictionary<string, object> GenericMap{ get; set; }
-            
-       }
+        }
     }
 }
