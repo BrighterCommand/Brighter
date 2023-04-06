@@ -29,13 +29,13 @@ namespace Paramore.Brighter.Inbox.MsSql
     /// </summary>
     public class SqlInboxBuilder
     {
-        private const string OutboxDDL = @"
+        private const string InboxDDL = @"
                     CREATE TABLE {0}
                         (
                             [Id] [BIGINT] IDENTITY(1, 1) NOT NULL ,
                             [CommandId] [UNIQUEIDENTIFIER] NOT NULL ,
                             [CommandType] [NVARCHAR](256) NULL ,
-                            [CommandBody] [NTEXT] NULL ,
+                            [CommandBody] [NVARCHAR](MAX) NULL ,
                             [Timestamp] [DATETIME] NULL ,
                             [ContextKey] [NVARCHAR](256) NULL,
                             PRIMARY KEY ( [Id] )
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <returns>The required DDL</returns>
          public static string GetDDL(string inboxTableName)
         {
-            return string.Format(OutboxDDL, inboxTableName);
+            return string.Format(InboxDDL, inboxTableName);
         }
         
         /// <summary>
