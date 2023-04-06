@@ -39,7 +39,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly string _key4 = "name4";
         private readonly string _key5 = "name5";
         private readonly Message _messageEarliest;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
         private Message _storedMessage;
         private readonly string _value1 = "value1";
         private readonly string _value2 = "value2";
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(), 
                 topic: "test_topic", 
@@ -71,13 +71,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
 
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutboxSync.Add(_messageEarliest);
+            _sqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_PostgreSql_Outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);

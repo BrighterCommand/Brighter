@@ -39,8 +39,7 @@ namespace Paramore.Brighter.Outbox.MySql
     /// <summary>
     ///     Class MySqlOutbox.
     /// </summary>
-    public class
-        MySqlOutbox : RelationDatabaseOutbox<MySqlConnection, MySqlCommand, MySqlDataReader, MySqlParameter>
+    public class MySqlOutbox : RelationDatabaseOutbox<MySqlConnection, MySqlCommand, MySqlDataReader, MySqlParameter>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
@@ -367,8 +366,8 @@ namespace Paramore.Brighter.Outbox.MySql
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr))
-                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
 
             return new Message(header, body);
         }

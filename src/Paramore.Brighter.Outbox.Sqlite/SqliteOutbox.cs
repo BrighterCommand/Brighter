@@ -26,8 +26,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -355,9 +353,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
             }
 
-            var body = _configuration.BinaryMessagePayload 
-                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr)) 
-                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
+
 
             return new Message(header, body);
         }

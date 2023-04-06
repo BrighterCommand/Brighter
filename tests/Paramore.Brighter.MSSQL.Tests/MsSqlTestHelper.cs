@@ -169,9 +169,9 @@ namespace Paramore.Brighter.MSSQL.Tests
     internal class SqlSettings
     {
         public string TestsBrighterConnectionString { get; set; } =
-            "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password1!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
+            "Server=127.0.0.1,11433;Database=BrighterTests;User Id=sa;Password=Password123!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
 
         public string TestsMasterConnectionString { get; set; } =
-            "Server=127.0.0.1,11433;Database=master;User Id=sa;Password=Password1!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
+            "Server=127.0.0.1,11433;Database=master;User Id=sa;Password=Password123!;Application Name=BrighterTests;Connect Timeout=60;Encrypt=false";
     }
 }

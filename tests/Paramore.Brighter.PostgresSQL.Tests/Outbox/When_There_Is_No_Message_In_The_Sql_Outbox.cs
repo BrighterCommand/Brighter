@@ -35,7 +35,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
     {
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
         private readonly Message _messageEarliest;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
         private Message _storedMessage;
 
         public PostgreSqlOutboxEmptyStoreTests()
@@ -43,14 +43,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
         }
 
         [Fact]
         public void When_There_Is_No_Message_In_The_Sql_Outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
             //should return a empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

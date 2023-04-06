@@ -202,9 +202,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         protected override SqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded, int pageSize, int pageNumber)
         {
             var parameters = new SqlParameter[3];
-            parameters[0] = CreateSqlParameter("PageNumber", pageNumber);
-            parameters[1] = CreateSqlParameter("PageSize", pageSize);
-            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
+            parameters[0] = new SqlParameter{ParameterName ="PageNumber", Value=(object)pageNumber ?? DBNull.Value};
+            parameters[1] = new SqlParameter{ParameterName ="PageSize", Value = (object)pageSize ?? DBNull.Value};
+            parameters[2] = new SqlParameter{ParameterName ="OutstandingSince", Value = (object)milliSecondsSinceAdded ?? DBNull.Value};
 
             return parameters;
         }
@@ -213,7 +213,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         protected override SqlParameter CreateSqlParameter(string parameterName, object value)
         {
-            return new SqlParameter(parameterName, value ?? DBNull.Value);
+            return new SqlParameter{ ParameterName = parameterName, Value = value ?? DBNull.Value};
         }
         
         protected override SqlParameter[] InitAddDbParameters(Message message, int? position = null)
@@ -222,15 +222,46 @@ namespace Paramore.Brighter.Outbox.MsSql
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                CreateSqlParameter($"{prefix}MessageId", message.Id),
-                CreateSqlParameter($"{prefix}MessageType", message.Header.MessageType.ToString()),
-                CreateSqlParameter($"{prefix}Topic", message.Header.Topic),
-                CreateSqlParameter($"{prefix}Timestamp", message.Header.TimeStamp.ToUniversalTime()), //always store in UTC, as this is how we query messages
-                CreateSqlParameter($"{prefix}CorrelationId", message.Header.CorrelationId),
-                CreateSqlParameter($"{prefix}ReplyTo", message.Header.ReplyTo),
-                CreateSqlParameter($"{prefix}ContentType", message.Header.ContentType),
-                CreateSqlParameter($"{prefix}HeaderBag", bagJson),
-                CreateSqlParameter($"{prefix}Body", message.Body?.Value)
+                new SqlParameter
+                {
+                    ParameterName= $"{prefix}MessageId", Value = (object)message.Id ?? DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName=$"{prefix}MessageType", Value = (object)message.Header.MessageType.ToString() ?? DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}Topic", Value = (object)message.Header.Topic ?? DBNull.Value
+                },
+                new SqlParameter{ParameterName =$"{prefix}Timestamp", Value = (object)message.Header.TimeStamp.ToUniversalTime() ?? DBNull.Value}, //always store in UTC, as this is how we query messages
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}CorrelationId", Value = (object)message.Header.CorrelationId ?? DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}ReplyTo", Value = (object)message.Header.ReplyTo ?? DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}ContentType", Value = (object)message.Header.ContentType ?? DBNull.Value
+                },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}HeaderBag", Value = (object)bagJson ?? DBNull.Value
+                },
+                _configuration.BinaryMessagePayload 
+                ? new SqlParameter
+                {
+                     ParameterName = $"{prefix}Body", 
+                     Value = (object)message.Body?.Bytes ?? DBNull.Value                   
+                }
+                : new SqlParameter
+                {
+                    ParameterName = $"{prefix}Body", 
+                    Value = (object)message.Body?.Value ?? DBNull.Value
+                }
             };
         }
         
@@ -379,11 +410,20 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             var bodyOrdinal = dr.GetOrdinal("Body");
             string messageBody = string.Empty;
-            if (!dr.IsDBNull(bodyOrdinal))
-                messageBody = dr.GetString(bodyOrdinal);
-            var body = new MessageBody(messageBody);
-
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
             return new Message(header, body);
+        }
+        
+        private byte[] GetBodyAsBytes(SqlDataReader dr)
+        {
+            var i = dr.GetOrdinal("Body");
+            var body = dr.GetStream(i);
+            long bodyLength = body.Length;
+            var buffer = new byte[bodyLength];
+            body.Read(buffer,0, (int)bodyLength);
+            return buffer;
         }
     }
 }

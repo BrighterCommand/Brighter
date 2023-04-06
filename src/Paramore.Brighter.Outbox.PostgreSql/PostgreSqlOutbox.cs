@@ -36,11 +36,11 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxSync : IAmABulkOutboxSync<Message>
+    public class PostgreSqlOutbox : IAmABulkOutboxSync<Message>
     {
         private readonly PostgreSqlOutboxConfiguration _configuration;
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutboxSync>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
 
         
         private const string _deleteMessageCommand = "DELETE FROM {0} WHERE MessageId IN ({1})";
@@ -53,10 +53,10 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         /// <summary>
-        /// Initialises a new instance of <see cref="PostgreSqlOutboxSync"> class.
+        /// Initialises a new instance of <see cref="PostgreSqlOutbox"> class.
         /// </summary>
         /// <param name="postgresSqlOutboxConfiguration">PostgreSql Outbox Configuration.</param>
-        public PostgreSqlOutboxSync(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
+        public PostgreSqlOutbox(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);

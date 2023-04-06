@@ -40,28 +40,28 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private IEnumerable<Message> _messages;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
 
         public PostgreSqlOutboxRangeRequestTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.OutboxConfiguration);
             var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
             var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _sqlOutboxSync.Add(messageEarliest);
+            _sqlOutbox.Add(messageEarliest);
             Task.Delay(100);
-            _sqlOutboxSync.Add(message1);
+            _sqlOutbox.Add(message1);
             Task.Delay(100);
-            _sqlOutboxSync.Add(message2);
+            _sqlOutbox.Add(message2);
         }
 
         [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched()
         {
-            _messages = _sqlOutboxSync.Get(1, 3);
+            _messages = _sqlOutbox.Get(1, 3);
 
             //should fetch 1 message
             _messages.Should().HaveCount(1);

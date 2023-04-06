@@ -59,12 +59,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return brighterBuilder;
         }
 
-        private static PostgreSqlOutboxSync BuildPostgreSqlOutboxSync(IServiceProvider provider)
+        private static PostgreSqlOutbox BuildPostgreSqlOutboxSync(IServiceProvider provider)
         {
             var config = provider.GetService<PostgreSqlOutboxConfiguration>();
             var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
 
-            return new PostgreSqlOutboxSync(config, connectionProvider);
+            return new PostgreSqlOutbox(config, connectionProvider);
         }
     }
 }
