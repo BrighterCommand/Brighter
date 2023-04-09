@@ -135,7 +135,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// The unique identifier for this producer, used with transactions
         /// </summary>
-        /// <returns></returns>
         public string TransactionalId { get; set; }
 
         /// <summary>

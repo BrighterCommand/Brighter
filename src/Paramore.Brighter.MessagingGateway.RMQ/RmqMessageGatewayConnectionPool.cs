@@ -55,7 +55,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// or create new subscription to RabbitMQ (thread-safe)
         /// </summary>
         /// <param name="connectionFactory"></param>
-        /// <returns></returns>
         public IConnection GetConnection(ConnectionFactory connectionFactory)
         {
             var connectionId = GetConnectionId(connectionFactory);

@@ -121,7 +121,6 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// </summary>
         /// <param name="message">The message, with luggage retrieved if required</param>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
         {
             if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))

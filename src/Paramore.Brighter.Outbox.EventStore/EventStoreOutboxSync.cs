@@ -134,7 +134,6 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="pageSize">number of items on the page, default is 100</param>
         /// <param name="pageNumber">page number of results to return, default is first</param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns></returns>
         public IList<Message> Get(
             int pageSize = 100,
             int pageNumber = 1,
@@ -176,7 +175,6 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="stream">The stream name.</param>
         /// <param name="fromEventNumber">The event number to start from (inclusive).</param>
         /// <param name="numberOfEvents">The number of events to return.</param>
-        /// <returns></returns>
         public IList<Message> Get(string stream, int fromEventNumber, int numberOfEvents)
         {
             var eventStreamSlice = _eventStore
@@ -212,7 +210,6 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="stream">The stream name.</param>
         /// <param name="fromEventNumber">The event number to start from (inclusive).</param>
         /// <param name="numberOfEvents">The number of events to return.</param>
-        /// <returns></returns>
         public async Task<IList<Message>> GetAsync(string stream, int fromEventNumber, int numberOfEvents)
         {
             var eventStreamSlice =

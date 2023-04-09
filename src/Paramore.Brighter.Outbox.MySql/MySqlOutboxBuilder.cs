@@ -55,7 +55,6 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Get the DDL that describes the table we will store messages in
         /// </summary>
         /// <param name="outboxTableName">The name of the table to store messages in</param>
-        /// <returns></returns>
         public static string GetDDL(string outboxTableName)
         {
             if (string.IsNullOrEmpty(outboxTableName))
@@ -67,7 +66,6 @@ namespace Paramore.Brighter.Outbox.MySql
         /// Gets the SQL statements required to check for the existence of an Outbox in MySQL
         /// </summary>
         /// <param name="inboxTableName"></param>
-        /// <returns></returns>
         /// <exception cref="InvalidEnumArgumentException"></exception>
         public static string GetExistsQuery(string inboxTableName)
         {

@@ -49,7 +49,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         ///
         /// </summary>
         /// <param name="redisMessage">The raw message read from the wire</param>
-        /// <returns></returns>
         public Message CreateMessage(string redisMessage)
         {
             var message = new Message();
@@ -110,7 +109,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// (2) JSON parsers can struggle with some types.
         /// </summary>
         /// <param name="headersJson">The raw header JSON</param>
-        /// <returns></returns>
         private MessageHeader ReadHeader(string headersJson)
         {
             var headers = JsonSerializer.Deserialize<Dictionary<string, string>>(headersJson, JsonSerialisationOptions.Options);  
@@ -179,7 +177,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// </summary>
         /// <param name="topic"></param>
         /// <param name="messageId"></param>
-        /// <returns></returns>
         private MessageHeader FailureMessageHeader(HeaderResult<string> topic, HeaderResult<Guid> messageId)
         {
             return new MessageHeader(

@@ -38,7 +38,6 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         /// Get the current connection of the DB context
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns></returns>
         public async Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection

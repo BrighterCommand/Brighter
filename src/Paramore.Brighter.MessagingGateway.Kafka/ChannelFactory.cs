@@ -43,7 +43,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// Creates the input channel
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
-        /// <returns></returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
             KafkaSubscription rmqSubscription = subscription as KafkaSubscription;  

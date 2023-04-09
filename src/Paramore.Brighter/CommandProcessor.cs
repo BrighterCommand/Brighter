@@ -605,7 +605,6 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
-        /// <returns></returns>
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {
@@ -624,7 +623,6 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">The Cancellation Token.</param>
         /// <typeparam name="T">The type of the request</typeparam>
-        /// <returns></returns>
         public Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
         {

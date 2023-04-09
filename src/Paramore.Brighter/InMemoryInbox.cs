@@ -90,7 +90,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="id">The Guid for the request</param>
         /// <param name="contextKey">The handler this is for</param>
-        /// <returns></returns>
         public static string CreateKey(Guid id, string contextKey)
         {
             return $"{id}:{contextKey}";

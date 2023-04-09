@@ -58,7 +58,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="streamSpecification"></param>
         /// <param name="tags"></param>
         /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
         public CreateTableRequest GenerateCreateTableRequest<T>(
             DynamoDbCreateProvisionedThroughput provisionedThroughput,
             DynamoGSIProjections gsiProjections = null,

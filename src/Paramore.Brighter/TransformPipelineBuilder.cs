@@ -82,7 +82,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="request"></param>
         /// <typeparam name="TRequest"></typeparam>
-        /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
         {
             try

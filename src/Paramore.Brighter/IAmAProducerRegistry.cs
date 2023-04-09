@@ -16,7 +16,6 @@ namespace Paramore.Brighter
         /// Used to obtain values from the first producer for configuration of the Outbox. Workaround because the outbox properties are on the publication
         /// expect to be removed
         /// </summary>
-        /// <returns></returns>
         IAmAMessageProducer GetDefaultProducer();
         
         /// <summary>

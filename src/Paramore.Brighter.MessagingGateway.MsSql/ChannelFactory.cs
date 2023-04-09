@@ -23,7 +23,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         /// Creates the input channel
         /// </summary>
         /// <param name="subscription">The subscription parameters with which to create the channel</param>
-        /// <returns></returns>
         public IAmAChannel CreateChannel(Subscription subscription)
         {
             MsSqlSubscription rmqSubscription = subscription as MsSqlSubscription;  

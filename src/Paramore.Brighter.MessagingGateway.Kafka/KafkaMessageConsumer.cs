@@ -396,7 +396,6 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <summary>
         /// Mainly used diagnostically in tests - how many offsets do we have now?
         /// </summary>
-        /// <returns></returns>
         public int StoredOffsets()
         {
             return _offsetStorage.Count;

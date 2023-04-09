@@ -62,7 +62,6 @@ namespace Paramore.Brighter.FeatureSwitch.Attributes
         /// <summary>
         /// Gets the type of the handler
         /// </summary>
-        /// <returns></returns>
         public override Type GetHandlerType()
         {
             return typeof(FeatureSwitchHandlerAsync<>);

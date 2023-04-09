@@ -138,7 +138,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Converts the body to a character encoded string.
         /// </summary>
-        /// <returns></returns>
         public string ToCharacterEncodedString(CharacterEncoding characterEncoding)
         {
             return characterEncoding switch

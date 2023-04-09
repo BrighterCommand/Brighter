@@ -69,7 +69,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
-        /// <returns></returns>
         public IBrighterBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
@@ -90,7 +89,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Register message mappers
         /// </summary>
         /// <param name="registerMappers">A callback to register mappers</param>
-        /// <returns></returns>
         public IBrighterBuilder MapperRegistry(Action<ServiceCollectionMessageMapperRegistry> registerMappers)
         {
             if (registerMappers == null) throw new ArgumentNullException(nameof(registerMappers));

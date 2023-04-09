@@ -73,7 +73,6 @@ namespace Paramore.Brighter
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Cancellation Token, if any</param>
-        /// <returns></returns>
         [Obsolete("Removed in v10, Please use OutstandingMessagesAsync instead.")]
         Task<IList<Message>> GetAsync(
             int pageSize = 100, 

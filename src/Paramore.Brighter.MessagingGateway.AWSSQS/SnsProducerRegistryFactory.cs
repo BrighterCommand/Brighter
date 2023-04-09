@@ -48,7 +48,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// <summary>
         /// Create a message producer for each publication, add it into the registry under the key of the topic
         /// </summary>
-        /// <returns></returns>
         public IAmAProducerRegistry Create()
         {
             var producers = new Dictionary<string, IAmAMessageProducer>();

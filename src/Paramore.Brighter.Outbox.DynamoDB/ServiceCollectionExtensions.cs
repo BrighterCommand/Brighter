@@ -19,7 +19,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// So we assume that prerequisite has taken place beforehand 
         /// </summary>
         /// <param name="serviceLifetime">The lifetime of the outbox connection</param>
-        /// <returns></returns>
         public static IBrighterBuilder UseDynamoDbOutbox(
             this IBrighterBuilder brighterBuilder, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {

@@ -50,7 +50,6 @@ namespace Paramore.Brighter.Sqlite.Dapper
         /// Begins a transaction, if one not already started. Closes connection if required
         /// </summary>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         public async Task<DbTransaction> BeginOrGetTransactionAsync(CancellationToken cancellationToken)
         {
             if (!HasTransaction())

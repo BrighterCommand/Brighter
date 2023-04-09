@@ -58,7 +58,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// Creates a plain/text JSON representation of the message
         /// </summary>
         /// <param name="message">The Brighter message to convert</param>
-        /// <returns></returns>
         protected static string CreateRedisMessage(Message message)
         {
             //Convert the message into something we can put out via Redis i.e. a string

@@ -31,7 +31,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// The name of the subscription - used for identification
         /// </summary>
         /// <param name="name">The name to give this subscription</param>
-        /// <returns></returns>
        public IConnectionBuilderChannelFactory ConnectionName(string name)
         {
             _name = name;
@@ -42,7 +41,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// How do we build instances of the channel - sometimes this may build a consumer that builds the channel indirectly
         /// </summary>
         /// <param name="channelFactory">The channel to use</param>
-        /// <returns></returns>
         public IConnectionBuilderChannelType ChannelFactory(IAmAChannelFactory channelFactory)
         {
             _channelFactory = channelFactory;
@@ -53,7 +51,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// The data type of the channel
         /// </summary>
         /// <param name="type">The type that represents the type of the channel</param>
-        /// <returns></returns>
         public IConnectionBuilderChannelName Type(Type type)
         {
             _type = type;
@@ -64,7 +61,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// What is the name of the channel
         /// </summary>
         /// <param name="name">The name for the channel</param>
-        /// <returns></returns>
         public IConnectionBuilderRoutingKey ChannelName(string channelName)
         {
             _channelName = channelName;
@@ -75,7 +71,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// The routing key, or topic, that represents the channel in a broker
         /// </summary>
         /// <param name="routingKey"></param>
-        /// <returns></returns>
         public IConnectionBuilderOptionalBuild RoutingKey(string routingKey)
         {
             _routingKey = routingKey;
@@ -86,7 +81,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// The timeout for waiting for a message when polling a queue
         /// </summary>
         /// <param name="millisecondTimeout">The number of milliseconds to timeout (defaults to 300)</param>
-        /// <returns></returns>
         public IConnectionBuilderOptionalBuild Timeout(int millisecondTimeout)
         {
             _milliseconds = millisecondTimeout;
@@ -127,7 +121,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// Should we create channels, or assume that they have been created separately and just confirm their existence and error if not available
         /// </summary>
         /// <param name="onMissingChannel">The action to take if a channel is missing. Defaults to create channel</param>
-        /// <returns></returns>
         public IConnectionBuilderOptionalBuild MakeChannels(OnMissingChannel onMissingChannel)
         {
             _makeChannel = onMissingChannel;
@@ -139,7 +132,6 @@ namespace Paramore.Brighter.ServiceActivator
         /// Each thread is its own event loop - a performer
         /// </summary>
         /// <param name="noOfPerformers">How many threads to run, Defaults to 1</param>
-        /// <returns></returns>
         public IConnectionBuilderOptionalBuild NoOfPeformers(int noOfPerformers)
         {
             _noOfPeformers = noOfPerformers;

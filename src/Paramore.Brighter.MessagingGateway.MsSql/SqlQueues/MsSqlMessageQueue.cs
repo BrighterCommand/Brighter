@@ -71,7 +71,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <param name="topic">The topic name</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">The active CancellationToken</param>
-        /// <returns></returns>
         public async Task SendAsync(T message, string topic, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
