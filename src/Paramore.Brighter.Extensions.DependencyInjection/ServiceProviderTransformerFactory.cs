@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public ServiceProviderTransformerFactory(IServiceProvider serviceProvider)
         {
             _serviceProvider = serviceProvider;
-            var options = (IBrighterOptions) serviceProvider.GetRequiredService<IBrighterOptions>();
+            var options = serviceProvider.GetRequiredService<IBrighterOptions>();
             if (options == null) _isTransient = false; else _isTransient = options.HandlerLifetime == ServiceLifetime.Transient;  
         }
     

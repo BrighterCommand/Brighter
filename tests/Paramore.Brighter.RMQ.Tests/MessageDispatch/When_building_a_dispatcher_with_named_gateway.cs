@@ -100,7 +100,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessageDispatch
             _dispatcher = _builder.Build();
 
             //_should_build_a_dispatcher
-            AssertionExtensions.Should((object) _dispatcher).NotBeNull();
+            AssertionExtensions.Should(_dispatcher).NotBeNull();
         }
 
         public void Dispose()

@@ -88,10 +88,10 @@ namespace Paramore.Brighter
         {
             get
             {
-                if (Header.Bag.ContainsKey(DeliveryTagHeaderName))
-                    return (ulong) Header.Bag[DeliveryTagHeaderName];
+                if (Header.Bag.TryGetValue(DeliveryTagHeaderName, out object value))
+                    return (ulong) value;
                 else
-                    return (ulong) 0;
+                    return 0;
             }
             set { Header.Bag[DeliveryTagHeaderName] = value; }
         }
@@ -100,8 +100,8 @@ namespace Paramore.Brighter
         {
             get
             {
-                if (Header.Bag.ContainsKey(RedeliveredHeaderName))
-                    return (bool) Header.Bag[RedeliveredHeaderName];
+                if (Header.Bag.TryGetValue(RedeliveredHeaderName, out object value))
+                    return (bool) value;
                 else
                 {
                     return false;

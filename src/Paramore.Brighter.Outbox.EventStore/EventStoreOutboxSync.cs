@@ -338,8 +338,8 @@ namespace Paramore.Brighter.Outbox.EventStore
 
             foreach (var message in messages)
             {
-                var dispatchedAt = message.Header.Bag.ContainsKey(Globals.DispatchedAtKey)
-                    ? message.Header.Bag[Globals.DispatchedAtKey] as string
+                var dispatchedAt = message.Header.Bag.TryGetValue(Globals.DispatchedAtKey, out object value)
+                    ? value as string
                     : null;
 
                 if (dispatchedAt is null)

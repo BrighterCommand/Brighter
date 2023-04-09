@@ -45,7 +45,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         public void When_There_Is_No_Message_In_The_Inbox()
         {
             var exception = Catch.Exception(() => _dynamoDbInbox.Get<MyCommand>(Guid.NewGuid(), "some key"));
-            AssertionExtensions.Should((object) exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
     }
 }

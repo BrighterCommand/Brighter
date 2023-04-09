@@ -47,7 +47,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         {
             var exception =
                 await Catch.ExceptionAsync(() => _dynamoDbInbox.GetAsync<MyCommand>(Guid.NewGuid(), "some key"));
-            AssertionExtensions.Should((object)exception).BeOfType<RequestNotFoundException<MyCommand>>();
+            AssertionExtensions.Should(exception).BeOfType<RequestNotFoundException<MyCommand>>();
         }
     }
 }

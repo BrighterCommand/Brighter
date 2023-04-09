@@ -74,7 +74,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             var storedCommand = _pgSqlInbox.Get<MyCommand>(_raisedCommand.Id, newcontext);
 
             //_should_read_the_command_from_the__dynamo_db_inbox
-            AssertionExtensions.Should((object) storedCommand).NotBeNull();
+            AssertionExtensions.Should(storedCommand).NotBeNull();
         }
 
         public void Dispose()
