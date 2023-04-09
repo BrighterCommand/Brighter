@@ -72,7 +72,6 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// the sender (over the control bus).
         /// </summary>
         /// <param name="producerRegistryFactory"></param>
-        /// <returns></returns>
         public INeedAChannelFactory ProducerRegistryFactory(IAmAProducerRegistryFactory producerRegistryFactory)
         {
             _producerRegistryFactory = producerRegistryFactory;

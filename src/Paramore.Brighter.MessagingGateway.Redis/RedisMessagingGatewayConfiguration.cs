@@ -87,7 +87,6 @@ namespace Paramore.Brighter.MessagingGateway.Redis
         /// <summary>
         /// Exponential backoff interval for retrying connections on socket failure, default 10ms
         /// </summary>
-        /// <returns></returns>
         public int? BackoffMultiplier { get; set; }
         
         /// <summary>

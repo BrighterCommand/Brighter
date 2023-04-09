@@ -60,7 +60,6 @@ namespace Paramore.Brighter.DynamoDb
         /// <param name="tableNames">The tables to check</param>
         /// <param name="targetStatus">The status that defines ready</param>
         /// <param name="ct">A cancellation token</param>
-        /// <returns></returns>
         public async Task EnsureTablesReady(IEnumerable<string> tableNames, TableStatus targetStatus, CancellationToken ct = default(CancellationToken))
         {
             // Let us wait until all tables are created. Call DescribeTable.

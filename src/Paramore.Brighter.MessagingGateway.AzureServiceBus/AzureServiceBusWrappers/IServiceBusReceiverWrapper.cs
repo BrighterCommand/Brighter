@@ -14,7 +14,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="batchSize">The size of the batch to receive.</param>
         /// <param name="serverWaitTime">Time to wait.</param>
-        /// <returns></returns>
         Task<IEnumerable<IBrokeredMessageWrapper>> Receive(int batchSize, TimeSpan serverWaitTime);
 
         /// <summary>
@@ -27,7 +26,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Send a message to the Dead Letter Queue.
         /// </summary>
         /// <param name="lockToken">The Lock Token the message was provider with.</param>
-        /// <returns></returns>
         Task DeadLetter(string lockToken);
 
         /// <summary>

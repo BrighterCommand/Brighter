@@ -174,7 +174,6 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// NOTE: RMQ's client has no async support, so this is not actually async and will block whilst it sends 
         /// </summary>
         /// <param name="message"></param>
-        /// <returns></returns>
         public Task SendAsync(Message message)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

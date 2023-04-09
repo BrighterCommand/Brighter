@@ -48,7 +48,6 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="outBox">The store to retrieve from</param>
         /// <param name="messageIds">The messages to retrieve</param>
-        /// <returns></returns>
         private static IEnumerable<Message> GetMessagesFromOutBox(IAmAnOutboxSync<Message> outBox, IReadOnlyCollection<string> messageIds)
         {
             IEnumerable<Message> foundMessages = messageIds 

@@ -36,7 +36,6 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
         /// Get the current connection of the database context
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns></returns>
         public Task<NpgsqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<NpgsqlConnection>();

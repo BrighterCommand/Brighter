@@ -34,7 +34,6 @@ namespace Paramore.Brighter.FeatureSwitch
         /// Check the <see cref="FeatureSwitchStatus"/> of a Handler based on type.
         /// </summary>
         /// <param name="handler"></param>
-        /// <returns></returns>
         FeatureSwitchStatus StatusOf(Type handler);
     }
 }

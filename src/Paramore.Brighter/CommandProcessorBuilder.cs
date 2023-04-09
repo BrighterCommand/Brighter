@@ -192,7 +192,6 @@ namespace Paramore.Brighter
         /// <param name="configuration"></param>
         /// <param name="outbox">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating reply queues</param>
-        /// <returns></returns>
         public INeedARequestContext ExternalRPC(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
         {
             _useRequestReplyQueues = true;
@@ -289,7 +288,6 @@ namespace Paramore.Brighter
         /// Configure Feature Switches for the Handlers
         /// </summary>
         /// <param name="featureSwitchRegistry"></param>
-        /// <returns></returns>
         INeedAHandlers ConfigureFeatureSwitches(IAmAFeatureSwitchRegistry featureSwitchRegistry);
     }
 

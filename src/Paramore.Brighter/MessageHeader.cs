@@ -243,7 +243,6 @@ namespace Paramore.Brighter
         /// <summary>
         /// Create a copy of the header that allows manipulation of bag contents.
         /// </summary>
-        /// <returns></returns>
         public MessageHeader Copy()
         {
             var newHeader = new MessageHeader

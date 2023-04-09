@@ -48,7 +48,6 @@ namespace Paramore.Brighter.Inbox.MySql
         /// Gets the DDL statements to create an Inbox in MySQL
         /// </summary>
         /// <param name="imboxTableName">The Inbox Table Name</param>
-        /// <returns></returns>
         public static string GetDDL(string imboxTableName)
         {
             return string.Format(OutboxDDL, imboxTableName);

@@ -27,7 +27,6 @@ namespace Paramore.Brighter.DynamoDb
         /// just add your items to the list
         /// i.e. tx.TransactItems.Add(new TransactWriteItem(...
         /// </summary>
-        /// <returns></returns>
         public TransactWriteItemsRequest BeginOrGetTransaction()
         {
             if (HasTransaction())
@@ -69,7 +68,6 @@ namespace Paramore.Brighter.DynamoDb
         /// <summary>
         /// Is there an existing transaction
         /// </summary>
-        /// <returns></returns>
         public bool HasTransaction()
         {
             return _tx != null;

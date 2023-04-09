@@ -40,7 +40,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Scan the assemblies provided for implementations of IHandleRequests, IHandleRequestsAsync, IAmAMessageMapper and register them with ServiceCollection
         /// </summary>
         /// <param name="assemblies">The assemblies to scan</param>
-        /// <returns></returns>
         IBrighterBuilder AutoFromAssemblies(params Assembly[] assemblies);
         
         /// <summary>

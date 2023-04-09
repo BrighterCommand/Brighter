@@ -66,7 +66,6 @@ namespace Paramore.Brighter
         /// Turn a Guid into an inbox key - convenience wrapper
         /// </summary>
         /// <param name="id"></param>
-        /// <returns></returns>
         public static string ConvertKey(Guid id)
         {
             return $"{id}";
@@ -138,7 +137,6 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
         /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
-        /// <returns></returns>
         public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -162,7 +160,6 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
         /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
-        /// <returns></returns>
         public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -225,7 +222,6 @@ namespace Paramore.Brighter
         /// <param name="pageSize"></param>
         /// <param name="pageNumber"></param>
         /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns></returns>
         public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
         {
             ClearExpiredMessages();
@@ -247,7 +243,6 @@ namespace Paramore.Brighter
         /// <param name="messageId"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
-        /// <returns></returns>
         public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
         {
             var tcs = new TaskCompletionSource<Message>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -102,7 +102,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <param name="brighterBuilder">The Brighter builder to add this option to</param>
         /// <param name="outbox">The outbox provider - if your outbox supports both sync and async options, just provide this and we will register both</param>
         /// <param name="outboxBulkChunkSize"></param>
-        /// <returns></returns>
         public static IBrighterBuilder UseExternalOutbox(this IBrighterBuilder brighterBuilder, IAmAnOutbox<Message> outbox = null, int outboxBulkChunkSize = 100)
         {
             if (outbox is IAmAnOutboxSync<Message>)
@@ -184,7 +183,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         ///  - InMemoryInboxAsync - what messages have we received (async pipeline compatible)
         /// </summary>
         /// <param name="brighterBuilder"></param>
-        /// <returns></returns>
         public static IBrighterBuilder UseInMemoryInbox(this IBrighterBuilder brighterBuilder)
         {
             brighterBuilder.Services.TryAdd(new ServiceDescriptor(typeof(IAmAnInboxSync), _ => new InMemoryInbox(), ServiceLifetime.Singleton));
@@ -269,7 +267,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Visibility is required for use from both
         /// </summary>
         /// <param name="provider">The IoC container to build the transform factory over</param>
-        /// <returns></returns>
         public static ServiceProviderTransformerFactory TransformFactory(IServiceProvider provider)
         {
             return new ServiceProviderTransformerFactory(provider);

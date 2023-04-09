@@ -28,7 +28,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="clientProvider">The connection to ASB</param>
         /// <param name="asbPublication">Describes the parameters for the producer</param>
         /// <param name="bulkSendBatchSize">When sending more than one message using the MessageProducer, the max amount to send in a single transmission.</param>
-        /// <returns></returns>
         public static AzureServiceBusMessageProducer Get(
             IServiceBusClientProvider clientProvider,
             AzureServiceBusPublication asbPublication,

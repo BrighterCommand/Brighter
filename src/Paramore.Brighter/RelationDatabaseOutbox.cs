@@ -172,7 +172,6 @@ namespace Paramore.Brighter
         /// <param name="outBoxTimeout">The Timeout of the outbox.</param>
         /// <param name="cancellationToken">Cancellation Token.</param>
         /// <param name="messageIds">The Ids of the messages</param>
-        /// <returns></returns>
         public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default(CancellationToken))
         {
@@ -201,7 +200,6 @@ namespace Paramore.Brighter
         /// <param name="pageNumber">Page number of results to return (default = 1)</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Cancellation Token</param>
-        /// <returns></returns>
         public async Task<IList<Message>> GetAsync(
             int pageSize = 100,
             int pageNumber = 1,

@@ -210,7 +210,6 @@ internal class RmqMessagePublisher
         /// x and V types and the AMQP 0-9-1 A type.
         /// </summary>
         /// <param name="value"></param>
-        /// <returns></returns>
         private bool IsAnAmqpType(object value)
         {
             switch (value)
