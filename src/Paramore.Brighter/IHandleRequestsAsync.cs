@@ -101,7 +101,7 @@ namespace Paramore.Brighter
         /// <param name="request">The request.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> HandleAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken));
+        Task<TRequest> HandleAsync(TRequest request, CancellationToken cancellationToken = default);
 
 
         /// <summary>
@@ -111,7 +111,7 @@ namespace Paramore.Brighter
         /// <param name="request">The request.</param>
         /// <param name="cancellationToken">A cancellation token (optional). Can be used to signal that the pipeline should end by the caller</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        Task<TRequest> FallbackAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken));
+        Task<TRequest> FallbackAsync(TRequest request, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Sets the successor.

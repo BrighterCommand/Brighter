@@ -57,7 +57,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request. Optional.</param>
         /// <returns>Awaitable <see cref="Task{TRequest}"/>.</returns>
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
             LogCommand(command);
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -83,7 +83,7 @@ namespace Paramore.Brighter.Logging.Handlers
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request. Optional.</param>
         /// <returns>TRequest.</returns>
-        public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<TRequest> FallbackAsync(TRequest command, CancellationToken cancellationToken = default)
         {
             LogFailure(command);
             return await base.FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

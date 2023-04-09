@@ -30,7 +30,7 @@ namespace SalutationPorts.Handlers
         //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
         [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
         {
             var posts = new List<Guid>();
             var context = new DynamoDBContext(_uow.DynamoDb);

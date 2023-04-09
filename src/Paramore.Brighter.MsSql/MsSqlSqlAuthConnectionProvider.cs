@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MsSql
             return new SqlConnection(_connectionString);
         }
 
-        public async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<SqlConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
 

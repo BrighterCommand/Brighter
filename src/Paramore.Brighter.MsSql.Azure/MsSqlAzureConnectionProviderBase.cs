@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MsSql.Azure
         }
 
         public async Task<SqlConnection> GetConnectionAsync(
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var sqlConnection = new SqlConnection(_connectionString);
             sqlConnection.AccessToken = await GetAccessTokenAsync(cancellationToken);

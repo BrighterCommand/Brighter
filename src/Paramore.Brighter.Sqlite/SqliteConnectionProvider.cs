@@ -49,7 +49,7 @@ namespace Paramore.Brighter.Sqlite
             return new SqliteConnection(_connectionString);
         }
 
-        public async Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<SqliteConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
 

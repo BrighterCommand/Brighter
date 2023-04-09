@@ -33,14 +33,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// </summary>
         /// <param name="message">The message to send.</param>
         /// <param name="cancellationToken">Cancellation Token.</param>
-        Task SendAsync(ServiceBusMessage message, CancellationToken cancellationToken = default(CancellationToken));
+        Task SendAsync(ServiceBusMessage message, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Send Messages
         /// </summary>
         /// <param name="messages">The messages to send.</param>
         /// <param name="cancellationToken">Cancellation Token.</param>
-        Task SendAsync(ServiceBusMessage[] messages, CancellationToken cancellationToken = default(CancellationToken));
+        Task SendAsync(ServiceBusMessage[] messages, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Schedule a message to be sent.
@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="cancellationToken">Cancellation Token.</param>
         /// <returns></returns>
         Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
-            CancellationToken cancellationToken = default(CancellationToken));
+            CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Close the Connection.

@@ -317,7 +317,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             if (_handlerFactoryAsync == null)
@@ -429,7 +429,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             if (_handlerFactoryAsync == null)
@@ -518,7 +518,7 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         /// <returns>awaitable <see cref="Task"/>.</returns>
         public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             var messageId = await DepositPostAsync(request, null, continueOnCapturedContext, cancellationToken);
@@ -607,7 +607,7 @@ namespace Paramore.Brighter
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             return await DepositPostAsync(request, _boxTransactionConnectionProvider, continueOnCapturedContext,
                 cancellationToken);
@@ -626,7 +626,7 @@ namespace Paramore.Brighter
         /// <typeparam name="T">The type of the request</typeparam>
         /// <returns></returns>
         public Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             return DepositPostAsync(requests, _boxTransactionConnectionProvider, continueOnCapturedContext,
                 cancellationToken);
@@ -634,7 +634,7 @@ namespace Paramore.Brighter
 
         private async Task<Guid> DepositPostAsync<T>(T request, IAmABoxTransactionConnectionProvider connectionProvider,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             s_logger.LogInformation("Save request: {RequestType} {Id}", request.GetType(), request.Id);
 
@@ -683,7 +683,7 @@ namespace Paramore.Brighter
         public async Task ClearOutboxAsync(
             IEnumerable<Guid> posts,
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             await _bus.ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
         }
@@ -876,7 +876,7 @@ namespace Paramore.Brighter
 
         private async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests,
             IAmABoxTransactionConnectionProvider connectionProvider, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             if (!_bus.HasAsyncBulkOutbox())
                 throw new InvalidOperationException("No bulk async outbox defined.");

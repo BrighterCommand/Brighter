@@ -73,7 +73,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <param name="cancellationToken">The active CancellationToken</param>
         /// <returns></returns>
         public async Task SendAsync(T message, string topic, int timeoutInMilliseconds = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("SendAsync<{CommandType}>(..., {Topic})", typeof(T).FullName, topic);
 
@@ -142,7 +142,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// <param name="cancellationToken"></param>
         /// <returns>The message received -or- ReceivedResult&lt;T&gt;.Empty when no message is waiting</returns>
         public async Task<ReceivedResult<T>> TryReceiveAsync(string topic,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             if (s_logger.IsEnabled(LogLevel.Debug)) s_logger.LogDebug("TryReceiveAsync<{CommandType}>(...)", typeof(T).FullName);
 

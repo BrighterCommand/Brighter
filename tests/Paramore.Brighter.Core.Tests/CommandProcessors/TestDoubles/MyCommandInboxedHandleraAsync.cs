@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         [UseInboxAsync(step:0, contextKey: typeof(MyCommandInboxedHandlerAsync), onceOnly: false)]
-        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
+        public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
         {
             LogCommand(command);
             return base.HandleAsync(command, cancellationToken);

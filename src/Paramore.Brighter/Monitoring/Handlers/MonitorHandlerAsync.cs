@@ -68,7 +68,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">Allow the caller to cancel the operation (optional)</param>
         /// <returns><see cref="Task"/>.</returns>
-        public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<T> HandleAsync(T command, CancellationToken cancellationToken = default)
         {
             if (!_isMonitoringEnabled) return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
