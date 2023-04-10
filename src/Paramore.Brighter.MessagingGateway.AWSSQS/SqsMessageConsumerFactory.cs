@@ -47,11 +47,11 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             SqsSubscription sqsSubscription = subscription as SqsSubscription;
             if (sqsSubscription == null) throw new ConfigurationException("We expect an SqsSubscription or SqsSubscription<T> as a parameter");
-            
+
             return new SqsMessageConsumer(
-                awsConnection: _awsConnection, 
-                queueName:subscription.ChannelName.ToValidSQSQueueName(), 
-                routingKey:subscription.RoutingKey, 
+                awsConnection: _awsConnection,
+                queueName:subscription.ChannelName.ToValidSQSQueueName(),
+                routingKey:subscription.RoutingKey,
                 batchSize: subscription.BufferSize,
                 hasDLQ: sqsSubscription.RedrivePolicy == null,
                 rawMessageDelivery: sqsSubscription.RawMessageDelivery

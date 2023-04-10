@@ -22,8 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using Amazon;
-using Amazon.Runtime;
 
 namespace Paramore.Brighter.MessagingGateway.AWSSQS
 {
@@ -59,7 +57,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     producers[p.Topic] = producer;
                 else
                     throw new ConfigurationException($"Missing SNS topic: {p.Topic}");
-
             }
 
             return new ProducerRegistry(producers);

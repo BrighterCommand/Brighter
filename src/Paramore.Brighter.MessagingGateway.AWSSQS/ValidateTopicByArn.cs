@@ -49,8 +49,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             //List topics does not work across accounts - GetTopicAttributesRequest works within the region
             //List Topics is rate limited to 30 ListTopic transactions per second, and can be rate limited
             //So where we can, we validate a topic using GetTopicAttributesRequest
-            
-            bool exists = false;
+
+            bool exists;
 
             try
             {
@@ -58,7 +58,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     new GetTopicAttributesRequest(topicArn)
                 ).GetAwaiter().GetResult();
 
-                exists = ((topicAttributes.HttpStatusCode == HttpStatusCode.OK)  && (topicAttributes.Attributes["TopicArn"] == topicArn));
+                exists = (topicAttributes.HttpStatusCode == HttpStatusCode.OK) && (topicAttributes.Attributes["TopicArn"] == topicArn);
             }
             catch (InternalErrorException)
             {

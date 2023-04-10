@@ -47,8 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 messageId.Success ? messageId.Result : Guid.Empty,
                 topic.Success ? topic.Result : string.Empty,
                 MessageType.MT_UNACCEPTABLE);
-            var message = new Message(header, new MessageBody(string.Empty));
-            return message;
+            return new Message(header, new MessageBody(string.Empty));
         }
     }
 }

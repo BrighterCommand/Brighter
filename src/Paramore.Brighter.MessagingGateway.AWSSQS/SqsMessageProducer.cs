@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
         /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
-        
+
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
         /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
@@ -74,31 +74,31 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             MaxOutStandingMessages = publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = publication.MaxOutStandingMessages;
         }
-        
-       public bool ConfirmTopicExists(string topic = null)
-       {
-           //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
-           if (string.IsNullOrEmpty(ChannelTopicArn))
-           {
-               EnsureTopic(
-                   topic != null ? new RoutingKey(topic) : _publication.Topic,
-                   _publication.SnsAttributes,
-                   _publication.FindTopicBy,
-                   _publication.MakeChannels);
-           }
 
-           return !string.IsNullOrEmpty(ChannelTopicArn);
-       }
+        public bool ConfirmTopicExists(string topic = null)
+        {
+            //Only do this on first send for a topic for efficiency; won't auto-recreate when goes missing at runtime as a result
+            if (string.IsNullOrEmpty(ChannelTopicArn))
+            {
+                EnsureTopic(
+                    topic != null ? new RoutingKey(topic) : _publication.Topic,
+                    _publication.SnsAttributes,
+                    _publication.FindTopicBy,
+                    _publication.MakeChannels);
+            }
 
-       /// <summary>
+            return !string.IsNullOrEmpty(ChannelTopicArn);
+        }
+
+        /// <summary>
         /// Sends the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         public void Send(Message message)
         {
-            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}", 
+            s_logger.LogDebug("SQSMessageProducer: Publishing message with topic {Topic} and id {Id} and message: {Request}",
                 message.Header.Topic, message.Id, message.Body);
-            
+
             ConfirmTopicExists(message.Header.Topic);
 
             using (var client = new AmazonSimpleNotificationServiceClient(_connection.Credentials, _connection.Region))
@@ -128,15 +128,12 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             Send(message);
         }
-        
 
         /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public void Dispose()
         {
-            
         }
-       
    }
 }
