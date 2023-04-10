@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
+﻿namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 {
     internal static class ASBConstants
     {

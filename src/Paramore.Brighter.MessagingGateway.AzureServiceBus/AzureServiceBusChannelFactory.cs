@@ -8,7 +8,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
     public class AzureServiceBusChannelFactory : IAmAChannelFactory
     {
         private readonly AzureServiceBusConsumerFactory _azureServiceBusConsumerFactory;
-        
+
         /// <summary>
         /// Initializes an Instance of <see cref="AzureServiceBusConsumerFactory"/>
         /// </summary>
@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             _azureServiceBusConsumerFactory = azureServiceBusConsumerFactory;
         }
-        
+
         /// <summary>
         /// Creates the input channel.
         /// </summary>
