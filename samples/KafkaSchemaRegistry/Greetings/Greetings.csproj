@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net6.0</TargetFramework>
   </PropertyGroup>
@@ -13,6 +13,6 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="7.0.0" />
     <PackageReference Include="System.Reflection.TypeExtensions" Version="4.7.0" />
     <PackageReference Include="Confluent.SchemaRegistry" Version="2.0.2" />
-    <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.0.2" />
+    <PackageReference Include="Confluent.SchemaRegistry.Serdes.Json" Version="2.1.0" />
   </ItemGroup>
 </Project>
