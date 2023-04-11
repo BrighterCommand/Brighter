@@ -88,7 +88,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>        
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var messageToStore = new MessageItem(message);
 
@@ -164,14 +164,14 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken"></param>
         /// <returns><see cref="T:Paramore.Brighter.Message" /></returns>
-        public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
         {
             return await GetMessage(messageId, cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
 
         public async Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var messages = new List<Message>();
             foreach (var messageId in messageIds)
@@ -208,7 +208,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             int pageSize = 100, 
             int pageNumber = 1, 
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             throw new NotSupportedException();
         }
@@ -231,7 +231,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
        }
 
         public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             foreach(var messageId in ids)
             {
@@ -240,7 +240,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         }
 
         public async Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             if (args == null)
             {
@@ -389,7 +389,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
            return tcs.Task;
        }
        
-        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<Message> GetMessage(Guid id, CancellationToken cancellationToken = default)
         {
             MessageItem messageItem = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
             return messageItem?.ConvertToMessage() ?? new Message();

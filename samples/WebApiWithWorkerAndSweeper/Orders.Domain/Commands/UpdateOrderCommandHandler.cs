@@ -17,7 +17,7 @@ public class UpdateOrderCommandHandler : RequestHandlerAsync<UpdateOrderCommand>
         _unitOfWork = unitOfWork;
     }
 
-    public override async Task<UpdateOrderCommand> HandleAsync(UpdateOrderCommand command, CancellationToken cancellationToken = default(CancellationToken))
+    public override async Task<UpdateOrderCommand> HandleAsync(UpdateOrderCommand command, CancellationToken cancellationToken = default)
     {
         await _unitOfWork.BeginTransactionAsync(cancellationToken);
         try

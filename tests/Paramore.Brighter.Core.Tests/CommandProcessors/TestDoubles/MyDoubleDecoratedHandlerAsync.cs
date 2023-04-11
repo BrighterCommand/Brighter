@@ -31,7 +31,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
     {
         [MyValidationHandlerAsync(2)]
         [MyLoggingHandlerAsync(1)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
         {
             return await base.HandleAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }

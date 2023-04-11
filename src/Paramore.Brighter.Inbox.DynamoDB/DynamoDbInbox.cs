@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>D
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             await _context
                 .SaveAsync(new CommandItem<T>(command, contextKey), cancellationToken)
@@ -108,7 +108,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task{T}"/></returns>
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {                
             return await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
         }
@@ -122,7 +122,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <typeparam name="T">Type of command being checked</typeparam>
         /// <returns><see cref="bool.True"/> if Command exists, otherwise <see cref="bool.False"/></returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
        {
            try
            {
@@ -149,7 +149,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             return ExistsAsync<T>(id, contextKey).Result;
         }
 
-        private async Task<T> GetCommandAsync<T>(Guid id, string contextKey, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        private async Task<T> GetCommandAsync<T>(Guid id, string contextKey, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var queryConfig = new QueryOperationConfig
             {

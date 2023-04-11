@@ -69,12 +69,12 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <param name="command">The command.</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns>TRequest.</returns>
-        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<TRequest> HandleAsync(TRequest command, CancellationToken cancellationToken = default)
         {
             return await _exceptionHandlerFunc(command, cancellationToken);
         }
 
-        private async Task<TRequest> CatchAll(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<TRequest> CatchAll(TRequest command, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -87,7 +87,7 @@ namespace Paramore.Brighter.Policies.Handlers
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private async Task<TRequest> CatchBrokenCircuit(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<TRequest> CatchBrokenCircuit(TRequest command, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -100,7 +100,7 @@ namespace Paramore.Brighter.Policies.Handlers
             return await FallbackAsync(command, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
-        private async Task<TRequest> CatchNone(TRequest command, CancellationToken cancellationToken = default(CancellationToken))
+        private async Task<TRequest> CatchNone(TRequest command, CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<TRequest>(TaskCreationOptions.RunContinuationsAsynchronously);
             if (cancellationToken.IsCancellationRequested)

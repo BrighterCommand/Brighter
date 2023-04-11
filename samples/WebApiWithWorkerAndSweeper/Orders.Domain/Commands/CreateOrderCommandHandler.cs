@@ -12,7 +12,7 @@ public class CreateOrderCommandHandler : RequestHandlerAsync<CreateOrderCommand>
         _orderRepository = orderRepository;
     }
 
-    public override async Task<CreateOrderCommand> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken = default(CancellationToken))
+    public override async Task<CreateOrderCommand> HandleAsync(CreateOrderCommand command, CancellationToken cancellationToken = default)
     {
         var order = new Order(0, command.Number, command.Type);
 

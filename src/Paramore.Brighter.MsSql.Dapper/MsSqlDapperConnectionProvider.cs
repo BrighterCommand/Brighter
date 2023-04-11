@@ -20,7 +20,7 @@ namespace Paramore.Brighter.MySql.Dapper
             return (SqlConnection)_unitOfWork.Database;
         }
 
-        public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<SqlConnection>();
             tcs.SetResult(GetConnection());

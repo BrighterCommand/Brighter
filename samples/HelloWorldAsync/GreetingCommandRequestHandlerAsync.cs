@@ -34,7 +34,7 @@ namespace HelloWorldAsync
     internal class GreetingCommandRequestHandlerAsync : RequestHandlerAsync<GreetingCommand>
     {
         [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<GreetingCommand> HandleAsync(GreetingCommand command, CancellationToken cancellationToken = default)
         {
             var api = new IpFyApi(new Uri("https://api.ipify.org"));
 

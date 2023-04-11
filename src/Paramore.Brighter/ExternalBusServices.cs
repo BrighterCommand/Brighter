@@ -215,7 +215,7 @@ namespace Paramore.Brighter
         internal async Task ClearOutboxAsync(
             IEnumerable<Guid> posts, 
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
 
             if (!HasAsyncOutbox())
@@ -584,7 +584,7 @@ namespace Paramore.Brighter
         }
 
         private async Task<bool> RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var result = await PolicyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC)
                 .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)
