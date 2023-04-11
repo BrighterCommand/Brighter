@@ -234,26 +234,65 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                new SqliteParameter($"@{prefix}MessageId", SqliteType.Text) { Value = message.Id.ToString() },
-                new SqliteParameter($"@{prefix}MessageType", SqliteType.Text)
+                new SqliteParameter
                 {
+                    ParameterName = $"@{prefix}MessageId",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Id.ToString()
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}MessageType",
+                    SqliteType = SqliteType.Text,
                     Value = message.Header.MessageType.ToString()
                 },
-                new SqliteParameter($"@{prefix}Topic", SqliteType.Text) { Value = message.Header.Topic },
-                new SqliteParameter($"@{prefix}Timestamp", SqliteType.Text)
+                new SqliteParameter
                 {
+                    ParameterName = $"@{prefix}Topic", SqliteType = SqliteType.Text, Value = message.Header.Topic
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}Timestamp",
+                    SqliteType = SqliteType.Text,
                     Value = message.Header.TimeStamp.ToString("s")
                 },
-                new SqliteParameter($"@{prefix}CorrelationId", SqliteType.Text)
+                new SqliteParameter
                 {
+                    ParameterName = $"@{prefix}CorrelationId",
+                    SqliteType = SqliteType.Text,
                     Value = message.Header.CorrelationId
                 },
-                new SqliteParameter($"@{prefix}ReplyTo", SqliteType.Text) {Value =  message.Header.ReplyTo},
-                new SqliteParameter($"@{prefix}ContentType", SqliteType.Text) {Value = message.Header.ContentType},
-                new SqliteParameter($"@{prefix}HeaderBag", SqliteType.Text) { Value = bagJson },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}ReplyTo",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.ReplyTo
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}ContentType",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.ContentType
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}PartitionKey",
+                    SqliteType = SqliteType.Text,
+                    Value = message.Header.PartitionKey
+                },
+                new SqliteParameter
+                {
+                    ParameterName = $"@{prefix}HeaderBag", SqliteType = SqliteType.Text, Value = bagJson
+                },
                 _configuration.BinaryMessagePayload
-                    ? new SqliteParameter($"@{prefix}Body", SqliteType.Blob) { Value = message.Body.Bytes }
-                    : new SqliteParameter($"@{prefix}Body", SqliteType.Text) { Value = message.Body.Value }
+                    ? new SqliteParameter
+                    {
+                        ParameterName = $"@{prefix}Body", SqliteType = SqliteType.Blob, Value = message.Body.Bytes
+                    }
+                    : new SqliteParameter
+                    {
+                        ParameterName = $"@{prefix}Body", SqliteType = SqliteType.Text, Value = message.Body.Value
+                    }
             };
         }
 
@@ -331,6 +370,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
+                var partitionKey = GetPartitionKey(dr);
 
                 header = new MessageHeader(
                     messageId: id,
@@ -341,7 +381,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     delayedMilliseconds: 0,
                     correlationId: correlationId,
                     replyTo: replyTo,
-                    contentType: contentType);
+                    contentType: contentType,
+                    partitionKey: partitionKey);
 
                 Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
@@ -354,12 +395,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                ? new MessageBody(GetBodyAsBytes((SqliteDataReader)dr), "application/octet-stream",
+                    CharacterEncoding.Raw)
                 : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
 
 
             return new Message(header, body);
         }
+
 
         private byte[] GetBodyAsBytes(SqliteDataReader dr)
         {
@@ -370,9 +413,32 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return buffer;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag =
+                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
+            return dictionaryBag;
+        }
+
+        private string GetContentType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal)) return null;
+
+            var contentType = dr.GetString(ordinal);
+            return contentType;
+        }
+
+
+        private Guid? GetCorrelationId(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("CorrelationId");
+            if (dr.IsDBNull(ordinal)) return null;
+
+            var correlationId = dr.GetGuid(ordinal);
+            return correlationId;
         }
 
         private static MessageType GetMessageType(IDataReader dr)
@@ -385,14 +451,15 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return Guid.Parse(dr.GetString(dr.GetOrdinal("MessageId")));
         }
 
-        private string GetContentType(IDataReader dr)
+        private string GetPartitionKey(IDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ContentType");
+            var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            var partitionKey = dr.GetString(ordinal);
+            return partitionKey;
         }
+
 
         private string GetReplyTo(IDataReader dr)
         {
@@ -403,23 +470,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return replyTo;
         }
 
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static string GetTopic(IDataReader dr)
         {
-            var i = dr.GetOrdinal("HeaderBag");
-            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag =
-                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
-            return dictionaryBag;
+            return dr.GetString(dr.GetOrdinal("Topic"));
         }
 
-        private Guid? GetCorrelationId(IDataReader dr)
-        {
-            var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null;
-
-            var correlationId = dr.GetGuid(ordinal);
-            return correlationId;
-        }
 
         private static DateTime GetTimeStamp(IDataReader dr)
         {
