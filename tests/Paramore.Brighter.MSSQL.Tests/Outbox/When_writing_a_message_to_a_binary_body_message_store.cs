@@ -39,7 +39,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
                 delayedMilliseconds: 5,
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyAddress",
-                contentType: "application/octet-stream");
+                contentType: "application/octet-stream",
+                partitionKey: "123456789");
             _messageHeader.Bag.Add(_key1, _value1);
             _messageHeader.Bag.Add(_key2, _value2);
             _messageHeader.Bag.Add(_key3, _value3);
@@ -81,6 +82,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_message.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_message.Header.ContentType);
+            _storedMessage.Header.PartitionKey.Should().Be(_message.Header.PartitionKey);
 
 
             //Bag serialization

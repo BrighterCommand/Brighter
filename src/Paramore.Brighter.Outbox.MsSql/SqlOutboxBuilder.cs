@@ -35,16 +35,17 @@ namespace Paramore.Brighter.Outbox.MsSql
         CREATE TABLE {0}
             (
               [Id] [BIGINT] NOT NULL IDENTITY ,
-              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
-              [Topic] NVARCHAR(255) NULL ,
-              [MessageType] NVARCHAR(32) NULL ,
-              [Timestamp] DATETIME NULL ,
+              [MessageId] UNIQUEIDENTIFIER NOT NULL,
+              [Topic] NVARCHAR(255) NULL,
+              [MessageType] NVARCHAR(32) NULL,
+              [Timestamp] DATETIME NULL,
               [CorrelationId] UNIQUEIDENTIFIER NULL,
               [ReplyTo] NVARCHAR(255) NULL,
               [ContentType] NVARCHAR(128) NULL,  
+              [PartitionKey] NVARCHAR(255) NULL, 
               [Dispatched] DATETIME NULL,
-              [HeaderBag] NVARCHAR(MAX) NULL ,
-              [Body] NVARCHAR(MAX) NULL ,
+              [HeaderBag] NVARCHAR(MAX) NULL,
+              [Body] NVARCHAR(MAX) NULL,
               PRIMARY KEY ( [Id] )
             );
         ";
@@ -52,17 +53,18 @@ namespace Paramore.Brighter.Outbox.MsSql
         const string BinaryOutboxDdl = @"
         CREATE TABLE {0}
             (
-              [Id] [BIGINT] NOT NULL IDENTITY ,
-              [MessageId] UNIQUEIDENTIFIER NOT NULL ,
-              [Topic] NVARCHAR(255) NULL ,
-              [MessageType] NVARCHAR(32) NULL ,
-              [Timestamp] DATETIME NULL ,
+              [Id] [BIGINT] NOT NULL IDENTITY,
+              [MessageId] UNIQUEIDENTIFIER NOT NULL,
+              [Topic] NVARCHAR(255) NULL,
+              [MessageType] NVARCHAR(32) NULL,
+              [Timestamp] DATETIME NULL,
               [CorrelationId] UNIQUEIDENTIFIER NULL,
               [ReplyTo] NVARCHAR(255) NULL,
               [ContentType] NVARCHAR(128) NULL,  
+              [PartitionKey] NVARCHAR(255) NULL,
               [Dispatched] DATETIME NULL,
-              [HeaderBag] NVARCHAR(MAX) NULL ,
-              [Body] VARBINARY(MAX) NULL ,
+              [HeaderBag] NVARCHAR(MAX) NULL,
+              [Body] VARBINARY(MAX) NULL,
               PRIMARY KEY ( [Id] )
             );
         ";

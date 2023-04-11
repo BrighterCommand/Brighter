@@ -249,6 +249,10 @@ namespace Paramore.Brighter.Outbox.MsSql
                 },
                 new SqlParameter
                 {
+                    ParameterName = $"{prefix}PartitionKey", Value = (object)message.Header.PartitionKey ?? DBNull.Value
+                },
+                new SqlParameter
+                {
                     ParameterName = $"{prefix}HeaderBag", Value = (object)bagJson ?? DBNull.Value
                 },
                 _configuration.BinaryMessagePayload 
@@ -280,8 +284,8 @@ namespace Paramore.Brighter.Outbox.MsSql
             var ordinal = dr.GetOrdinal("ContentType");
             if (dr.IsDBNull(ordinal)) return null; 
             
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            var contentType = dr.GetString(ordinal);
+            return contentType;
         }
 
         private string GetReplyTo(SqlDataReader dr)
@@ -317,6 +321,25 @@ namespace Paramore.Brighter.Outbox.MsSql
                 ? DateTime.MinValue
                 : dr.GetDateTime(ordinal);
             return timeStamp;
+        }
+        
+        private string GetPartitionKey(SqlDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("PartitionKey");
+            if (dr.IsDBNull(ordinal)) return null; 
+            
+            var partitionKey = dr.GetString(ordinal);
+            return partitionKey;
+        }
+
+        private byte[] GetBodyAsBytes(SqlDataReader dr)
+        {
+            var i = dr.GetOrdinal("Body");
+            var body = dr.GetStream(i);
+            long bodyLength = body.Length;
+            var buffer = new byte[bodyLength];
+            body.Read(buffer,0, (int)bodyLength);
+            return buffer;
         }
 
         #endregion
@@ -379,32 +402,30 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             var header = new MessageHeader(id, topic, messageType);
 
-            //new schema....we've got the extra header information
-            if (dr.FieldCount > 4)
+            DateTime timeStamp = GetTimeStamp(dr);
+            var correlationId = GetCorrelationId(dr);
+            var replyTo = GetReplyTo(dr);
+            var contentType = GetContentType(dr);
+            var partitionKey = GetPartitionKey(dr);
+
+            header = new MessageHeader(
+                messageId: id,
+                topic: topic,
+                messageType: messageType,
+                timeStamp: timeStamp,
+                handledCount: 0,
+               delayedMilliseconds: 0,
+                correlationId: correlationId,
+                replyTo: replyTo,
+                contentType: contentType,
+                partitionKey: partitionKey);
+
+            Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+            if (dictionaryBag != null)
             {
-                DateTime timeStamp = GetTimeStamp(dr);
-                var correlationId = GetCorrelationId(dr);
-                var replyTo = GetReplyTo(dr);
-                var contentType = GetContentType(dr);
-
-                header = new MessageHeader(
-                    messageId: id,
-                    topic: topic,
-                    messageType: messageType,
-                    timeStamp: timeStamp,
-                    handledCount: 0,
-                   delayedMilliseconds: 0,
-                    correlationId: correlationId,
-                    replyTo: replyTo,
-                    contentType: contentType);
-
-                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
-                if (dictionaryBag != null)
+                foreach (var key in dictionaryBag.Keys)
                 {
-                    foreach (var key in dictionaryBag.Keys)
-                    {
-                        header.Bag.Add(key, dictionaryBag[key]);
-                    }
+                    header.Bag.Add(key, dictionaryBag[key]);
                 }
             }
 
@@ -414,16 +435,6 @@ namespace Paramore.Brighter.Outbox.MsSql
                 ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
                 : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
             return new Message(header, body);
-        }
-        
-        private byte[] GetBodyAsBytes(SqlDataReader dr)
-        {
-            var i = dr.GetOrdinal("Body");
-            var body = dr.GetStream(i);
-            long bodyLength = body.Length;
-            var buffer = new byte[bodyLength];
-            body.Read(buffer,0, (int)bodyLength);
-            return buffer;
         }
     }
 }
