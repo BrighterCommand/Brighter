@@ -64,7 +64,6 @@ namespace Paramore.Brighter.Extensions.Hosting
             catch (Exception e)
             {
                 s_logger.LogError(e, "Error while sweeping the outbox.");
-                throw;
             }
 
             s_logger.LogInformation("Outbox Sweeper sleeping");
