@@ -21,8 +21,14 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     public void ArchiveMessage(Message message)
     {
         var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
-        
-        blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes));
+
+        var alreadyUploaded = blobClient.Exists();
+
+        if (!alreadyUploaded.Value)
+        {
+            var opts = GetUploadOptions(message);
+            blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes), opts);
+        }
     }
 
     /// <summary>
@@ -33,10 +39,20 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     public async Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
     {
         var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
-        
+
+        var alreadyUploaded = await blobClient.ExistsAsync(cancellationToken);
+        if (!alreadyUploaded.Value)
+        {
+            var opts = GetUploadOptions(message);
+            await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
+        }
+    }
+
+    private BlobUploadOptions GetUploadOptions(Message message)
+    {
         var opts = new BlobUploadOptions()
         {
-            AccessTier = _options.AccessTier,
+            AccessTier = _options.AccessTier
         };
 
         if (_options.TagBlobs)
@@ -50,7 +66,7 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
                 { "content_type", message.Header.ContentType }
             };
         }
-        
-        await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
+
+        return opts;
     }
 }
