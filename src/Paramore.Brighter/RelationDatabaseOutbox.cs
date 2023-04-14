@@ -74,7 +74,8 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         public void Delete(params Guid[] messageIds)
         {
-            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+            if(messageIds.Any())
+                WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
         }
 
         /// <summary>
@@ -317,6 +318,9 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
         {
+            if(!messageIds.Any())
+                return Task.CompletedTask;
+            
             return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
                 cancellationToken);
         }

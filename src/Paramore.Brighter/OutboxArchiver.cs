@@ -43,6 +43,7 @@ namespace Paramore.Brighter
             {
                 var messages = _outboxSync.DispatchedMessages(age.Milliseconds, _batchSize);
 
+                if (!messages.Any()) return;
                 foreach (var message in messages)
                 {
                     _archiveProvider.ArchiveMessage(message);
@@ -52,6 +53,7 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
+                activity?.SetStatus(ActivityStatusCode.Error, e.Message);
                 _logger.LogError(e, "Error while archiving from the outbox");
                 throw;
             }
@@ -78,6 +80,7 @@ namespace Paramore.Brighter
                 var messages = await _outboxAsync.DispatchedMessagesAsync(age.Milliseconds, _batchSize,
                     cancellationToken: cancellationToken);
 
+                if (!messages.Any()) return;
                 foreach (var message in messages)
                 {
                     await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
@@ -87,6 +90,7 @@ namespace Paramore.Brighter
             }
             catch (Exception e)
             {
+                activity?.SetStatus(ActivityStatusCode.Error, e.Message);
                 _logger.LogError(e, "Error while archiving from the outbox");
                 throw;
             }
