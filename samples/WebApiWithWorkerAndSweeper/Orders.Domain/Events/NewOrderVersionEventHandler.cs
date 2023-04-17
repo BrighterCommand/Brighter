@@ -10,7 +10,7 @@ public class NewOrderVersionEventHandler : RequestHandlerAsync<NewOrderVersionEv
         
     }
 
-    public override async Task<NewOrderVersionEvent> HandleAsync(NewOrderVersionEvent command, CancellationToken cancellationToken = default(CancellationToken))
+    public override async Task<NewOrderVersionEvent> HandleAsync(NewOrderVersionEvent command, CancellationToken cancellationToken = default)
     {
         // Todo: Plumb in action Logic
         var action = command.Type;

@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
         }
 
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken), IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);
@@ -86,7 +86,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return _posts.Select(outboxEntry => outboxEntry.Message).Take(pageSize).ToList();
         }
 
-        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1, CancellationToken cancellationToken = default)
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled<Message>(cancellationToken);
@@ -96,13 +96,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(Get(pageSize, pageNumber, args));
         }
 
         public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IEnumerable<Message>>();
             tcs.SetResult(_posts.Where(oe => messageIds.Contains(oe.Message.Id))
@@ -123,7 +123,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             foreach (var id in ids)
             {
@@ -132,7 +132,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default(CancellationToken))
+            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
         {
             return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
                 args));
@@ -197,7 +197,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken),
+            CancellationToken cancellationToken = default,
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             foreach (var message in messages)

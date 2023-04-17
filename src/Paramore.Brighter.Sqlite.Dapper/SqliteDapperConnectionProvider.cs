@@ -19,7 +19,7 @@ namespace Paramore.Brighter.Sqlite.Dapper
             return (SqliteConnection)_unitOfWork.Database;
         }
 
-        public Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<SqliteConnection>();
             tcs.SetResult(GetConnection());

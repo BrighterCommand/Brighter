@@ -24,7 +24,7 @@ namespace Greetings.Ports.CommandHandlers
         }
         
         public async override Task<AddGreetingCommand> HandleAsync(AddGreetingCommand command,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             await _unitOfWork.BeginTransactionAsync(cancellationToken);
 

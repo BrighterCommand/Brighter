@@ -97,7 +97,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <param name="message">The message whose contents we want to </param>
         /// <param name="cancellationToken">Add cancellation token</param>
         /// <returns>The message, with 'luggage' swapped out if over the threshold</returns>
-        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken= default(CancellationToken))
+        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken= default)
         {
             if (System.Text.Encoding.Unicode.GetByteCount(message.Body.Value) < _thresholdInBytes) return message;
 
@@ -122,7 +122,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// <param name="message">The message, with luggage retrieved if required</param>
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
-        public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
             if (message.Header.Bag.TryGetValue(CLAIM_CHECK, out object objId))
             {

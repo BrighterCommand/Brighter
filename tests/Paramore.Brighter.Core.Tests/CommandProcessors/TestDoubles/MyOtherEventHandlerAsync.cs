@@ -38,7 +38,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             _receivedMessages = receivedMessages;
         }
 
-        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<MyEvent> HandleAsync(MyEvent command, CancellationToken cancellationToken = default)
         {
             if (cancellationToken.IsCancellationRequested)
                 return command;

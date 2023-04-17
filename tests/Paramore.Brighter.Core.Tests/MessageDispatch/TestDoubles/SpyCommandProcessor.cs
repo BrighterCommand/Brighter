@@ -67,7 +67,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             Commands.Add(CommandType.Send);
         }
 
-        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public virtual async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             _requests.Enqueue(command);
             Commands.Add(CommandType.SendAsync);
@@ -82,7 +82,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
             Commands.Add(CommandType.Publish);
         }
 
-        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public virtual async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             _requests.Enqueue(@event);
             Commands.Add(CommandType.PublishAsync);
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         /// <param name="request">The request.</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public virtual async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             _requests.Enqueue(request);
             Commands.Add(CommandType.PostAsync);
@@ -133,7 +133,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
         public async Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             _postBox.Add(request.Id, request);
 
@@ -143,7 +143,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
         public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+            CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var ids = new List<Guid>();
             foreach (T r in requests)
@@ -172,7 +172,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
         public async Task ClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             ClearOutbox(posts.ToArray());
 
@@ -188,7 +188,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
         public Task BulkClearOutboxAsync(IEnumerable<Guid> posts, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return ClearOutboxAsync(posts, continueOnCapturedContext, cancellationToken);
         }
@@ -238,14 +238,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
 
             throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
         }
-        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
         {
             await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
             SendCount++;
             throw new DeferMessageAction();
         }
 
-        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
         {
             await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
             PublishCount++;

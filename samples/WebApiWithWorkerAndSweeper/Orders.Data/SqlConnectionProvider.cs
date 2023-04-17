@@ -18,7 +18,7 @@ public class SqlConnectionProvider : IMsSqlTransactionConnectionProvider
         return _sqlConnection.Connection;
     }
 
-    public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+    public Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
     {
         return Task.FromResult(_sqlConnection.Connection);
     }

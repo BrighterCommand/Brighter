@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
         public static int ReceivedCount { get; private set; }
         
         [UseInboxAsync(1, onceOnly: true, contextKey: typeof(MyStoredCommandToWarnHandlerAsync), onceOnlyAction: OnceOnlyAction.Warn)]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
         {
             ReceivedCount++;
 

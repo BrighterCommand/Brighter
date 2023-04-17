@@ -75,7 +75,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message to unwrap</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>a request</returns>
-        public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
         {
             var msg = message;
             await Transforms.EachAsync(async transform => msg = await transform.UnwrapAsync(msg,cancellationToken));

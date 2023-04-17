@@ -13,7 +13,7 @@ namespace Paramore.Brighter.DynamoDb
             IAmazonDynamoDB client,
             IEnumerable<string> tableNames,
             int pageSize = 10,
-            CancellationToken ct = default(CancellationToken))
+            CancellationToken ct = default)
         {
             var results = tableNames.ToDictionary(tableName => tableName, tableName => false);
 

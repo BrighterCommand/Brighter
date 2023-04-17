@@ -74,7 +74,8 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         public void Delete(params Guid[] messageIds)
         {
-            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
+            if(messageIds.Any())
+                WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
         }
 
         /// <summary>
@@ -86,7 +87,7 @@ namespace Paramore.Brighter
         /// <param name="transactionConnectionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
         public Task AddAsync(Message message, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken),
+            CancellationToken cancellationToken = default,
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
@@ -109,7 +110,7 @@ namespace Paramore.Brighter
         /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
         public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken),
+            CancellationToken cancellationToken = default,
             IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
             return WriteToStoreAsync(transactionConnectionProvider,
@@ -160,7 +161,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task{Message}" />.</returns>
         public Task<Message> GetAsync(Guid messageId, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(connection => InitGetMessageCommand(connection, messageId, outBoxTimeout),
                 dr => MapFunctionAsync(dr, cancellationToken), cancellationToken);
@@ -174,7 +175,7 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The Ids of the messages</param>
         /// <returns></returns>
         public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(
                 connection => InitGetMessagesCommand(connection, messageIds.ToList(), outBoxTimeout),
@@ -206,7 +207,7 @@ namespace Paramore.Brighter
             int pageSize = 100,
             int pageNumber = 1,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return (await ReadFromStoreAsync(connection => CreatePagedReadCommand(connection, pageSize, pageNumber),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken)).ToList();
@@ -235,7 +236,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null,
             Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return WriteToStoreAsync(null,
                 connection => InitMarkDispatchedCommand(connection, ids, dispatchedAt ?? DateTime.UtcNow), null,
@@ -255,7 +256,7 @@ namespace Paramore.Brighter
         public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince,
             int pageSize = 100, int pageNumber = 1,
             int outboxTimeout = -1, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             return ReadFromStoreAsync(
                 connection =>
@@ -317,6 +318,9 @@ namespace Paramore.Brighter
         /// <param name="messageIds">The id of the message to delete</param>
         public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
         {
+            if(!messageIds.Any())
+                return Task.CompletedTask;
+            
             return WriteToStoreAsync(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null,
                 cancellationToken);
         }

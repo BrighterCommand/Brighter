@@ -44,7 +44,7 @@ namespace Paramore.Brighter.MySql
         /// </summary>
         /// <param name="cancellationToken">Cancels the operation</param>
         /// <returns>A Sqlite connection</returns>
-        Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
+        Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default);
        
         /// <summary>
         /// Is there an ambient transaction? If so return it 
