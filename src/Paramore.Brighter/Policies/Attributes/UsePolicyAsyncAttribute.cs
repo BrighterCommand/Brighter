@@ -23,7 +23,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
+using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Policies.Handlers;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Policies.Attributes
 {
@@ -38,7 +41,7 @@ namespace Paramore.Brighter.Policies.Attributes
     [AttributeUsage(AttributeTargets.Method)]
     public class UsePolicyAsyncAttribute : RequestHandlerAttribute
     {
-        private readonly string _policy;
+        private readonly List<string> _policies = new List<string>();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="UsePolicyAsyncAttribute" /> class.
@@ -47,7 +50,17 @@ namespace Paramore.Brighter.Policies.Attributes
         /// <param name="step">The step.</param>
         public UsePolicyAsyncAttribute(string policy, int step) : base(step, HandlerTiming.Before)
         {
-            _policy = policy;
+            _policies.Add(policy);
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="UsePolicyAsyncAttribute" /> class.
+        /// </summary>
+        /// <param name="policies">A set of policy keys, used as a lookup into an <see cref="IAmAPolicyRegistry" />.</param>
+        /// <param name="step">The step</param>
+        public UsePolicyAsyncAttribute(string[] policies, int step) : base(step, HandlerTiming.Before)
+        {
+            policies.Each(p => _policies.Add(p));
         }
 
         /// <summary>
@@ -56,7 +69,7 @@ namespace Paramore.Brighter.Policies.Attributes
         /// <returns>System.Object[].</returns>
         public override object[] InitializerParams()
         {
-            return new object[] { _policy};
+            return new object[] { _policies};
         }
 
         /// <summary>
