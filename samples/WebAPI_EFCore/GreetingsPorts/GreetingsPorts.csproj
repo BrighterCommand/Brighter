@@ -10,7 +10,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.4" />
+      <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.5" />
       <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
       <PackageReference Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
       <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
