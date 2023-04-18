@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Policies.Attributes;
@@ -18,7 +19,7 @@ public class MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync : RequestHandle
     public override Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
     {
         ReceivedCommand = true;
-        return base.HandleAsync(command, cancellationToken);
+        throw new DivideByZeroException();
     }
 
     public static bool ShouldReceive(MyCommand myCommand)

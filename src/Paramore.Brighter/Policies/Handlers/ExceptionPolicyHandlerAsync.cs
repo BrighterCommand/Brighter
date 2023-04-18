@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Policies.Handlers
         /// <exception cref="System.ArgumentException">Could not find the policy for this attribute, did you register it with the command processor's container;initializerList</exception>
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
-            //we expect the first and only parameter to be a string
-            var policyName = (string)initializerList[0];
+            if (_initialized) return;
+            
             var policies = (List<string>)initializerList[0];
             policies.Each(p => _policies.Add(Context.Policies.Get<AsyncPolicy>(p)));
             _initialized = true;

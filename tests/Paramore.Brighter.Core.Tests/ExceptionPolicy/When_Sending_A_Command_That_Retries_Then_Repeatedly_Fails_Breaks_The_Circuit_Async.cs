@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using FluentAssertions.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -31,7 +32,7 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
 
             var container = new ServiceCollection();
             container.AddSingleton<MyMultiplePoliciesFailsWithDivideByZeroHandlerAsync>();
-            container.AddSingleton<ExceptionPolicyHandler<MyCommand>>();
+            container.AddSingleton<ExceptionPolicyHandlerAsync<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions()
             {
                 HandlerLifetime = ServiceLifetime.Transient
@@ -71,20 +72,20 @@ namespace Paramore.Brighter.Core.Tests.ExceptionPolicy
         }
 
         [Fact]
-        public void When_Sending_A_Command_That_Retries_Then_Repeatedly_Fails_Breaks_The_Circuit()
+        public async Task When_Sending_A_Command_That_Retries_Then_Repeatedly_Fails_Breaks_The_Circuit()
         {
             //First two should be caught, and increment the count
-            _firstException = Catch.Exception(async () => await _commandProcessor.SendAsync(new MyCommand()));
+            _firstException = await Catch.ExceptionAsync(async () => await _commandProcessor.SendAsync(new MyCommand()));
             //should have retried three times
             _retryCount.Should().Be(3);
             _retryCount = 0;
-            _secondException = Catch.Exception(async() => await _commandProcessor.SendAsync(new MyCommand()));
+            _secondException = await Catch.ExceptionAsync(async() => await _commandProcessor.SendAsync(new MyCommand()));
             //should have retried three times
             _retryCount.Should().Be(3);
             _retryCount = 0;
 
             //this one should tell us that the circuit is broken
-            _thirdException = Catch.Exception(async() => await _commandProcessor.SendAsync(new MyCommand()));
+            _thirdException = await Catch.ExceptionAsync(async() => await _commandProcessor.SendAsync(new MyCommand()));
             //should have retried three times
             _retryCount.Should().Be(0);
 
