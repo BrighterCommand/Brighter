@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Policies.Handlers
         public override void InitializeFromAttributeParams(params object[] initializerList)
         {
             if (_initialized) return;
-            
+
             var policies = (List<string>)initializerList[0];
             policies.Each(p => _policies.Add(Context.Policies.Get<AsyncPolicy>(p)));
             _initialized = true;
