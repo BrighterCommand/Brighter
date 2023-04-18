@@ -70,7 +70,7 @@ namespace Paramore.Brighter
             _commandProcessor.Post(request);
         }
 
-        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             await _commandProcessor.PostAsync(request, continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
         }

@@ -152,7 +152,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request, optional</param>
         /// <returns><see cref="Task" />.</returns>
-        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             var parameters = InitAddDbParameters(command, contextKey);
@@ -189,7 +189,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <param name="contextKey">An identifier for the context in which the command has been processed (for example, the name of the handler)</param>
         /// <param name="timeoutInMilliseconds"></param>
         /// <returns>True if it exists, False otherwise</returns>
-        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken)) where T : class, IRequest
+        public async Task<bool> ExistsAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             var sql = $"SELECT TOP 1 CommandId FROM {_configuration.InBoxTableName} WHERE CommandId = @commandId AND ContextKey = @contextKey";
             var parameters = new[]
@@ -230,7 +230,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         /// <param name="timeoutInMilliseconds">Timeout in milliseconds; -1 for default timeout</param>
         /// <param name="cancellationToken">Allow the sender to cancel the request</param>
         /// <returns><see cref="Task{T}" />.</returns>
-        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<T> GetAsync<T>(Guid id, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             var sql = $"select * from {_configuration.InBoxTableName} where CommandId = @commandId AND ContextKey = @contextKey";
@@ -275,7 +275,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             Func<SqlCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
-            CancellationToken cancellationToken = default(CancellationToken),
+            CancellationToken cancellationToken = default,
             params SqlParameter[] parameters)
         {
             using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))

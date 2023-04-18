@@ -42,7 +42,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
         public DynamoDbInboxDuplicateMessageAsyncTests()
         {
             _dynamoDbInbox = new DynamoDbInbox(Client);
- 
+
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";
         }
@@ -57,6 +57,5 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
             //_should_succeed_even_if_the_message_is_a_duplicate
             _exception.Should().BeNull();
         }
-
     }
 }

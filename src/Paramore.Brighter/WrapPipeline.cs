@@ -77,7 +77,7 @@ namespace Paramore.Brighter
         /// <param name="request">The request to wrap</param>
         /// <param name="cancellationToken">The cancellation token</param>
         /// <returns></returns>
-        public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<Message> WrapAsync(TRequest request, CancellationToken cancellationToken = default)
         {
             var message = MessageMapper.MapToMessage(request);
             await Transforms.EachAsync(async transform => message = await transform.WrapAsync(message, cancellationToken));

@@ -376,7 +376,9 @@ namespace Paramore.Brighter
             Bag[MessageTelemetry.SourceHeaderName] = "Brighter"; //ToDo: Plumb in something better than this
             Bag[MessageTelemetry.EventTypeHeaderName] = eventType;
 
+#pragma warning disable CS0618
             UpdateTelemetryFromHeaders();
+#pragma warning restore CS0618
         }
     }
 }

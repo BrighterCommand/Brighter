@@ -26,7 +26,7 @@ using System;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    internal class MyCommand : Command
+    public class MyCommand : Command
     {
         public MyCommand()
             :base(Guid.NewGuid()) 

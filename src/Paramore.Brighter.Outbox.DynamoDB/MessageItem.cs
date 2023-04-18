@@ -181,7 +181,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             byte[] data = Array.Empty<byte>();
             Primitive primitive = entry as Primitive; 
             if (primitive?.Value is byte[] bytes)
-                data = ((byte[])bytes);
+                data = bytes;
             if (primitive?.Value is string text)    //for historical data that used UTF-8 strings
                 data = Encoding.UTF8.GetBytes(text);
             if (primitive == null || !(primitive.Value is string || primitive.Value is byte[]))

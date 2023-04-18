@@ -8,14 +8,14 @@ using Xunit;
 
 namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
 {
-    public class DynamoDbFactoryOtherTableAttributesTests 
+    public class DynamoDbFactoryOtherTableAttributesTests
     {
         [Fact]
         public void When_Creating_A_Table_With_Admin_Attributes()
         {
             //arrange
             var tableRequestFactory = new DynamoDbTableFactory();
-            
+
             //act
             CreateTableRequest tableRequest = tableRequestFactory.GenerateCreateTableRequest<DynamoDbEntity>(
                 new DynamoDbCreateProvisionedThroughput(),
@@ -31,12 +31,12 @@ namespace Paramore.Brighter.DynamoDB.Tests.DynamoDbExtensions
             Assert.Contains(tableRequest.Tags, tag => tag.Key == "beta" && tag.Value == "True");
             Assert.Contains(tableRequest.Tags, tag => tag.Key == "paramore" && tag.Value == "Brighter");
         }
-    
+
         [DynamoDBTable("MyEntity")]
         private class DynamoDbEntity
         {
             [DynamoDBHashKey]
             public string Id { get; set; }
         }
- }
+    }
 }

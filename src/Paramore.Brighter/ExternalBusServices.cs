@@ -83,7 +83,9 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
+#pragma warning disable CS0618
             if (AsyncOutbox is IAmABulkOutboxAsync<Message> box)
+#pragma warning restore CS0618
             {
                 foreach (var chunk in ChunkMessages(messages))
                 {
@@ -121,7 +123,9 @@ namespace Paramore.Brighter
         {
             CheckOutboxOutstandingLimit();
 
+#pragma warning disable CS0618
             if (OutBox is IAmABulkOutboxSync<Message> box)
+#pragma warning restore CS0618
             {
                 foreach (var chunk in ChunkMessages(messages))
                 {
@@ -211,7 +215,7 @@ namespace Paramore.Brighter
         internal async Task ClearOutboxAsync(
             IEnumerable<Guid> posts, 
             bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
 
             if (!HasAsyncOutbox())
@@ -509,7 +513,9 @@ namespace Paramore.Brighter
         }
         internal bool HasAsyncBulkOutbox()
         {
+#pragma warning disable CS0618
             return AsyncOutbox is IAmABulkOutboxAsync<Message>;
+#pragma warning restore CS0618
         }
 
         internal bool HasOutbox()
@@ -519,7 +525,9 @@ namespace Paramore.Brighter
         
         internal bool HasBulkOutbox()
         {
+#pragma warning disable CS0618
             return OutBox is IAmABulkOutboxSync<Message>;
+#pragma warning restore CS0618
         }
 
         private void OutstandingMessagesCheck()
@@ -576,7 +584,7 @@ namespace Paramore.Brighter
         }
 
         private async Task<bool> RetryAsync(Func<CancellationToken, Task> send, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default(CancellationToken))
+            CancellationToken cancellationToken = default)
         {
             var result = await PolicyRegistry.Get<AsyncPolicy>(CommandProcessor.RETRYPOLICYASYNC)
                 .ExecuteAndCaptureAsync(send, cancellationToken, continueOnCapturedContext)

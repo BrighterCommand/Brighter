@@ -49,7 +49,7 @@ namespace Paramore.Brighter.MySql
             return new MySqlConnection(_connectionString);
         }
 
-        public async Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<MySqlConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
 

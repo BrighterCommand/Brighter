@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly.TestDoubles
         public static bool CommandReceived { get; set; }
         
         [UseInboxAsync(1, onceOnly: true, onceOnlyAction: OnceOnlyAction.Throw, contextKey: typeof(MyStoredCommandToThrowHandlerAsync))]
-        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default(CancellationToken))
+        public override async Task<MyCommand> HandleAsync(MyCommand command, CancellationToken cancellationToken = default)
         {
             CommandReceived = true;
 

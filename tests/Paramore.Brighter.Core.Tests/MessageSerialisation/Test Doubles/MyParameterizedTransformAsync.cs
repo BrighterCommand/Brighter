@@ -21,7 +21,7 @@ public class MyParameterizedTransformAsync : IAmAMessageTransformAsync
         _displayFormat = (string)initializerList[0];
     }
 
-    public Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>(cancellationToken);
         message.Header.Bag.Add(HEADER_KEY, _template);
@@ -29,7 +29,7 @@ public class MyParameterizedTransformAsync : IAmAMessageTransformAsync
         return tcs.Task;
     }
 
-    public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default(CancellationToken))
+    public Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
     {
         var tcs = new TaskCompletionSource<Message>(cancellationToken);
         var oldCommand = JsonSerializer.Deserialize<MyTransformableCommand>(message.Body.Value);

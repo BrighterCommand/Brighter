@@ -51,7 +51,7 @@ namespace HelloWorldAsync
             _endpoint = endpoint;
         }
 
-        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<IpFyApiResult> GetAsync(CancellationToken cancellationToken = default)
         {
             using (var client = new HttpClient())
             {

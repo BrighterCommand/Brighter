@@ -7,7 +7,7 @@ namespace Paramore.Brighter.MsSql
     public interface IMsSqlConnectionProvider
     {
         SqlConnection GetConnection();
-        Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
+        Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default);
         SqlTransaction GetTransaction();
         bool HasOpenTransaction { get; }
         bool IsSharedConnection { get; }

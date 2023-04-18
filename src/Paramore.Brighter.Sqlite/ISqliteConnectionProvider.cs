@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Sqlite
         /// </summary>
         /// <param name="cancellationToken">Cancels the operation</param>
         /// <returns>A Sqlite connection</returns>
-        Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default(CancellationToken));
+        Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default);
        
         /// <summary>
         /// Is there an ambient transaction? If so return it 

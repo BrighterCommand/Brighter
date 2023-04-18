@@ -58,7 +58,7 @@ namespace Paramore.Brighter.DynamoDb
         /// Commit a transaction, performing all associated write actions
         /// </summary>
         /// <returns>A response indicating the status of the transaction</returns>
-        public async Task<TransactWriteItemsResponse> CommitAsync(CancellationToken ct = default(CancellationToken))
+        public async Task<TransactWriteItemsResponse> CommitAsync(CancellationToken ct = default)
         {
              if (!HasTransaction())
                  throw new InvalidOperationException("No transaction to commit");
