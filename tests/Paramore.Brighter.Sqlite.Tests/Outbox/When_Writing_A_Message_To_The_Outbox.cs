@@ -62,7 +62,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 delayedMilliseconds:5,
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyTo",
-                contentType: "text/plain");
+                contentType: "text/plain",
+                partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -88,6 +89,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
+            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
              
             
             //Bag serialization
