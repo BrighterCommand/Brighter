@@ -26,8 +26,9 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Linq;
 using System.Text.Json;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Npgsql;
 using NpgsqlTypes;
@@ -36,335 +37,35 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutbox : IAmABulkOutboxSync<Message>
+    public class
+        PostgreSqlOutbox : RelationDatabaseOutbox<NpgsqlConnection, NpgsqlCommand, NpgsqlDataReader, NpgsqlParameter>
     {
-        private readonly PostgreSqlOutboxConfiguration _configuration;
-        private readonly IPostgreSqlConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
 
-        
-        private const string _deleteMessageCommand = "DELETE FROM {0} WHERE MessageId IN ({1})";
-        private readonly string _outboxTableName;
-        
-        public bool ContinueOnCapturedContext
-        {
-            get => throw new NotImplementedException();
-            set => throw new NotImplementedException();
-        }
+        private readonly PostgreSqlConfiguration _configuration;
+        private readonly IPostgreSqlConnectionProvider _connectionProvider;
 
-        /// <summary>
-        /// Initialises a new instance of <see cref="PostgreSqlOutbox"> class.
-        /// </summary>
-        /// <param name="postgresSqlOutboxConfiguration">PostgreSql Outbox Configuration.</param>
-        public PostgreSqlOutbox(PostgreSqlOutboxConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
+
+        public PostgreSqlOutbox(
+            PostgreSqlConfiguration configuration,
+            IPostgreSqlConnectionProvider connectionProvider) : base(
+            configuration.OutBoxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
         {
             _configuration = configuration;
-            _connectionProvider = connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(configuration);
-            _outboxTableName = configuration.OutboxTableName;
+            _connectionProvider = connectionProvider;
         }
 
-        /// <summary>
-        /// Adds the specified message.
-        /// </summary>
-        /// <param name="message">The message.</param>
-        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
-        {
-            var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
-            var parameters = InitAddDbParameters(message);
-            var connection = GetOpenConnection(connectionProvider);
+        public PostgreSqlOutbox(PostgreSqlConfiguration configuration)
+            : this(configuration, new PostgreSqlNpgsqlConnectionProvider(configuration))
+        { }
 
-            try
-            {
-                using (var command = InitAddDbCommand(connection, parameters))
-                {
-                    if (connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
-                }
-            }
-            catch (PostgresException sqlException)
-            {
-                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                {
-                    s_logger.LogWarning(
-                        "PostgresSQLOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
-                        message.Id);
-                    return;
-                }
-
-                throw;
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-        
-        /// <summary>
-        /// Awaitable add the specified message.
-        /// </summary>
-        /// <param name="messages">The message.</param>
-        /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
-        {
-            var connectionProvider = GetConnectionProvider(transactionConnectionProvider);
-            var connection = GetOpenConnection(connectionProvider);
-
-            try
-            {
-                using (var command = InitBulkAddDbCommand(connection, messages.ToList()))
-                {
-                    if (connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
-                    command.ExecuteNonQuery();
-                }
-            }
-            catch (PostgresException sqlException)
-            {
-                if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
-                {
-                    s_logger.LogWarning(
-                        "PostgresSQLOutbox: A duplicate Message was found in the batch");
-                    return;
-                }
-
-                throw;
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-
-        /// <summary>
-        /// Returns messages that have been successfully dispatched
-        /// </summary>
-        /// <param name="millisecondsDispatchedSince">How long ago was the message dispatched?</param>
-        /// <param name="pageSize">How many messages returned at once?</param>
-        /// <param name="pageNumber">Which page of the dispatched messages to return?</param>
-        /// <param name="outboxTimeout"></param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns>A list of dispatched messages</returns>
-        public IEnumerable<Message> DispatchedMessages(
-            double millisecondsDispatchedSince,
-            int pageSize = 100,
-            int pageNumber = 1,
-            int outboxTimeout = -1,
-            Dictionary<string, object> args = null)
-        {
-            var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
-
-            try
-            {
-                using (var command = InitPagedDispatchedCommand(connection, millisecondsDispatchedSince, pageSize, pageNumber))
-                {
-                    var messages = new List<Message>();
-
-                    using (var dbDataReader = command.ExecuteReader())
-                    {
-                        while (dbDataReader.Read())
-                            messages.Add(MapAMessage(dbDataReader));
-                    }
-
-                    return messages;
-                }
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-
-        /// <summary>
-        /// Returns all messages in the store
-        /// </summary>
-        /// <param name="pageSize">Number of messages to return in search results (default = 100)</param>
-        /// <param name="pageNumber">Page number of results to return (default = 1)</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns>A list of messages</returns>
-        public IList<Message> Get(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null)
-        {
-            var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
-
-            try
-            {
-                using (var command = InitPagedReadCommand(connection, pageSize, pageNumber))
-                {
-                    var messages = new List<Message>();
-
-                    using (var dbDataReader = command.ExecuteReader())
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            messages.Add(MapAMessage(dbDataReader));
-                        }
-                    }
-
-                    return messages;
-                }
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-
-        /// <summary>
-        /// Gets the specified message identifier.
-        /// </summary>
-        /// <param name="messageId">The message identifier.</param>
-        /// <param name="outBoxTimeout">The time allowed for the read in milliseconds; on  a -2 default</param>
-        /// <returns>The message</returns>
-        public Message Get(Guid messageId, int outBoxTimeout = -1)
-        {
-            var sql = string.Format(
-                "SELECT Id, MessageId, Topic, MessageType, Timestamp, Correlationid, ReplyTo, ContentType, HeaderBag, Body FROM {0} WHERE MessageId = @MessageId",
-                _configuration.OutboxTableName);
-            var parameters = new[] { InitNpgsqlParameter("MessageId", messageId) };
-
-            return ExecuteCommand(command => MapFunction(command.ExecuteReader()), sql, outBoxTimeout, parameters);
-        }
-
-        /// <summary>
-        /// Update a message to show it is dispatched
-        /// </summary>
-        /// <param name="id">The id of the message to update</param>
-        /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
-        public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
-        {
-            var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
-
-            try
-            {
-                using (var command = InitMarkDispatchedCommand(connection, id, dispatchedAt))
-                {
-                    command.ExecuteNonQuery();
-                }
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-
-        /// <summary>
-        /// Returns messages that have yet to be dispatched
-        /// </summary>
-        /// <param name="millSecondsSinceSent">How long ago as the message sent?</param>
-        /// <param name="pageSize">How many messages to return at once?</param>
-        /// <param name="pageNumber">Which page number of messages</param>
-        /// <param name="args">Additional parameters required for search, if any</param>
-        /// <returns>A list of messages that are outstanding for dispatch</returns>
-        public IEnumerable<Message> OutstandingMessages(
-             double millSecondsSinceSent,
-             int pageSize = 100,
-             int pageNumber = 1,
-             Dictionary<string, object> args = null)
-        {
-            var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
-
-            try
-            {
-                using (var command = InitPagedOutstandingCommand(connection, millSecondsSinceSent, pageSize, pageNumber))
-                {
-                    var messages = new List<Message>();
-
-                    using (var dbDataReader = command.ExecuteReader())
-                    {
-                        while (dbDataReader.Read())
-                        {
-                            messages.Add(MapAMessage(dbDataReader));
-                        }
-                    }
-
-                    return messages;
-                }
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-
-        public void Delete(params Guid[] messageIds)
-        {
-            WriteToStore(null, connection => InitDeleteDispatchedCommand(connection, messageIds), null);
-        }
-        
-        private NpgsqlCommand InitDeleteDispatchedCommand(NpgsqlConnection connection, IEnumerable<Guid> messageIds)
-        {
-            var inClause = GenerateInClauseAndAddParameters(messageIds.ToList());
-            foreach (var p in inClause.parameters)
-            {
-                p.DbType = DbType.Object;
-            }
-            return CreateCommand(connection, GenerateSqlText(_deleteMessageCommand, inClause.inClause), 0,
-                inClause.parameters);
-        }
-        
-        private (string inClause, NpgsqlParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
-        {
-            var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();
-
-            var parameters = new NpgsqlParameter[messageIds.Count];
-            for (int i = 0; i < paramNames.Count(); i++)
-            {
-                parameters[i] = CreateSqlParameter(paramNames[i], messageIds[i]);
-            }
-
-            return (string.Join(",", paramNames), parameters);
-        }
-        
-        private NpgsqlParameter CreateSqlParameter(string parameterName, object value)
-        {
-            return new NpgsqlParameter(parameterName, value ?? DBNull.Value);
-        }
-        
-        private string GenerateSqlText(string sqlFormat, params string[] orderedParams)
-            => string.Format(sqlFormat, orderedParams.Prepend(_outboxTableName).ToArray());
-        
-        private NpgsqlCommand CreateCommand(NpgsqlConnection connection, string sqlText, int outBoxTimeout,
-            params NpgsqlParameter[] parameters)
-
-        {
-            var command = connection.CreateCommand();
-
-            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
-            command.CommandText = sqlText;
-            command.Parameters.AddRange(parameters);
-
-            return command;
-        }
-        
-        private void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider, Func<NpgsqlConnection, NpgsqlCommand> commandFunc, Action loggingAction)
+        protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
+            Func<NpgsqlConnection, NpgsqlCommand> commandFunc,
+            Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null && transactionConnectionProvider is IPostgreSqlConnectionProvider provider)
+            if (transactionConnectionProvider != null &&
+                transactionConnectionProvider is IPostgreSqlConnectionProvider provider)
                 connectionProvider = provider;
 
             var connection = connectionProvider.GetConnection();
@@ -399,200 +100,250 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             }
         }
 
-        private IPostgreSqlConnectionProvider GetConnectionProvider(IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        protected override async Task WriteToStoreAsync(
+            IAmABoxTransactionConnectionProvider transactionConnectionProvider,
+            Func<NpgsqlConnection, NpgsqlCommand> commandFunc,
+            Action loggingAction,
+            CancellationToken cancellationToken)
         {
-            var connectionProvider = _connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(_configuration);
+            var connectionProvider = _connectionProvider;
+            if (transactionConnectionProvider != null &&
+                transactionConnectionProvider is IPostgreSqlConnectionProvider provider)
+                connectionProvider = provider;
 
-            if (transactionConnectionProvider != null)
+            var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+            using (var command = commandFunc.Invoke(connection))
             {
-                if (transactionConnectionProvider is IPostgreSqlTransactionConnectionProvider provider)
-                    connectionProvider = provider;
-                else
-                    throw new Exception($"{nameof(transactionConnectionProvider)} does not implement interface {nameof(IPostgreSqlTransactionConnectionProvider)}.");
-            }
+                try
+                {
+                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                        command.Transaction = connectionProvider.GetTransaction();
+                    await command.ExecuteNonQueryAsync(cancellationToken);
+                }
+                catch (PostgresException sqlException)
+                {
+                    if (sqlException.SqlState == PostgresErrorCodes.UniqueViolation)
+                    {
+                        s_logger.LogWarning(
+                            "PostgresSqlOutbox: A duplicate was detected in the batch");
+                        return;
+                    }
 
-            return connectionProvider;
+                    throw;
+                }
+                finally
+                {
+                    if (!connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!connectionProvider.HasOpenTransaction)
+                        await connection.CloseAsync();
+                }
+            }
         }
 
-        private NpgsqlConnection GetOpenConnection(IPostgreSqlConnectionProvider connectionProvider)
+        protected override T ReadFromStore<T>(Func<NpgsqlConnection, NpgsqlCommand> commandFunc,
+            Func<NpgsqlDataReader, T> resultFunc)
         {
-            NpgsqlConnection connection = connectionProvider.GetConnection();
+            var connection = _connectionProvider.GetConnection();
 
             if (connection.State != ConnectionState.Open)
                 connection.Open();
-
-            return connection;
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    return resultFunc.Invoke(command.ExecuteReader());
+                }
+                finally
+                {
+                    if (!_connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!_connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
         }
 
-        private NpgsqlParameter InitNpgsqlParameter(string parametername, object value)
+        protected override async Task<T> ReadFromStoreAsync<T>(Func<NpgsqlConnection, NpgsqlCommand> commandFunc,
+            Func<NpgsqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
         {
-            if (value != null)
-                return new NpgsqlParameter(parametername, value);
-            else
-                return new NpgsqlParameter(parametername, DBNull.Value);
+            var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+
+            if (connection.State != ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
+            using (var command = commandFunc.Invoke(connection))
+            {
+                try
+                {
+                    return await resultFunc.Invoke(await command.ExecuteReaderAsync(cancellationToken));
+                }
+                finally
+                {
+                    if (!_connectionProvider.IsSharedConnection)
+                        connection.Dispose();
+                    else if (!_connectionProvider.HasOpenTransaction)
+                        connection.Close();
+                }
+            }
         }
 
-        private NpgsqlCommand InitPagedDispatchedCommand(NpgsqlConnection connection, double millisecondsDispatchedSince,
+        protected override NpgsqlCommand CreateCommand(
+            NpgsqlConnection connection,
+            string sqlText,
+            int outBoxTimeout,
+            params NpgsqlParameter[] parameters)
+        {
+            var command = connection.CreateCommand();
+
+            command.CommandTimeout = outBoxTimeout < 0 ? 0 : outBoxTimeout;
+            command.CommandText = sqlText;
+            command.Parameters.AddRange(parameters);
+
+            return command;
+        }
+
+        protected override NpgsqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
             int pageSize, int pageNumber)
         {
-            var command = connection.CreateCommand();
+            var offset = (pageNumber - 1) * pageSize;
+            var parameters = new NpgsqlParameter[3];
+            parameters[0] = CreateSqlParameter("OffsetValue", offset);
+            parameters[1] = CreateSqlParameter("PageSize", pageSize);
+            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
 
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("PageNumber", pageNumber),
-                InitNpgsqlParameter("PageSize", pageSize),
-                InitNpgsqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince)
-            };
-
-            var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE DISPATCHED IS NOT NULL AND DISPATCHED < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-
-            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-            command.Parameters.AddRange(parameters);
-
-            return command;
+            return parameters;
         }
 
-        private NpgsqlCommand InitPagedReadCommand(NpgsqlConnection connection, int pageSize, int pageNumber)
+        protected override NpgsqlParameter CreateSqlParameter(string parameterName, object value)
         {
-            var command = connection.CreateCommand();
-
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("PageNumber", pageNumber),
-                InitNpgsqlParameter("PageSize", pageSize)
-            };
-
-            var pagingSqlFormat =
-                "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp DESC) AS NUMBER, * FROM {0}) AS TBL WHERE NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-
-            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-            command.Parameters.AddRange(parameters);
-
-            return command;
+            return new NpgsqlParameter { ParameterName = parameterName, Value = value };
         }
 
-        private NpgsqlCommand InitPagedOutstandingCommand(NpgsqlConnection connection, double milliSecondsSinceAdded, int pageSize,
-            int pageNumber)
-        {
-            var command = connection.CreateCommand();
-
-            var parameters = new[]
-            {
-                InitNpgsqlParameter("PageNumber", pageNumber),
-                InitNpgsqlParameter("PageSize", pageSize),
-                InitNpgsqlParameter("OutstandingSince", milliSecondsSinceAdded)
-            };
-
-            var pagingSqlFormat =
-               "SELECT * FROM (SELECT ROW_NUMBER() OVER(ORDER BY Timestamp ASC) AS NUMBER, * FROM {0} WHERE DISPATCHED IS NULL) AS TBL WHERE TIMESTAMP < (CURRENT_TIMESTAMP + (@OutstandingSince || ' millisecond')::INTERVAL) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
-
-            command.CommandText = string.Format(pagingSqlFormat, _configuration.OutboxTableName);
-            command.Parameters.AddRange(parameters);
-
-            return command;
-        }
-
-        private NpgsqlParameter[] InitAddDbParameters(Message message, int? position = null)
+        protected override NpgsqlParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagjson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
-            return new NpgsqlParameter[]
+            return new[]
             {
-                InitNpgsqlParameter($"{prefix}MessageId", message.Id),
-                InitNpgsqlParameter($"{prefix}MessageType", message.Header.MessageType.ToString()),
-                InitNpgsqlParameter($"{prefix}Topic", message.Header.Topic),
-                new NpgsqlParameter($"{prefix}Timestamp", NpgsqlDbType.TimestampTz) {Value = message.Header.TimeStamp},
-                InitNpgsqlParameter($"{prefix}CorrelationId", message.Header.CorrelationId),
-                InitNpgsqlParameter($"{prefix}ReplyTo", message.Header.ReplyTo),
-                InitNpgsqlParameter($"{prefix}ContentType", message.Header.ContentType),
-                InitNpgsqlParameter($"{prefix}HeaderBag", bagjson),
-                InitNpgsqlParameter($"{prefix}Body", message.Body.Value)
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}MessageId", NpgsqlDbType = NpgsqlDbType.Uuid, Value = message.Id
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}MessageType",
+                    NpgsqlDbType = NpgsqlDbType.Text,
+                    Value = message.Header.MessageType.ToString()
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}Topic",
+                    NpgsqlDbType = NpgsqlDbType.Text,
+                    Value = message.Header.Topic
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}Timestamp",
+                    NpgsqlDbType = NpgsqlDbType.TimestampTz,
+                    Value = message.Header.TimeStamp
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}CorrelationId",
+                    NpgsqlDbType = NpgsqlDbType.Uuid,
+                    Value = message.Header.CorrelationId
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}ReplyTo",
+                    NpgsqlDbType = NpgsqlDbType.Varchar,
+                    Value = message.Header.ReplyTo
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}ContentType",
+                    NpgsqlDbType = NpgsqlDbType.Varchar,
+                    Value = message.Header.ContentType
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}PartitionKey",
+                    NpgsqlDbType = NpgsqlDbType.Varchar,
+                    Value = message.Header.PartitionKey
+                },
+                new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}HeaderBag", NpgsqlDbType = NpgsqlDbType.Text, Value = bagjson
+                },
+                _configuration.BinaryMessagePayload ? new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}Body",
+                    NpgsqlDbType = NpgsqlDbType.Bytea,
+                    Value = message.Body.Bytes
+                } 
+                : new NpgsqlParameter
+                {
+                    ParameterName = $"{prefix}Body",
+                    NpgsqlDbType = NpgsqlDbType.Text,
+                    Value = message.Body.Value
+                }
             };
         }
 
-        private NpgsqlCommand InitMarkDispatchedCommand(NpgsqlConnection connection, Guid messageId,
-            DateTime? dispatchedAt)
+        protected override Message MapFunction(NpgsqlDataReader dr)
         {
-            var command = connection.CreateCommand();
-            command.CommandText = $"UPDATE {_configuration.OutboxTableName} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
-            command.Parameters.Add(InitNpgsqlParameter("MessageId", messageId));
-            command.Parameters.Add(InitNpgsqlParameter("DispatchedAt", dispatchedAt));
-            return command;
-        }
-
-        private T ExecuteCommand<T>(Func<NpgsqlCommand, T> execute, string sql, int messageStoreTimeout,
-            NpgsqlParameter[] parameters)
-        {
-            var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
-
-            try
+            if (dr.Read())
             {
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = sql;
-                    command.Parameters.AddRange(parameters);
-
-                    if (messageStoreTimeout != -1)
-                        command.CommandTimeout = messageStoreTimeout;
-
-                    return execute(command);
-                }
-            }
-            finally
-            {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
-            }
-        }
-
-        private NpgsqlCommand InitAddDbCommand(NpgsqlConnection connection, NpgsqlParameter[] parameters)
-        {
-            var command = connection.CreateCommand();
-
-            var addSqlFormat = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp::timestamptz, @CorrelationId, @ReplyTo, @ContentType,  @HeaderBag, @Body)";
-
-            command.CommandText = string.Format(addSqlFormat, _configuration.OutboxTableName);
-            command.Parameters.AddRange(parameters);
-
-            return command;
-        }
-        
-        private NpgsqlCommand InitBulkAddDbCommand(NpgsqlConnection connection, List<Message> messages)
-        {
-            var messageParams = new List<string>();
-            var parameters = new List<NpgsqlParameter>();
-            
-            for (int i = 0; i < messages.Count; i++)
-            {
-                messageParams.Add($"(@p{i}_MessageId, @p{i}_MessageType, @p{i}_Topic, @p{i}_Timestamp, @p{i}_CorrelationId, @p{i}_ReplyTo, @p{i}_ContentType, @p{i}_HeaderBag, @p{i}_Body)");
-                parameters.AddRange(InitAddDbParameters(messages[i], i));
-                
-            }
-            var sql = $"INSERT INTO {_configuration.OutboxTableName} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, HeaderBag, Body) VALUES {string.Join(",", messageParams)}";
-            
-            var command = connection.CreateCommand();
-            
-            command.CommandText = sql;
-            command.Parameters.AddRange(parameters.ToArray());
-
-            return command;
-        }
-
-        private Message MapFunction(IDataReader reader)
-        {
-            if (reader.Read())
-            {
-                return MapAMessage(reader);
+                return MapAMessage(dr);
             }
 
             return new Message();
         }
 
-        private Message MapAMessage(IDataReader dr)
+        protected override async Task<Message> MapFunctionAsync(NpgsqlDataReader dr,
+            CancellationToken cancellationToken)
+        {
+            if (await dr.ReadAsync(cancellationToken))
+            {
+                return MapAMessage(dr);
+            }
+
+            return new Message();
+        }
+
+        protected override IEnumerable<Message> MapListFunction(NpgsqlDataReader dr)
+        {
+            var messages = new List<Message>();
+            while (dr.Read())
+            {
+                messages.Add(MapAMessage(dr));
+            }
+
+            dr.Close();
+
+            return messages;
+        }
+
+        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(
+            NpgsqlDataReader dr,
+            CancellationToken cancellationToken)
+        {
+            var messages = new List<Message>();
+            while (await dr.ReadAsync(cancellationToken))
+            {
+                messages.Add(MapAMessage(dr));
+            }
+
+            await dr.CloseAsync();
+
+            return messages;
+        }
+
+        public Message MapAMessage(IDataReader dr)
         {
             var id = GetMessageId(dr);
             var messageType = GetMessageType(dr);
@@ -602,6 +353,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             var correlationId = GetCorrelationId(dr);
             var replyTo = GetReplyTo(dr);
             var contentType = GetContentType(dr);
+            var partitionKey = GetPartitionKey(dr);
 
             var header = new MessageHeader(
                 messageId: id,
@@ -612,7 +364,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 delayedMilliseconds: 0,
                 correlationId: correlationId,
                 replyTo: replyTo,
-                contentType: contentType);
+                contentType: contentType,
+                partitionKey: partitionKey);
 
             Dictionary<string, object> dictionaryBag = GetContextBag(dr);
             if (dictionaryBag != null)
@@ -623,9 +376,40 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 }
             }
 
-            var body = new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
+            var body = _configuration.BinaryMessagePayload
+                ? new MessageBody(((NpgsqlDataReader)dr).GetFieldValue<byte[]>(dr.GetOrdinal("Body")))
+                :new MessageBody(dr.GetString(dr.GetOrdinal("Body")));
 
             return new Message(header, body);
+        }
+
+        private string GetContentType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal))
+                return null;
+
+            var replyTo = dr.GetString(ordinal);
+            return replyTo;
+        }
+
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        {
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag =
+                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
+            return dictionaryBag;
+        }
+
+        private Guid? GetCorrelationId(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("CorrelationId");
+            if (dr.IsDBNull(ordinal))
+                return null;
+
+            var correlationId = dr.GetGuid(ordinal);
+            return correlationId;
         }
 
         private static string GetTopic(IDataReader dr)
@@ -643,14 +427,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return dr.GetGuid(dr.GetOrdinal("MessageId"));
         }
 
-        private string GetContentType(IDataReader dr)
+        private string GetPartitionKey(IDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal))
-                return null;
+            var ordinal = dr.GetOrdinal("PartitionKey");
+            if (dr.IsDBNull(ordinal)) return null;
 
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            var partitionKey = dr.GetString(ordinal);
+            return partitionKey;
         }
 
         private string GetReplyTo(IDataReader dr)
@@ -661,24 +444,6 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             var replyTo = dr.GetString(ordinal);
             return replyTo;
-        }
-
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
-        {
-            var i = dr.GetOrdinal("HeaderBag");
-            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag = JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
-            return dictionaryBag;
-        }
-
-        private Guid? GetCorrelationId(IDataReader dr)
-        {
-            var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal))
-                return null;
-
-            var correlationId = dr.GetGuid(ordinal);
-            return correlationId;
         }
 
         private static DateTime GetTimeStamp(IDataReader dr)

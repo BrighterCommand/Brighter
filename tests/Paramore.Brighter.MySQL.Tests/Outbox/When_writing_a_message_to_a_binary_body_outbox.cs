@@ -36,7 +36,8 @@ namespace Paramore.Brighter.MySQL.Tests
                 delayedMilliseconds: 5,
                 correlationId: new Guid(),
                 replyTo: "ReplyTo",
-                contentType: "application/octet-stream");
+                contentType: "application/octet-stream",
+                partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -67,7 +68,7 @@ namespace Paramore.Brighter.MySQL.Tests
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-
+            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
 
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();

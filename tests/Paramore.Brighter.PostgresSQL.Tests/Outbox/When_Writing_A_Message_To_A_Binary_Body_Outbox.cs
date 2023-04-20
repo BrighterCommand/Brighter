@@ -1,29 +1,4 @@
-#region Licence
-
-/* The MIT License (MIT)
-Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the “Software”), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE. */
-
-#endregion
-
-using System;
+﻿using System;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.PostgreSql;
 using Xunit;
@@ -31,7 +6,7 @@ using Xunit;
 namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
 {
     [Trait("Category", "PostgresSql")]
-    public class SqlOutboxWritingMessageTests : IDisposable
+    public class SqlBinaryOutboxWritingMessageTests : IDisposable
     {
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
@@ -48,19 +23,19 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         private readonly DateTime _value5 = DateTime.UtcNow;
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
 
-        public SqlOutboxWritingMessageTests()
+        public SqlBinaryOutboxWritingMessageTests()
         {
-            _postgresSqlTestHelper = new PostgresSqlTestHelper();
+            _postgresSqlTestHelper = new PostgresSqlTestHelper(binaryMessagePayload: true);
             _postgresSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
             var messageHeader = new MessageHeader(
-                messageId:Guid.NewGuid(), 
-                topic: "test_topic", 
-                messageType: MessageType.MT_DOCUMENT, 
-                timeStamp: DateTime.UtcNow.AddDays(-1), 
-                handledCount:5, 
-                delayedMilliseconds:5,
+                messageId: Guid.NewGuid(),
+                topic: "test_topic",
+                messageType: MessageType.MT_DOCUMENT,
+                timeStamp: DateTime.UtcNow.AddDays(-1),
+                handledCount: 5,
+                delayedMilliseconds: 5,
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyTo",
                 contentType: "text/plain",
@@ -75,8 +50,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _sqlOutbox.Add(_messageEarliest);
         }
 
-        [Fact]
-        public void When_Writing_A_Message_To_The_PostgreSql_Outbox()
+        public void When_Writing_A_Message_To_A_Binary_Body_Outbox()
         {
             _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
 
@@ -91,8 +65,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
-            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey); 
-            
+            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
+
             //Bag serialization
             _storedMessage.Header.Bag.ContainsKey(_key1).Should().BeTrue();
             _storedMessage.Header.Bag[_key1].Should().Be(_value1);

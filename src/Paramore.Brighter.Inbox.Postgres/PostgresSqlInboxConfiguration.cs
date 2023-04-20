@@ -27,17 +27,18 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class PostgresSqlInboxConfiguration : PostgreSqlConfiguration
+    public class PostgresSqlInboxConfiguration 
     {
-        public PostgresSqlInboxConfiguration(string connectionString, string tableName) : base(connectionString)
+        public PostgresSqlInboxConfiguration(string connectionString, string tableName)
         {
+            ConnectionString = connectionString;
             InBoxTableName = tableName;
         }
 
-        public PostgresSqlInboxConfiguration(string tableName) : base(null)
-        {
-            InBoxTableName = tableName;
-        }
+        /// <summary>
+        /// The connection string to the PostgresSql database
+        /// </summary>
+        public string ConnectionString { get; }
 
         /// <summary>
         /// Gets the name of the outbox table.

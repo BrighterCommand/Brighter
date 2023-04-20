@@ -29,33 +29,53 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     /// </summary>
     public class PostgreSqlOutboxBulder
     {
-        const string OutboxDdl = @"
+        const string TextOutboxDdl = @"
        CREATE TABLE {0}
             (
-                Id BIGSERIAL PRIMARY KEY,
-                MessageId UUID UNIQUE NOT NULL,
-                Topic VARCHAR(255) NULL,
-                MessageType VARCHAR(32) NULL,
+                Id bigserial PRIMARY KEY,
+                MessageId uuid UNIQUE NOT NULL,
+                Topic character varying(255) NULL,
+                MessageType character varying(32) NULL,
                 Timestamp timestamptz NULL,
                 CorrelationId uuid NULL,
-                ReplyTo VARCHAR(255) NULL,
-                ContentType VARCHAR(128) NULL,  
+                ReplyTo character varying(255) NULL,
+                ContentType character varying(128) NULL,
+                PartitionKey character varying(128) NULL,  
                 Dispatched timestamptz NULL,
-                HeaderBag TEXT NULL,
-                Body TEXT NULL
+                HeaderBag text NULL,
+                Body text NULL
+            );
+        ";
+        
+        const string BinaryOutboxDdl = @"
+       CREATE TABLE {0}
+            (
+                Id bigserial PRIMARY KEY,
+                MessageId uuid UNIQUE NOT NULL,
+                Topic character varying(255) NULL,
+                MessageType character varying(32) NULL,
+                Timestamp timestamptz NULL,
+                CorrelationId uuid NULL,
+                ReplyTo character varying(255) NULL,
+                ContentType character varying(128) NULL,
+                PartitionKey character varying(128) NULL,  
+                Dispatched timestamptz NULL,
+                HeaderBag text NULL,
+                Body bytea NULL
             );
         ";
         
         private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
-        
+
         /// <summary>
         /// Get the DDL required to create the Outbox in Postgres
         /// </summary>
         /// <param name="outboxTableName">The name you want to use for the table</param>
+        /// <param name="binaryMessagePayload"></param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName)
+        public static string GetDDL(string outboxTableName, bool binaryMessagePayload)
         {
-            return string.Format(OutboxDdl, outboxTableName);
+            return binaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDdl, outboxTableName);
         }
         
         /// <summary>

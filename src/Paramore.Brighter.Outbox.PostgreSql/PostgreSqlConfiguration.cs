@@ -22,35 +22,33 @@ THE SOFTWARE. */
 
 #endregion
 
-using Paramore.Brighter.PostgreSql;
-
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
-    public class PostgreSqlOutboxConfiguration : PostgreSqlConfiguration
+    public class PostgreSqlConfiguration : RelationalDatabaseOutboxConfiguration
     {
         /// <summary>
-        /// Initialises a new instance of <see cref="PostgreSqlOutboxConfiguration" class/>
+        /// Initialises a new instance of <see cref="PostgreSqlConfiguration" class/>
         /// </summary>
-        /// <param name="connectionstring">The Subscription String</param>
-        /// <param name="outBoxTablename">Name of the OutBox table</param>
-        public PostgreSqlOutboxConfiguration(string connectionstring, string outBoxTablename) : base(connectionstring)
+        /// <param name="connectionString">The connection string to the database</param>
+        /// <param name="outBoxTableName">The name of the outbox within the table</param>
+        /// <param name="inboxTableName">The name of the inbox table</param>
+        /// <param name="queueStoreTable">A store for messages to be written</param>
+        /// <param name="binaryMessagePayload">Do we store the payload as text or binary</param>
+        public PostgreSqlConfiguration(
+            string connectionString,
+            string outBoxTableName = null,
+            string inboxTableName = null,
+            string queueStoreTable = null,
+            bool binaryMessagePayload = false) 
+            : base(connectionString, outBoxTableName, queueStoreTable, binaryMessagePayload)
         {
-            OutboxTableName = outBoxTablename;
+            InBoxTableName = inboxTableName;
         }
 
         /// <summary>
-        /// Initialises a new instance of <see cref="PostgreSqlOutboxConfiguration" class/>
+        /// Gets the name of the inbox table.
         /// </summary>
-        /// <param name="outBoxTablename">Name of the OutBox table</param>
-        public PostgreSqlOutboxConfiguration(string outBoxTablename) : base(null)
-        {
-            OutboxTableName = outBoxTablename;
-        }
-
-        /// <summary>
-        /// Gets the name of the outbox table.
-        /// </summary>
-        /// <value>The name of the outbox table.</value>
-        public string OutboxTableName { get; }
+        /// <value>The name of the inbox table.</value>
+        public string InBoxTableName { get; private set; }
     }
 }

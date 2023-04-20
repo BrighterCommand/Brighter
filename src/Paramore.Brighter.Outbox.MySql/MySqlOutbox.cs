@@ -105,7 +105,8 @@ namespace Paramore.Brighter.Outbox.MySql
         protected override async Task WriteToStoreAsync(
             IAmABoxTransactionConnectionProvider transactionConnectionProvider,
             Func<MySqlConnection, MySqlCommand> commandFunc,
-            Action loggingAction, CancellationToken cancellationToken)
+            Action loggingAction, 
+            CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
             if (transactionConnectionProvider != null &&
@@ -146,7 +147,9 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override T ReadFromStore<T>(Func<MySqlConnection, MySqlCommand> commandFunc,
+        protected override T ReadFromStore<T>(
+            Func<MySqlConnection, 
+                MySqlCommand> commandFunc,
             Func<MySqlDataReader, T> resultFunc)
         {
             var connection = _connectionProvider.GetConnection();
@@ -169,8 +172,10 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override async Task<T> ReadFromStoreAsync<T>(Func<MySqlConnection, MySqlCommand> commandFunc,
-            Func<MySqlDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+        protected override async Task<T> ReadFromStoreAsync<T>(
+            Func<MySqlConnection, MySqlCommand> commandFunc,
+            Func<MySqlDataReader, Task<T>> resultFunc, 
+            CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -192,7 +197,10 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override MySqlCommand CreateCommand(MySqlConnection connection, string sqlText, int outBoxTimeout,
+        protected override MySqlCommand CreateCommand(
+            MySqlConnection connection, 
+            string sqlText, 
+            int outBoxTimeout,
             params MySqlParameter[] parameters)
         {
             var command = connection.CreateCommand();
@@ -252,6 +260,12 @@ namespace Paramore.Brighter.Outbox.MySql
                     DbType = DbType.String,
                     Value = message.Header.ContentType
                 },
+                new MySqlParameter
+                {
+                    ParameterName = $"@{prefix}PartitionKey",
+                    DbType = DbType.String,
+                    Value = message.Header.PartitionKey
+                },
                 new MySqlParameter { ParameterName = $"@{prefix}HeaderBag", DbType = DbType.String, Value = bagJson },
                 _configuration.BinaryMessagePayload
                     ? new MySqlParameter
@@ -310,7 +324,8 @@ namespace Paramore.Brighter.Outbox.MySql
             return messages;
         }
 
-        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(MySqlDataReader dr,
+        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(
+            MySqlDataReader dr,
             CancellationToken cancellationToken)
         {
             var messages = new List<Message>();
@@ -343,6 +358,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 var correlationId = GetCorrelationId(dr);
                 var replyTo = GetReplyTo(dr);
                 var contentType = GetContentType(dr);
+                var partitionKey = GetPartitionKey(dr);
 
                 header = new MessageHeader(
                     messageId: id,
@@ -353,7 +369,8 @@ namespace Paramore.Brighter.Outbox.MySql
                     delayedMilliseconds: 0,
                     correlationId: correlationId,
                     replyTo: replyTo,
-                    contentType: contentType);
+                    contentType: contentType,
+                    partitionKey: partitionKey);
 
                 Dictionary<string, object> dictionaryBag = GetContextBag(dr);
                 if (dictionaryBag != null)
@@ -366,7 +383,8 @@ namespace Paramore.Brighter.Outbox.MySql
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream",
+                    CharacterEncoding.Raw)
                 : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
 
             return new Message(header, body);
@@ -378,13 +396,35 @@ namespace Paramore.Brighter.Outbox.MySql
             var body = dr.GetStream(i);
             long bodyLength = body.Length;
             var buffer = new byte[bodyLength];
-            body.Read(buffer,0, (int)bodyLength);
+            body.Read(buffer, 0, (int)bodyLength);
             return buffer;
         }
 
-        private static string GetTopic(IDataReader dr)
+        private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
-            return dr.GetString(dr.GetOrdinal("Topic"));
+            var i = dr.GetOrdinal("HeaderBag");
+            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
+            var dictionaryBag =
+                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
+            return dictionaryBag;
+        }
+
+        private string GetContentType(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("ContentType");
+            if (dr.IsDBNull(ordinal)) return null;
+
+            var contentType = dr.GetString(ordinal);
+            return contentType;
+        }
+
+        private Guid? GetCorrelationId(IDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("CorrelationId");
+            if (dr.IsDBNull(ordinal)) return null;
+
+            var correlationId = dr.GetGuid(ordinal);
+            return correlationId;
         }
 
         private static MessageType GetMessageType(IDataReader dr)
@@ -397,13 +437,13 @@ namespace Paramore.Brighter.Outbox.MySql
             return dr.GetGuid(0);
         }
 
-        private string GetContentType(IDataReader dr)
+        private string GetPartitionKey(IDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ContentType");
+            var ordinal = dr.GetOrdinal("PartitionKey");
             if (dr.IsDBNull(ordinal)) return null;
 
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+            var partitionKey = dr.GetString(ordinal);
+            return partitionKey;
         }
 
         private string GetReplyTo(IDataReader dr)
@@ -415,22 +455,9 @@ namespace Paramore.Brighter.Outbox.MySql
             return replyTo;
         }
 
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static string GetTopic(IDataReader dr)
         {
-            var i = dr.GetOrdinal("HeaderBag");
-            var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
-            var dictionaryBag =
-                JsonSerializer.Deserialize<Dictionary<string, object>>(headerBag, JsonSerialisationOptions.Options);
-            return dictionaryBag;
-        }
-
-        private Guid? GetCorrelationId(IDataReader dr)
-        {
-            var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null;
-
-            var correlationId = dr.GetGuid(ordinal);
-            return correlationId;
+            return dr.GetString(dr.GetOrdinal("Topic"));
         }
 
         private static DateTime GetTimeStamp(IDataReader dr)

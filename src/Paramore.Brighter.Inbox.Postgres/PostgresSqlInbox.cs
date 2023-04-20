@@ -62,10 +62,8 @@ namespace Paramore.Brighter.Inbox.Postgres
 
         public void Add<T>(T command, string contextKey, int timeoutInMilliseconds = -1) where T : class, IRequest
         {
-            var connectionProvider = GetConnectionProvider();
             var parameters = InitAddDbParameters(command, contextKey);
-            var connection = GetOpenConnection(connectionProvider);
-
+            var connection = GetConnection(); 
             try
             {
                 using (var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds))
@@ -86,10 +84,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
             finally
             {
-                if (!connectionProvider.IsSharedConnection)
                     connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
             }
         }
 
@@ -120,9 +115,8 @@ namespace Paramore.Brighter.Inbox.Postgres
         public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1,
             CancellationToken cancellationToken = default) where T : class, IRequest
         {
-            var connectionProvider = GetConnectionProvider();
             var parameters = InitAddDbParameters(command, contextKey);
-            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var connection = GetConnection(); 
 
             try
             {
@@ -145,10 +139,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
             finally
             {
-                if (!connectionProvider.IsSharedConnection)
-                    await connection.DisposeAsync().ConfigureAwait(ContinueOnCapturedContext);
-                else if (!connectionProvider.HasOpenTransaction)
-                    await connection.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+                connection.Dispose();
             }
         }
 
@@ -192,29 +183,11 @@ namespace Paramore.Brighter.Inbox.Postgres
                     parameters)
                 .ConfigureAwait(ContinueOnCapturedContext);
         }
-
-        private IPostgreSqlConnectionProvider GetConnectionProvider(IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        
+        private DbConnection GetConnection()
         {
-            var connectionProvider = _connectionProvider ?? new PostgreSqlNpgsqlConnectionProvider(_configuration);
-
-            if (transactionConnectionProvider != null)
-            {
-                if (transactionConnectionProvider is IPostgreSqlTransactionConnectionProvider provider)
-                    connectionProvider = provider;
-                else
-                    throw new Exception($"{nameof(transactionConnectionProvider)} does not implement interface {nameof(IPostgreSqlTransactionConnectionProvider)}.");
-            }
-
-            return connectionProvider;
-        }
-
-        private NpgsqlConnection GetOpenConnection(IPostgreSqlConnectionProvider connectionProvider)
-        {
-            NpgsqlConnection connection = connectionProvider.GetConnection();
-
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-
+            var connection = new NpgsqlConnection(_configuration.ConnectionString);
+            connection.Open();
             return connection;
         }
 
@@ -263,8 +236,7 @@ namespace Paramore.Brighter.Inbox.Postgres
         private T ExecuteCommand<T>(Func<DbCommand, T> execute, string sql, int timeoutInMilliseconds,
             params DbParameter[] parameters)
         {
-            var connectionProvider = GetConnectionProvider();
-            var connection = GetOpenConnection(connectionProvider);
+            var connection = GetConnection(); 
 
             try
             {
@@ -281,10 +253,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
             finally
             {
-                if (!connectionProvider.IsSharedConnection)
-                    connection.Dispose();
-                else if (!connectionProvider.HasOpenTransaction)
-                    connection.Close();
+                connection.Dispose();
             }
         }
 
@@ -295,8 +264,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             CancellationToken cancellationToken = default,
             params DbParameter[] parameters)
         {
-            var connectionProvider = GetConnectionProvider();
-            var connection = await GetOpenConnectionAsync(connectionProvider, cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var connection = GetConnection(); 
 
             try
             {
@@ -313,10 +281,7 @@ namespace Paramore.Brighter.Inbox.Postgres
             }
             finally
             {
-                if (!connectionProvider.IsSharedConnection)
-                    await connection.DisposeAsync().ConfigureAwait(ContinueOnCapturedContext);
-                else if (!connectionProvider.HasOpenTransaction)
-                    await connection.CloseAsync().ConfigureAwait(ContinueOnCapturedContext);
+                connection.Dispose();
             }
         }
 
