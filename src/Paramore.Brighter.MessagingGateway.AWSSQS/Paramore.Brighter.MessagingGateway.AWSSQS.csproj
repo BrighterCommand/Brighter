@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using awssqs</Description>
     <Authors>Deniz Kocak</Authors>
@@ -9,7 +9,7 @@
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.101.48" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.101.52" />
     <PackageReference Include="Polly" Version="7.2.3" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
     <PackageReference Include="AWSSDK.SimpleNotificationService" Version="3.7.101.49" />
