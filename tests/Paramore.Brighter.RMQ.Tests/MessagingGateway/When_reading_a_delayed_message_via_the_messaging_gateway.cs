@@ -96,7 +96,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
             _messageConsumer.Acknowledge(message);
 
             //now requeue with a delay
-            _message.UpdateHandledCount();
+            _message.Header.UpdateHandledCount();
             _messageConsumer.Requeue(_message, 1000);
 
             //receive and assert

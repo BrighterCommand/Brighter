@@ -314,7 +314,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// <returns>Returns True if the message should be acked, false if the channel has handled it</returns>
         private bool RequeueMessage(Message message)
         {
-            message.UpdateHandledCount();
+            message.Header.UpdateHandledCount();
 
             if (DiscardRequeuedMessagesEnabled())
             {
