@@ -239,49 +239,68 @@ namespace Paramore.Brighter.Outbox.MsSql
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
             return new[]
             {
-                new SqlParameter { ParameterName = $"{prefix}MessageId", Value = (object)message.Id ?? DBNull.Value },
+                new SqlParameter
+                {
+                    ParameterName = $"{prefix}MessageId", 
+                    DbType = DbType.Guid,
+                    Value = (object)message.Id ?? DBNull.Value
+                },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}MessageType",
+                    DbType = DbType.String,
                     Value = (object)message.Header.MessageType.ToString() ?? DBNull.Value
                 },
                 new SqlParameter
                 {
-                    ParameterName = $"{prefix}Topic", Value = (object)message.Header.Topic ?? DBNull.Value
+                    ParameterName = $"{prefix}Topic", 
+                    DbType = DbType.String,
+                    Value = (object)message.Header.Topic ?? DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}Timestamp",
+                    DbType = DbType.DateTime,
                     Value = (object)message.Header.TimeStamp.ToUniversalTime() ?? DBNull.Value
                 }, //always store in UTC, as this is how we query messages
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}CorrelationId",
+                    DbType = DbType.Guid,
                     Value = (object)message.Header.CorrelationId ?? DBNull.Value
                 },
                 new SqlParameter
                 {
-                    ParameterName = $"{prefix}ReplyTo", Value = (object)message.Header.ReplyTo ?? DBNull.Value
+                    ParameterName = $"{prefix}ReplyTo", 
+                    DbType = DbType.String,
+                    Value = (object)message.Header.ReplyTo ?? DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}ContentType",
+                    DbType = DbType.String,
                     Value = (object)message.Header.ContentType ?? DBNull.Value
                 },
                 new SqlParameter
                 {
                     ParameterName = $"{prefix}PartitionKey",
+                    DbType = DbType.String,
                     Value = (object)message.Header.PartitionKey ?? DBNull.Value
                 },
-                new SqlParameter { ParameterName = $"{prefix}HeaderBag", Value = (object)bagJson ?? DBNull.Value },
+                new SqlParameter { ParameterName = $"{prefix}HeaderBag", 
+                    Value = (object)bagJson ?? DBNull.Value },
                 _configuration.BinaryMessagePayload
                     ? new SqlParameter
                     {
-                        ParameterName = $"{prefix}Body", Value = (object)message.Body?.Bytes ?? DBNull.Value
+                        ParameterName = $"{prefix}Body", 
+                        DbType = DbType.Binary,
+                        Value = (object)message.Body?.Bytes ?? DBNull.Value
                     }
                     : new SqlParameter
                     {
-                        ParameterName = $"{prefix}Body", Value = (object)message.Body?.Value ?? DBNull.Value
+                        ParameterName = $"{prefix}Body", 
+                        DbType = DbType.String,
+                        Value = (object)message.Body?.Value ?? DBNull.Value
                     }
             };
         }
@@ -353,12 +372,20 @@ namespace Paramore.Brighter.Outbox.MsSql
 
         private byte[] GetBodyAsBytes(SqlDataReader dr)
         {
-            var i = dr.GetOrdinal("Body");
-            var body = dr.GetStream(i);
+            var ordinal = dr.GetOrdinal("Body");
+            if (dr.IsDBNull(ordinal)) return null;
+            
+            var body = dr.GetStream(ordinal);
             long bodyLength = body.Length;
             var buffer = new byte[bodyLength];
             body.Read(buffer, 0, (int)bodyLength);
             return buffer;
+        }
+        
+        private static string GetBodyAsText(SqlDataReader dr)
+        {
+            var ordinal = dr.GetOrdinal("Body");
+            return dr.IsDBNull(ordinal) ? null : dr.GetString(ordinal);
         }
 
         #endregion
@@ -459,7 +486,7 @@ namespace Paramore.Brighter.Outbox.MsSql
             string messageBody = string.Empty;
             var body = _configuration.BinaryMessagePayload
                 ? new MessageBody(GetBodyAsBytes((SqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
-                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
+                : new MessageBody(GetBodyAsText(dr), "application/json", CharacterEncoding.UTF8);
             return new Message(header, body);
         }
     }

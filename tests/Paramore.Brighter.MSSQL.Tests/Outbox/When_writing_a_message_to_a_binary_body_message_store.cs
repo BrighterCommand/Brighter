@@ -61,7 +61,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
         [Fact]
         public void When_Writing_A_Message_With_a_Null_To_The_MSSQL_Outbox()
         {
-            _message = new Message(_messageHeader, null);
+            _message = new Message(_messageHeader, new MessageBody((byte[])null));
             _sqlOutbox.Add(_message);
 
             AssertMessage();
@@ -76,7 +76,8 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_message.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.ffZ")
+                .Should().Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.ffZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_message.Header.CorrelationId);

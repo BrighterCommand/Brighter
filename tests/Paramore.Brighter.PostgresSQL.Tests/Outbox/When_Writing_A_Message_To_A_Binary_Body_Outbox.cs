@@ -59,8 +59,8 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
-                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.ffZ")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.ffZ"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
