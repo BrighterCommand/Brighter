@@ -37,8 +37,9 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
     public class PostgreSqlOutboxRangeRequestTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
-        private readonly string _TopicFirstMessage = "test_topic";
-        private readonly string _TopicLastMessage = "test_topic3";
+        private readonly string _topicFirstMessage = "test_topic";
+        private readonly string _topicSecondMessage = "test_topic2";
+        private readonly string _topicLastMessage = "test_topic3";
         private IEnumerable<Message> _messages;
         private readonly PostgreSqlOutbox _sqlOutbox;
 
@@ -48,14 +49,15 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             _postgresSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
-            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _sqlOutbox.Add(messageEarliest);
+            var messageOne = new Message(new MessageHeader(Guid.NewGuid(), _topicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            var messageTwo = new Message(new MessageHeader(Guid.NewGuid(), _topicSecondMessage, MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            var messageThree = new Message(new MessageHeader(Guid.NewGuid(), _topicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            
+            _sqlOutbox.Add(messageOne);
             Task.Delay(100);
-            _sqlOutbox.Add(message1);
+            _sqlOutbox.Add(messageTwo);
             Task.Delay(100);
-            _sqlOutbox.Add(message2);
+            _sqlOutbox.Add(messageThree);
         }
 
         [Fact]
@@ -66,7 +68,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
             //should fetch 1 message
             _messages.Should().HaveCount(1);
             //should fetch expected message
-            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
+            _messages.First().Header.Topic.Should().Be(_topicLastMessage);
             //should not fetch null messages
             _messages.Should().NotBeNull();
         }
