@@ -358,6 +358,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalutationAnalytics", "samp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutations_SqliteMigrations", "samples\WebAPI_Dapper_Kafka\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj", "{B50A44CE-5F54-4559-90E0-1AF81655E944}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutations_mySqlMigrations", "samples\WebAPI_Dapper_Kafka\Salutations_mySqlMigrations\Salutations_mySqlMigrations.csproj", "{E66CA4D7-8339-4674-B102-BC7CA890B7C5}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_MySqlMigrations", "samples\WebAPI_Dapper_Kafka\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj", "{2FADCED2-8563-4261-9AA8-514E5888075F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -2072,6 +2076,30 @@ Global
 		{B50A44CE-5F54-4559-90E0-1AF81655E944}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{B50A44CE-5F54-4559-90E0-1AF81655E944}.Release|x86.ActiveCfg = Release|Any CPU
 		{B50A44CE-5F54-4559-90E0-1AF81655E944}.Release|x86.Build.0 = Release|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Debug|x86.Build.0 = Debug|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Release|x86.ActiveCfg = Release|Any CPU
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5}.Release|x86.Build.0 = Release|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Debug|x86.Build.0 = Debug|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|x86.ActiveCfg = Release|Any CPU
+		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -2196,6 +2224,8 @@ Global
 		{2DBA8A1A-76AC-4F6F-9533-2977AAD9DB15} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 		{559212C0-0912-4586-AD6B-462E7A0E738E} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 		{B50A44CE-5F54-4559-90E0-1AF81655E944} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
+		{E66CA4D7-8339-4674-B102-BC7CA890B7C5} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
+		{2FADCED2-8563-4261-9AA8-514E5888075F} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {8B7C7E31-2E32-4E0D-9426-BC9AF22E9F4C}

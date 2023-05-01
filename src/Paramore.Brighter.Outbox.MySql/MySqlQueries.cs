@@ -3,7 +3,7 @@
     public class MySqlQueries : IRelationDatabaseOutboxQueries
     {
         public string PagedDispatchedCommand { get; } = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) AND DISPATCHED IS NOT NULL AND DISPATCHED < DATE_ADD(UTC_TIMESTAMP(), INTERVAL -@OutstandingSince MICROSECOND) AND NUMBER BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
-        public string PagedReadCommand { get; } = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp DESC";
+        public string PagedReadCommand { get; } = "SELECT * FROM {0} AS TBL WHERE `CreatedID` BETWEEN ((@PageNumber-1)*@PageSize+1) AND (@PageNumber*@PageSize) ORDER BY Timestamp ASC";
         public string PagedOutstandingCommand { get; } = "SELECT * FROM {0} WHERE DISPATCHED IS NULL AND Timestamp < DATE_ADD(UTC_TIMESTAMP(), INTERVAL -@OutStandingSince SECOND) ORDER BY Timestamp DESC LIMIT @PageSize OFFSET @OffsetValue";
         public string AddCommand { get; } = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @CorrelationId, @ReplyTo, @ContentType, @PartitionKey, @HeaderBag, @Body)";
         public string BulkAddCommand { get; } = "INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, CorrelationId, ReplyTo, ContentType, PartitionKey, HeaderBag, Body) VALUES {1}";
