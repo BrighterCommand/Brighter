@@ -50,8 +50,11 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (correlationId.Success)
                         messageHeader.CorrelationId = correlationId.Result;
 
+                    //If we don't have a partition key in the header, assume a non-Brighter sender and use message key
                     if (partitionKey.Success)
                         messageHeader.PartitionKey = partitionKey.Result;
+                    else
+                        messageHeader.PartitionKey = consumeResult.Message.Key;
                     
                     if (contentType.Success)
                         messageHeader.ContentType =contentType.Result;
@@ -202,7 +205,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                     if (string.IsNullOrEmpty(s))
                     {
                         s_logger.LogDebug("No partition key found in message");
-                        return new HeaderResult<string>(string.Empty, true);
+                        return new HeaderResult<string>(string.Empty, false);
                     }
 
                     return new HeaderResult<string>(s, true);
