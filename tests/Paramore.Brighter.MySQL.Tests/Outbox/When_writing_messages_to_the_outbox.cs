@@ -63,10 +63,10 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             
             _retrievedMessages = _mySqlOutbox.Get();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageOne.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageThree.Id);
             //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageThree.Id);
+            _retrievedMessages.First().Id.Should().Be(_messageOne.Id);
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
@@ -78,10 +78,10 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
             _mySqlOutbox.Add(messages);
             _retrievedMessages = _mySqlOutbox.Get();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageOne.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageThree.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageThree.Id);
+            //should read first message first from the outbox
+            _retrievedMessages.First().Id.Should().Be(_messageOne.Id);
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
