@@ -284,8 +284,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         private static void MarkMessageDispatched(DateTime? dispatchedAt, MessageItem message)
         {
+            dispatchedAt = dispatchedAt ?? DateTime.UtcNow;
             message.DeliveryTime = dispatchedAt.Value.Ticks;
-            message.DeliveredAt = $"{dispatchedAt:yyyy-MM-dd}";
+            message.DeliveredAt = dispatchedAt.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         }
 
         /// <summary>
