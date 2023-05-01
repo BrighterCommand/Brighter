@@ -79,7 +79,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the message header first bag item from the sql outbox
             //should read the message header timestamp from the sql outbox
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fZ"));
             //should read the message header topic from the sql outbox =
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             //should read the message header type from the sql outbox
