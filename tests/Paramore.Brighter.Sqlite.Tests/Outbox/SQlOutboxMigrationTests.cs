@@ -89,7 +89,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //_should_read_the_message_header_topic_from_the__sql_outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             //_should_default_the_timestamp_from_the__sql_outbox
-            _storedMessage.Header.TimeStamp.Should().BeOnOrAfter(_message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss").Should()
+                .Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             //_should_read_empty_header_bag_from_the__sql_outbox
             _storedMessage.Header.Bag.Keys.Should().BeEmpty();
         }
