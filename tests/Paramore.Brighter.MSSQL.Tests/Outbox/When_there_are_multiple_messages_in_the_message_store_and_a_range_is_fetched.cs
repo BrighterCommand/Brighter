@@ -37,10 +37,14 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     public class MsSqlOutboxRangeRequestTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
-        private readonly string _TopicFirstMessage = "test_topic";
-        private readonly string _TopicLastMessage = "test_topic3";
+        private readonly string _testTopicOne = "test_topic";
+        private string _testTopicTwo = "test_topic2";
+        private readonly string _testTopicThree = "test_topic3";
         private IEnumerable<Message> _messages;
         private readonly MsSqlOutbox _sqlOutbox;
+        private readonly Message _messageOne;
+        private readonly Message _messageTwo;
+        private readonly Message _messageThree;
 
         public MsSqlOutboxRangeRequestTests()
         {
@@ -48,14 +52,14 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            var messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _sqlOutbox.Add(messageEarliest);
+            _messageOne = new Message(new MessageHeader(Guid.NewGuid(), _testTopicOne, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _messageTwo = new Message(new MessageHeader(Guid.NewGuid(), _testTopicTwo, MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            _messageThree = new Message(new MessageHeader(Guid.NewGuid(), _testTopicThree, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            _sqlOutbox.Add(_messageOne);
             Task.Delay(100);
-            _sqlOutbox.Add(message1);
+            _sqlOutbox.Add(_messageTwo);
             Task.Delay(100);
-             _sqlOutbox.Add(message2);
+             _sqlOutbox.Add(_messageThree);
         }
 
         [Fact]
@@ -66,7 +70,7 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             //should fetch 1 message
             _messages.Should().HaveCount(1);
             //should fetch expected message
-            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
+            _messages.First().Header.Topic.Should().Be(_messageThree.Header.Topic);
             //should not fetch null messages
             _messages.Should().NotBeNull();
         }

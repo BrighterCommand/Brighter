@@ -37,12 +37,13 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
     public class MsSqlOutboxRangeRequestAsyncTests : IDisposable
     {
         private readonly MsSqlTestHelper _msSqlTestHelper;
-        private readonly string _TopicFirstMessage = "test_topic";
-        private readonly string _TopicLastMessage = "test_topic3";
+        private readonly string _testTopicOne = "test_topic";
+        private string _testTopicTwo = "test_topic2";
+        private readonly string _testTopicThree = "test_topic3";
         private IEnumerable<Message> _messages;
-        private readonly Message _message1;
-        private readonly Message _message2;
-        private readonly Message _messageEarliest;
+        private readonly Message _messageTwo;
+        private readonly Message _messageThree;
+        private readonly Message _messageOne;
         private readonly MsSqlOutbox _sqlOutbox;
 
         public MsSqlOutboxRangeRequestAsyncTests()
@@ -51,26 +52,26 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
             _msSqlTestHelper.SetupMessageDb();
 
             _sqlOutbox = new MsSqlOutbox(_msSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
-            _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
+            _messageOne = new Message(new MessageHeader(Guid.NewGuid(), _testTopicOne, MessageType.MT_DOCUMENT), new MessageBody("message body"));
+            _messageTwo = new Message(new MessageHeader(Guid.NewGuid(), _testTopicTwo, MessageType.MT_DOCUMENT), new MessageBody("message body2"));
+            _messageThree = new Message(new MessageHeader(Guid.NewGuid(), _testTopicThree, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
         }
 
         [Fact]
         public async Task When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched_Async()
         {
-            await _sqlOutbox.AddAsync(_messageEarliest);
+            await _sqlOutbox.AddAsync(_messageOne);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message1);
+            await _sqlOutbox.AddAsync(_messageTwo);
             await Task.Delay(100);
-            await _sqlOutbox.AddAsync(_message2);
+            await _sqlOutbox.AddAsync(_messageThree);
 
              _messages = await _sqlOutbox.GetAsync(1, 3);
 
             //should fetch 1 message
             _messages.Should().HaveCount(1);
             //should fetch expected message
-            _messages.First().Header.Topic.Should().Be(_TopicLastMessage);
+            _messages.First().Header.Topic.Should().Be(_messageThree.Header.Topic);
             //should not fetch null messages
             _messages.Should().NotBeNull();
         }
