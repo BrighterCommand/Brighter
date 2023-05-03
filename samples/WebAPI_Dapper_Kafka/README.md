@@ -21,10 +21,10 @@ This sample shows a typical scenario when using WebAPI and Brighter/Darker. It d
 
 *Development* - runs locally on your machine, uses Sqlite as a data store; uses RabbitMQ for messaging, can be launched individually from the docker compose file; it represents a typical setup for development.
 
-*Production* - runs in Docker;uses RabbitMQ for messaging; it emulates a possible production environment. We offer support for a range of common SQL stores in this example. We determine which SQL store to use via an environment 
+*Production* - runs in Docker;uses Kafka for messaging; it emulates a possible production environment. We offer support for a range of common SQL stores in this example. We determine which SQL store to use via an environment 
 variable. The process is: (1) determine we are running in a non-development environment (2) lookup the type of database we want to support (3) initialise an enum to identify that.
 
-We provide launchSetting.json files for all of these, which allows you to run Production with the appropriate db; you should launch your SQL data store and RabbitMQ from the docker compose file. 
+We provide launchSetting.json files for all of these, which allows you to run Production with the appropriate db; you should launch your SQL data store and Kafka from the docker compose file. 
 
 In case you are using Command Line Interface for running the project, consider adding --launch-profile:
 
@@ -74,7 +74,7 @@ A common error is to change something, forget to run build.sh and use an old Doc
 
 We provide a docker compose file to allow you to run a 'Production' environment or to startup RabbitMQ for production:
 ```sh
-docker compose up -d rabbitmq   # will just start rabbitmq
+docker compose up -d kafka   # will just start kafka
 ```
 
 ```sh
@@ -89,35 +89,6 @@ and so on.
 A Sqlite database will only have permissions for the process that created it. This can result in you receiving read-only errors between invocations of the sample. You either need to alter the permissions on your Db, or delete it between runs.
 
 Maintainers, please don't check the Sqlite files into source control.
-
-#### Queue Creation and Dropped Messages
-
-Queues are created by consumers. This is because publishers don't know who consumes them, and thus don't create their queues. This means that if you run a producer, such as GreetingsWeb, and use tests.http to push in greetings, although a message will be published to RabbitMQ, it won't have a queue to be delivered to and will be dropped, unless you have first run the SalutationAnalytics worker to create the queue.
-
-Generally, the rule of thumb is: start the consumer and *then* start the producer.
-
-You can spot this by looking in the [RabbitMQ Management console](http://localhost:1567) and noting that no queue is bound to the routing key in the exchange.
-You can use default credentials for the RabbitMQ Management console:
-```sh
-user :guest
-passowrd: guest
-```
-#### Connection issue with the RabbitMQ
-When running RabbitMQ from the docker compose file (without any additional network setup, etc.) your RabbitMQ instance in docker will still be accessible by **localhost** as a host name. Consider this when running your application in the Production environment.
-In Production, the application by default will have:
-```sh
-amqp://guest:guest@rabbitmq:5672
-```
-
-as an Advanced Message Queuing Protocol (AMQP) connection string.  
-So one of the options will be replacing AMQP connection string with:
-```sh
-amqp://guest:guest@localhost:5672
-```
-In case you still struggle, consider following these steps: [RabbitMQ Troubleshooting Networking](https://www.rabbitmq.com/troubleshooting-networking.html)
-#### Helpful documentation links
-* [Brighter technical documentation](https://paramore.readthedocs.io/en/latest/index.html)
-* [Rabbit Message Queue (RMQ) documentation](https://www.rabbitmq.com/documentation.html)
 
 ## Tests
 

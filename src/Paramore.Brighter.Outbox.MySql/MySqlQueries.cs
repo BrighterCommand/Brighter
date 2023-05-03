@@ -10,7 +10,7 @@
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId IN ( {1} )";
         public string GetMessageCommand { get; } = "SELECT * FROM {0} WHERE MessageId = @MessageId";
-        public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE `MessageID` IN ( {1} )ORDER BY ";
+        public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE `MessageID` IN ( {1} )ORDER BY ASC Timestamp";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE MessageId IN ( {1} )";
     }
 }

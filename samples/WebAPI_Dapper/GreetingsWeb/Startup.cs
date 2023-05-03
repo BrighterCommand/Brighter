@@ -74,7 +74,6 @@ namespace GreetingsWeb
             ConfigureMigration(services);
             ConfigureDapper(services);
             ConfigureBrighter(services);
-            ConfigureBrighter(services);
             ConfigureDarker(services);
         }
 

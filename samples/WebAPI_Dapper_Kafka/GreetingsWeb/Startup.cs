@@ -74,7 +74,6 @@ namespace GreetingsWeb
             ConfigureMigration(services);
             ConfigureDapper(services);
             ConfigureBrighter(services);
-            ConfigureBrighter(services);
             ConfigureDarker(services);
         }
 
@@ -169,7 +168,7 @@ namespace GreetingsWeb
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
-                })
+                } )/*
                 .UseExternalBus(new RmqProducerRegistryFactory(
                         new RmqMessagingGatewayConnection
                         {
@@ -187,7 +186,25 @@ namespace GreetingsWeb
                                 MakeChannels = OnMissingChannel.Create
                             }
                         }
-                    ).Create()
+                    )*/
+                .UseExternalBus(
+                    new KafkaProducerRegistryFactory(
+                            new KafkaMessagingGatewayConfiguration
+                            {
+                                Name = "paramore.brighter.greetingsender",
+                                BootStrapServers = new[] { "localhost:9092" }
+                            },
+                            new KafkaPublication[]
+                            {
+                                new KafkaPublication
+                                {
+                                    Topic = new RoutingKey("greeting.event"),
+                                    MessageSendMaxRetries = 3,
+                                    MessageTimeoutMs = 1000,
+                                    MaxInFlightRequestsPerConnection = 1
+                                }
+                            })
+                        .Create()
                 )
                 //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
                 //types easily. You may just choose to call the methods directly if you do not need to support multiple
