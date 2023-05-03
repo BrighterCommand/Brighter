@@ -18,7 +18,7 @@ using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -168,43 +168,25 @@ namespace GreetingsWeb
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
-                } )/*
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        new RmqMessagingGatewayConnection
-                        {
-                            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                            Exchange = new Exchange("paramore.brighter.exchange"),
-                        },
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("GreetingMade"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    )*/
+                })
                 .UseExternalBus(
                     new KafkaProducerRegistryFactory(
-                            new KafkaMessagingGatewayConfiguration
+                        new KafkaMessagingGatewayConfiguration
+                        {
+                            Name = "paramore.brighter.greetingsender",
+                            BootStrapServers = new[] { "localhost:9092" }
+                        },
+                        new KafkaPublication[]
+                        {
+                            new KafkaPublication
                             {
-                                Name = "paramore.brighter.greetingsender",
-                                BootStrapServers = new[] { "localhost:9092" }
-                            },
-                            new KafkaPublication[]
-                            {
-                                new KafkaPublication
-                                {
-                                    Topic = new RoutingKey("greeting.event"),
-                                    MessageSendMaxRetries = 3,
-                                    MessageTimeoutMs = 1000,
-                                    MaxInFlightRequestsPerConnection = 1
-                                }
-                            })
-                        .Create()
+                                Topic = new RoutingKey("greeting.event"),
+                                MessageSendMaxRetries = 3,
+                                MessageTimeoutMs = 1000,
+                                MaxInFlightRequestsPerConnection = 1
+                            }
+                        })
+                    .Create()
                 )
                 //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
                 //types easily. You may just choose to call the methods directly if you do not need to support multiple
