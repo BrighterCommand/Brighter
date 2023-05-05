@@ -1,4 +1,5 @@
 using System;
+using Confluent.SchemaRegistry;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
@@ -160,22 +161,28 @@ namespace GreetingsWeb
         private void ConfigureBrighter(IServiceCollection services)
         {
             services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+            
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
+            var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+            services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
+            var configuration = new KafkaMessagingGatewayConfiguration
+            {
+                Name = "paramore.brighter.greetingsender",
+                BootStrapServers = new[] { "localhost:9092" }
+            };
             services.AddBrighter(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;
+                    options.ChannelFactory = new ChannelFactory(new KafkaMessageConsumerFactory(configuration));
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
                 .UseExternalBus(
                     new KafkaProducerRegistryFactory(
-                        new KafkaMessagingGatewayConfiguration
-                        {
-                            Name = "paramore.brighter.greetingsender",
-                            BootStrapServers = new[] { "localhost:9092" }
-                        },
+                        configuration,
                         new KafkaPublication[]
                         {
                             new KafkaPublication
@@ -183,7 +190,8 @@ namespace GreetingsWeb
                                 Topic = new RoutingKey("greeting.event"),
                                 MessageSendMaxRetries = 3,
                                 MessageTimeoutMs = 1000,
-                                MaxInFlightRequestsPerConnection = 1
+                                MaxInFlightRequestsPerConnection = 1,
+                                MakeChannels = OnMissingChannel.Create
                             }
                         })
                     .Create()
@@ -192,7 +200,7 @@ namespace GreetingsWeb
                 //types easily. You may just choose to call the methods directly if you do not need to support multiple
                 //db types (which we just need to allow you to see how to configure your outbox type).
                 //It's also an example of how you can extend the DSL here easily if you have this kind of variability
-                .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName)
+                .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName, binaryMessagePayload: true)
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 

@@ -8,7 +8,7 @@ namespace SalutationAnalytics.Mappers
     {
         public Message MapToMessage(SalutationReceived request)
         {
-            var header = new MessageHeader(messageId: request.Id, topic: "SalutationReceived", messageType: MessageType.MT_EVENT);
+            var header = new MessageHeader(messageId: request.Id, topic: "salutationreceived.event", messageType: MessageType.MT_EVENT);
             var body = new MessageBody(System.Text.Json.JsonSerializer.Serialize(request, new JsonSerializerOptions(JsonSerializerDefaults.General)));
             var message = new Message(header, body);
             return message;

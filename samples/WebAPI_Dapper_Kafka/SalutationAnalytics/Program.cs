@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
+using Confluent.Kafka;
+using Confluent.SchemaRegistry;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
@@ -14,14 +16,13 @@ using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
-using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using SalutationAnalytics.Database;
 using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
 using SalutationPorts.Requests;
-using Salutations_SqliteMigrations.Migrations;
 
 namespace SalutationAnalytics
 {
@@ -63,32 +64,37 @@ namespace SalutationAnalytics
 
         private static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
         {
-            var subscriptions = new Subscription[]
+            var subscriptions = new KafkaSubscription[]
             {
-                new RmqSubscription<GreetingMade>(
+                new KafkaSubscription<GreetingMade>(
                     new SubscriptionName("paramore.sample.salutationanalytics"),
-                    new ChannelName("SalutationAnalytics"),
-                    new RoutingKey("GreetingMade"),
-                    runAsync: true,
-                    timeoutInMilliseconds: 200,
-                    isDurable: true,
-                    makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                    channelName: new ChannelName("SalutationAnalytics"),
+                    routingKey: new RoutingKey("greeting.event"),
+                    groupId: "kafka-GreetingsReceiverConsole-Sample",
+                    timeoutInMilliseconds: 100,
+                    offsetDefault: AutoOffsetReset.Earliest,
+                    commitBatchSize: 5,
+                    sweepUncommittedOffsetsIntervalMs: 10000,
+                    makeChannels: OnMissingChannel.Create)
             };
+                    
+            //We take a direct dependency on the schema registry in the message mapper
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
+            var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+            services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+
+            //create the gateway
+            var consumerFactory = new KafkaMessageConsumerFactory(
+                new KafkaMessagingGatewayConfiguration { Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" } }
+            );
 
             var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
-
-            var rmqConnection = new RmqMessagingGatewayConnection
-            {
-                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")), Exchange = new Exchange("paramore.brighter.exchange")
-            };
-
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
-                    options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                     options.UseScoped = true;
+                    options.ChannelFactory = new ChannelFactory(consumerFactory);
                     options.HandlerLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
@@ -99,19 +105,24 @@ namespace SalutationAnalytics
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;
                 })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("SalutationReceived"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
+                .UseExternalBus(
+                  new KafkaProducerRegistryFactory(
+                       new KafkaMessagingGatewayConfiguration
+                       {
+                           Name = "paramore.brighter.greetingsender",
+                           BootStrapServers = new[] { "localhost:9092" }
+                       },
+                       new KafkaPublication[]
+                       {
+                           new KafkaPublication
+                           {
+                               Topic = new RoutingKey("salutationrecieved.event"),
+                               MessageSendMaxRetries = 3,
+                               MessageTimeoutMs = 1000,
+                               MaxInFlightRequestsPerConnection = 1,
+                               MakeChannels = OnMissingChannel.Create
+                           }
+                       }
                     ).Create()
                 )
                 .AutoFromAssemblies()

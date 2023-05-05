@@ -13,13 +13,13 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
         private readonly IUnitOfWork _uow;
         private readonly IAmACommandProcessor _postBox;
-        private readonly ILogger<GreetingMadeHandlerAsync> _logger;
+        private readonly ILogger<GreetingMadeHandler> _logger;
 
-        public GreetingMadeHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandler(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
         {
             _uow = uow;
             _postBox = postBox;
@@ -27,36 +27,36 @@ namespace SalutationPorts.Handlers
         }
 
         //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
-        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
+        public override GreetingMade Handle(GreetingMade @event)
         {
             var posts = new List<Guid>();
             
-            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
+            var tx = _uow.BeginOrGetTransaction();
             try
             {
                 var salutation = new Salutation(@event.Greeting);
                 
-                await _uow.Database.InsertAsync<Salutation>(salutation, tx);
+                _uow.Database.Insert<Salutation>(salutation, tx);
                 
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
+                posts.Add(_postBox.DepositPost(new SalutationReceived(DateTimeOffset.Now)));
                 
-                await tx.CommitAsync(cancellationToken);
+                tx.Commit();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
                 
                 //if it went wrong rollback entity write and Outbox write
-                await tx.RollbackAsync(cancellationToken);
+                tx.Rollback();
                 
-                return await base.HandleAsync(@event, cancellationToken);
+                return base.Handle(@event);
             }
 
-            await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+            _postBox.ClearOutbox(posts.ToArray());
             
-            return await base.HandleAsync(@event, cancellationToken);
+            return base.Handle(@event);
         }
     }
 }

@@ -17,18 +17,18 @@ namespace GreetingsWeb.Database;
 public static class OutboxExtensions
 {
     public static IBrighterBuilder AddOutbox(this IBrighterBuilder brighterBuilder, IWebHostEnvironment env, DatabaseType databaseType,
-        string dbConnectionString, string outBoxTableName)
+        string dbConnectionString, string outBoxTableName, bool binaryMessagePayload = false)
     {
         if (env.IsDevelopment())
         {
-            AddSqliteOutBox(brighterBuilder, dbConnectionString, outBoxTableName);
+            AddSqliteOutBox(brighterBuilder, dbConnectionString, outBoxTableName, binaryMessagePayload);
         }
         else
         {
             switch (databaseType)
             {
                 case DatabaseType.MySql:
-                    AddMySqlOutbox(brighterBuilder, dbConnectionString, outBoxTableName);
+                    AddMySqlOutbox(brighterBuilder, dbConnectionString, outBoxTableName, binaryMessagePayload);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown Db type for Outbox configuration");
@@ -37,20 +37,20 @@ public static class OutboxExtensions
         return brighterBuilder;
     }
 
-    private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName)
+    private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName, bool binaryMessagePayload)
     {
         brighterBuilder.UseMySqlOutbox(
-                new MySqlConfiguration(dbConnectionString, outBoxTableName), 
+                new MySqlConfiguration(dbConnectionString, outBoxTableName, binaryMessagePayload: binaryMessagePayload), 
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
             .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
             .UseOutboxSweeper();
     }
 
-    private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName)
+    private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName, bool binaryMessagePayload)
     {
         brighterBuilder.UseSqliteOutbox(
-                new SqliteConfiguration(dbConnectionString, outBoxTableName), 
+                new SqliteConfiguration(dbConnectionString, outBoxTableName, binaryMessagePayload: binaryMessagePayload), 
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
             .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.SqliteDapperConnectionProvider), ServiceLifetime.Scoped)
