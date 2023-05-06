@@ -40,7 +40,7 @@ namespace CompetingSender
                 .ConfigureServices((hostContext, services) =>
                 {
                     //create the gateway
-                    var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
+                    var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
                     services.AddBrighter()
                         .UseInMemoryOutbox()

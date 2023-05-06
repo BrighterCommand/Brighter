@@ -50,7 +50,7 @@ string dbConnString = "Server=127.0.0.1,11433;Database=BrighterOrderTests;User I
             
 
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");

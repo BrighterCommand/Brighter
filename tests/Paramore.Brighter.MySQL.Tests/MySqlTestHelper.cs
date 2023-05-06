@@ -50,10 +50,10 @@ namespace Paramore.Brighter.MySQL.Tests
             CreateInboxTable();
         }
 
-        public MySqlInboxConfiguration InboxConfiguration =>
+        public RelationalDatabaseConfiguration InboxConfiguration =>
             new(_mysqlSettings.TestsBrighterConnectionString, _tableName);
 
-        public MySqlConfiguration OutboxConfiguration => 
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
             new(_mysqlSettings.TestsBrighterConnectionString, _tableName, binaryMessagePayload: _binaryMessagePayload);
 
         public void CleanUpDb()

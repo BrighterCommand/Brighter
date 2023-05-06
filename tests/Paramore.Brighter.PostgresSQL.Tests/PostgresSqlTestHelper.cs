@@ -28,12 +28,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             _tableName = $"test_{Guid.NewGuid():N}";
         }
 
-        public PostgreSqlConfiguration Configuration 
-            => new PostgreSqlConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, 
+        public RelationalDatabaseConfiguration Configuration 
+            => new RelationalDatabaseConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, 
                 outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
         
-        public PostgresSqlInboxConfiguration InboxConfiguration 
-            => new PostgresSqlInboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
+        public RelationalDatabaseConfiguration InboxConfiguration 
+            => new RelationalDatabaseConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
 
 
         public void SetupMessageDb()

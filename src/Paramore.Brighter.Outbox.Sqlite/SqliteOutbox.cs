@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly SqliteConfiguration _configuration;
+        private readonly RelationalDatabaseConfiguration _configuration;
         private readonly ISqliteConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        public SqliteOutbox(SqliteConfiguration configuration, ISqliteConnectionProvider connectionProvider) : base(
+        public SqliteOutbox(RelationalDatabaseConfiguration configuration, ISqliteConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
         {
             _configuration = configuration;
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public SqliteOutbox(SqliteConfiguration configuration) : this(configuration,
+        public SqliteOutbox(RelationalDatabaseConfiguration configuration) : this(configuration,
             new SqliteConnectionProvider(configuration))
         {
         }

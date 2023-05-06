@@ -20,6 +20,8 @@ using Paramore.Brighter;
 using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Paramore.Brighter.MySql;
+using Paramore.Brighter.Sqlite;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -166,6 +168,9 @@ namespace GreetingsWeb
             var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
             services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
+            var outboxConfiguration = GetOutboxConfiguration();
+            services.AddSingleton<RelationalDatabaseConfiguration>(outboxConfiguration);
+
             var configuration = new KafkaMessagingGatewayConfiguration
             {
                 Name = "paramore.brighter.greetingsender",
@@ -196,13 +201,20 @@ namespace GreetingsWeb
                         })
                     .Create()
                 )
-                //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
-                //types easily. You may just choose to call the methods directly if you do not need to support multiple
-                //db types (which we just need to allow you to see how to configure your outbox type).
-                //It's also an example of how you can extend the DSL here easily if you have this kind of variability
-                .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName, binaryMessagePayload: true)
+                /*
+                 * NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
+                 * types easily. You may just choose to call the methods directly if you do not need to support multiple
+                 * db types (which we just need to allow you to see how to configure your outbox type).
+                 * It's also an example of how you can extend the DSL here easily if you have this kind of variability
+                
+                 * KAFKA and BINARY: Because Kafka here uses the Serdes serializer which sets magic bytes in the first
+                 * five bytes of the the payload we have binary payload messages, and we need to set the binaryMessagePayload to true
+                 *if we don't do that, and use text the database will corrupt the leading bytes
+                */
+                .AddOutbox(_env, GetDatabaseType(), outboxConfiguration)
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
+
 
         private void ConfigureDarker(IServiceCollection services)
         {
@@ -247,5 +259,16 @@ namespace GreetingsWeb
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
+        
+        private RelationalDatabaseConfiguration GetOutboxConfiguration()
+        {
+            if (_env.IsDevelopment())
+            {
+                return new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName, binaryMessagePayload: true);
+            }
+
+            return new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName, binaryMessagePayload: true);
+        }
+
     }
 }

@@ -23,9 +23,9 @@ namespace Paramore.Brighter.Outbox.MySql
         /// -- IAmAnOutboxViewer<Message>: Lets us read the entries in the outbox
         /// -- IAmAnOutboxViewerAsync<Message>: Lets us read the entries in the outbox
         public static IBrighterBuilder UseMySqlOutbox(
-            this IBrighterBuilder brighterBuilder, RelationalDatabaseOutboxConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+            this IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
-            brighterBuilder.Services.AddSingleton<RelationalDatabaseOutboxConfiguration>(configuration);
+            brighterBuilder.Services.AddSingleton<RelationalDatabaseConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMySqlConnectionProvider), connectionProvider, serviceLifetime));
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Outbox.MySql
        
         private static MySqlOutbox BuildMySqlOutboxOutbox(IServiceProvider provider)
         {
-            var config = provider.GetService<MySqlConfiguration>();
+            var config = provider.GetService<RelationalDatabaseConfiguration>();
             var connectionProvider = provider.GetService<IMySqlConnectionProvider>();
 
             return new MySqlOutbox(config, connectionProvider);

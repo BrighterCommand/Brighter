@@ -42,12 +42,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
 
-        private readonly PostgreSqlConfiguration _configuration;
+        private readonly RelationalDatabaseConfiguration _configuration;
         private readonly IPostgreSqlConnectionProvider _connectionProvider;
 
 
         public PostgreSqlOutbox(
-            PostgreSqlConfiguration configuration,
+            RelationalDatabaseConfiguration configuration,
             IPostgreSqlConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
         {
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             _connectionProvider = connectionProvider;
         }
 
-        public PostgreSqlOutbox(PostgreSqlConfiguration configuration)
+        public PostgreSqlOutbox(RelationalDatabaseConfiguration configuration)
             : this(configuration, new PostgreSqlNpgsqlConnectionProvider(configuration))
         { }
 

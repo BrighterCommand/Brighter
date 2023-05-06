@@ -1,19 +1,20 @@
 ﻿namespace Paramore.Brighter
 {
-    public class RelationalDatabaseOutboxConfiguration
+    public class RelationalDatabaseConfiguration
     {
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="RelationalDatabaseOutboxConfiguration"/> class. 
+        /// Initializes a new instance of the <see cref="RelationalDatabaseConfiguration"/> class. 
         /// </summary>
         /// <param name="connectionString">The connection string.</param>
         /// <param name="outBoxTableName">Name of the outbox table.</param>
         /// <param name="inboxTableName">Name of the inbox table.</param>
         /// <param name="queueStoreTable">Name of the queue store table.</param>
         /// <param name="binaryMessagePayload">Is the message payload binary, or a UTF-8 string, default is false or UTF-8</param>
-        protected RelationalDatabaseOutboxConfiguration(
+        public RelationalDatabaseConfiguration(
             string connectionString,
             string outBoxTableName = null,
+            string inboxTableName = null,
             string queueStoreTable = null,
             bool binaryMessagePayload = false
         )
@@ -34,6 +35,12 @@
         /// </summary>
         /// <value>The connection string.</value>
         public string ConnectionString { get; protected set; }
+        
+        /// <summary>
+        /// Gets the name of the inbox table.
+        /// </summary>
+        /// <value>The name of the inbox table.</value>
+        public string InBoxTableName { get; private set; }
 
         /// <summary>
         /// Gets the name of the outbox table.

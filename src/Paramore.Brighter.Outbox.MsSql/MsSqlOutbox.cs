@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     {
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private readonly MsSqlConfiguration _configuration;
+        private readonly RelationalDatabaseConfiguration _configuration;
         private readonly IMsSqlConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
-        public MsSqlOutbox(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider) : base(
+        public MsSqlOutbox(RelationalDatabaseConfiguration configuration, IMsSqlConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlOutbox>())
         {
             _configuration = configuration;
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlOutbox(MsSqlConfiguration configuration) : this(configuration,
+        public MsSqlOutbox(RelationalDatabaseConfiguration configuration) : this(configuration,
             new MsSqlSqlAuthConnectionProvider(configuration))
         {
         }

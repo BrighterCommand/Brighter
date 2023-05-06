@@ -44,10 +44,10 @@ namespace Paramore.Brighter.Outbox.MySql
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
-        private readonly MySqlConfiguration _configuration;
+        private readonly RelationalDatabaseConfiguration _configuration;
         private readonly IMySqlConnectionProvider _connectionProvider;
 
-        public MySqlOutbox(MySqlConfiguration configuration, IMySqlConnectionProvider connectionProvider) : base(
+        public MySqlOutbox(RelationalDatabaseConfiguration configuration, IMySqlConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Outbox.MySql
             ContinueOnCapturedContext = false;
         }
 
-        public MySqlOutbox(MySqlConfiguration configuration) : this(configuration,
+        public MySqlOutbox(RelationalDatabaseConfiguration configuration) : this(configuration,
             new MySqlConnectionProvider(configuration))
         {
         }

@@ -187,7 +187,7 @@ namespace GreetingsWeb.Database
         {
             return databaseType switch
             { 
-                DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
+                DatabaseType.MySql => config.GetConnectionString("GreetingsMySqlDb"),
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }

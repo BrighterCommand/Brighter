@@ -49,9 +49,9 @@ namespace Paramore.Brighter.MSSQL.Tests
             _tableName = $"test_{Guid.NewGuid()}";
 
             _connectionProvider =
-                new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString));
+                new MsSqlSqlAuthConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString));
             _masterConnectionProvider =
-                new MsSqlSqlAuthConnectionProvider(new MsSqlConfiguration(_sqlSettings.TestsMasterConnectionString));
+                new MsSqlSqlAuthConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsMasterConnectionString));
         }
 
         public void CreateDatabase()
@@ -89,15 +89,15 @@ namespace Paramore.Brighter.MSSQL.Tests
             CreateQueueTable();
         }
 
-        public MsSqlConfiguration InboxConfiguration =>
-            new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+        public RelationalDatabaseConfiguration InboxConfiguration =>
+            new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public MsSqlConfiguration OutboxConfiguration => new MsSqlConfiguration(
+        public RelationalDatabaseConfiguration OutboxConfiguration => new RelationalDatabaseConfiguration(
             _sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName,
             binaryMessagePayload: _binaryMessagePayload);
 
-        public MsSqlConfiguration QueueConfiguration =>
-            new MsSqlConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
+        public RelationalDatabaseConfiguration QueueConfiguration =>
+            new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
 
         private void CreateQueueTable()
         {

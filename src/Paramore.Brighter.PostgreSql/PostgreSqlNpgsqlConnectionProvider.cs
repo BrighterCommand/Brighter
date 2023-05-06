@@ -9,7 +9,7 @@ namespace Paramore.Brighter.PostgreSql
     {
         private readonly string _connectionString;
 
-        public PostgreSqlNpgsqlConnectionProvider(RelationalDatabaseOutboxConfiguration configuration)
+        public PostgreSqlNpgsqlConnectionProvider(RelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));

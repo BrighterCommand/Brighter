@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     public static class ServiceCollectionExtensions
     {
         public static IBrighterBuilder UsePostgreSqlOutbox(
-            this IBrighterBuilder brighterBuilder, PostgreSqlConfiguration configuration, Type connectionProvider = null, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+            this IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration, Type connectionProvider = null, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             if (brighterBuilder is null)
                 throw new ArgumentNullException($"{nameof(brighterBuilder)} cannot be null.", nameof(brighterBuilder));
@@ -16,7 +16,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             if (configuration is null)
                 throw new ArgumentNullException($"{nameof(configuration)} cannot be null.", nameof(configuration));
 
-            brighterBuilder.Services.AddSingleton<PostgreSqlConfiguration>(configuration);
+            brighterBuilder.Services.AddSingleton<RelationalDatabaseConfiguration>(configuration);
 
             if (connectionProvider is object)
             {
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
         private static PostgreSqlOutbox BuildPostgreSqlOutboxSync(IServiceProvider provider)
         {
-            var config = provider.GetService<PostgreSqlConfiguration>();
+            var config = provider.GetService<RelationalDatabaseConfiguration>();
             var connectionProvider = provider.GetService<IPostgreSqlConnectionProvider>();
 
             return new PostgreSqlOutbox(config, connectionProvider);

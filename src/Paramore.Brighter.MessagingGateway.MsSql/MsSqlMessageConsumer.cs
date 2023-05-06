@@ -14,7 +14,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private readonly MsSqlMessageQueue<Message> _sqlQ;
 
         public MsSqlMessageConsumer(
-            MsSqlConfiguration msSqlConfiguration, 
+            RelationalDatabaseConfiguration msSqlConfiguration, 
             string topic, IMsSqlConnectionProvider connectionProvider)
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         }
 
         public MsSqlMessageConsumer(
-            MsSqlConfiguration msSqlConfiguration,
+            RelationalDatabaseConfiguration msSqlConfiguration,
             string topic) :this(msSqlConfiguration, topic, new MsSqlSqlAuthConnectionProvider(msSqlConfiguration))
         {
         }

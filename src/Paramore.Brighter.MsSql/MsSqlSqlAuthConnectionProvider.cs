@@ -12,7 +12,7 @@ namespace Paramore.Brighter.MsSql
         /// Initialise a new instance of Ms Sql Connection provider using Sql Authentication.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlSqlAuthConnectionProvider(MsSqlConfiguration configuration)
+        public MsSqlSqlAuthConnectionProvider(RelationalDatabaseConfiguration configuration)
         {
             _connectionString = configuration.ConnectionString;
         }

@@ -62,7 +62,7 @@ namespace GreetingsReceiverConsole
 
                     //create the gateway
                     var messagingConfiguration =
-                        new MsSqlConfiguration(
+                        new RelationalDatabaseConfiguration(
                             @"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
                     var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
                     services.AddServiceActivator(options =>

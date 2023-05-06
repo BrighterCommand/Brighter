@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MySql;
@@ -40,7 +41,7 @@ public static class OutboxExtensions
     private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName)
     {
         brighterBuilder.UseMySqlOutbox(
-                new MySqlConfiguration(dbConnectionString, outBoxTableName), 
+                new RelationalDatabaseConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
             .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
@@ -50,7 +51,7 @@ public static class OutboxExtensions
     private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName)
     {
         brighterBuilder.UseSqliteOutbox(
-                new SqliteConfiguration(dbConnectionString, outBoxTableName), 
+                new RelationalDatabaseConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
             .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.SqliteDapperConnectionProvider), ServiceLifetime.Scoped)

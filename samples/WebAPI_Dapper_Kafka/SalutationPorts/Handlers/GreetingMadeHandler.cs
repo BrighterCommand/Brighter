@@ -19,6 +19,15 @@ namespace SalutationPorts.Handlers
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandler> _logger;
 
+        /*
+         * KAFKA and ASYNC: Kafka is oriented around the idea of an ordered append log of events. You will lose that ordering
+         * if you use an async handler, because your handlers will not necessarily complete in order. Because a Brighter consumer
+         * is single-threaded we guarantee your ordering, provided you don't use async handlers. If you do, there are no
+         * guarantees about order.
+         * Generally, you should not use async handlers with Kafka, unless you are happy to lose ordering.
+         * Instead, rely on being able to partition your topic such that a single thread can handle the number of messages
+         * arriving on that thread with an acceptable latency.
+         */
         public GreetingMadeHandler(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
         {
             _uow = uow;

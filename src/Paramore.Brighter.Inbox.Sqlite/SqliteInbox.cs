@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
         ///     Initializes a new instance of the <see cref="SqliteInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public SqliteInbox(SqliteInboxConfiguration configuration)
+        public SqliteInbox(RelationalDatabaseConfiguration configuration)
         {
             Configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -210,7 +210,7 @@ namespace Paramore.Brighter.Inbox.Sqlite
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
-        public SqliteInboxConfiguration Configuration { get; }
+        public RelationalDatabaseConfiguration Configuration { get; }
 
         public string OutboxTableName => Configuration.InBoxTableName;
 

@@ -24,9 +24,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// -- IAmAnOutboxViewer<Message>: Lets us read the entries in the outbox
         /// -- IAmAnOutboxViewerAsync<Message>: Lets us read the entries in the outbox
         public static IBrighterBuilder UseMsSqlOutbox(
-            this IBrighterBuilder brighterBuilder, MsSqlConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton, int outboxBulkChunkSize = 100)
+            this IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton, int outboxBulkChunkSize = 100)
         {
-            brighterBuilder.Services.AddSingleton<MsSqlConfiguration>(configuration);
+            brighterBuilder.Services.AddSingleton<RelationalDatabaseConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMsSqlConnectionProvider), connectionProvider, serviceLifetime));
             
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMsSqlOutbox, serviceLifetime));
@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private static MsSqlOutbox BuildMsSqlOutbox(IServiceProvider provider)
         {
             var connectionProvider = provider.GetService<IMsSqlConnectionProvider>();
-            var config = provider.GetService<MsSqlConfiguration>();
+            var config = provider.GetService<RelationalDatabaseConfiguration>();
 
             return new MsSqlOutbox(config, connectionProvider);
         }

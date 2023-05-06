@@ -39,7 +39,7 @@ namespace Paramore.Brighter.Sqlite
         /// Initialise a new instance of Sqlte Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public SqliteConnectionProvider(SqliteConfiguration configuration)
+        public SqliteConnectionProvider(RelationalDatabaseConfiguration configuration)
         {
             _connectionString = configuration.ConnectionString;
         }

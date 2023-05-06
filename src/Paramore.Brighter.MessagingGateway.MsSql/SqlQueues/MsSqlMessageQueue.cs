@@ -17,7 +17,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
     {
         private const int RetryDelay = 100;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlMessageQueue<T>>();
-        private readonly MsSqlConfiguration _configuration;
+        private readonly RelationalDatabaseConfiguration _configuration;
         private readonly IMsSqlConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
         /// </summary>
         /// <param name="configuration"></param>
         /// <param name="connectionProvider"></param>
-        public MsSqlMessageQueue(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
+        public MsSqlMessageQueue(RelationalDatabaseConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _connectionProvider = connectionProvider;

@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// Initialise a new instance of Ms Sql Connection provider using Managed Identity Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlManagedIdentityConnectionProvider(MsSqlConfiguration configuration) : base(configuration)
+        public MsSqlManagedIdentityConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
         {
         }
 

@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MySql;
@@ -16,19 +17,22 @@ namespace GreetingsWeb.Database;
 
 public static class OutboxExtensions
 {
-    public static IBrighterBuilder AddOutbox(this IBrighterBuilder brighterBuilder, IWebHostEnvironment env, DatabaseType databaseType,
-        string dbConnectionString, string outBoxTableName, bool binaryMessagePayload = false)
+    public static IBrighterBuilder AddOutbox(
+        this IBrighterBuilder brighterBuilder, 
+        IWebHostEnvironment env, 
+        DatabaseType databaseType,
+        RelationalDatabaseConfiguration configuration)
     {
         if (env.IsDevelopment())
         {
-            AddSqliteOutBox(brighterBuilder, dbConnectionString, outBoxTableName, binaryMessagePayload);
+            AddSqliteOutBox(brighterBuilder, configuration);
         }
         else
         {
             switch (databaseType)
             {
                 case DatabaseType.MySql:
-                    AddMySqlOutbox(brighterBuilder, dbConnectionString, outBoxTableName, binaryMessagePayload);
+                    AddMySqlOutbox(brighterBuilder, configuration);
                     break;
                 default:
                     throw new InvalidOperationException("Unknown Db type for Outbox configuration");
@@ -37,20 +41,21 @@ public static class OutboxExtensions
         return brighterBuilder;
     }
 
-    private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName, bool binaryMessagePayload)
+    private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration)
     {
         brighterBuilder.UseMySqlOutbox(
-                new MySqlConfiguration(dbConnectionString, outBoxTableName, binaryMessagePayload: binaryMessagePayload), 
+                //new MySqlConfiguration(dbConnectionString, outBoxTableName, binaryMessagePayload: binaryMessagePayload), 
+                configuration,
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
             .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
             .UseOutboxSweeper();
     }
 
-    private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder, string dbConnectionString, string outBoxTableName, bool binaryMessagePayload)
+    private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration)
     {
         brighterBuilder.UseSqliteOutbox(
-                new SqliteConfiguration(dbConnectionString, outBoxTableName, binaryMessagePayload: binaryMessagePayload), 
+                configuration,
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
             .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.SqliteDapperConnectionProvider), ServiceLifetime.Scoped)

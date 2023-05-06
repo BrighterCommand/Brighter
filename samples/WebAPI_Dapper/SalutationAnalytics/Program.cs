@@ -193,10 +193,10 @@ namespace SalutationAnalytics
         {
             if (hostContext.HostingEnvironment.IsDevelopment())
             {
-                return new SqliteInbox(new SqliteInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+                return new SqliteInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
             }
 
-            return new MySqlInbox(new MySqlInboxConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+            return new MySqlInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
         }
 
         private static string DbConnectionString(HostBuilderContext hostContext)

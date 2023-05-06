@@ -23,9 +23,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// -- IAmAnOutboxViewer<Message>: Lets us read the entries in the outbox
         /// -- IAmAnOutboxViewerAsync<Message>: Lets us read the entries in the outbox
          public static IBrighterBuilder UseSqliteOutbox(
-            this IBrighterBuilder brighterBuilder, SqliteConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
+            this IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
-            brighterBuilder.Services.AddSingleton<SqliteConfiguration>(configuration);
+            brighterBuilder.Services.AddSingleton(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(ISqliteConnectionProvider), connectionProvider, serviceLifetime));
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildSqliteOutbox, serviceLifetime));
@@ -55,7 +55,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private static SqliteOutbox BuildSqliteOutbox(IServiceProvider provider)
         {
-            var config = provider.GetService<SqliteConfiguration>();
+            var config = provider.GetService<RelationalDatabaseConfiguration>();
             var connectionProvider = provider.GetService<ISqliteConnectionProvider>();
 
             return new SqliteOutbox(config, connectionProvider);

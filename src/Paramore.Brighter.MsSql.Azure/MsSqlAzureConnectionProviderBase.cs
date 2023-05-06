@@ -24,7 +24,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration.</param>
         /// <param name="cacheTokens">Cache Access Tokens until they have less than 5 minutes of life left.</param>
-        protected MsSqlAzureConnectionProviderBase(MsSqlConfiguration configuration, bool cacheTokens = true)
+        protected MsSqlAzureConnectionProviderBase(RelationalDatabaseConfiguration configuration, bool cacheTokens = true)
         {
             _cacheTokens = cacheTokens;
             _connectionString = configuration.ConnectionString;

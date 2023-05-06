@@ -15,7 +15,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
         /// <param name="credentialSources">List of Token Providers to use when trying to obtain a token.</param>
-        public ServiceBusChainedClientProvider(MsSqlConfiguration configuration,
+        public ServiceBusChainedClientProvider(RelationalDatabaseConfiguration configuration,
             params TokenCredential[] credentialSources) : base(configuration)
         {
             if (credentialSources == null || credentialSources.Length < 1)

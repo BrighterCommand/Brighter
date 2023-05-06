@@ -136,7 +136,7 @@ namespace GreetingsWeb
                                 }}
                          ).Create()
                      )
-                     .UseSqliteOutbox(new SqliteConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
+                     .UseSqliteOutbox(new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
                      .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
                      .UseOutboxSweeper(options =>
                      {
@@ -170,7 +170,7 @@ namespace GreetingsWeb
                                 }}
                         ).Create()
                     )
-                    .UseMySqlOutbox(new MySqlConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
+                    .UseMySqlOutbox(new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
                     .UseMySqTransactionConnectionProvider(typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
                     .UseOutboxSweeper()
                     .AutoFromAssemblies();

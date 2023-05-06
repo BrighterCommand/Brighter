@@ -31,7 +31,7 @@ string asbEndpoint = ".servicebus.windows.net";
 
 var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoint);
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 builder.Services
     .AddBrighter(opt =>

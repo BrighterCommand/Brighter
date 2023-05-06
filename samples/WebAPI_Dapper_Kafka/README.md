@@ -72,7 +72,7 @@ A common error is to change something, forget to run build.sh and use an old Doc
 
 ### Deploy
 
-We provide a docker compose file to allow you to run a 'Production' environment or to startup RabbitMQ for production:
+We provide a docker compose file to allow you to run a 'Production' environment or to startup Kafka and PostgreSQL for production:
 ```sh
 docker compose up -d kafka   # will just start kafka
 ```
