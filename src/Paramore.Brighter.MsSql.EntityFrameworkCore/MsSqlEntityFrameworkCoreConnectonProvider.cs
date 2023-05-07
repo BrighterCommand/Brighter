@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Paramore.Brighter.MsSql.EntityFrameworkCore
 {
-    public class MsSqlEntityFrameworkCoreConnectonProvider<T> : IAmATransactionConnectonProvider where T : DbContext
+    public class MsSqlEntityFrameworkCoreConnectonProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectonProvider where T : DbContext
     {
         private readonly T _context;
         
@@ -19,27 +19,27 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
             _context = context;
         }
         
-        public DbConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             _context.Database.CanConnect();
-            return (SqlConnection)_context.Database.GetDbConnection();
+            return _context.Database.GetDbConnection();
         }
 
-        public async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             await _context.Database.CanConnectAsync(cancellationToken);
-            return (SqlConnection)_context.Database.GetDbConnection();
+            return _context.Database.GetDbConnection();
         }
 
-        public DbTransaction GetTransaction()
+        public override DbTransaction GetTransaction()
         {
             var trans = (SqlTransaction)_context.Database.CurrentTransaction?.GetDbTransaction();
             return trans;
         }
 
-        public bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
-        public bool IsSharedConnection { get => true; }
+        public override bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
+        public override bool IsSharedConnection { get => true; }
     }
 }

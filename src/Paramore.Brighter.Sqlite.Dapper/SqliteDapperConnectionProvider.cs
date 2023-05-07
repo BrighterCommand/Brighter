@@ -4,7 +4,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Dapper;
-using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Sqlite.Dapper
 {

@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace Paramore.Brighter.PostgreSql
+namespace Paramore.Brighter
 {
     public abstract class RelationalDbConnectionProvider : IAmARelationalDbConnectionProvider
     {

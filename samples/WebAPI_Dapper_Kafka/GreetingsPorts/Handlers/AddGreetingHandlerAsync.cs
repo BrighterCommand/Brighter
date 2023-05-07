@@ -12,7 +12,6 @@ using GreetingsPorts.Requests;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
-using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.Sqlite.Dapper;
 
 namespace GreetingsPorts.Handlers

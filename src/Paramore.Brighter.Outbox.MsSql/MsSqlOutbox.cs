@@ -34,7 +34,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MsSql;
-using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.MsSql
 {

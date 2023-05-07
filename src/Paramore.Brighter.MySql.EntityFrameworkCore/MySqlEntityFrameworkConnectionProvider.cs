@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
     /// A connection provider that uses the same connection as EF Core
     /// </summary>
     /// <typeparam name="T">The Db Context to take the connection from</typeparam>
-    public class MySqlEntityFrameworkConnectionProvider<T> : IAmATransactionConnectonProvider where T: DbContext
+    public class MySqlEntityFrameworkConnectionProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectonProvider where T: DbContext
     {
         private readonly T _context;
 
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// Get the current connection of the DB context
         /// </summary>
         /// <returns>The Sqlite Connection that is in use</returns>
-        public DbConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             _context.Database.CanConnect();
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns></returns>
-        public async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             await _context.Database.CanConnectAsync(cancellationToken);
@@ -51,12 +51,12 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         /// Get the ambient EF Core Transaction
         /// </summary>
         /// <returns>The Sqlite Transaction</returns>
-        public DbTransaction GetTransaction()
+        public override DbTransaction GetTransaction()
         {
             return _context.Database.CurrentTransaction?.GetDbTransaction();
         }
 
-        public bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
-        public bool IsSharedConnection { get => true; }
+        public override bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
+        public override bool IsSharedConnection { get => true; }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System.Data.Common;
 using Microsoft.Data.SqlClient;
-using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MsSql
 {

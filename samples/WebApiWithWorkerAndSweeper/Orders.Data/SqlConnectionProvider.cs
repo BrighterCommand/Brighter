@@ -1,6 +1,6 @@
 using System.Data.Common;
 using Microsoft.Data.SqlClient;
-using Paramore.Brighter.PostgreSql;
+using Paramore.Brighter;
 
 namespace Orders.Data;
 

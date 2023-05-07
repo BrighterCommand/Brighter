@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
-using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {

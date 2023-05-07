@@ -24,7 +24,6 @@
 
 using System.Data.Common;
 using MySqlConnector;
-using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MySql
 {

@@ -34,7 +34,6 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Inbox.Exceptions;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.Logging;
-using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.MsSql
 {

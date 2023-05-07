@@ -12,7 +12,7 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
     /// A connection provider that uses the same connection as EF Core
     /// </summary>
     /// <typeparam name="T">The Db Context to take the connection from</typeparam>
-    public class PostgreSqlEntityFrameworkConnectonProvider<T> : IAmATransactionConnectonProvider where T : DbContext
+    public class PostgreSqlEntityFrameworkConnectonProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectonProvider where T : DbContext
     {
         private readonly T _context;
 
@@ -29,7 +29,7 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
         /// Get the current connection of the database context
         /// </summary>
         /// <returns>The NpgsqlConnection that is in use</returns>
-        public DbConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             return _context.Database.GetDbConnection();
         }
@@ -39,10 +39,10 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
         /// </summary>
         /// <param name="cancellationToken">A cancellation token</param>
         /// <returns></returns>
-        public Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        public override Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<DbConnection>();
-            tcs.SetResult((DbConnection)_context.Database.GetDbConnection());
+            tcs.SetResult(_context.Database.GetDbConnection());
             return tcs.Task;
         }
 
@@ -50,13 +50,13 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
         /// Get the ambient Transaction
         /// </summary>
         /// <returns>The NpgsqlTransaction</returns>
-        public DbTransaction GetTransaction()
+        public override DbTransaction GetTransaction()
         {
             return _context.Database.CurrentTransaction?.GetDbTransaction();
         }
 
-        public bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
+        public override bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
 
-        public bool IsSharedConnection { get => true; }
+        public override bool IsSharedConnection { get => true; }
     }
 }
