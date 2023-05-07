@@ -65,12 +65,12 @@ namespace Paramore.Brighter
             
         }
 
-        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
+        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmATransactionConnectonProvider overridingAmATransactionProvider = null)
             where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
                 
-            var written = await RetryAsync(async ct => { await AsyncOutbox.AddAsync(message, OutboxTimeout, ct, overridingTransactionConnectionProvider).ConfigureAwait(continueOnCapturedContext); },
+            var written = await RetryAsync(async ct => { await AsyncOutbox.AddAsync(message, OutboxTimeout, ct, overridingAmATransactionProvider).ConfigureAwait(continueOnCapturedContext); },
                     continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
 
             if (!written)
@@ -79,7 +79,7 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
 
-        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null)
+        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmATransactionConnectonProvider overridingAmATransactionProvider = null)
         {
             CheckOutboxOutstandingLimit();
 
@@ -92,7 +92,7 @@ namespace Paramore.Brighter
                     var written = await RetryAsync(
                         async ct =>
                         {
-                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingTransactionConnectionProvider)
+                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingAmATransactionProvider)
                                 .ConfigureAwait(continueOnCapturedContext);
                         },
                         continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
@@ -107,11 +107,11 @@ namespace Paramore.Brighter
             }
         } 
             
-        internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) where T : class, IRequest
+        internal void AddToOutbox<T>(T request, Message message, IAmATransactionConnectonProvider overridingAmATransactionProvider = null) where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
                 
-            var written = Retry(() => { OutBox.Add(message, OutboxTimeout, overridingTransactionConnectionProvider); });
+            var written = Retry(() => { OutBox.Add(message, OutboxTimeout, overridingAmATransactionProvider); });
 
             if (!written)
                 throw new ChannelFailureException($"Could not write request {request.Id} to the outbox");
@@ -119,7 +119,7 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
         
-        internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionConnectionProvider overridingTransactionConnectionProvider = null) 
+        internal void AddToOutbox(IEnumerable<Message> messages, IAmATransactionConnectonProvider overridingAmATransactionProvider = null) 
         {
             CheckOutboxOutstandingLimit();
 
@@ -130,7 +130,7 @@ namespace Paramore.Brighter
                 foreach (var chunk in ChunkMessages(messages))
                 {
                     var written =
-                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingTransactionConnectionProvider); });
+                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingAmATransactionProvider); });
 
                     if (!written)
                         throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");

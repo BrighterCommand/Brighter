@@ -12,8 +12,8 @@ namespace Paramore.Brighter.MSSQL.Tests
         private readonly bool _binaryMessagePayload;
         private string _tableName;
         private SqlSettings _sqlSettings;
-        private IMsSqlConnectionProvider _connectionProvider;
-        private IMsSqlConnectionProvider _masterConnectionProvider;
+        private IAmARelationalDbConnectionProvider _connectionProvider;
+        private IAmARelationalDbConnectionProvider _masterConnectionProvider;
 
         private const string _textQueueDDL = @"CREATE TABLE [dbo].[{0}](
                 [Id][bigint] IDENTITY(1, 1) NOT NULL,
@@ -36,6 +36,16 @@ namespace Paramore.Brighter.MSSQL.Tests
                 [Id] ASC
                 )WITH(PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON[PRIMARY]
                 ) ON[PRIMARY] TEXTIMAGE_ON[PRIMARY]";
+        
+        public RelationalDatabaseConfiguration InboxConfiguration => 
+            new(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
+            new(_sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+
+        public RelationalDatabaseConfiguration QueueConfiguration =>
+            new(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
+
 
         public MsSqlTestHelper(bool binaryMessagePayload = false)
         {
@@ -88,16 +98,6 @@ namespace Paramore.Brighter.MSSQL.Tests
             CreateDatabase();
             CreateQueueTable();
         }
-
-        public RelationalDatabaseConfiguration InboxConfiguration =>
-            new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
-
-        public RelationalDatabaseConfiguration OutboxConfiguration => new RelationalDatabaseConfiguration(
-            _sqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName,
-            binaryMessagePayload: _binaryMessagePayload);
-
-        public RelationalDatabaseConfiguration QueueConfiguration =>
-            new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString, queueStoreTable: _tableName);
 
         private void CreateQueueTable()
         {

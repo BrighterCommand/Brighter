@@ -22,16 +22,19 @@
  
 #endregion
 
+using System.Data;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Sqlite
 {
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class SqliteConnectionProvider : ISqliteConnectionProvider
+    public class SqliteConnectionProvider : RelationalDbConnectionProvider
     {
         private readonly string _connectionString;
 
@@ -44,26 +47,9 @@ namespace Paramore.Brighter.Sqlite
             _connectionString = configuration.ConnectionString;
         }
 
-        public SqliteConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             return new SqliteConnection(_connectionString);
         }
-
-        public async Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
-        {
-            var tcs = new TaskCompletionSource<SqliteConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            tcs.SetResult(GetConnection());
-            return await tcs.Task;
-        }
-
-        public SqliteTransaction GetTransaction()
-        {
-            //This Connection Factory does not support Transactions 
-            return null;
-        }
-
-        public bool HasOpenTransaction { get => false; }
-        public bool IsSharedConnection { get => false; }
     }
 }

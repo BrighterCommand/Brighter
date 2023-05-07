@@ -12,6 +12,7 @@ using GreetingsPorts.Requests;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
+using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.Sqlite.Dapper;
 
 namespace GreetingsPorts.Handlers
@@ -20,12 +21,12 @@ namespace GreetingsPorts.Handlers
     {
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<AddGreetingHandlerAsync> _logger;
-        private readonly SqliteDapperConnectionProvider  _uow;
+        private readonly RelationalDbConnectionProvider  _uow;
 
 
-        public AddGreetingHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(RelationalDbConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
-            _uow = (SqliteDapperConnectionProvider)uow;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
+            _uow = uow;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
             _postBox = postBox;
             _logger = logger;
         }

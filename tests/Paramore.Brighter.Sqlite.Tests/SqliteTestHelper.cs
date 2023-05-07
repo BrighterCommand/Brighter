@@ -11,10 +11,15 @@ namespace Paramore.Brighter.Sqlite.Tests
         private readonly bool _binaryMessagePayload;
         private const string TestDbPath = "test.db";
         public string ConnectionString = $"DataSource=\"{TestDbPath}\"";
-        public readonly string TableName = "test_commands";
-        public readonly string TableNameMessages = "test_messages";
+        public readonly string InboxTableName = "test_commands";
+        public readonly string OutboxTableName = "test_messages";
         private string _connectionStringPath;
         private string _connectionStringPathDir;
+        
+        public RelationalDatabaseConfiguration InboxConfiguration => new(ConnectionString, inboxTableName: InboxTableName);
+        
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
+                    new(ConnectionString, outBoxTableName: OutboxTableName, binaryMessagePayload: _binaryMessagePayload);
 
         public SqliteTestHelper(bool binaryMessagePayload = false)
         {
@@ -25,14 +30,14 @@ namespace Paramore.Brighter.Sqlite.Tests
         {
             _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(TableName));
+            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(InboxTableName));
         }
 
         public void SetupMessageDb()
         {
             _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
             ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableNameMessages, hasBinaryMessagePayload: _binaryMessagePayload));
+            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(OutboxTableName, hasBinaryMessagePayload: _binaryMessagePayload));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()

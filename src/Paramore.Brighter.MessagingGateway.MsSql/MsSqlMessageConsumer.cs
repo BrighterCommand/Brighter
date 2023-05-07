@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
 using Paramore.Brighter.MessagingGateway.MsSql.SqlQueues;
 using Paramore.Brighter.MsSql;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MessagingGateway.MsSql
 {
@@ -15,7 +16,9 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration, 
-            string topic, IMsSqlConnectionProvider connectionProvider)
+            string topic, 
+            RelationalDbConnectionProvider connectionProvider
+            )
         {
             _topic = topic ?? throw new ArgumentNullException(nameof(topic));
             _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);

@@ -1,11 +1,14 @@
-﻿using System.Threading;
+﻿using System.Data;
+using System.Data.Common;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Dapper;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Sqlite.Dapper
 {
-    public class SqliteDapperConnectionProvider : ISqliteTransactionConnectionProvider 
+    public class SqliteDapperConnectionProvider : RelationalDbConnectionProvider 
     {
         private readonly IUnitOfWork _unitOfWork;
 
@@ -14,21 +17,14 @@ namespace Paramore.Brighter.Sqlite.Dapper
             _unitOfWork = unitOfWork;
         }
         
-        public SqliteConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             return (SqliteConnection)_unitOfWork.Database;
         }
 
-        public Task<SqliteConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        public IDbTransaction GetTransaction()
         {
-            var tcs = new TaskCompletionSource<SqliteConnection>();
-            tcs.SetResult(GetConnection());
-            return tcs.Task;
-        }
-
-        public SqliteTransaction GetTransaction()
-        {
-            return (SqliteTransaction)_unitOfWork.BeginOrGetTransaction();
+            return (DbTransaction)_unitOfWork.BeginOrGetTransaction();
         }
 
         public bool HasOpenTransaction

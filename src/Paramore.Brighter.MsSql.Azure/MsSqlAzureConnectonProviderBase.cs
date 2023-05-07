@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Core;
@@ -7,7 +8,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public abstract class MsSqlAzureConnectionProviderBase : IMsSqlConnectionProvider
+    public abstract class MsSqlAzureConnectonProviderBase : IAmATransactionConnectonProvider
     {
         private readonly bool _cacheTokens;
         private const string _azureScope = "https://database.windows.net/.default";
@@ -24,14 +25,14 @@ namespace Paramore.Brighter.MsSql.Azure
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration.</param>
         /// <param name="cacheTokens">Cache Access Tokens until they have less than 5 minutes of life left.</param>
-        protected MsSqlAzureConnectionProviderBase(RelationalDatabaseConfiguration configuration, bool cacheTokens = true)
+        protected MsSqlAzureConnectonProviderBase(RelationalDatabaseConfiguration configuration, bool cacheTokens = true)
         {
             _cacheTokens = cacheTokens;
             _connectionString = configuration.ConnectionString;
             _authenticationTokenScopes = new string[1] {_azureScope};
         }
 
-        public SqlConnection GetConnection()
+        public DbConnection GetConnection()
         {
             var sqlConnection = new SqlConnection(_connectionString);
             sqlConnection.AccessToken = GetAccessToken();
@@ -39,7 +40,7 @@ namespace Paramore.Brighter.MsSql.Azure
             return sqlConnection;
         }
 
-        public async Task<SqlConnection> GetConnectionAsync(
+        public async Task<DbConnection> GetConnectionAsync(
             CancellationToken cancellationToken = default)
         {
             var sqlConnection = new SqlConnection(_connectionString);
@@ -96,7 +97,7 @@ namespace Paramore.Brighter.MsSql.Azure
         
         protected abstract Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken);
 
-        public SqlTransaction GetTransaction()
+        public DbTransaction GetTransaction()
         {
             //This Connection Factory does not support Transactions 
             return null;

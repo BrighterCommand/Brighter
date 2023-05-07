@@ -6,7 +6,7 @@ using Azure.Identity;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public class MsSqlSharedTokenCacheConnectionProvider : MsSqlAzureConnectionProviderBase
+    public class MsSqlSharedTokenCacheConnectonProvider : MsSqlAzureConnectonProviderBase
     {
         private const string _azureUserNameKey = "AZURE_USERNAME";
         private const string _azureTenantIdKey = "AZURE_TENANT_ID";
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlSharedTokenCacheConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
+        public MsSqlSharedTokenCacheConnectonProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
         {
             _azureUserName = Environment.GetEnvironmentVariable(_azureUserNameKey);
             _azureTenantId = Environment.GetEnvironmentVariable(_azureTenantIdKey);
@@ -28,7 +28,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// Initialise a new instance of Ms Sql Connection provider using Shared Token Cache Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlSharedTokenCacheConnectionProvider(RelationalDatabaseConfiguration configuration, string userName, string tenantId) : base(configuration)
+        public MsSqlSharedTokenCacheConnectonProvider(RelationalDatabaseConfiguration configuration, string userName, string tenantId) : base(configuration)
         {
             _azureUserName = userName;
             _azureTenantId = tenantId;

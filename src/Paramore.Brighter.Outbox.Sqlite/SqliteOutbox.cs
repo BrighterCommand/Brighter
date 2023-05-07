@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,23 +40,22 @@ namespace Paramore.Brighter.Outbox.Sqlite
     /// <summary>
     /// Implements an outbox using Sqlite as a backing store
     /// </summary>
-    public class SqliteOutbox : RelationDatabaseOutbox<SqliteConnection, SqliteCommand, SqliteDataReader,
-        SqliteParameter>
+    public class SqliteOutbox : RelationDatabaseOutbox
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<SqliteOutbox>();
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
         private readonly RelationalDatabaseConfiguration _configuration;
-        private readonly ISqliteConnectionProvider _connectionProvider;
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        public SqliteOutbox(RelationalDatabaseConfiguration configuration, ISqliteConnectionProvider connectionProvider) : base(
-            configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
+        public SqliteOutbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
+            : base(configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -66,19 +66,20 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public SqliteOutbox(RelationalDatabaseConfiguration configuration) : this(configuration,
-            new SqliteConnectionProvider(configuration))
+        public SqliteOutbox(RelationalDatabaseConfiguration configuration) 
+            : this(configuration, new SqliteConnectionProvider(configuration))
         {
         }
 
-        protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
-            Func<SqliteConnection, SqliteCommand> commandFunc,
-            Action loggingAction)
+        protected override void WriteToStore(
+            IAmATransactionConnectonProvider transactionProvider,
+            Func<DbConnection, DbCommand> commandFunc,
+            Action loggingAction
+            )
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null &&
-                transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
-                connectionProvider = provider;
+            if (transactionProvider != null)
+                connectionProvider = transactionProvider;
 
             var connection = connectionProvider.GetConnection();
 
@@ -88,7 +89,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             {
                 try
                 {
-                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
@@ -113,14 +114,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider,
-            Func<SqliteConnection, SqliteCommand> commandFunc,
-            Action loggingAction, CancellationToken cancellationToken)
+            IAmATransactionConnectonProvider transactionConnectionProvider,
+            Func<DbConnection, DbCommand> commandFunc,
+            Action loggingAction, 
+            CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null &&
-                transactionConnectionProvider is ISqliteTransactionConnectionProvider provider)
-                connectionProvider = provider;
+            if (transactionConnectionProvider != null)
+                connectionProvider = transactionConnectionProvider;
 
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -154,8 +155,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
-        protected override T ReadFromStore<T>(Func<SqliteConnection, SqliteCommand> commandFunc,
-            Func<SqliteDataReader, T> resultFunc)
+        protected override T ReadFromStore<T>(
+            Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, T> resultFunc
+            )
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -177,8 +180,9 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
-        protected override async Task<T> ReadFromStoreAsync<T>(Func<SqliteConnection, SqliteCommand> commandFunc,
-            Func<SqliteDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+        protected override async Task<T> ReadFromStoreAsync<T>(
+            Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -200,8 +204,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
-        protected override SqliteCommand CreateCommand(SqliteConnection connection, string sqlText, int outBoxTimeout,
-            params SqliteParameter[] parameters)
+        protected override DbCommand  CreateCommand(
+            DbConnection connection, 
+            string sqlText, 
+            int outBoxTimeout,
+            params IDbDataParameter[] parameters)
         {
             var command = connection.CreateCommand();
 
@@ -212,10 +219,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return command;
         }
 
-        protected override SqliteParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber)
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
+            double milliSecondsSinceAdded,
+            int pageSize, int pageNumber
+            )
         {
-            var parameters = new SqliteParameter[3];
+            var parameters = new IDbDataParameter[3];
             parameters[0] = CreateSqlParameter("PageNumber", pageNumber);
             parameters[1] = CreateSqlParameter("PageSize", pageSize);
             parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
@@ -223,12 +232,12 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return parameters;
         }
 
-        protected override SqliteParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
         {
             return new SqliteParameter(parameterName, value ?? DBNull.Value);
         }
 
-        protected override SqliteParameter[] InitAddDbParameters(Message message, int? position = null)
+        protected override IDbDataParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
@@ -296,7 +305,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             };
         }
 
-        protected override Message MapFunction(SqliteDataReader dr)
+        protected override Message MapFunction(DbDataReader dr)
         {
             using (dr)
             {
@@ -309,8 +318,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
-        protected override async Task<Message> MapFunctionAsync(SqliteDataReader dr,
-            CancellationToken cancellationToken)
+        protected override async Task<Message> MapFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
         {
             using (dr)
             {
@@ -323,7 +331,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             }
         }
 
-        protected override IEnumerable<Message> MapListFunction(SqliteDataReader dr)
+        protected override IEnumerable<Message> MapListFunction(DbDataReader dr)
         {
             var messages = new List<Message>();
             while (dr.Read())
@@ -336,8 +344,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             return messages;
         }
 
-        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(SqliteDataReader dr,
-            CancellationToken cancellationToken)
+        protected override async Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
         {
             var messages = new List<Message>();
             while (await dr.ReadAsync(cancellationToken))
@@ -404,7 +411,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
 
-        private byte[] GetBodyAsBytes(SqliteDataReader dr)
+        private byte[] GetBodyAsBytes(DbDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);

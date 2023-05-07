@@ -41,9 +41,7 @@ namespace Paramore.Brighter.Outbox.EventStore
     /// <summary>
     ///     Class EventStoreOutbox.
     /// </summary>
-    public class EventStoreOutboxSync :
-        IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>
+    public class EventStoreOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutboxSync>();
 
@@ -75,7 +73,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The outBoxTimeout.</param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider transactionProvider = null)
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
@@ -96,8 +94,12 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns><see cref="Task"/>.</returns>
-        public async Task AddAsync(Message message, int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public async Task AddAsync(
+            Message message, 
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default, 
+            IAmATransactionConnectonProvider transactionProvider = null
+            )
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
@@ -199,7 +201,9 @@ namespace Paramore.Brighter.Outbox.EventStore
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
+        public Task<IEnumerable<Message>> GetAsync(
+            IEnumerable<Guid> messageIds, 
+            int outBoxTimeout = -1,
             CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
@@ -227,8 +231,12 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="args">Additional parameters required for search, if any</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
+        public async Task MarkDispatchedAsync(
+            Guid id, 
+            DateTime? dispatchedAt = null, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default
+            )
         {
             var stream = GetStreamFromArgs(args);
 
@@ -262,14 +270,22 @@ namespace Paramore.Brighter.Outbox.EventStore
             await _eventStore.AppendToStreamAsync(stream, nextEventNumber.Value, eventData);
         }
 
-        public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
+        public Task MarkDispatchedAsync(
+            IEnumerable<Guid> ids, DateTime? dispatchedAt = null, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default
+            )
         {
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
         }

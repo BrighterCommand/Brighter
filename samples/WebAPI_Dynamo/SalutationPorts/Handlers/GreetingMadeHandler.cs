@@ -20,7 +20,7 @@ namespace SalutationPorts.Handlers
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandlerAsync> _logger;
 
-        public GreetingMadeHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandlerAsync(IAmABoxTransactionProvider uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
         {
             _uow = (DynamoDbUnitOfWork)uow;
             _postBox = postBox;

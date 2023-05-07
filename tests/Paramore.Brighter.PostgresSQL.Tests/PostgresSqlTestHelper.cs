@@ -16,6 +16,12 @@ namespace Paramore.Brighter.PostgresSQL.Tests
         private string _tableName;
         private readonly object syncObject = new object();
 
+        public RelationalDatabaseConfiguration Configuration 
+            => new(_postgreSqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+        
+        public RelationalDatabaseConfiguration InboxConfiguration 
+            => new(_postgreSqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+
         public PostgresSqlTestHelper(bool binaryMessagePayload = false)
         {
             _binaryMessagePayload = binaryMessagePayload;
@@ -27,13 +33,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 
             _tableName = $"test_{Guid.NewGuid():N}";
         }
-
-        public RelationalDatabaseConfiguration Configuration 
-            => new RelationalDatabaseConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, 
-                outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
-        
-        public RelationalDatabaseConfiguration InboxConfiguration 
-            => new RelationalDatabaseConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
 
 
         public void SetupMessageDb()

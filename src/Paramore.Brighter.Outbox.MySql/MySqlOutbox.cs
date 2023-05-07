@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,35 +40,36 @@ namespace Paramore.Brighter.Outbox.MySql
     /// <summary>
     ///     Class MySqlOutbox.
     /// </summary>
-    public class MySqlOutbox : RelationDatabaseOutbox<MySqlConnection, MySqlCommand, MySqlDataReader, MySqlParameter>
+    public class MySqlOutbox : RelationDatabaseOutbox
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
         private readonly RelationalDatabaseConfiguration _configuration;
-        private readonly IMySqlConnectionProvider _connectionProvider;
+        private readonly IAmARelationalDbConnectionProvider  _connectionProvider;
 
-        public MySqlOutbox(RelationalDatabaseConfiguration configuration, IMySqlConnectionProvider connectionProvider) : base(
-            configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
+        public MySqlOutbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
+            : base(configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;
             ContinueOnCapturedContext = false;
         }
 
-        public MySqlOutbox(RelationalDatabaseConfiguration configuration) : this(configuration,
-            new MySqlConnectionProvider(configuration))
+        public MySqlOutbox(RelationalDatabaseConfiguration configuration) 
+            : this(configuration, new MySqlConnectionProvider(configuration))
         {
         }
 
-        protected override void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
-            Func<MySqlConnection, MySqlCommand> commandFunc,
-            Action loggingAction)
+        protected override void WriteToStore(
+            IAmATransactionConnectonProvider transactionProvider,
+            Func<DbConnection, DbCommand> commandFunc,
+            Action loggingAction
+            )
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null &&
-                transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
-                connectionProvider = provider;
+            if (transactionProvider != null)
+                connectionProvider = transactionProvider;
 
             var connection = connectionProvider.GetConnection();
 
@@ -77,7 +79,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 try
                 {
-                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
@@ -103,15 +105,15 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider,
-            Func<MySqlConnection, MySqlCommand> commandFunc,
+            IAmATransactionConnectonProvider transactionProvider,
+            Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction, 
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken
+            )
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectionProvider != null &&
-                transactionConnectionProvider is IMySqlTransactionConnectionProvider provider)
-                connectionProvider = provider;
+            if (transactionProvider != null)
+                connectionProvider = transactionProvider;
 
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
@@ -122,7 +124,7 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 try
                 {
-                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
+                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
@@ -142,15 +144,15 @@ namespace Paramore.Brighter.Outbox.MySql
                     if (!connectionProvider.IsSharedConnection)
                         connection.Dispose();
                     else if (!connectionProvider.HasOpenTransaction)
-                        await connection.CloseAsync();
+                        connection.Close();
                 }
             }
         }
 
         protected override T ReadFromStore<T>(
-            Func<MySqlConnection, 
-                MySqlCommand> commandFunc,
-            Func<MySqlDataReader, T> resultFunc)
+            Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, T> resultFunc
+            )
         {
             var connection = _connectionProvider.GetConnection();
 
@@ -173,8 +175,8 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override async Task<T> ReadFromStoreAsync<T>(
-            Func<MySqlConnection, MySqlCommand> commandFunc,
-            Func<MySqlDataReader, Task<T>> resultFunc, 
+            Func<DbConnection, DbCommand> commandFunc,
+            Func<DbDataReader, Task<T>> resultFunc, 
             CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
@@ -197,11 +199,11 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        protected override MySqlCommand CreateCommand(
-            MySqlConnection connection, 
+        protected override DbCommand CreateCommand(
+            DbConnection connection, 
             string sqlText, 
             int outBoxTimeout,
-            params MySqlParameter[] parameters)
+            params IDbDataParameter[] parameters)
         {
             var command = connection.CreateCommand();
 
@@ -212,13 +214,13 @@ namespace Paramore.Brighter.Outbox.MySql
             return command;
         }
 
-        protected override MySqlParameter CreateSqlParameter(string parameterName, object value)
+        protected override IDbDataParameter CreateSqlParameter(string parameterName, object value)
         {
             return new MySqlParameter { ParameterName = parameterName, Value = value };
         }
 
 
-        protected override MySqlParameter[] InitAddDbParameters(Message message, int? position = null)
+        protected override IDbDataParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
             var bagJson = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
@@ -279,11 +281,11 @@ namespace Paramore.Brighter.Outbox.MySql
             };
         }
 
-        protected override MySqlParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
             int pageSize, int pageNumber)
         {
             var offset = (pageNumber - 1) * pageSize;
-            var parameters = new MySqlParameter[3];
+            var parameters = new IDbDataParameter[3];
             parameters[0] = CreateSqlParameter("OffsetValue", offset);
             parameters[1] = CreateSqlParameter("PageSize", pageSize);
             parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
@@ -291,7 +293,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return parameters;
         }
 
-        protected override Message MapFunction(MySqlDataReader dr)
+        protected override Message MapFunction(DbDataReader dr)
         {
             if (dr.Read())
             {
@@ -301,7 +303,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return new Message();
         }
 
-        protected override async Task<Message> MapFunctionAsync(MySqlDataReader dr, CancellationToken cancellationToken)
+        protected override async Task<Message> MapFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
         {
             if (await dr.ReadAsync(cancellationToken))
             {
@@ -311,7 +313,7 @@ namespace Paramore.Brighter.Outbox.MySql
             return new Message();
         }
 
-        protected override IEnumerable<Message> MapListFunction(MySqlDataReader dr)
+        protected override IEnumerable<Message> MapListFunction(DbDataReader dr)
         {
             var messages = new List<Message>();
             while (dr.Read())
@@ -325,7 +327,7 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override async Task<IEnumerable<Message>> MapListFunctionAsync(
-            MySqlDataReader dr,
+            DbDataReader dr,
             CancellationToken cancellationToken)
         {
             var messages = new List<Message>();

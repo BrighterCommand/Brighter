@@ -13,7 +13,7 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _unitOfWork;
 
-        public DeletePersonHandlerAsync(IAmABoxTransactionConnectionProvider unitOfWork)
+        public DeletePersonHandlerAsync(IAmABoxTransactionProvider unitOfWork)
         {
             _unitOfWork = (DynamoDbUnitOfWork)unitOfWork;
         }

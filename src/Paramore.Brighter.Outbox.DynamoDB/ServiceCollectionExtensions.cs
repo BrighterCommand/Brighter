@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             this IBrighterBuilder brighterBuilder, Type connectionProvider,
             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), connectionProvider, serviceLifetime));
 
             return brighterBuilder;
         }

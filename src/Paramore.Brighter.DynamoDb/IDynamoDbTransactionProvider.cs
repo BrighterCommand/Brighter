@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter.DynamoDb
 {
-    public interface IDynamoDbClientTransactionProvider : IDynamoDbClientProvider, IAmABoxTransactionConnectionProvider
+    public interface IDynamoDbClientTransactionProvider : IDynamoDbClientProvider, IAmABoxTransactionProvider
     {
         
     }

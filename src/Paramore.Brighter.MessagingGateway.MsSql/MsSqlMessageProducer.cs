@@ -59,10 +59,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            IMsSqlConnectionProvider connectionProvider,
+            IAmARelationalDbConnectionProvider connectonProvider,
         Publication publication = null)
         {
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
             _publication = publication ?? new Publication {MakeChannels = OnMissingChannel.Create};
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;

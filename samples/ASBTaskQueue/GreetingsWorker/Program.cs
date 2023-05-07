@@ -82,7 +82,7 @@ builder.Services.AddServiceActivator(options =>
         options.UseScoped = true;
         
     }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
+    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectonProvider<GreetingsDataContext>))
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

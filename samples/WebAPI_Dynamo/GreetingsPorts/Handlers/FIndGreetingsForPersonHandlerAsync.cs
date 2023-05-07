@@ -18,7 +18,7 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _unitOfWork;
 
-        public FIndGreetingsForPersonHandlerAsync(IAmABoxTransactionConnectionProvider unitOfWork)
+        public FIndGreetingsForPersonHandlerAsync(IAmABoxTransactionProvider unitOfWork)
         {
             _unitOfWork = (DynamoDbUnitOfWork ) unitOfWork;
         }

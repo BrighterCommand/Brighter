@@ -57,7 +57,7 @@ builder.Services
             .Create()
     )
     .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
+    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectonProvider<GreetingsDataContext>))
     .MapperRegistry(r =>
     {
         r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));

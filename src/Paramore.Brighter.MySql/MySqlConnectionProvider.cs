@@ -22,16 +22,16 @@
  
 #endregion
 
-using System.Threading;
-using System.Threading.Tasks;
+using System.Data.Common;
 using MySqlConnector;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MySql
 {
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class MySqlConnectionProvider : IMySqlConnectionProvider
+    public class MySqlConnectionProvider : RelationalDbConnectionProvider
     {
         private readonly string _connectionString;
 
@@ -44,26 +44,9 @@ namespace Paramore.Brighter.MySql
             _connectionString = configuration.ConnectionString;
         }
 
-        public MySqlConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             return new MySqlConnection(_connectionString);
         }
-
-        public async Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
-        {
-            var tcs = new TaskCompletionSource<MySqlConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            tcs.SetResult(GetConnection());
-            return await tcs.Task;
-        }
-
-        public MySqlTransaction GetTransaction()
-        {
-            //This Connection Factory does not support Transactions 
-            return null;
-        }
-
-        public bool HasOpenTransaction { get => false; }
-        public bool IsSharedConnection { get => false; }
     }
 }

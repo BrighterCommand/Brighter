@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Outbox.MySql
             this IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton<RelationalDatabaseConfiguration>(configuration);
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IMySqlConnectionProvider), connectionProvider, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider), connectionProvider, serviceLifetime));
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildMySqlOutboxOutbox, serviceLifetime));
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Outbox.MySql
              this IBrighterBuilder brighterBuilder, Type connectionProvider,
              ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
          {
-             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), connectionProvider, serviceLifetime));
  
              return brighterBuilder;
          }
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Outbox.MySql
         private static MySqlOutbox BuildMySqlOutboxOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<RelationalDatabaseConfiguration>();
-            var connectionProvider = provider.GetService<IMySqlConnectionProvider>();
+            var connectionProvider = provider.GetService<IAmARelationalDbConnectionProvider>();
 
             return new MySqlOutbox(config, connectionProvider);
         }

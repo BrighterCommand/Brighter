@@ -1,11 +1,12 @@
-﻿using System.Threading;
+﻿using System.Data.Common;
+using System.Threading;
 using System.Threading.Tasks;
 using MySqlConnector;
 using Paramore.Brighter.Dapper;
 
 namespace Paramore.Brighter.MySql.Dapper
 {
-    public class MySqlDapperConnectionProvider : IMySqlTransactionConnectionProvider 
+    public class MySqlDapperConnectionProvider : IAmATransactionConnectonProvider 
     {
         private readonly IUnitOfWork _unitOfWork;
 
@@ -14,19 +15,19 @@ namespace Paramore.Brighter.MySql.Dapper
             _unitOfWork = unitOfWork;
         }
         
-        public MySqlConnection GetConnection()
+        public DbConnection GetConnection()
         {
             return (MySqlConnection)_unitOfWork.Database;
         }
 
-        public Task<MySqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        public Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<MySqlConnection>();
+            var tcs = new TaskCompletionSource<DbConnection>();
             tcs.SetResult(GetConnection());
             return tcs.Task;
         }
 
-        public MySqlTransaction GetTransaction()
+        public DbTransaction GetTransaction()
         {
             return (MySqlTransaction)_unitOfWork.BeginOrGetTransaction();
         }

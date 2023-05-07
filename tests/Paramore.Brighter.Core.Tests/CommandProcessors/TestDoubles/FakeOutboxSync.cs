@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public bool ContinueOnCapturedContext { get; set; }
 
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider transactionProvider = null)
         {
             _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
         }
 
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmATransactionConnectonProvider transactionProvider = null)
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);
@@ -188,21 +188,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+            IAmATransactionConnectonProvider transactionProvider = null)
         {
             foreach (Message message in messages)
             {
-                Add(message,outBoxTimeout, transactionConnectionProvider);
+                Add(message,outBoxTimeout, transactionProvider);
             }
         }
 
         public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+            IAmATransactionConnectonProvider transactionProvider = null)
         {
             foreach (var message in messages)
             {
-                await AddAsync(message, outBoxTimeout, cancellationToken, transactionConnectionProvider);
+                await AddAsync(message, outBoxTimeout, cancellationToken, transactionProvider);
             }
         }
     }

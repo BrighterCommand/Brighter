@@ -5,16 +5,14 @@ using Azure.Identity;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public class MsSqlVisualStudioConnectionProvider : MsSqlAzureConnectionProviderBase
+    public class MsSqlDefaultAzureConnectonProvider : MsSqlAzureConnectonProviderBase
     {
         /// <summary>
-        /// Initialise a new instance of Ms Sql Connection provider using Visual Studio Credentials to acquire Access Tokens.
+        /// Initialise a new instance of Ms Sql Connection provider using Default Azure Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlVisualStudioConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
-        {
-        }
-
+        public MsSqlDefaultAzureConnectonProvider(RelationalDatabaseConfiguration configuration) : base(configuration) { }
+        
         protected override AccessToken GetAccessTokenFromProvider()
         {
             return GetAccessTokenFromProviderAsync(CancellationToken.None).GetAwaiter().GetResult();
@@ -22,7 +20,8 @@ namespace Paramore.Brighter.MsSql.Azure
 
         protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
-            var credential = new VisualStudioCredential();
+            var credential = new DefaultAzureCredential();
+
             return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
         }
     }

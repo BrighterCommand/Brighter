@@ -98,8 +98,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider amATransactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -119,15 +119,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmATransactionConnectonProvider amATransactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
             foreach (Message message in messages)
             {
-                Add(message, outBoxTimeout, transactionConnectionProvider);
+                Add(message, outBoxTimeout, amATransactionProvider);
             }
         }
 
@@ -137,9 +137,14 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(
+            Message message, 
+            int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default, 
+            IAmATransactionConnectonProvider amATransactionProvider = null
+            )
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -161,9 +166,14 @@ namespace Paramore.Brighter
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
-        /// <param name="transactionConnectionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public Task AddAsync(
+            IEnumerable<Message> messages, 
+            int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default, 
+            IAmATransactionConnectonProvider amATransactionProvider = null
+            )
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -264,8 +274,11 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-       public Task<IEnumerable<Message>> GetAsync(IEnumerable<Guid> messageIds, int outBoxTimeout = -1,
-           CancellationToken cancellationToken = default)
+       public Task<IEnumerable<Message>> GetAsync(
+           IEnumerable<Guid> messageIds, 
+           int outBoxTimeout = -1,
+           CancellationToken cancellationToken = default
+           )
        {
            var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
             ClearExpiredMessages();
@@ -281,7 +294,12 @@ namespace Paramore.Brighter
         /// Mark the message as dispatched
         /// </summary>
         /// <param name="id">The message to mark as dispatched</param>
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task MarkDispatchedAsync(
+           Guid id, 
+           DateTime? dispatchedAt = null, 
+           Dictionary<string, object> args = null, 
+           CancellationToken cancellationToken = default
+           )
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -292,14 +310,24 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-       public Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-           CancellationToken cancellationToken = default)
+       public Task MarkDispatchedAsync(
+           IEnumerable<Guid> ids, 
+           DateTime? dispatchedAt = null, 
+           Dictionary<string, object> args = null,
+           CancellationToken cancellationToken = default
+           )
        {
            throw new NotImplementedException();
        }
 
-       public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-           int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+       public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+           double millisecondsDispatchedSince, 
+           int pageSize = 100, 
+           int pageNumber = 1,
+           int outboxTimeout = -1, 
+           Dictionary<string, object> args = null, 
+           CancellationToken cancellationToken = default
+           )
        {
            return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
                args));
@@ -345,7 +373,11 @@ namespace Paramore.Brighter
             }
         }
 
-        public Task<IList<Message>> GetAsync(int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task<IList<Message>> GetAsync(
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IList<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -354,7 +386,12 @@ namespace Paramore.Brighter
             return tcs.Task;
         }
 
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<IEnumerable<Message>>(TaskCreationOptions.RunContinuationsAsynchronously);
 

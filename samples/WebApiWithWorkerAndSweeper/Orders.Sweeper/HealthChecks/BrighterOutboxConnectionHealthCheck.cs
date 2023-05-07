@@ -1,14 +1,15 @@
 using System.Data;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Paramore.Brighter;
 using Paramore.Brighter.MsSql;
 
 namespace Orders.Sweeper.HealthChecks;
 
 public class BrighterOutboxConnectionHealthCheck : IHealthCheck
 {
-    private readonly IMsSqlConnectionProvider _connectionProvider;
+    private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
-    public BrighterOutboxConnectionHealthCheck(IMsSqlConnectionProvider connectionProvider)
+    public BrighterOutboxConnectionHealthCheck(IAmARelationalDbConnectionProvider connectionProvider)
     {
         _connectionProvider = connectionProvider;
     }

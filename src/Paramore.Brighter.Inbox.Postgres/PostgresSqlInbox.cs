@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Inbox.Postgres
     public class PostgresSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly RelationalDatabaseConfiguration _configuration;
-        private readonly IPostgreSqlConnectionProvider _connectionProvider;
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlInbox>();
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
-        public PostgresSqlInbox(RelationalDatabaseConfiguration configuration, IPostgreSqlConnectionProvider connectionProvider = null)
+        public PostgresSqlInbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;
@@ -191,9 +191,9 @@ namespace Paramore.Brighter.Inbox.Postgres
             return connection;
         }
 
-        private async Task<NpgsqlConnection> GetOpenConnectionAsync(IPostgreSqlConnectionProvider connectionProvider, CancellationToken cancellationToken = default)
+        private async Task<DbConnection> GetOpenConnectionAsync(IAmARelationalDbConnectionProvider connectionProvider, CancellationToken cancellationToken = default)
         {
-            NpgsqlConnection connection = await connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            DbConnection connection = await connectionProvider.GetConnectionAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
 
             if (connection.State != ConnectionState.Open)
                 await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);

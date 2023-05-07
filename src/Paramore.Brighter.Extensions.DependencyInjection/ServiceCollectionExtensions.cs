@@ -293,7 +293,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             var outbox = provider.GetService<IAmAnOutboxSync<Message>>();
             var asyncOutbox = provider.GetService<IAmAnOutboxAsync<Message>>();
-            var overridingConnectionProvider = provider.GetService<IAmABoxTransactionConnectionProvider>();
+            var overridingConnectionProvider = provider.GetService<IAmATransactionConnectonProvider>();
 
             if (outbox == null) outbox = new InMemoryOutbox();
             if (asyncOutbox == null) asyncOutbox = new InMemoryOutbox();
@@ -347,7 +347,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             MessageMapperRegistry messageMapperRegistry, 
             InboxConfiguration inboxConfiguration, 
             IAmAnOutboxSync<Message> outbox,
-            IAmABoxTransactionConnectionProvider overridingConnectionProvider, 
+            IAmATransactionConnectonProvider overridingProvider, 
             IUseRpc useRequestResponse,
             int outboxBulkChunkSize,
             IAmAMessageTransformerFactory transformerFactory)
@@ -365,7 +365,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         useInbox: inboxConfiguration,
                         transformerFactory: transformerFactory),
                     outbox,
-                    overridingConnectionProvider);
+                    overridingProvider);
             else if (externalBusType == ExternalBusType.RPC)
             {
                 return messagingBuilder.ExternalRPC(

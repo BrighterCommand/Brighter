@@ -12,6 +12,12 @@ namespace Paramore.Brighter.MySQL.Tests
         private readonly bool _binaryMessagePayload;
         private string _tableName;
         private MySqlSettings _mysqlSettings;
+        
+        public RelationalDatabaseConfiguration InboxConfiguration =>
+            new(_mysqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
+            new(_mysqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
 
         public MySqlTestHelper(bool binaryMessagePayload = false)
         {
@@ -50,13 +56,7 @@ namespace Paramore.Brighter.MySQL.Tests
             CreateInboxTable();
         }
 
-        public RelationalDatabaseConfiguration InboxConfiguration =>
-            new(_mysqlSettings.TestsBrighterConnectionString, _tableName);
-
-        public RelationalDatabaseConfiguration OutboxConfiguration => 
-            new(_mysqlSettings.TestsBrighterConnectionString, _tableName, binaryMessagePayload: _binaryMessagePayload);
-
-        public void CleanUpDb()
+       public void CleanUpDb()
         {
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {

@@ -1,10 +1,10 @@
-﻿using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Data.Common;
 using Microsoft.Data.SqlClient;
+using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.MsSql
 {
-    public class MsSqlSqlAuthConnectionProvider : IMsSqlConnectionProvider
+    public class MsSqlSqlAuthConnectionProvider : RelationalDbConnectionProvider
     {
         private readonly string _connectionString;
 
@@ -17,26 +17,9 @@ namespace Paramore.Brighter.MsSql
             _connectionString = configuration.ConnectionString;
         }
 
-        public SqlConnection GetConnection()
+        public override DbConnection GetConnection()
         {
             return new SqlConnection(_connectionString);
         }
-
-        public async Task<SqlConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
-        {
-            var tcs = new TaskCompletionSource<SqlConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
-
-            tcs.SetResult(GetConnection());
-            return await tcs.Task;
-        }
-
-        public SqlTransaction GetTransaction()
-        {
-            //This Connection Factory does not support Transactions 
-            return null;
-        }
-
-        public bool HasOpenTransaction { get => false; }
-        public bool IsSharedConnection { get => false; }
     }
 }

@@ -8,7 +8,7 @@ namespace Paramore.Brighter.Dapper
     /// <summary>
     /// Creates a unit of work, so that Brighter can access the active transaction for the Outbox
     /// </summary>
-    public interface IUnitOfWork : IAmABoxTransactionConnectionProvider, IDisposable
+    public interface IUnitOfWork : IAmABoxTransactionProvider, IDisposable
     {
         /// <summary>
         /// Begins a new transaction against the database. Will open the connection if it is not already open,

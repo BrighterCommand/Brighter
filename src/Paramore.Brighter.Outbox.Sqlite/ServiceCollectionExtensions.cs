@@ -26,7 +26,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             this IBrighterBuilder brighterBuilder, RelationalDatabaseConfiguration configuration, Type connectionProvider, ServiceLifetime serviceLifetime = ServiceLifetime.Singleton)
         {
             brighterBuilder.Services.AddSingleton(configuration);
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(ISqliteConnectionProvider), connectionProvider, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider), connectionProvider, serviceLifetime));
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildSqliteOutbox, serviceLifetime));
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildSqliteOutbox, serviceLifetime));
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             this IBrighterBuilder brighterBuilder, Type connectionProvider,
             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
         {
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionConnectionProvider), connectionProvider, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), connectionProvider, serviceLifetime));
 
             return brighterBuilder;
         }
@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         private static SqliteOutbox BuildSqliteOutbox(IServiceProvider provider)
         {
             var config = provider.GetService<RelationalDatabaseConfiguration>();
-            var connectionProvider = provider.GetService<ISqliteConnectionProvider>();
+            var connectionProvider = provider.GetService<IAmARelationalDbConnectionProvider>();
 
             return new SqliteOutbox(config, connectionProvider);
         }

@@ -20,6 +20,7 @@
         )
         {
             OutBoxTableName = outBoxTableName;
+            InBoxTableName = inboxTableName;
             ConnectionString = connectionString;
             QueueStoreTable = queueStoreTable;
             BinaryMessagePayload = binaryMessagePayload;
