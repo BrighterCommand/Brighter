@@ -37,7 +37,7 @@ namespace GreetingsPorts.Handlers
             using (var conn = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
             {
                 await conn.OpenAsync(cancellationToken);
-                using (var tx = _transactionConnectionProvider.GetTransaction())
+                using (var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken))
                 {
                     try
                     {

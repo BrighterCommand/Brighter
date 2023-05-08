@@ -11,11 +11,32 @@ namespace Paramore.Brighter
         private bool _disposed = false;
         protected DbConnection Connection;
         protected DbTransaction Transaction;
+        
+        /// <summary>
+        /// debugging
+        /// </summary>
+        public Guid Instance = Guid.NewGuid();
 
         /// <summary>
         /// Close any open connection or transaction
         /// </summary>
-        public virtual void Close() => Dispose(true);
+        public virtual void Close()
+        {
+            Transaction?.Dispose();
+            Connection?.Close();
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        public void Commit()
+        {
+            if (HasOpenTransaction)
+            {
+                Transaction.Commit();
+                Transaction = null;
+            }
+        }
         
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
@@ -39,7 +60,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Gets an existing transaction; creates a new one from the connection if it does not exist.
-        /// You are responsible for committing the transaction.
+        /// YOu should use the commit transaction using the Commit method. 
         /// </summary>
         /// <returns>A database transaction</returns>
         public virtual DbTransaction GetTransaction()
@@ -96,6 +117,8 @@ namespace Paramore.Brighter
                     Connection?.Dispose();
                     Transaction?.Dispose();
                 }
+                Connection = null;
+                Transaction = null;
                 _disposed = true;
             }
         }

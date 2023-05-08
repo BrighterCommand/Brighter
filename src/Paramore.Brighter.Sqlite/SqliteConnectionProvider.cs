@@ -48,17 +48,23 @@ namespace Paramore.Brighter.Sqlite
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
             _connectionString = configuration.ConnectionString;
         }
-        
+
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
         /// The connection is not opened, you need to open it yourself.
         /// </summary>
         /// <returns>A database connection</returns>
-        public override DbConnection GetConnection() =>  Connection ?? (Connection = new SqliteConnection(_connectionString));
+        public override DbConnection GetConnection()
+        {
+            if (Connection == null) { Connection = new SqliteConnection(_connectionString);}
+            if (Connection.State != ConnectionState.Open)
+                Connection.Open();
+            return Connection;
+        }
 
         public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
-            Connection ??= GetConnection();
+            if (Connection == null) { Connection = new SqliteConnection(_connectionString);}
             if (Connection.State != ConnectionState.Open)
                 await Connection.OpenAsync(cancellationToken);
             if (!HasOpenTransaction)

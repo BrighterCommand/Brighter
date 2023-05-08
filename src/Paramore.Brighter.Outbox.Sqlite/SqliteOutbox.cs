@@ -105,10 +105,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
-                    if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    connection.Close();
                 }
             }
         }

@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,10 +29,13 @@ namespace GreetingsPorts.Handlers
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
             var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
-            var people = await _transactionConnectionProvider.GetConnection().GetListAsync<Person>(searchbyName);
-            var person = people.Single();
+            using (var connection = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
+            {
+                var people = await connection.GetListAsync<Person>(searchbyName);
+                var person = people.Single();
 
-            return new FindPersonResult(person);
+                return new FindPersonResult(person);
+            }
         }
     }
 }
