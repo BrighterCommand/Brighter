@@ -18,12 +18,12 @@ namespace GreetingsPorts.Handlers
     {
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<AddGreetingHandlerAsync> _logger;
-        private readonly RelationalDbConnectionProvider  _uow;
+        private readonly IAmATransactionConnectionProvider  _transactionProvider;
 
 
-        public AddGreetingHandlerAsync(RelationalDbConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(IAmATransactionConnectionProvider transactionProvider, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
-            _uow = uow;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
+            _transactionProvider = transactionProvider;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
             _postBox = postBox;
             _logger = logger;
         }
@@ -37,9 +37,9 @@ namespace GreetingsPorts.Handlers
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'
 
-            var conn = await _uow.GetConnectionAsync(cancellationToken);
+            var conn = await _transactionProvider.GetConnectionAsync(cancellationToken);
             await conn.OpenAsync(cancellationToken);
-            var tx = _uow.GetTransaction();
+            var tx = _transactionProvider.GetTransaction();
             try
             {
                 var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);

@@ -24,7 +24,10 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Data;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 using MySqlConnector;
 
 namespace Paramore.Brighter.MySql
@@ -48,5 +51,16 @@ namespace Paramore.Brighter.MySql
         }
 
         public override DbConnection GetConnection() => Connection ?? (Connection = new MySqlConnection(_connectionString));
+        
+        public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (Connection == null) Connection = GetConnection();
+            if (Connection.State != ConnectionState.Open)
+                await Connection.OpenAsync(cancellationToken);
+            if (!HasOpenTransaction)
+                Transaction = await ((MySqlConnection) Connection).BeginTransactionAsync(cancellationToken);
+            return Transaction;
+        }
+ 
     }
 }

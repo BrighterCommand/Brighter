@@ -18,12 +18,12 @@ namespace GreetingsPorts.Handlers
     {
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<AddGreetingHandlerAsync> _logger;
-        private readonly RelationalDbConnectionProvider  _uow;
+        private readonly IAmATransactionConnectionProvider  _transactionConnectionProvider;
 
 
-        public AddGreetingHandlerAsync(RelationalDbConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
-            _uow = uow;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
+            _transactionConnectionProvider = transactionConnectionProvider;    //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
             _postBox = postBox;
             _logger = logger;
         }
@@ -33,36 +33,38 @@ namespace GreetingsPorts.Handlers
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default)
         {
             var posts = new List<Guid>();
-            
-            //We use the unit of work to grab connection and transaction, because Outbox needs
-            //to share them 'behind the scenes'
 
-            var conn = await _uow.GetConnectionAsync(cancellationToken);
-            await conn.OpenAsync(cancellationToken);
-            var tx = _uow.GetTransaction();
-            try
+            using (var conn = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
             {
-                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
-                var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
-                var person = people.Single();
-                
-                var greeting = new Greeting(addGreeting.Greeting, person);
-                
-               //write the added child entity to the Db
-                await conn.InsertAsync<Greeting>(greeting, tx);
+                await conn.OpenAsync(cancellationToken);
+                using (var tx = _transactionConnectionProvider.GetTransaction())
+                {
+                    try
+                    {
+                        var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
+                        var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
+                        var person = people.Single();
 
-                //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
-                
-                //commit both new greeting and outgoing message
-                await tx.CommitAsync(cancellationToken);
-            }
-            catch (Exception e)
-            {   
-                _logger.LogError(e, "Exception thrown handling Add Greeting request");
-                //it went wrong, rollback the entity change and the downstream message
-                await tx.RollbackAsync(cancellationToken);
-                return await base.HandleAsync(addGreeting, cancellationToken);
+                        var greeting = new Greeting(addGreeting.Greeting, person);
+
+                        //write the added child entity to the Db
+                        await conn.InsertAsync<Greeting>(greeting, tx);
+
+                        //Now write the message we want to send to the Db in the same transaction.
+                        posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()),
+                            cancellationToken: cancellationToken));
+
+                        //commit both new greeting and outgoing message
+                        await tx.CommitAsync(cancellationToken);
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Exception thrown handling Add Greeting request");
+                        //it went wrong, rollback the entity change and the downstream message
+                        await tx.RollbackAsync(cancellationToken);
+                        return await base.HandleAsync(addGreeting, cancellationToken);
+                    }
+                }
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

@@ -23,7 +23,7 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
         {
             _context = context;
         }
-        
+
         /// <summary>
         /// Get the current connection of the DB context
         /// </summary>
@@ -56,7 +56,14 @@ namespace Paramore.Brighter.Sqlite.EntityFrameworkCore
             return _context.Database.CurrentTransaction?.GetDbTransaction();
         }
 
+        /// <summary>
+        /// Is there a transaction open?
+        /// </summary>
         public override bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
+        
+        /// <summary>
+        /// Is there a shared connection? (Do we maintain state of just create anew)
+        /// </summary>
         public override bool IsSharedConnection { get => true; }
     }
 }

@@ -32,6 +32,8 @@ namespace Paramore.Brighter.MsSql.Azure
             _authenticationTokenScopes = new string[1] {_azureScope};
         }
 
+        public void Close() { }
+
         public DbConnection GetConnection()
         {
             var sqlConnection = new SqlConnection(_connectionString);

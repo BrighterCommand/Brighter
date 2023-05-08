@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Data.Common;
+using System.Threading;
 using System.Threading.Tasks;
 using DapperExtensions;
 using GreetingsEntities;
@@ -22,8 +23,11 @@ namespace GreetingsPorts.Handlers
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default)
         {
-            await _transactionConnectionProvider.GetConnection().InsertAsync<Person>(new Person(addPerson.Name));
-            
+            using (var connection = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
+            {
+                await connection.InsertAsync(new Person(addPerson.Name));
+            }
+
             return await base.HandleAsync(addPerson, cancellationToken);
         }
     }

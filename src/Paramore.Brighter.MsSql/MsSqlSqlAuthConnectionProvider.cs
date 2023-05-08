@@ -23,5 +23,6 @@ namespace Paramore.Brighter.MsSql
         }
 
         public override DbConnection GetConnection() =>  Connection ?? (Connection = new SqlConnection(_connectionString));
+        
     }
 }

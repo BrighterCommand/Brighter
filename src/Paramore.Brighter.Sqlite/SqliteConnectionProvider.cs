@@ -23,7 +23,10 @@
 #endregion
 
 using System;
+using System.Data;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
 namespace Paramore.Brighter.Sqlite
@@ -46,6 +49,21 @@ namespace Paramore.Brighter.Sqlite
             _connectionString = configuration.ConnectionString;
         }
         
+        /// <summary>
+        /// Gets a existing Connection; creates a new one if it does not exist
+        /// The connection is not opened, you need to open it yourself.
+        /// </summary>
+        /// <returns>A database connection</returns>
         public override DbConnection GetConnection() =>  Connection ?? (Connection = new SqliteConnection(_connectionString));
+
+        public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            Connection ??= GetConnection();
+            if (Connection.State != ConnectionState.Open)
+                await Connection.OpenAsync(cancellationToken);
+            if (!HasOpenTransaction)
+                Transaction = await Connection.BeginTransactionAsync(cancellationToken);
+            return Transaction;
+        }
     }
 }

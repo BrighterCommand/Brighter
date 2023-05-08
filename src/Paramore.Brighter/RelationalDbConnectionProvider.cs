@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,42 +11,52 @@ namespace Paramore.Brighter
         private bool _disposed = false;
         protected DbConnection Connection;
         protected DbTransaction Transaction;
-        
-        
-        /// <summary>
-        /// Get a database connection from the underlying provider
-        /// </summary>
-        /// <returns></returns>
-        public abstract DbConnection GetConnection();
 
         /// <summary>
-        /// Get a database connection from the underlying provider
+        /// Close any open connection or transaction
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        public virtual async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        public virtual void Close() => Dispose(true);
+        
+        /// <summary>
+        /// Gets a existing Connection; creates a new one if it does not exist
+        /// The connection is not opened, you need to open it yourself.
+        /// </summary>
+        /// <returns>A database connection</returns>
+        public abstract DbConnection GetConnection();
+        
+        /// <summary>
+        /// Gets a existing Connection; creates a new one if it does not exist
+        /// The connection is not opened, you need to open it yourself.
+        /// The base class just returns a new or existing connection, but derived types may perform async i/o
+        /// </summary>
+        /// <returns>A database connection</returns>
+        public virtual Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var tcs = new TaskCompletionSource<DbConnection>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var tcs = new TaskCompletionSource<DbConnection>();
             tcs.SetResult(GetConnection());
-            return await tcs.Task;
+            return tcs.Task;
         }
 
         /// <summary>
-        /// Returns a transaction against the underlying database
+        /// Gets an existing transaction; creates a new one from the connection if it does not exist.
+        /// You are responsible for committing the transaction.
         /// </summary>
-        /// <returns></returns>
+        /// <returns>A database transaction</returns>
         public virtual DbTransaction GetTransaction()
         {
+            Connection ??= GetConnection();
+            if (Connection.State != ConnectionState.Open)
+                Connection.Open();
             if (!HasOpenTransaction)
-                Transaction = GetConnection().BeginTransaction();
+                Transaction = Connection.BeginTransaction();
             return Transaction;
         }
         
         /// <summary>
-        /// Returns a transaction against the underlying database
+        /// Gets an existing transaction; creates a new one from the connection if it does not exist.
+        /// You are responsible for committing the transaction.
         /// </summary>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
+        /// <returns>A database transaction</returns>
         public virtual Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<DbTransaction>();
@@ -58,12 +69,12 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Is there already a transaction open against the underlying database
+        /// Is there a transaction open?
         /// </summary>
         public virtual bool HasOpenTransaction { get { return Transaction != null; } }
 
         /// <summary>
-        /// Does the underlying provider share connections 
+        /// Is there a shared connection? (Do we maintain state of just create anew)
         /// </summary>
         public virtual bool IsSharedConnection { get => true; }
         

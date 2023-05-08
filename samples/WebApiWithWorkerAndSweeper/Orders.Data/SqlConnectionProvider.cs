@@ -18,7 +18,7 @@ public class SqlConnectionProvider : RelationalDbConnectionProvider
         return _sqlConnection.Connection;
     }
 
-    public override SqlTransaction? GetTransaction()
+    public override DbTransaction GetTransaction()
     {
         return _sqlConnection.Transaction;
     }
