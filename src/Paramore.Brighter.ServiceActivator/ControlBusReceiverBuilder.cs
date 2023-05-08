@@ -185,7 +185,7 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// </summary>
         private class SinkOutboxSync : IAmAnOutboxSync<Message>
         {
-            public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider transactionProvider = null)
+            public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectionProvider transactionProvider = null)
             {
                 //discard message
             }

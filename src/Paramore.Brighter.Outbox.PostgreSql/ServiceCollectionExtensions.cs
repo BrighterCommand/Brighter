@@ -51,8 +51,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             if (connectionProvider is null)
                 throw new ArgumentNullException($"{nameof(connectionProvider)} cannot be null.", nameof(connectionProvider));
 
-            if (!typeof(IAmATransactionConnectonProvider).IsAssignableFrom(connectionProvider))
-                throw new Exception($"Unable to register provider of type {connectionProvider.GetType().Name}. Class does not implement interface {nameof(IAmATransactionConnectonProvider)}.");
+            if (!typeof(IAmATransactionConnectionProvider).IsAssignableFrom(connectionProvider))
+                throw new Exception($"Unable to register provider of type {connectionProvider.GetType().Name}. Class does not implement interface {nameof(IAmATransactionConnectionProvider)}.");
 
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), connectionProvider, serviceLifetime));
 

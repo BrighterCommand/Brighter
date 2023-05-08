@@ -17,11 +17,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Paramore.Brighter.MySql;
-using Paramore.Brighter.Sqlite;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -123,7 +120,11 @@ namespace GreetingsWeb
 
         private void ConfigureDapper(IServiceCollection services)
         {
-            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString()));
+            var configuration = new RelationalDatabaseConfiguration(
+                DbConnectionString(),
+                outBoxTableName:_outBoxTableName
+            );
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
 
             ConfigureDapperByHost(GetDatabaseType(), services);
 
@@ -150,28 +151,29 @@ namespace GreetingsWeb
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.MySql.MySqlConnectionProvider>();
         }
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+            var outboxConfiguration = new RelationalDatabaseConfiguration(
+                DbConnectionString(),
+                outBoxTableName:_outBoxTableName
+            );
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             
             var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
             var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
             services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-            var outboxConfiguration = GetOutboxConfiguration();
-            services.AddSingleton<RelationalDatabaseConfiguration>(outboxConfiguration);
-
-            var configuration = new KafkaMessagingGatewayConfiguration
+            var kafkaConfiguration = new KafkaMessagingGatewayConfiguration
             {
                 Name = "paramore.brighter.greetingsender",
                 BootStrapServers = new[] { "localhost:9092" }
@@ -180,14 +182,14 @@ namespace GreetingsWeb
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;
-                    options.ChannelFactory = new ChannelFactory(new KafkaMessageConsumerFactory(configuration));
+                    options.ChannelFactory = new ChannelFactory(new KafkaMessageConsumerFactory(kafkaConfiguration));
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
                 .UseExternalBus(
                     new KafkaProducerRegistryFactory(
-                        configuration,
+                        kafkaConfiguration,
                         new KafkaPublication[]
                         {
                             new KafkaPublication
@@ -259,16 +261,5 @@ namespace GreetingsWeb
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
-        
-        private RelationalDatabaseConfiguration GetOutboxConfiguration()
-        {
-            if (_env.IsDevelopment())
-            {
-                return new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName, binaryMessagePayload: true);
-            }
-
-            return new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName, binaryMessagePayload: true);
-        }
-
     }
 }

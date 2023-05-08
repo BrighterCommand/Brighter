@@ -42,12 +42,12 @@ namespace Paramore.Brighter.Outbox.PostgreSql
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
 
-        private readonly RelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
 
         public PostgreSqlOutbox(
-            RelationalDatabaseConfiguration configuration,
+            IAmARelationalDatabaseConfiguration configuration,
             IAmARelationalDbConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new PostgreSqlQueries(), ApplicationLogging.CreateLogger<PostgreSqlOutbox>())
         {
@@ -55,18 +55,18 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             _connectionProvider = connectionProvider;
         }
 
-        public PostgreSqlOutbox(RelationalDatabaseConfiguration configuration)
+        public PostgreSqlOutbox(IAmARelationalDatabaseConfiguration configuration)
             : this(configuration, new PostgreSqlNpgsqlConnectionProvider(configuration))
         { }
 
         protected override void WriteToStore(
-            IAmATransactionConnectonProvider transactionConnectonProvider,
+            IAmATransactionConnectionProvider transactionConnectionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionConnectonProvider != null)
-                connectionProvider = transactionConnectonProvider;
+            if (transactionConnectionProvider != null)
+                connectionProvider = transactionConnectionProvider;
 
             var connection = connectionProvider.GetConnection();
 
@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 try
                 {
-                    if (transactionConnectonProvider != null && connectionProvider.HasOpenTransaction)
+                    if (transactionConnectionProvider != null && connectionProvider.HasOpenTransaction)
                         command.Transaction = connectionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
@@ -101,7 +101,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmATransactionConnectonProvider transactionConnectionProvider,
+            IAmATransactionConnectionProvider transactionConnectionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction,
             CancellationToken cancellationToken)

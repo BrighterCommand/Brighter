@@ -46,7 +46,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
 
         private const int SqliteDuplicateKeyError = 1555;
         private const int SqliteUniqueKeyError = 19;
-        private readonly RelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -54,7 +54,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
         /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
-        public SqliteOutbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
+        public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
             : base(configuration.OutBoxTableName, new SqliteQueries(), ApplicationLogging.CreateLogger<SqliteOutbox>())
         {
             _configuration = configuration;
@@ -66,13 +66,13 @@ namespace Paramore.Brighter.Outbox.Sqlite
         /// Initializes a new instance of the <see cref="SqliteOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration to connect to this data store</param>
-        public SqliteOutbox(RelationalDatabaseConfiguration configuration) 
+        public SqliteOutbox(IAmARelationalDatabaseConfiguration configuration) 
             : this(configuration, new SqliteConnectionProvider(configuration))
         {
         }
 
         protected override void WriteToStore(
-            IAmATransactionConnectonProvider transactionProvider,
+            IAmATransactionConnectionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction
             )
@@ -114,7 +114,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmATransactionConnectonProvider transactionConnectionProvider,
+            IAmATransactionConnectionProvider transactionConnectionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction, 
             CancellationToken cancellationToken)

@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using DapperExtensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -15,13 +14,13 @@ namespace SalutationPorts.Handlers
 {
     public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider;
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandlerAsync> _logger;
 
-        public GreetingMadeHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
         {
-            _uow = uow;
+            _transactionConnectionProvider = transactionConnectionProvider;
             _postBox = postBox;
             _logger = logger;
         }
@@ -33,12 +32,12 @@ namespace SalutationPorts.Handlers
         {
             var posts = new List<Guid>();
             
-            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
+            var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken);
             try
             {
                 var salutation = new Salutation(@event.Greeting);
                 
-                await _uow.Database.InsertAsync<Salutation>(salutation, tx);
+                await _transactionConnectionProvider.GetConnection().InsertAsync<Salutation>(salutation, tx);
                 
                 posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
                 

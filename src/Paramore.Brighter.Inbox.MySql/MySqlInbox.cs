@@ -44,13 +44,13 @@ namespace Paramore.Brighter.Inbox.MySql
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlInbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
-        private readonly RelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MySqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MySqlInbox(RelationalDatabaseConfiguration configuration)
+        public MySqlInbox(IAmARelationalDatabaseConfiguration configuration)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;

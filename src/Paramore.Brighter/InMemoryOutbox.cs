@@ -99,7 +99,7 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider amATransactionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectionProvider amATransactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -120,7 +120,7 @@ namespace Paramore.Brighter
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmATransactionConnectonProvider amATransactionProvider = null)
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmATransactionConnectionProvider amATransactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -143,7 +143,7 @@ namespace Paramore.Brighter
             Message message, 
             int outBoxTimeout = -1, 
             CancellationToken cancellationToken = default, 
-            IAmATransactionConnectonProvider amATransactionProvider = null
+            IAmATransactionConnectionProvider amATransactionProvider = null
             )
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -172,7 +172,7 @@ namespace Paramore.Brighter
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1, 
             CancellationToken cancellationToken = default, 
-            IAmATransactionConnectonProvider amATransactionProvider = null
+            IAmATransactionConnectionProvider amATransactionProvider = null
             )
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

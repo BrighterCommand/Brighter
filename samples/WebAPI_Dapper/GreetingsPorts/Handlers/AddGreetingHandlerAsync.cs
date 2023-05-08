@@ -6,13 +6,11 @@ using System.Threading.Tasks;
 using DapperExtensions;
 using DapperExtensions.Predicate;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
-using Paramore.Brighter.Sqlite.Dapper;
 
 namespace GreetingsPorts.Handlers
 {

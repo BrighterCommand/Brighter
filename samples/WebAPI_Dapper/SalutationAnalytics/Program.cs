@@ -9,7 +9,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
@@ -21,7 +20,6 @@ using SalutationAnalytics.Database;
 using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
 using SalutationPorts.Requests;
-using Salutations_SqliteMigrations.Migrations;
 
 namespace SalutationAnalytics
 {
@@ -84,6 +82,12 @@ namespace SalutationAnalytics
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+            var dbConfiguration = new RelationalDatabaseConfiguration(
+                DbConnectionString(hostContext), 
+                inboxTableName:SchemaCreation.INBOX_TABLE_NAME);
+            
+            services.AddSingleton(dbConfiguration);
+
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
@@ -116,7 +120,7 @@ namespace SalutationAnalytics
                 )
                 .AutoFromAssemblies()
                 .UseExternalInbox(
-                    ConfigureInbox(hostContext),
+                    CreateInbox(hostContext, dbConfiguration),
                     new InboxConfiguration(
                         scope: InboxScope.Commands,
                         onceOnly: true,
@@ -153,7 +157,6 @@ namespace SalutationAnalytics
 
         private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
-            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString(hostBuilderContext)));
             ConfigureDapperByHost(GetDatabaseType(hostBuilderContext), services);
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
             DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
@@ -178,25 +181,25 @@ namespace SalutationAnalytics
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
         }
 
 
-        private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
+        private static IAmAnInbox CreateInbox(HostBuilderContext hostContext, IAmARelationalDatabaseConfiguration configuration)
         {
             if (hostContext.HostingEnvironment.IsDevelopment())
             {
-                return new SqliteInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+                return new SqliteInbox(configuration);
             }
 
-            return new MySqlInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+            return new MySqlInbox(configuration);
         }
 
         private static string DbConnectionString(HostBuilderContext hostContext)
@@ -219,8 +222,7 @@ namespace SalutationAnalytics
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
-
-
+        
         private static string GetEnvironment()
         {
             //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly

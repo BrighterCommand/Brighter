@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using DapperExtensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -15,7 +12,7 @@ namespace SalutationPorts.Handlers
 {
     public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider; 
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandler> _logger;
 
@@ -28,9 +25,9 @@ namespace SalutationPorts.Handlers
          * Instead, rely on being able to partition your topic such that a single thread can handle the number of messages
          * arriving on that thread with an acceptable latency.
          */
-        public GreetingMadeHandler(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
+        public GreetingMadeHandler(IAmATransactionConnectionProvider transactionConnectionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
         {
-            _uow = uow;
+            _transactionConnectionProvider = transactionConnectionProvider;
             _postBox = postBox;
             _logger = logger;
         }
@@ -41,13 +38,13 @@ namespace SalutationPorts.Handlers
         public override GreetingMade Handle(GreetingMade @event)
         {
             var posts = new List<Guid>();
-            
-            var tx = _uow.BeginOrGetTransaction();
+
+            var tx = _transactionConnectionProvider.GetTransaction(); 
             try
             {
                 var salutation = new Salutation(@event.Greeting);
                 
-                _uow.Database.Insert<Salutation>(salutation, tx);
+                _transactionConnectionProvider.GetConnection().Insert<Salutation>(salutation, tx);
                 
                 posts.Add(_postBox.DepositPost(new SalutationReceived(DateTimeOffset.Now)));
                 

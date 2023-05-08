@@ -45,10 +45,10 @@ namespace Paramore.Brighter.Outbox.MySql
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MySqlOutbox>();
 
         private const int MySqlDuplicateKeyError = 1062;
-        private readonly RelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider  _connectionProvider;
 
-        public MySqlOutbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
             : base(configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
             _configuration = configuration;
@@ -56,13 +56,13 @@ namespace Paramore.Brighter.Outbox.MySql
             ContinueOnCapturedContext = false;
         }
 
-        public MySqlOutbox(RelationalDatabaseConfiguration configuration) 
+        public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration) 
             : this(configuration, new MySqlConnectionProvider(configuration))
         {
         }
 
         protected override void WriteToStore(
-            IAmATransactionConnectonProvider transactionProvider,
+            IAmATransactionConnectionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction
             )
@@ -105,7 +105,7 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmATransactionConnectonProvider transactionProvider,
+            IAmATransactionConnectionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction, 
             CancellationToken cancellationToken

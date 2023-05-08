@@ -5,13 +5,13 @@ using Azure.Identity;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public class MsSqlManagedIdentityConnectonProvider : MsSqlAzureConnectonProviderBase
+    public class MsSqlManagedIdentityConnectionProvider : MsSqlAzureConnectionProviderBase
     {
         /// <summary>
         /// Initialise a new instance of Ms Sql Connection provider using Managed Identity Credentials to acquire Access Tokens.
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlManagedIdentityConnectonProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
+        public MsSqlManagedIdentityConnectionProvider(RelationalDatabaseConfiguration configuration) : base(configuration)
         {
         }
 

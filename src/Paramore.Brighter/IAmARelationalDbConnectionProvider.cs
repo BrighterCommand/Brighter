@@ -11,6 +11,8 @@ namespace Paramore.Brighter
         Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default);
 
         DbTransaction GetTransaction();
+        
+        Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default);
 
         bool HasOpenTransaction { get; }
 

@@ -7,7 +7,7 @@ using GreetingsEntities;
 using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
-using Paramore.Brighter.Dapper;
+using Paramore.Brighter;
 using Paramore.Darker;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -16,11 +16,11 @@ namespace GreetingsPorts.Handlers
 {
     public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider;
 
-        public FindPersonByNameHandlerAsync(IUnitOfWork uow)
+        public FindPersonByNameHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider)
         {
-            _uow = uow;
+            _transactionConnectionProvider = transactionConnectionProvider;
         }
        
         [QueryLogging(0)]
@@ -28,7 +28,7 @@ namespace GreetingsPorts.Handlers
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
             var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
-            var people = await _uow.Database.GetListAsync<Person>(searchbyName);
+            var people = await _transactionConnectionProvider.GetConnection().GetListAsync<Person>(searchbyName);
             var person = people.Single();
 
             return new FindPersonResult(person);

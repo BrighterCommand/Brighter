@@ -44,7 +44,7 @@ namespace Paramore.Brighter
         public void Add(
             Message message, 
             int outBoxTimeout = -1,
-            IAmATransactionConnectonProvider amATransactionProvider = null)
+            IAmATransactionConnectionProvider amATransactionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
             WriteToStore(amATransactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
@@ -65,7 +65,7 @@ namespace Paramore.Brighter
         public void Add(
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1,
-            IAmATransactionConnectonProvider amATransactionProvider = null
+            IAmATransactionConnectionProvider amATransactionProvider = null
             )
         {
             WriteToStore(amATransactionProvider,
@@ -95,7 +95,7 @@ namespace Paramore.Brighter
             Message message, 
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmATransactionConnectonProvider  amATransactionProvider = null
+            IAmATransactionConnectionProvider  amATransactionProvider = null
             )
         {
             var parameters = InitAddDbParameters(message);
@@ -121,7 +121,7 @@ namespace Paramore.Brighter
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmATransactionConnectonProvider amATransactionProvider = null
+            IAmATransactionConnectionProvider amATransactionProvider = null
             )
         {
             return WriteToStoreAsync(amATransactionProvider,
@@ -344,13 +344,13 @@ namespace Paramore.Brighter
         #endregion
 
         protected abstract void WriteToStore(
-            IAmATransactionConnectonProvider provider,
+            IAmATransactionConnectionProvider provider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction
             );
 
         protected abstract Task WriteToStoreAsync(
-            IAmATransactionConnectonProvider transactionConnectionProvider,
+            IAmATransactionConnectionProvider transactionConnectionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction, 
             CancellationToken cancellationToken

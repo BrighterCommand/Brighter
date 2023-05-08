@@ -39,11 +39,11 @@ public static class BrighterExtensions
             {
                 if (environmentName != null && environmentName.Equals(_developmentEnvironemntName, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    outboxType = typeof(MsSqlVisualStudioConnectonProvider);
+                    outboxType = typeof(MsSqlVisualStudioConnectionProvider);
                 }
                 else
                 {
-                    outboxType = typeof(MsSqlDefaultAzureConnectonProvider);
+                    outboxType = typeof(MsSqlDefaultAzureConnectionProvider);
                 }
             }
             else

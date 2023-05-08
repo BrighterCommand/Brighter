@@ -11,7 +11,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
@@ -164,7 +163,6 @@ namespace SalutationAnalytics
 
         private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
-            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString(hostBuilderContext)));
             ConfigureDapperByHost(GetDatabaseType(hostBuilderContext), services);
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
             DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
@@ -189,14 +187,14 @@ namespace SalutationAnalytics
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.MySql.MySqlConnectionProvider>();
         }
 
 

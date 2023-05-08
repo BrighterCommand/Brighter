@@ -7,14 +7,14 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Paramore.Brighter.MsSql.EntityFrameworkCore
 {
-    public class MsSqlEntityFrameworkCoreConnectonProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectonProvider where T : DbContext
+    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectionProvider where T : DbContext
     {
         private readonly T _context;
         
         /// <summary>
         /// Initialise a new instance of Ms Sql Connection provider using the Database Connection from an Entity Framework Core DbContext.
         /// </summary>
-        public MsSqlEntityFrameworkCoreConnectonProvider(T context)
+        public MsSqlEntityFrameworkCoreConnectionProvider(T context)
         {
             _context = context;
         }

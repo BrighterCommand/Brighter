@@ -8,7 +8,7 @@ using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public abstract class MsSqlAzureConnectonProviderBase : IAmATransactionConnectonProvider
+    public abstract class MsSqlAzureConnectionProviderBase : IAmATransactionConnectionProvider
     {
         private readonly bool _cacheTokens;
         private const string _azureScope = "https://database.windows.net/.default";
@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MsSql.Azure
         /// </summary>
         /// <param name="configuration">Ms Sql Configuration.</param>
         /// <param name="cacheTokens">Cache Access Tokens until they have less than 5 minutes of life left.</param>
-        protected MsSqlAzureConnectonProviderBase(RelationalDatabaseConfiguration configuration, bool cacheTokens = true)
+        protected MsSqlAzureConnectionProviderBase(RelationalDatabaseConfiguration configuration, bool cacheTokens = true)
         {
             _cacheTokens = cacheTokens;
             _connectionString = configuration.ConnectionString;
@@ -101,6 +101,11 @@ namespace Paramore.Brighter.MsSql.Azure
         {
             //This Connection Factory does not support Transactions 
             return null;
+        }
+
+        public Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
         }
 
         public bool HasOpenTransaction { get => false; }

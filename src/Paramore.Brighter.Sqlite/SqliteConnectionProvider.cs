@@ -22,33 +22,30 @@
  
 #endregion
 
-using System.Data;
+using System;
 using System.Data.Common;
-using System.Threading;
-using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 
 namespace Paramore.Brighter.Sqlite
 {
     /// <summary>
-    /// A connection provider that uses the connection string to create a connection
+    /// A connection provider for Sqlite 
     /// </summary>
-    public class SqliteConnectionProvider : RelationalDbConnectionProvider
+    public class SqliteConnectionProvider : RelationalDbConnectionProvider, IAmATransactionConnectionProvider
     {
         private readonly string _connectionString;
 
         /// <summary>
-        /// Initialise a new instance of Sqlte Connection provider from a connection string
+        /// Create a connection provider for Sqlite using a connection string for Db access
         /// </summary>
-        /// <param name="configuration">Ms Sql Configuration</param>
-        public SqliteConnectionProvider(RelationalDatabaseConfiguration configuration)
+        /// <param name="configuration">The configuration of the Sqlite database</param>
+        public SqliteConnectionProvider(IAmARelationalDatabaseConfiguration configuration)
         {
+            if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
+                throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
             _connectionString = configuration.ConnectionString;
         }
-
-        public override DbConnection GetConnection()
-        {
-            return new SqliteConnection(_connectionString);
-        }
+        
+        public override DbConnection GetConnection() =>  Connection ?? (Connection = new SqliteConnection(_connectionString));
     }
 }

@@ -17,7 +17,7 @@ namespace Paramore.Brighter.Outbox.MySql
         /// <returns>Allows fluent syntax</returns>
         /// Registers the following
         /// -- MySqlOutboxConfiguration: connection string and outbox name
-        /// -- IMySqlConnectionProvider: lets us get a connection for the outbox that matches the entity store
+        /// -- IAmARelationalDbConnectionProvider: lets us get a connection for the outbox that matches the entity store
         /// -- IAmAnOutbox<Message>: an outbox to store messages we want to send
         /// -- IAmAnOutboxAsync<Message>: an outbox to store messages we want to send
         /// -- IAmAnOutboxViewer<Message>: Lets us read the entries in the outbox
@@ -38,17 +38,19 @@ namespace Paramore.Brighter.Outbox.MySql
          /// Use this transaction provider to ensure that the Outbox and the Entity Store are correct
          /// </summary>
          /// <param name="brighterBuilder">Allows extension method</param>
-         /// <param name="connectionProvider">What is the type of the connection provider</param>
+         /// <param name="transactionProvider">What is the type of the transaction provider</param>
          /// <param name="serviceLifetime">What is the lifetime of registered interfaces</param>
          /// <returns>Allows fluent syntax</returns>
          /// This is paired with Use Outbox (above) when required
          /// Registers the following
          /// -- IAmABoxTransactionConnectionProvider: the provider of a connection for any existing transaction
          public static IBrighterBuilder UseMySqTransactionConnectionProvider(
-             this IBrighterBuilder brighterBuilder, Type connectionProvider,
-             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped)
+             this IBrighterBuilder brighterBuilder, 
+             Type transactionProvider,
+             ServiceLifetime serviceLifetime = ServiceLifetime.Scoped
+             )
          {
-             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), connectionProvider, serviceLifetime));
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), transactionProvider, serviceLifetime));
  
              return brighterBuilder;
          }

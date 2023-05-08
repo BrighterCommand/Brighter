@@ -65,7 +65,7 @@ namespace Paramore.Brighter
             
         }
 
-        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmATransactionConnectonProvider overridingAmATransactionProvider = null)
+        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmATransactionConnectionProvider overridingAmATransactionProvider = null)
             where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
@@ -79,7 +79,7 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
 
-        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmATransactionConnectonProvider overridingAmATransactionProvider = null)
+        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmATransactionConnectionProvider overridingAmATransactionProvider = null)
         {
             CheckOutboxOutstandingLimit();
 
@@ -107,7 +107,7 @@ namespace Paramore.Brighter
             }
         } 
             
-        internal void AddToOutbox<T>(T request, Message message, IAmATransactionConnectonProvider overridingAmATransactionProvider = null) where T : class, IRequest
+        internal void AddToOutbox<T>(T request, Message message, IAmATransactionConnectionProvider overridingAmATransactionProvider = null) where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
                 
@@ -119,7 +119,7 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
         
-        internal void AddToOutbox(IEnumerable<Message> messages, IAmATransactionConnectonProvider overridingAmATransactionProvider = null) 
+        internal void AddToOutbox(IEnumerable<Message> messages, IAmATransactionConnectionProvider overridingAmATransactionProvider = null) 
         {
             CheckOutboxOutstandingLimit();
 

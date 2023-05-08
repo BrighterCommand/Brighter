@@ -6,7 +6,7 @@ using GreetingsEntities;
 using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
 using GreetingsPorts.Responses;
-using Paramore.Brighter.Dapper;
+using Paramore.Brighter;
 using Paramore.Darker;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -15,11 +15,11 @@ namespace GreetingsPorts.Handlers
 {
     public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider; 
 
-        public FIndGreetingsForPersonHandlerAsync(IUnitOfWork uow)
+        public FIndGreetingsForPersonHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider)
         {
-            _uow = uow;
+            _transactionConnectionProvider = transactionConnectionProvider;
         }
        
         [QueryLogging(0)]
@@ -33,7 +33,7 @@ namespace GreetingsPorts.Handlers
             var sql = @"select p.Id, p.Name, g.Id, g.Message 
                         from Person p
                         inner join Greeting g on g.Recipient_Id = p.Id";
-            var people = await _uow.Database.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
+            var people = await _transactionConnectionProvider.GetConnection().QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
             {
                person.Greetings.Add(greeting);
                return person;

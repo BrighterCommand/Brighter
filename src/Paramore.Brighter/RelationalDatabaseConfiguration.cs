@@ -1,6 +1,6 @@
 ﻿namespace Paramore.Brighter
 {
-    public class RelationalDatabaseConfiguration
+    public class RelationalDatabaseConfiguration : IAmARelationalDatabaseConfiguration
     {
 
         /// <summary>

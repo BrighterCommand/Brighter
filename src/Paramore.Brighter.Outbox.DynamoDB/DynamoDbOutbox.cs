@@ -76,7 +76,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>       
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider transactionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectionProvider transactionProvider = null)
         {
             AddAsync(message, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
@@ -92,7 +92,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             Message message, 
             int outBoxTimeout = -1, 
             CancellationToken cancellationToken = default, 
-            IAmATransactionConnectonProvider transactionProvider = null)
+            IAmATransactionConnectionProvider transactionProvider = null)
         {
             var messageToStore = new MessageItem(message);
 

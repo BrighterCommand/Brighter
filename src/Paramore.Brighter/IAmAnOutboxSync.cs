@@ -42,7 +42,7 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="amATransactionProvider">The Connection Provider to use for this call</param>
-        void Add(T message, int outBoxTimeout = -1, IAmATransactionConnectonProvider amATransactionProvider = null);
+        void Add(T message, int outBoxTimeout = -1, IAmATransactionConnectionProvider amATransactionProvider = null);
 
         /// <summary>
         /// Gets the specified message identifier.

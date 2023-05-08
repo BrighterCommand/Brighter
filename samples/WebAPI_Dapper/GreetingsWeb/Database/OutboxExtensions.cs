@@ -6,12 +6,9 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MySql;
-using Paramore.Brighter.MySql.Dapper;
 using Paramore.Brighter.Outbox.MySql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.Sqlite;
-using Paramore.Brighter.Sqlite.Dapper;
-using UnitOfWork = Paramore.Brighter.MySql.Dapper.UnitOfWork;
 
 namespace GreetingsWeb.Database;
 
@@ -44,7 +41,7 @@ public static class OutboxExtensions
                 new RelationalDatabaseConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.Dapper.MySqlDapperConnectionProvider), ServiceLifetime.Scoped)
+            .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.MySqlConnectionProvider), ServiceLifetime.Scoped)
             .UseOutboxSweeper();
     }
 
@@ -54,7 +51,7 @@ public static class OutboxExtensions
                 new RelationalDatabaseConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.Dapper.SqliteDapperConnectionProvider), ServiceLifetime.Scoped)
+            .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.SqliteConnectionProvider), ServiceLifetime.Scoped)
             .UseOutboxSweeper(options =>
             {
                 options.TimerInterval = 5;

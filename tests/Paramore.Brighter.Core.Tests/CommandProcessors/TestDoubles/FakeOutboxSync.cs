@@ -37,12 +37,12 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public bool ContinueOnCapturedContext { get; set; }
 
-        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectonProvider transactionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectionProvider transactionProvider = null)
         {
             _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
         }
 
-        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmATransactionConnectonProvider transactionProvider = null)
+        public Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmATransactionConnectionProvider transactionProvider = null)
         {
             if (cancellationToken.IsCancellationRequested)
                 return Task.FromCanceled(cancellationToken);
@@ -188,7 +188,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
 
         public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            IAmATransactionConnectonProvider transactionProvider = null)
+            IAmATransactionConnectionProvider transactionProvider = null)
         {
             foreach (Message message in messages)
             {
@@ -198,7 +198,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 
         public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmATransactionConnectonProvider transactionProvider = null)
+            IAmATransactionConnectionProvider transactionProvider = null)
         {
             foreach (var message in messages)
             {

@@ -46,15 +46,15 @@ namespace Paramore.Brighter.Inbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private readonly RelationalDatabaseConfiguration _configuration;
-        private readonly RelationalDbConnectionProvider _connectionProvider;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The Connection Provider.</param>
-        public MsSqlInbox(RelationalDatabaseConfiguration configuration, RelationalDbConnectionProvider connectionProvider)
+        public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Inbox.MsSql
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlInbox(RelationalDatabaseConfiguration configuration) : this(configuration,
+        public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
             new MsSqlSqlAuthConnectionProvider(configuration))
         {
         }

@@ -16,7 +16,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
@@ -120,8 +119,6 @@ namespace GreetingsWeb
 
         private void ConfigureDapper(IServiceCollection services)
         {
-            services.AddSingleton<DbConnectionStringProvider>(new DbConnectionStringProvider(DbConnectionString()));
-
             ConfigureDapperByHost(GetDatabaseType(), services);
 
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
@@ -147,19 +144,23 @@ namespace GreetingsWeb
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.Sqlite.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IUnitOfWork, Paramore.Brighter.MySql.Dapper.UnitOfWork>();
+            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.MySql.MySqlConnectionProvider>();
         }
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            services.AddSingleton(new DbConnectionStringProvider(DbConnectionString()));
+            var configuration = new RelationalDatabaseConfiguration(
+                DbConnectionString(),
+                outBoxTableName:_outBoxTableName
+            );
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
 
             services.AddBrighter(options =>
                 {

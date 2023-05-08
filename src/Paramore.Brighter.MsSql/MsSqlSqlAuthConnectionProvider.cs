@@ -1,24 +1,27 @@
-﻿using System.Data.Common;
+﻿using System;
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql
 {
-    public class MsSqlSqlAuthConnectionProvider : RelationalDbConnectionProvider
+    /// <summary>
+    /// A connection provider for Sqlite 
+    /// </summary>
+    public class MsSqlSqlAuthConnectionProvider : RelationalDbConnectionProvider, IAmATransactionConnectionProvider
     {
         private readonly string _connectionString;
-
+ 
         /// <summary>
-        /// Initialise a new instance of Ms Sql Connection provider using Sql Authentication.
+        /// Create a connection provider for MSSQL using a connection string for Db access
         /// </summary>
-        /// <param name="configuration">Ms Sql Configuration</param>
-        public MsSqlSqlAuthConnectionProvider(RelationalDatabaseConfiguration configuration)
+        /// <param name="configuration">The configuration for this database</param>
+        public MsSqlSqlAuthConnectionProvider(IAmARelationalDatabaseConfiguration configuration)
         {
+            if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
+                throw new ArgumentNullException(nameof(configuration.ConnectionString));
             _connectionString = configuration.ConnectionString;
         }
 
-        public override DbConnection GetConnection()
-        {
-            return new SqlConnection(_connectionString);
-        }
+        public override DbConnection GetConnection() =>  Connection ?? (Connection = new SqlConnection(_connectionString));
     }
 }

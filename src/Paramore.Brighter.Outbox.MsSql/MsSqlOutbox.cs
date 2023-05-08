@@ -44,7 +44,7 @@ namespace Paramore.Brighter.Outbox.MsSql
     {
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private readonly RelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
@@ -52,7 +52,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
-        public MsSqlOutbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) : base(
+        public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) : base(
             configuration.OutBoxTableName, new MsSqlQueries(), ApplicationLogging.CreateLogger<MsSqlOutbox>())
         {
             _configuration = configuration;
@@ -64,13 +64,13 @@ namespace Paramore.Brighter.Outbox.MsSql
         ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlOutbox(RelationalDatabaseConfiguration configuration) : this(configuration,
+        public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
             new MsSqlSqlAuthConnectionProvider(configuration))
         {
         }
 
         protected override void WriteToStore(
-            IAmATransactionConnectonProvider transactionProvider,
+            IAmATransactionConnectionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction)
         {
@@ -112,7 +112,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmATransactionConnectonProvider transactionProvider,
+            IAmATransactionConnectionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction, 
             CancellationToken cancellationToken)

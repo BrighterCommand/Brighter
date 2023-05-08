@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Inbox.Postgres
 {
     public class PostgresSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
-        private readonly RelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlInbox>();
         /// <summary>
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
-        public PostgresSqlInbox(RelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
+        public PostgresSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;
