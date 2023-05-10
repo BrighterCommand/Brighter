@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 using Npgsql;
 
 namespace Paramore.Brighter.PostgreSql
@@ -28,7 +30,23 @@ namespace Paramore.Brighter.PostgreSql
         /// The connection is not opened, you need to open it yourself.
         /// </summary>
         /// <returns>A database connection</returns>
-        public override DbConnection GetConnection() =>  Connection ?? (Connection = new NpgsqlConnection(_connectionString)); 
-        
+        public override DbConnection GetConnection()
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            if (connection.State != System.Data.ConnectionState.Open) connection.Open();
+            return connection;
+        }
+
+        /// <summary>
+        /// Gets a existing Connection; creates a new one if it does not exist
+        /// The connection is not opened, you need to open it yourself.
+        /// </summary>
+        /// <returns>A database connection</returns>
+         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            var connection = new NpgsqlConnection(_connectionString);
+            if (connection.State != System.Data.ConnectionState.Open) await connection.OpenAsync(cancellationToken);
+            return connection;
+        }
     }
 }

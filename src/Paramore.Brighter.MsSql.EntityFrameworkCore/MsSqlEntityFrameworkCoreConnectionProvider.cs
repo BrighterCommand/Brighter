@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Paramore.Brighter.MsSql.EntityFrameworkCore
 {
-    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectionProvider where T : DbContext
+    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : RelationalDbConnectionProvider where T : DbContext
     {
         private readonly T _context;
         
@@ -23,14 +23,18 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             _context.Database.CanConnect();
-            return _context.Database.GetDbConnection();
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open) connection.Open();
+            return connection;
         }
 
         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
             //This line ensure that the connection has been initialised and that any required interceptors have been run before getting the connection
             await _context.Database.CanConnectAsync(cancellationToken);
-            return _context.Database.GetDbConnection();
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open) await connection.OpenAsync(cancellationToken);
+            return connection;
         }
 
         public override DbTransaction GetTransaction()

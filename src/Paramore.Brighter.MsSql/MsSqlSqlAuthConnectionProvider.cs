@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Data.Common;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql
@@ -7,7 +9,7 @@ namespace Paramore.Brighter.MsSql
     /// <summary>
     /// A connection provider for Sqlite 
     /// </summary>
-    public class MsSqlSqlAuthConnectionProvider : RelationalDbConnectionProvider, IAmATransactionConnectionProvider
+    public class MsSqlSqlAuthConnectionProvider : RelationalDbConnectionProvider
     {
         private readonly string _connectionString;
  
@@ -22,7 +24,28 @@ namespace Paramore.Brighter.MsSql
             _connectionString = configuration.ConnectionString;
         }
 
-        public override DbConnection GetConnection() =>  Connection ?? (Connection = new SqlConnection(_connectionString));
-        
+        /// <summary>
+        /// Create a new Sql Connection and open it
+        /// This is not a shared connection and you should manage it's lifetime
+        /// </summary>
+        /// <returns></returns>
+        public override DbConnection GetConnection()
+        {
+            var connection = new SqlConnection(_connectionString);
+            if (connection.State != System.Data.ConnectionState.Open) connection.Open();
+            return connection;
+        }
+
+        /// <summary>
+        /// Create a new Sql Connection and open it
+        /// This is not a shared connection and you should manage it's lifetime
+        /// </summary>
+        /// <returns></returns>
+         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        {
+            var connection = new SqlConnection(_connectionString);
+            if (connection.State != System.Data.ConnectionState.Open) await connection.OpenAsync(cancellationToken);
+            return connection;
+        }
     }
 }

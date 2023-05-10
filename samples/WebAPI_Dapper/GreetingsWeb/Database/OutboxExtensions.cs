@@ -41,7 +41,7 @@ public static class OutboxExtensions
                 new RelationalDatabaseConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(MySqlConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseMySqTransactionConnectionProvider(typeof(Paramore.Brighter.MySql.MySqlConnectionProvider), ServiceLifetime.Scoped)
+            .UseMySqTransactionConnectionProvider(typeof(MySqlUnitOfWork), ServiceLifetime.Scoped)
             .UseOutboxSweeper();
     }
 
@@ -51,7 +51,7 @@ public static class OutboxExtensions
                 new RelationalDatabaseConfiguration(dbConnectionString, outBoxTableName), 
                 typeof(SqliteConnectionProvider),
                 ServiceLifetime.Singleton)
-            .UseSqliteTransactionConnectionProvider(typeof(Paramore.Brighter.Sqlite.SqliteConnectionProvider), ServiceLifetime.Scoped)
+            .UseSqliteTransactionConnectionProvider(typeof(SqliteUnitOfWork), ServiceLifetime.Scoped)
             .UseOutboxSweeper(options =>
             {
                 options.TimerInterval = 5;

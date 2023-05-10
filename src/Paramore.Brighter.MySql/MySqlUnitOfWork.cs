@@ -35,7 +35,7 @@ namespace Paramore.Brighter.MySql
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class MySqlConnectionProvider : RelationalDbConnectionProvider
+    public class MySqlUnitOfWork : RelationalDbTransactionProvider 
     {
         private readonly string _connectionString;
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.MySql
         /// Initialise a new instance of MySql Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">MySql Configuration</param>
-        public MySqlConnectionProvider(IAmARelationalDatabaseConfiguration configuration)
+        public MySqlUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
@@ -52,26 +52,55 @@ namespace Paramore.Brighter.MySql
 
         /// <summary>
         /// Creates and opens a MySql Connection
-        /// This is not a shared connection and you should manage its lifetime
         /// </summary>
         /// <returns></returns>
         public override DbConnection GetConnection()
         {
-            var connection = new MySqlConnection(_connectionString);
-            if (connection.State != ConnectionState.Open) connection.Open();
-            return connection;
+            if (Connection == null) Connection = new MySqlConnection(_connectionString);
+            if (Connection.State != ConnectionState.Open) Connection.Open();
+            return Connection;
         }
 
         /// <summary>
         /// Creates and opens a MySql Connection
-        /// This is not a shared connection and you should manage its lifetime
+        /// This is a shared connection and you should manage it through the unit of work
         /// </summary>
         /// <returns></returns>
         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var connection = new MySqlConnection(_connectionString);
-            if (connection.State != ConnectionState.Open) await connection.OpenAsync(cancellationToken);
-            return connection;
+            if (Connection == null) Connection = new MySqlConnection(_connectionString);
+            if (Connection.State != ConnectionState.Open) await Connection.OpenAsync();
+            return Connection;
         }
+        
+        /// <summary>
+        /// Creates and opens a MySql Transaction
+        /// This is a shared transaction and you should manage it through the unit of work
+        /// </summary>
+        /// <returns>A shared transaction</returns>
+        public override DbTransaction GetTransaction()
+        {
+            if (Connection == null) Connection = GetConnection();
+            if (Connection.State != ConnectionState.Open) Connection.Open();
+            if (!HasOpenTransaction)
+                Transaction = ((MySqlConnection) Connection).BeginTransaction();
+            return Transaction;
+        }
+
+        /// <summary>
+        /// Creates and opens a MySql Transaction
+        /// This is a shared transaction and you should manage it through the unit of work
+        /// </summary>
+        /// <returns>A shared transaction</returns>
+        public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
+            if (Connection.State != ConnectionState.Open)
+                await Connection.OpenAsync(cancellationToken);
+            if (!HasOpenTransaction)
+                Transaction = await ((MySqlConnection) Connection).BeginTransactionAsync(cancellationToken);
+            return Transaction;
+        }
+ 
     }
 }

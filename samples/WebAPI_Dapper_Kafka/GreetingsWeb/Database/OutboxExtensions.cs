@@ -44,12 +44,11 @@ namespace GreetingsWeb.Database
             RelationalDatabaseConfiguration configuration)
         {
             brighterBuilder.UseMySqlOutbox(
-                    //new MySqlConfiguration(dbConnectionString, outBoxTableName, binaryMessagePayload: binaryMessagePayload), 
                     configuration,
                     typeof(MySqlConnectionProvider),
                     ServiceLifetime.Singleton)
                 .UseMySqTransactionConnectionProvider(
-                    typeof(Paramore.Brighter.MySql.MySqlConnectionProvider), ServiceLifetime.Scoped)
+                    typeof(MySqlUnitOfWork), ServiceLifetime.Scoped)
                 .UseOutboxSweeper();
         }
 
@@ -61,7 +60,7 @@ namespace GreetingsWeb.Database
                     typeof(SqliteConnectionProvider),
                     ServiceLifetime.Singleton)
                 .UseSqliteTransactionConnectionProvider(
-                    typeof(Paramore.Brighter.Sqlite.SqliteConnectionProvider), ServiceLifetime.Scoped)
+                    typeof(SqliteUnitOfWork), ServiceLifetime.Scoped)
                 .UseOutboxSweeper(options =>
                 {
                     options.TimerInterval = 5;

@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Sqlite
     /// <summary>
     /// A connection provider for Sqlite 
     /// </summary>
-    public class SqliteConnectionProvider : RelationalDbConnectionProvider
+    public class SqliteUnitOfWork : RelationalDbTransactionProvider 
     {
         private readonly string _connectionString;
 
@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Sqlite
         /// Create a connection provider for Sqlite using a connection string for Db access
         /// </summary>
         /// <param name="configuration">The configuration of the Sqlite database</param>
-        public SqliteConnectionProvider(IAmARelationalDatabaseConfiguration configuration)
+        public SqliteUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
@@ -51,28 +51,59 @@ namespace Paramore.Brighter.Sqlite
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
-        /// The connection is not opened, you need to open it yourself.
+        /// This is a shared connection, so you should use this interface to manage it  
         /// </summary>
         /// <returns>A database connection</returns>
         public override DbConnection GetConnection()
         {
-            var connection = new SqliteConnection(_connectionString);
-            if (connection.State != ConnectionState.Open)
-                connection.Open();
-            return connection;
+            if (Connection == null) { Connection = new SqliteConnection(_connectionString);}
+            if (Connection.State != ConnectionState.Open)
+                Connection.Open();
+            return Connection;
         }
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
-        /// The connection is not opened, you need to open it yourself.
+        /// This is a shared connection, so you should use this interface to manage it  
         /// </summary>
-        /// <returns>A database connection</returns>
-         public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
+        /// <returns>A database connection</returns> 
+        public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var connection = new SqliteConnection(_connectionString);
-            if (connection.State != ConnectionState.Open)
-                await connection.OpenAsync(cancellationToken);
-            return connection;
+            if(Connection == null) { Connection = new SqliteConnection(_connectionString);}
+
+            if (Connection.State != ConnectionState.Open)
+                await Connection.OpenAsync(cancellationToken);
+            return Connection;
+        }
+
+        /// <summary>
+        /// Creates and opens a Sqlite Transaction
+        /// This is a shared transaction and you should manage it through the unit of work
+        /// </summary>
+        /// <returns>DbTransaction</returns>
+        public override DbTransaction GetTransaction()
+        {
+            if (Connection == null) {Connection = new SqliteConnection(_connectionString);}
+            if (Connection.State != ConnectionState.Open)
+                Connection.Open();
+            if (!HasOpenTransaction)
+                Transaction = Connection.BeginTransaction();
+            return Transaction;
+        }
+
+        /// <summary>
+        /// Creates and opens a Sqlite Transaction
+        /// This is a shared transaction and you should manage it through the unit of work
+        /// </summary>
+        /// <returns>DbTransaction</returns>
+         public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (Connection == null) { Connection = new SqliteConnection(_connectionString);}
+            if (Connection.State != ConnectionState.Open)
+                await Connection.OpenAsync(cancellationToken);
+            if (!HasOpenTransaction)
+                Transaction = await Connection.BeginTransactionAsync(cancellationToken);
+            return Transaction;
         }
     }
 }

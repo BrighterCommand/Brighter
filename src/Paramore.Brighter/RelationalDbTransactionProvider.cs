@@ -6,29 +6,39 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter
 {
-    public abstract class RelationalDbConnectionProvider : IAmARelationalDbConnectionProvider
+    public abstract class RelationalDbTransactionProvider : IAmATransactionConnectionProvider
     {
         private bool _disposed = false;
+        protected DbConnection Connection;
+        protected DbTransaction Transaction;
         
         /// <summary>
-        /// debugging
+        /// Close any open connection or transaction
         /// </summary>
-        public Guid Instance = Guid.NewGuid();
-
-        /// <summary>
-        /// Does not retain shared connections or transactions, so nothing to commit
-        /// </summary>
-        public virtual void Close() { }
+        public virtual void Close()
+        {
+            Transaction?.Dispose();
+            Transaction = null;
+            Connection.Close();
+            if (!IsSharedConnection)
+                Connection?.Close();
+        }
         
         /// <summary>
-        /// Does not support shared transactions, so nothing to commit, manage transactions independently
+        /// Commit the transaction
         /// </summary>
-        public void Commit() { }
+        public void Commit()
+        {
+            if (HasOpenTransaction)
+            {
+                Transaction.Commit();
+                Transaction = null;
+            }
+        }
         
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
-        /// Opens the connection if it is not opened
-        /// This is not a shared connection
+        /// Opens the connection if it is not opened 
         /// </summary>
         /// <returns>A database connection</returns>
         public abstract DbConnection GetConnection();
@@ -47,31 +57,47 @@ namespace Paramore.Brighter
         }
 
         /// <summary>
-        /// Does not support shared transactions, create a transaction of the DbConnection instead
+        /// Gets an existing transaction; creates a new one from the connection if it does not exist.
+        /// YOu should use the commit transaction using the Commit method. 
         /// </summary>
         /// <returns>A database transaction</returns>
-        public virtual DbTransaction GetTransaction() { return null; }
+        public virtual DbTransaction GetTransaction()
+        {
+            Connection ??= GetConnection();
+            if (Connection.State != ConnectionState.Open)
+                Connection.Open();
+            if (!HasOpenTransaction)
+                Transaction = Connection.BeginTransaction();
+            return Transaction;
+        }
         
         /// <summary>
-        /// Does not support shared transactions, create a transaction of the DbConnection instead
+        /// Gets an existing transaction; creates a new one from the connection if it does not exist.
+        /// You are responsible for committing the transaction.
         /// </summary>
         /// <returns>A database transaction</returns>
         public virtual Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
-            return null;
+            var tcs = new TaskCompletionSource<DbTransaction>();
+            
+            if(cancellationToken.IsCancellationRequested)
+                tcs.SetCanceled();
+            
+            tcs.SetResult(GetTransaction());
+            return tcs.Task;
         }
 
         /// <summary>
         /// Is there a transaction open?
         /// </summary>
-        public virtual bool HasOpenTransaction { get => false;  }
+        public virtual bool HasOpenTransaction { get { return Transaction != null; } }
 
         /// <summary>
         /// Is there a shared connection? (Do we maintain state of just create anew)
         /// </summary>
-        public virtual bool IsSharedConnection { get => false; }
+        public virtual bool IsSharedConnection { get => true; }
         
-        ~RelationalDbConnectionProvider() => Dispose(false);
+        ~RelationalDbTransactionProvider() => Dispose(false);
         
         // Public implementation of Dispose pattern callable by consumers.
         public void Dispose()
@@ -86,8 +112,11 @@ namespace Paramore.Brighter
             {
                 if (disposing)
                 {
-                    /* No shared transactions, nothing to do */
+                    Connection?.Dispose();
+                    Transaction?.Dispose();
                 }
+                Connection = null;
+                Transaction = null;
                 _disposed = true;
             }
         }
