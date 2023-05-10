@@ -16,8 +16,10 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.Kafka;
+using Paramore.Brighter.MySql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using Paramore.Brighter.Sqlite;
 using SalutationAnalytics.Database;
 using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
@@ -187,14 +189,16 @@ namespace SalutationAnalytics
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
+            services.AddScoped<IAmARelationalDbConnectionProvider, SqliteConnectionProvider>();
+            services.AddScoped<IAmATransactionConnectionProvider, SqliteUnitOfWork>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.MySql.MySqlConnectionProvider>();
+            services.AddScoped<IAmARelationalDbConnectionProvider, MySqlConnectionProvider>();
+            services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
         }
 
 
