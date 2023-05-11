@@ -82,6 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="readCommittedOffsetsTimeoutMs">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
         /// Defaults to 5000</param>
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
+        /// <param name="partitionAssignmentStrategy">What is the strategy for assigning partitions to consumers?</param>
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
         /// <param name="topicFindTimeoutMs">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
@@ -98,6 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int sweepUncommittedOffsetsIntervalMs = 30000,
             int readCommittedOffsetsTimeoutMs = 5000,
             int numPartitions = 1,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
             short replicationFactor = 1,
             int topicFindTimeoutMs = 10000,
             OnMissingChannel makeChannels = OnMissingChannel.Create
@@ -147,7 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = false,
                 // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-                PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
+                PartitionAssignmentStrategy = partitionAssignmentStrategy,
             };
 
             _maxBatchSize = commitBatchSize;
