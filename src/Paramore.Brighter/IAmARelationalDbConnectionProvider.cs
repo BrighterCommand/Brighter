@@ -64,5 +64,15 @@ namespace Paramore.Brighter
         /// Is there a shared connection? (Do we maintain state of just create anew)
         /// </summary>
         bool IsSharedConnection { get; }
+        
+        /// <summary>
+        /// Rollback a transaction that we manage
+        /// </summary>
+        void Rollback();
+        
+        /// <summary>
+        /// Rollback a transaction that we manage
+        /// </summary>
+         Task RollbackAsync(CancellationToken cancellationToken = default);
     }
 }

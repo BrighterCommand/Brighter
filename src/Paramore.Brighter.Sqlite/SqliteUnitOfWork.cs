@@ -98,9 +98,7 @@ namespace Paramore.Brighter.Sqlite
         /// <returns>DbTransaction</returns>
         public override DbTransaction GetTransaction()
         {
-            if (Connection == null) {Connection = new SqliteConnection(_connectionString);}
-            if (Connection.State != ConnectionState.Open)
-                Connection.Open();
+            if (Connection == null) Connection = GetConnection();
             if (!HasOpenTransaction)
                 Transaction = Connection.BeginTransaction();
             return Transaction;
@@ -113,9 +111,7 @@ namespace Paramore.Brighter.Sqlite
         /// <returns>DbTransaction</returns>
          public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
-            if (Connection == null) { Connection = new SqliteConnection(_connectionString);}
-            if (Connection.State != ConnectionState.Open)
-                await Connection.OpenAsync(cancellationToken);
+            if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
                 Transaction = await Connection.BeginTransactionAsync(cancellationToken);
             return Transaction;

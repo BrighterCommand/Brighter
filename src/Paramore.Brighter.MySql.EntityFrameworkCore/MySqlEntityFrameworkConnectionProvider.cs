@@ -1,4 +1,5 @@
-﻿using System.Data.Common;
+﻿using System;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
@@ -80,8 +81,18 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         {
             return _context.Database.CurrentTransaction?.GetDbTransaction();
         }
+        
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public override async Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            if (HasOpenTransaction)
+            {
+                try { await ((MySqlTransaction)GetTransaction()).RollbackAsync(cancellationToken); } catch (Exception) { /* Ignore*/}
+                Transaction = null;
+            }
+        }
 
-        public override bool HasOpenTransaction { get => _context.Database.CurrentTransaction != null; }
-        public override bool IsSharedConnection { get => true; }
     }
 }

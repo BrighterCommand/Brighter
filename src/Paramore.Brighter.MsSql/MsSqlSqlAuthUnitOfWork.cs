@@ -55,7 +55,6 @@ namespace Paramore.Brighter.MsSql
          public override DbTransaction GetTransaction()
         {
             if (Connection == null) Connection = GetConnection();
-            if (Connection.State != ConnectionState.Open) Connection.Open();
             if (!HasOpenTransaction)
                 Transaction = ((SqlConnection) Connection).BeginTransaction();
             return Transaction;
@@ -69,7 +68,6 @@ namespace Paramore.Brighter.MsSql
         public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
-            if (Connection.State != ConnectionState.Open) await Connection.OpenAsync(cancellationToken);
             if (!HasOpenTransaction)
                 Transaction = ((SqlConnection) Connection).BeginTransaction();
             return Transaction;

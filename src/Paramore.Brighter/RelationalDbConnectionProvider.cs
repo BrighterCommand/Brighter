@@ -68,14 +68,33 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Is there a transaction open?
+        /// On  a connection provider we do not manage so our response is always false
         /// </summary>
         public virtual bool HasOpenTransaction { get => false;  }
 
         /// <summary>
         /// Is there a shared connection? (Do we maintain state of just create anew)
+        /// On  a connection provider we do not have shared connections so our response is always false
         /// </summary>
         public virtual bool IsSharedConnection { get => false; }
-        
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// On a connection provider we do not manage transactions so our response is always false
+        /// </summary>
+        public virtual void Rollback()
+        {
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// On a connection provider we do not manage transactions so our response is always false
+        /// </summary>
+        public virtual Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.CompletedTask;
+        }
+
         ~RelationalDbConnectionProvider() => Dispose(false);
         
         // Public implementation of Dispose pattern callable by consumers.

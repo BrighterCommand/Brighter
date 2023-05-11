@@ -17,9 +17,12 @@ namespace Paramore.Brighter
         /// </summary>
         public virtual void Close()
         {
-            Transaction?.Dispose();
-            Transaction = null;
-            Connection.Close();
+            if (!HasOpenTransaction)
+            {
+                Transaction?.Dispose();
+                Transaction = null;
+            }
+
             if (!IsSharedConnection)
                 Connection?.Close();
         }
@@ -73,7 +76,7 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Gets an existing transaction; creates a new one from the connection if it does not exist.
-        /// YOu should use the commit transaction using the Commit method. 
+        /// You should use the commit transaction using the Commit method. 
         /// </summary>
         /// <returns>A database transaction</returns>
         public virtual DbTransaction GetTransaction()
@@ -111,6 +114,32 @@ namespace Paramore.Brighter
         /// Is there a shared connection? (Do we maintain state of just create anew)
         /// </summary>
         public virtual bool IsSharedConnection { get => true; }
+        
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public virtual void Rollback()
+        {
+            if (HasOpenTransaction)
+            {
+                try { Transaction.Rollback(); } catch(Exception) { /*ignore*/ }
+                Transaction = null;
+            }
+        }
+
+        /// <summary>
+        /// Rolls back a transaction
+        /// </summary>
+        public virtual Task RollbackAsync(CancellationToken cancellationToken = default)
+        {
+            if (HasOpenTransaction)
+            {
+                try { Transaction.Rollback(); } catch(Exception e) { /*ignore*/ }
+                Transaction = null;
+            }
+            
+            return Task.CompletedTask;
+        }
         
         ~RelationalDbTransactionProvider() => Dispose(false);
         

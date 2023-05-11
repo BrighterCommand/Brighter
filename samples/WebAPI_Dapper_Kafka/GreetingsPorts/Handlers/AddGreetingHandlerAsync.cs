@@ -34,40 +34,41 @@ namespace GreetingsPorts.Handlers
         {
             var posts = new List<Guid>();
 
-            using (var conn = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
+            //NOTE: We are using the transaction connection provider to get a connection, so we do not own the connection
+            //and we should use the transaction connection provider to manage it
+            var conn = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken);
+            //NOTE: We are using a transaction, but as we are using the Outbox, we ask the transaction connection provider for a transaction
+            //and allow it to manage the transaction for us. This is because we want to use the same transaction for the outgoing message
+            var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken);
+            try
             {
-                await conn.OpenAsync(cancellationToken);
-                
-                //NOTE: We are using a transaction, but as we are using the Outbox, we ask the transaction connection provider for a transaction
-                //and allow it to manage the transaction for us. This is because we want to use the same transaction for the outgoing message
-                using (var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken))
-                {
-                    try
-                    {
-                        var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
-                        var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
-                        var person = people.Single();
+                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
+                var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
+                var person = people.Single();
 
-                        var greeting = new Greeting(addGreeting.Greeting, person);
+                var greeting = new Greeting(addGreeting.Greeting, person);
 
-                        //write the added child entity to the Db
-                        await conn.InsertAsync<Greeting>(greeting, tx);
+                //write the added child entity to the Db
+                await conn.InsertAsync<Greeting>(greeting, tx);
 
-                        //Now write the message we want to send to the Db in the same transaction.
-                        posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()),
-                            cancellationToken: cancellationToken));
+                //Now write the message we want to send to the Db in the same transaction.
+                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()),
+                    cancellationToken: cancellationToken));
 
-                        //commit both new greeting and outgoing message
-                        await tx.CommitAsync(cancellationToken);
-                    }
-                    catch (Exception e)
-                    {
-                        _logger.LogError(e, "Exception thrown handling Add Greeting request");
-                        //it went wrong, rollback the entity change and the downstream message
-                        await tx.RollbackAsync(cancellationToken);
-                        return await base.HandleAsync(addGreeting, cancellationToken);
-                    }
-                }
+                //commit both new greeting and outgoing message
+                await _transactionConnectionProvider.CommitAsync(cancellationToken);
+            }
+            catch (Exception e)
+            {
+                _logger.LogError(e, "Exception thrown handling Add Greeting request");
+                //it went wrong, rollback the entity change and the downstream message
+                await tx.RollbackAsync(cancellationToken);
+                return await base.HandleAsync(addGreeting, cancellationToken);
+            }
+            finally
+            {
+                //in the finally block, tell the transaction provider that we are done.
+                _transactionConnectionProvider.Close();
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.
