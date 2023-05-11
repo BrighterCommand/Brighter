@@ -436,28 +436,37 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         
         private void CommitAllOffsets(DateTime flushTime)
         {
-            var listOffsets = new List<TopicPartitionOffset>();
-            var currentOffsetsInBag = _offsetStorage.Count; 
-            for (int i = 0; i < currentOffsetsInBag; i++)
+            try
             {
-                bool hasOffsets = _offsetStorage.TryTake(out var offset);
-                if (hasOffsets)
-                    listOffsets.Add(offset);
-                else
-                    break;
 
+
+                var listOffsets = new List<TopicPartitionOffset>();
+                var currentOffsetsInBag = _offsetStorage.Count;
+                for (int i = 0; i < currentOffsetsInBag; i++)
+                {
+                    bool hasOffsets = _offsetStorage.TryTake(out var offset);
+                    if (hasOffsets)
+                        listOffsets.Add(offset);
+                    else
+                        break;
+
+                }
+
+                if (s_logger.IsEnabled(LogLevel.Information))
+                {
+                    var offsets = listOffsets.Select(tpo =>
+                        $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                    var offsetAsString = string.Join(Environment.NewLine, offsets);
+                    s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                }
+
+                _consumer.Commit(listOffsets);
+                _lastFlushAt = flushTime;
             }
-           
-            if (s_logger.IsEnabled(LogLevel.Information))
+            finally
             {
-                var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-                var offsetAsString = string.Join(Environment.NewLine, offsets);
-                s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                _flushToken.Release(1);
             }
-           
-            _consumer.Commit(listOffsets);
-            _lastFlushAt = flushTime;
-            _flushToken.Release(1);
         }
 
         // The batch size has been exceeded, so flush our offsets
