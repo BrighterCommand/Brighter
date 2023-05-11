@@ -68,6 +68,14 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// AutoOffsetReset.Error - Consider it an error to be lacking a reset
         /// </summary>
         public AutoOffsetReset OffsetDefault { get; set; } = AutoOffsetReset.Earliest;
+        
+        /// <summary>
+        /// How should we assign partitions to consumers in the group?
+        /// Range - Assign to co-localise partitions to consumers in the same group
+        /// RoundRobin - Assign partitions to consumers in a round robin fashion
+        /// CooperativeSticky - Brighter's default, reduce the number of re-balances by assigning partitions to the consumer that previously owned them
+        /// </summary>
+        public PartitionAssignmentStrategy PartitionAssignmentStrategy { get; set; }
 
         /// <summary>
         /// How long before we time out when we are reading the committed offsets back (mainly used for debugging)
@@ -95,6 +103,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         public int TopicFindTimeoutMs { get; set; } = 5000;
 
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Subscription"/> class.
         /// </summary>
@@ -121,6 +130,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="makeChannels">Should we make channels if they don't exist, defaults to creating</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription (
             Type dataType, 
             SubscriptionName name = null, 
@@ -145,7 +155,8 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            int channelFailureDelay = 1000,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky) 
             : base(dataType, name, channelName, routingKey, bufferSize, noOfPerformers, timeoutInMilliseconds, requeueCount, 
                 requeueDelayInMilliseconds, unacceptableMessageLimit, isAsync, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
         {
@@ -158,6 +169,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             SessionTimeoutMs = sessionTimeoutMs;
             NumPartitions = numOfPartitions;
             ReplicationFactor = replicationFactor;
+            PartitionAssignmentStrategy = partitionAssignmentStrategy;
         }
     }
 
@@ -189,6 +201,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="channelFactory">The channel factory to create channels for Consumer.</param>
         /// <param name="emptyChannelDelay">How long to pause when a channel is empty in milliseconds</param>
         /// <param name="channelFailureDelay">How long to pause when there is a channel failure in milliseconds</param>
+        /// <param name="partitionAssignmentStrategy">How do partitions get assigned to consumers?</param>
         public KafkaSubscription(
             SubscriptionName name = null, 
             ChannelName channelName = null, 
@@ -212,11 +225,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             IAmAChannelFactory channelFactory = null, 
             OnMissingChannel makeChannels = OnMissingChannel.Create,
             int emptyChannelDelay = 500,
-            int channelFailureDelay = 1000) 
+            int channelFailureDelay = 1000,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky) 
             : base(typeof(T), name, channelName, routingKey, groupId, bufferSize, noOfPerformers, timeoutInMilliseconds, 
                 requeueCount, requeueDelayInMilliseconds, unacceptableMessageLimit, offsetDefault, commitBatchSize, 
                 sessionTimeoutMs, maxPollIntervalMs, sweepUncommittedOffsetsIntervalMs, isolationLevel, isAsync, 
-                numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay)
+                numOfPartitions, replicationFactor, channelFactory, makeChannels, emptyChannelDelay, channelFailureDelay,
+                partitionAssignmentStrategy)
         {
         }
     }
