@@ -10,7 +10,7 @@ namespace Paramore.Brighter
 
     public abstract class
         RelationDatabaseOutboxSync<TConnection, TCommand, TDataReader, TParameter> : IAmAnOutboxSync<Message>,
-            IAmAnOutboxAsync<Message>
+            IAmAnOutboxAsync<Message>, IAmABulkOutboxAsync<Message>
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;
