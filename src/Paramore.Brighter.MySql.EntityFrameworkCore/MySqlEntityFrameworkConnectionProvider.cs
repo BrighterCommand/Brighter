@@ -25,6 +25,31 @@ namespace Paramore.Brighter.MySql.EntityFrameworkCore
         }
         
         /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        public override void Commit()
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.Commit();
+            }
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
+            }
+            
+            return Task.CompletedTask;
+        }
+        
+        /// <summary>
         /// Get the current connection of the DB context
         /// </summary>
         /// <returns>The Sqlite Connection that is in use</returns>

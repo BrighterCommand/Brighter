@@ -14,6 +14,18 @@ namespace Paramore.Brighter
         /// Close any open connection or transaction
         /// </summary>
         void Close();
+
+        /// <summary>
+        /// Commit any transaction that we are managing
+        /// </summary>
+        void Commit();
+        
+        /// <summary>
+        /// Commit any transaction that we are managing
+        /// </summary>
+        /// <param name="cancellationToken">A cancellation token</param>
+        /// <returns></returns>
+        Task CommitAsync(CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist

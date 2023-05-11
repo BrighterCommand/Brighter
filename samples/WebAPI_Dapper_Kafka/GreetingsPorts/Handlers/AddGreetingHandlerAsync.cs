@@ -37,6 +37,9 @@ namespace GreetingsPorts.Handlers
             using (var conn = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
             {
                 await conn.OpenAsync(cancellationToken);
+                
+                //NOTE: We are using a transaction, but as we are using the Outbox, we ask the transaction connection provider for a transaction
+                //and allow it to manage the transaction for us. This is because we want to use the same transaction for the outgoing message
                 using (var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken))
                 {
                     try

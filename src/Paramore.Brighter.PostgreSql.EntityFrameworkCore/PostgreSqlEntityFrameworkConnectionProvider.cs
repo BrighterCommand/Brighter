@@ -12,7 +12,7 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
     /// A connection provider that uses the same connection as EF Core
     /// </summary>
     /// <typeparam name="T">The Db Context to take the connection from</typeparam>
-    public class PostgreSqlEntityFrameworkConnectionProvider<T> : RelationalDbConnectionProvider, IAmATransactionConnectionProvider where T : DbContext
+    public class PostgreSqlEntityFrameworkConnectionProvider<T> : RelationalDbTransactionProvider where T : DbContext
     {
         private readonly T _context;
 
@@ -23,6 +23,31 @@ namespace Paramore.Brighter.PostgreSql.EntityFrameworkCore
         public PostgreSqlEntityFrameworkConnectionProvider(T context)
         {
             _context = context;
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        public override void Commit()
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.Commit();
+            }
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
+            }
+            
+            return Task.CompletedTask;
         }
 
         /// <summary>

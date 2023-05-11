@@ -25,6 +25,21 @@ namespace Paramore.Brighter.PostgreSql
 
             _connectionString = configuration.ConnectionString;
         }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                ((NpgsqlTransaction)Transaction).CommitAsync(cancellationToken);
+                Transaction = null;
+            }
+            
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist

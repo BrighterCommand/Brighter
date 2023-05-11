@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Paramore.Brighter.MsSql.EntityFrameworkCore
 {
-    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : RelationalDbConnectionProvider where T : DbContext
+    public class MsSqlEntityFrameworkCoreConnectionProvider<T> : RelationalDbTransactionProvider where T : DbContext
     {
         private readonly T _context;
         
@@ -17,6 +17,31 @@ namespace Paramore.Brighter.MsSql.EntityFrameworkCore
         public MsSqlEntityFrameworkCoreConnectionProvider(T context)
         {
             _context = context;
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        public override void Commit()
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.Commit();
+            }
+        }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                _context.Database.CurrentTransaction?.CommitAsync(cancellationToken);
+            }
+            
+            return Task.CompletedTask;
         }
         
         public override DbConnection GetConnection()

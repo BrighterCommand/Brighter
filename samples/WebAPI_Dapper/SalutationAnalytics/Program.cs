@@ -14,8 +14,10 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MySql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
+using Paramore.Brighter.Sqlite;
 using SalutationAnalytics.Database;
 using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
@@ -73,20 +75,16 @@ namespace SalutationAnalytics
                     makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
             };
 
-            var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
-
+            var relationalDatabaseConfiguration =
+                new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME);
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
+            
             var rmqConnection = new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")), Exchange = new Exchange("paramore.brighter.exchange")
+                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@localhost:5672")), Exchange = new Exchange("paramore.brighter.exchange")
             };
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-            var dbConfiguration = new RelationalDatabaseConfiguration(
-                DbConnectionString(hostContext), 
-                inboxTableName:SchemaCreation.INBOX_TABLE_NAME);
-            
-            services.AddSingleton(dbConfiguration);
 
             services.AddServiceActivator(options =>
                 {
@@ -120,7 +118,7 @@ namespace SalutationAnalytics
                 )
                 .AutoFromAssemblies()
                 .UseExternalInbox(
-                    CreateInbox(hostContext, dbConfiguration),
+                    CreateInbox(hostContext, relationalDatabaseConfiguration),
                     new InboxConfiguration(
                         scope: InboxScope.Commands,
                         onceOnly: true,
@@ -181,14 +179,16 @@ namespace SalutationAnalytics
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
+            services.AddScoped<IAmARelationalDbConnectionProvider, SqliteConnectionProvider>();
+            services.AddScoped<IAmATransactionConnectionProvider, SqliteUnitOfWork>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-            services.AddScoped<IAmATransactionConnectionProvider, Paramore.Brighter.Sqlite.SqliteConnectionProvider>();
+            services.AddScoped<IAmARelationalDbConnectionProvider, MySqlConnectionProvider>();
+            services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
         }
 
 

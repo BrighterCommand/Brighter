@@ -27,13 +27,28 @@ namespace Paramore.Brighter
         /// <summary>
         /// Commit the transaction
         /// </summary>
-        public void Commit()
+        public virtual void Commit()
         {
             if (HasOpenTransaction)
             {
                 Transaction.Commit();
                 Transaction = null;
             }
+        }
+
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public virtual Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                Transaction.Commit();
+                Transaction = null;
+            }
+            
+            return Task.CompletedTask;
         }
         
         /// <summary>

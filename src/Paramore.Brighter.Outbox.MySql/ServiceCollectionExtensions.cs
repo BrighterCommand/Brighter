@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Outbox.MySql
              ServiceLifetime serviceLifetime = ServiceLifetime.Scoped
              )
          {
-             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmABoxTransactionProvider), transactionProvider, serviceLifetime));
+             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmATransactionConnectionProvider), transactionProvider, serviceLifetime));
  
              return brighterBuilder;
          }

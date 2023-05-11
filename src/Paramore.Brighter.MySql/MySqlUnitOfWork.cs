@@ -49,6 +49,21 @@ namespace Paramore.Brighter.MySql
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
             _connectionString = configuration.ConnectionString;
         }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                ((MySqlTransaction)Transaction).CommitAsync(cancellationToken);
+                Transaction = null;
+            }
+            
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// Creates and opens a MySql Connection

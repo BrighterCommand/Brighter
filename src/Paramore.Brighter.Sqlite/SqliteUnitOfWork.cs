@@ -48,6 +48,21 @@ namespace Paramore.Brighter.Sqlite
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
             _connectionString = configuration.ConnectionString;
         }
+        
+        /// <summary>
+        /// Commit the transaction
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+                Transaction = null;
+            }
+            
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist

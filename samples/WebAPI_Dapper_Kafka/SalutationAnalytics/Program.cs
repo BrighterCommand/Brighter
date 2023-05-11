@@ -89,7 +89,14 @@ namespace SalutationAnalytics
                 new KafkaMessagingGatewayConfiguration { Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" } }
             );
 
-            var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
+            var relationalDatabaseConfiguration =
+                new RelationalDatabaseConfiguration(
+                    DbConnectionString(hostContext), 
+                    SchemaCreation.INBOX_TABLE_NAME, 
+                    binaryMessagePayload:true
+                    );
+            
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
 
             services.AddServiceActivator(options =>
                 {
@@ -128,7 +135,7 @@ namespace SalutationAnalytics
                 )
                 .AutoFromAssemblies()
                 .UseExternalInbox(
-                    ConfigureInbox(hostContext),
+                    ConfigureInbox(hostContext, relationalDatabaseConfiguration),
                     new InboxConfiguration(
                         scope: InboxScope.Commands,
                         onceOnly: true,
@@ -202,7 +209,7 @@ namespace SalutationAnalytics
         }
 
 
-        private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext)
+        private static IAmAnInbox ConfigureInbox(HostBuilderContext hostContext, IAmARelationalDatabaseConfiguration configuration)
         {
             if (hostContext.HostingEnvironment.IsDevelopment())
             {

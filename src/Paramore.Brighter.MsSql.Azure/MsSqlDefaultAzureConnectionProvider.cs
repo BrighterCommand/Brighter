@@ -22,7 +22,7 @@ namespace Paramore.Brighter.MsSql.Azure
         {
             var credential = new DefaultAzureCredential();
 
-            return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
+            return await credential.GetTokenAsync(new TokenRequestContext(AuthenticationTokenScopes), cancellationToken);
         }
     }
 }

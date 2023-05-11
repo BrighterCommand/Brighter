@@ -42,7 +42,7 @@ namespace Paramore.Brighter.MsSql.Azure
         protected override async Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken)
         {
             var credential = GetCredential();
-            return await credential.GetTokenAsync(new TokenRequestContext(_authenticationTokenScopes), cancellationToken);
+            return await credential.GetTokenAsync(new TokenRequestContext(AuthenticationTokenScopes), cancellationToken);
         }
         
         private SharedTokenCacheCredential GetCredential()

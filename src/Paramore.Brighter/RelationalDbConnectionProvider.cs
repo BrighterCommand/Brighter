@@ -26,6 +26,11 @@ namespace Paramore.Brighter
         public void Commit() { }
         
         /// <summary>
+        /// Does not support shared transactions, so nothing to commit, manage transactions independently
+        /// </summary>
+        public Task CommitAsync(CancellationToken cancellationToken) { return Task.CompletedTask; }
+        
+        /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
         /// Opens the connection if it is not opened
         /// This is not a shared connection

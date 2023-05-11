@@ -8,17 +8,17 @@ using Microsoft.Data.SqlClient;
 
 namespace Paramore.Brighter.MsSql.Azure
 {
-    public abstract class MsSqlAzureConnectionProviderBase : IAmATransactionConnectionProvider
+    public abstract class MsSqlAzureConnectionProviderBase : RelationalDbConnectionProvider
     {
         private readonly bool _cacheTokens;
-        private const string _azureScope = "https://database.windows.net/.default";
-        private const int _cacheLifeTime = 5;
+        private const string AZURE_SCOPE = "https://database.windows.net/.default";
+        private const int CACHE_LIFE_TIME = 5;
         
         private readonly string _connectionString;
-        protected readonly string[] _authenticationTokenScopes;
+        protected readonly string[] AuthenticationTokenScopes;
         
-        private static AccessToken _token;
-        private static SemaphoreSlim _semaphoreToken = new SemaphoreSlim(1, 1);
+        private static AccessToken s_token;
+        private static readonly SemaphoreSlim _semaphoreToken = new SemaphoreSlim(1, 1);
 
         /// <summary>
         /// The Abstract Base class 
@@ -29,26 +29,27 @@ namespace Paramore.Brighter.MsSql.Azure
         {
             _cacheTokens = cacheTokens;
             _connectionString = configuration.ConnectionString;
-            _authenticationTokenScopes = new string[1] {_azureScope};
+            AuthenticationTokenScopes = new string[1] {AZURE_SCOPE};
         }
 
-        public void Close() { }
-
-        public DbConnection GetConnection()
+        public override DbConnection GetConnection()
         {
-            var sqlConnection = new SqlConnection(_connectionString);
-            sqlConnection.AccessToken = GetAccessToken();
+            var connection = new SqlConnection(_connectionString);
+            connection.AccessToken = GetAccessToken();
+            if (connection.State != System.Data.ConnectionState.Open)
+                connection.Open();
 
-            return sqlConnection;
+            return connection;
         }
 
-        public async Task<DbConnection> GetConnectionAsync(
-            CancellationToken cancellationToken = default)
+        public override async Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken = default)
         {
-            var sqlConnection = new SqlConnection(_connectionString);
-            sqlConnection.AccessToken = await GetAccessTokenAsync(cancellationToken);
+            var connection = new SqlConnection(_connectionString);
+            connection.AccessToken = await GetAccessTokenAsync(cancellationToken);
+            if (connection.State != System.Data.ConnectionState.Open)
+                await connection.OpenAsync(cancellationToken);
 
-            return sqlConnection;
+            return connection;
         }
 
         private string GetAccessToken()
@@ -58,12 +59,11 @@ namespace Paramore.Brighter.MsSql.Azure
             try
             {
                 //If the Token has more than 5 minutes Validity
-                if (DateTime.UtcNow.AddMinutes(_cacheLifeTime) <= _token.ExpiresOn.UtcDateTime) return _token.Token;
+                if (DateTime.UtcNow.AddMinutes(CACHE_LIFE_TIME) <= s_token.ExpiresOn.UtcDateTime) return s_token.Token;
         
-                var credential = new ManagedIdentityCredential();
                 var token = GetAccessTokenFromProvider();
 
-                _token = token;
+                s_token = token;
         
                 return token.Token;
             }
@@ -80,12 +80,11 @@ namespace Paramore.Brighter.MsSql.Azure
             try
             {
                 //If the Token has more than 5 minutes Validity
-                if (DateTime.UtcNow.AddMinutes(_cacheLifeTime) <= _token.ExpiresOn.UtcDateTime) return _token.Token;
+                if (DateTime.UtcNow.AddMinutes(CACHE_LIFE_TIME) <= s_token.ExpiresOn.UtcDateTime) return s_token.Token;
         
-                var credential = new ManagedIdentityCredential();
                 var token = await GetAccessTokenFromProviderAsync(cancellationToken);
 
-                _token = token;
+                s_token = token;
         
                 return token.Token;
             }
@@ -99,18 +98,5 @@ namespace Paramore.Brighter.MsSql.Azure
         
         protected abstract Task<AccessToken> GetAccessTokenFromProviderAsync(CancellationToken cancellationToken);
 
-        public DbTransaction GetTransaction()
-        {
-            //This Connection Factory does not support Transactions 
-            return null;
-        }
-
-        public Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
-        {
-            throw new NotImplementedException();
-        }
-
-        public bool HasOpenTransaction { get => false; }
-        public bool IsSharedConnection { get => false; }
     }
 }
