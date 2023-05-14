@@ -82,6 +82,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// <param name="readCommittedOffsetsTimeoutMs">Timeout when reading the committed offsets, used when closing a consumer to log where it reached.
         /// Defaults to 5000</param>
         /// <param name="numPartitions">If we are creating missing infrastructure, How many partitions should the topic have. Defaults to 1</param>
+        /// <param name="partitionAssignmentStrategy">What is the strategy for assigning partitions to consumers?</param>
         /// <param name="replicationFactor">If we are creating missing infrastructure, how many in-sync replicas do we need. Defaults to 1</param>
         /// <param name="topicFindTimeoutMs">If we are checking for the existence of the topic, what is the timeout. Defaults to 10000ms</param>
         /// <param name="makeChannels">Should we create infrastructure (topics) where it does not exist or check. Defaults to Create</param>
@@ -98,6 +99,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             int sweepUncommittedOffsetsIntervalMs = 30000,
             int readCommittedOffsetsTimeoutMs = 5000,
             int numPartitions = 1,
+            PartitionAssignmentStrategy partitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
             short replicationFactor = 1,
             int topicFindTimeoutMs = 10000,
             OnMissingChannel makeChannels = OnMissingChannel.Create
@@ -147,7 +149,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 EnableAutoOffsetStore = false,
                 EnableAutoCommit = false,
                 // https://www.confluent.io/blog/cooperative-rebalancing-in-kafka-streams-consumer-ksqldb/
-                PartitionAssignmentStrategy = PartitionAssignmentStrategy.CooperativeSticky,
+                PartitionAssignmentStrategy = partitionAssignmentStrategy,
             };
 
             _maxBatchSize = commitBatchSize;
@@ -434,28 +436,37 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         
         private void CommitAllOffsets(DateTime flushTime)
         {
-            var listOffsets = new List<TopicPartitionOffset>();
-            var currentOffsetsInBag = _offsetStorage.Count; 
-            for (int i = 0; i < currentOffsetsInBag; i++)
+            try
             {
-                bool hasOffsets = _offsetStorage.TryTake(out var offset);
-                if (hasOffsets)
-                    listOffsets.Add(offset);
-                else
-                    break;
 
+
+                var listOffsets = new List<TopicPartitionOffset>();
+                var currentOffsetsInBag = _offsetStorage.Count;
+                for (int i = 0; i < currentOffsetsInBag; i++)
+                {
+                    bool hasOffsets = _offsetStorage.TryTake(out var offset);
+                    if (hasOffsets)
+                        listOffsets.Add(offset);
+                    else
+                        break;
+
+                }
+
+                if (s_logger.IsEnabled(LogLevel.Information))
+                {
+                    var offsets = listOffsets.Select(tpo =>
+                        $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                    var offsetAsString = string.Join(Environment.NewLine, offsets);
+                    s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                }
+
+                _consumer.Commit(listOffsets);
+                _lastFlushAt = flushTime;
             }
-           
-            if (s_logger.IsEnabled(LogLevel.Information))
+            finally
             {
-                var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-                var offsetAsString = string.Join(Environment.NewLine, offsets);
-                s_logger.LogInformation("Sweeping offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                _flushToken.Release(1);
             }
-           
-            _consumer.Commit(listOffsets);
-            _lastFlushAt = flushTime;
-            _flushToken.Release(1);
         }
 
         // The batch size has been exceeded, so flush our offsets

@@ -9,8 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter
 {
-
-    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message> 
+    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>, IAmABulkOutboxAsync<Message> 
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;
