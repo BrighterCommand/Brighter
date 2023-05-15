@@ -165,7 +165,9 @@ namespace GreetingsWeb
         {
             var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(),
-                outBoxTableName:_outBoxTableName
+                outBoxTableName:_outBoxTableName,
+                //NOTE: With the Serdes serializer, if we don't use a binary payload, the payload will be corrupted
+                binaryMessagePayload: true
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             

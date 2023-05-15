@@ -16,11 +16,11 @@ namespace GreetingsPorts.Handlers
 {
     public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
-        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider; 
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider; 
 
-        public FIndGreetingsForPersonHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider)
+        public FIndGreetingsForPersonHandlerAsync(IAmARelationalDbConnectionProvider  relationalDbConnectionProvider)
         {
-            _transactionConnectionProvider = transactionConnectionProvider;
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }
        
         [QueryLogging(0)]
@@ -35,7 +35,7 @@ namespace GreetingsPorts.Handlers
                         from Person p
                         inner join Greeting g on g.Recipient_Id = p.Id";
 
-            using (var connection = _transactionConnectionProvider.GetConnection())
+            using (var connection = _relationalDbConnectionProvider.GetConnection())
             {
                 var people = await connection.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
                 {

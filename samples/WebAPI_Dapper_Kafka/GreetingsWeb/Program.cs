@@ -16,7 +16,9 @@ namespace GreetingsWeb
             
             host.CheckDbIsUp();
             host.MigrateDatabase();
-            host.CreateOutbox();
+            //NOTE: Because we use the Serdes serializer with Kafka, that adds scheme registry info to the message payload
+            //we use a binary payload outbox to avoid corruption.
+            host.CreateOutbox(hasBinaryPayload: true);
             
             host.Run();
         }

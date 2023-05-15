@@ -17,11 +17,11 @@ namespace GreetingsPorts.Handlers
 {
     public class FindPersonByNameHandlerAsync : QueryHandlerAsync<FindPersonByName, FindPersonResult>
     {
-        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider; 
+        private readonly IAmARelationalDbConnectionProvider  _relationalDbConnectionProvider; 
 
-        public FindPersonByNameHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider)
+        public FindPersonByNameHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
         {
-            _transactionConnectionProvider = transactionConnectionProvider;
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }
        
         [QueryLogging(0)]
@@ -29,7 +29,7 @@ namespace GreetingsPorts.Handlers
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
             var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
-            using (var connection = await _transactionConnectionProvider.GetConnectionAsync(cancellationToken))
+            using (var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken))
             {
                 var people = await connection.GetListAsync<Person>(searchbyName);
                 var person = people.Single();

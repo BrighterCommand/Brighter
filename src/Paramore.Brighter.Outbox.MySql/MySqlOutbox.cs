@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.IO;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -395,11 +396,22 @@ namespace Paramore.Brighter.Outbox.MySql
         private byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
-            var body = dr.GetStream(i);
-            long bodyLength = body.Length;
-            var buffer = new byte[bodyLength];
-            body.Read(buffer, 0, (int)bodyLength);
-            return buffer;
+            using (var ms = new MemoryStream())
+            {
+                var buffer = new byte[1024];
+                int offset = 0;
+                var bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
+                while (bytesRead > 0)
+                {
+                    ms.Write(buffer, offset, (int)bytesRead);
+                    offset += (int)bytesRead;
+                    bytesRead = dr.GetBytes(i, offset, buffer, 0, 1024);
+                }
+
+                ms.Flush();
+                var body = ms.ToArray();
+                return body;
+            }
         }
 
         private static Dictionary<string, object> GetContextBag(IDataReader dr)
