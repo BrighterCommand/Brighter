@@ -154,11 +154,11 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            var configuration = new RelationalDatabaseConfiguration(
+            var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(),
                 outBoxTableName:_outBoxTableName
             );
-            services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
             services.AddBrighter(options =>
                 {
@@ -191,7 +191,7 @@ namespace GreetingsWeb
                 //types easily. You may just choose to call the methods directly if you do not need to support multiple
                 //db types (which we just need to allow you to see how to configure your outbox type).
                 //It's also an example of how you can extend the DSL here easily if you have this kind of variability
-                .AddOutbox(_env, GetDatabaseType(), DbConnectionString(), _outBoxTableName)
+                .AddOutbox(_env, GetDatabaseType(), outboxConfiguration)
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 

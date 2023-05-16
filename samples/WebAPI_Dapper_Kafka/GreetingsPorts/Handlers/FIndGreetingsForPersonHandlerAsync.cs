@@ -35,7 +35,7 @@ namespace GreetingsPorts.Handlers
                         from Person p
                         inner join Greeting g on g.Recipient_Id = p.Id";
 
-            using (var connection = _relationalDbConnectionProvider.GetConnection())
+            using (var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken))
             {
                 var people = await connection.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
                 {

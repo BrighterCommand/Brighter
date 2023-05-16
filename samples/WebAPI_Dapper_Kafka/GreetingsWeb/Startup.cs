@@ -122,12 +122,6 @@ namespace GreetingsWeb
 
         private void ConfigureDapper(IServiceCollection services)
         {
-            var configuration = new RelationalDatabaseConfiguration(
-                DbConnectionString(),
-                outBoxTableName:_outBoxTableName
-            );
-            services.AddSingleton<IAmARelationalDatabaseConfiguration>(configuration);
-
             ConfigureDapperByHost(GetDatabaseType(), services);
 
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });

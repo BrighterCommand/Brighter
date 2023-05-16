@@ -11,20 +11,22 @@ namespace GreetingsPorts.Handlers
 {
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
-        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider;
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
 
-        public AddPersonHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider)
+        public AddPersonHandlerAsync(IAmARelationalDbConnectionProvider transactionConnectionProvider)
         {
-            _transactionConnectionProvider = transactionConnectionProvider;
+            _relationalDbConnectionProvider = transactionConnectionProvider;
         }
 
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default)
         {
-            await _transactionConnectionProvider.GetConnection().InsertAsync<Person>(new Person(addPerson.Name));
-            
-            return await base.HandleAsync(addPerson, cancellationToken);
+            using (var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken))
+            {
+                await connection.InsertAsync<Person>(new Person(addPerson.Name));
+                return await base.HandleAsync(addPerson, cancellationToken);
+            }
         }
     }
 }

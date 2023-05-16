@@ -14,28 +14,30 @@ namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
-        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider; 
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider; 
 
-        public DeletePersonHandlerAsync(IAmATransactionConnectionProvider transactionConnectionProvider)
+        public DeletePersonHandlerAsync(IAmATransactionConnectionProvider relationalDbConnectionProvider)
         {
-            _transactionConnectionProvider = transactionConnectionProvider;
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }
         
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public async override Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
+        public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
-            var tx = await _transactionConnectionProvider.GetTransactionAsync(cancellationToken); 
+            var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
+            var tx = await connection.BeginTransactionAsync(cancellationToken);
             try
             {
 
                 var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, deletePerson.Name);
-                var people = await _transactionConnectionProvider.GetConnection().GetListAsync<Person>(searchbyName, transaction: tx);
+                var people = await connection
+                    .GetListAsync<Person>(searchbyName, transaction: tx);
                 var person = people.Single();
 
                 var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
-                await _transactionConnectionProvider.GetConnection().DeleteAsync(deleteById, tx);
-                
+                await connection.DeleteAsync(deleteById, tx);
+
                 await tx.CommitAsync(cancellationToken);
             }
             catch (Exception)
@@ -43,6 +45,12 @@ namespace GreetingsPorts.Handlers
                 //it went wrong, rollback the entity change and the downstream message
                 await tx.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(deletePerson, cancellationToken);
+            }
+            finally
+            {
+                await connection.DisposeAsync();
+                await tx.DisposeAsync();
+
             }
 
             return await base.HandleAsync(deletePerson, cancellationToken);
