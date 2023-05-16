@@ -62,7 +62,7 @@ namespace GreetingsPorts.Handlers
             {
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
-                await tx.RollbackAsync(cancellationToken);
+                await _transactionConnectionProvider.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);
             }
             finally

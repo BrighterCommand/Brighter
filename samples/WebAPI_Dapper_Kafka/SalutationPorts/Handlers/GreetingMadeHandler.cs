@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using DapperExtensions;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -32,7 +33,7 @@ namespace SalutationPorts.Handlers
             _logger = logger;
         }
 
-        //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
+        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandler), onceOnly: true )] 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
         public override GreetingMade Handle(GreetingMade @event)
@@ -48,14 +49,14 @@ namespace SalutationPorts.Handlers
                 
                 posts.Add(_postBox.DepositPost(new SalutationReceived(DateTimeOffset.Now)));
                 
-                tx.Commit();
+                _transactionConnectionProvider.Commit();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
                 
                 //if it went wrong rollback entity write and Outbox write
-                tx.Rollback();
+                _transactionConnectionProvider.Rollback();
                 
                 return base.Handle(@event);
             }
