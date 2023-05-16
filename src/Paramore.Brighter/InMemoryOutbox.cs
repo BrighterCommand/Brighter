@@ -368,5 +368,21 @@ namespace Paramore.Brighter
             Delete(messageIds);
             return Task.CompletedTask;
         }
+
+        public IEnumerable<Message> DispatchedMessages(int hoursDispatchedSince, int pageSize = 100)
+        {
+            ClearExpiredMessages();
+            
+            DateTime dispatchedSince = DateTime.UtcNow.AddHours( -1 * hoursDispatchedSince);
+            return _requests.Values.Where(oe =>  (oe.TimeFlushed != DateTime.MinValue) && (oe.TimeFlushed >= dispatchedSince))
+                .Take(pageSize)
+                .Select(oe => oe.Message).ToArray();
+        }
+        
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(DispatchedMessages(hoursDispatchedSince, pageSize));
+        }
     }
 }

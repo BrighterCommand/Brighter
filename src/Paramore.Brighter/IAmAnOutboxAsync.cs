@@ -146,5 +146,17 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         /// <param name="messageIds">The id of the message to delete</param>
         Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds);
+        
+        /// <summary>
+        /// Get the messages that have been dispatched
+        /// </summary>
+        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
+        /// <param name="pageSize">The amount to return</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Messages that have already been dispatched</returns>
+        Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            int hoursDispatchedSince,
+            int pageSize = 100,
+            CancellationToken cancellationToken = default);
     }
 }
