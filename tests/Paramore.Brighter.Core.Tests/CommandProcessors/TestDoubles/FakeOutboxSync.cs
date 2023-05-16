@@ -150,6 +150,21 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return Task.CompletedTask;
         }
 
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(DispatchedMessages(hoursDispatchedSince, pageSize));
+        }
+
+        public IEnumerable<Message> DispatchedMessages(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            var ago = hoursDispatchedSince * -1;
+            var now = DateTime.UtcNow;
+            var messagesSince = now.AddHours(ago);
+            return _posts.Where(oe => oe.TimeFlushed >= messagesSince).Select(oe => oe.Message).Take(pageSize).ToArray();
+        }
+
         public void MarkDispatched(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null)
         {
            var entry = _posts.SingleOrDefault(oe => oe.Message.Id == id);

@@ -72,12 +72,10 @@ namespace Paramore.Brighter
         public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
-            
-            var age = TimeSpan.FromHours(minimumAge);
 
             try
             {
-                var messages = await _outboxAsync.DispatchedMessagesAsync(age.Milliseconds, _batchSize,
+                var messages = await _outboxAsync.DispatchedMessagesAsync(minimumAge, _batchSize,
                     cancellationToken: cancellationToken);
 
                 if (!messages.Any()) return;
