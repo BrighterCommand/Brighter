@@ -70,13 +70,13 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override void WriteToStore(
-            IAmATransactionConnectionProvider transactionProvider,
+            IAmABoxTransactionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionProvider != null)
-                connectionProvider = transactionProvider;
+            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
+                connectionProvider = transConnectionProvider;
 
             var connection = connectionProvider.GetConnection();
 
@@ -112,14 +112,14 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmATransactionConnectionProvider transactionProvider,
+            IAmABoxTransactionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction, 
             CancellationToken cancellationToken)
         {
             var connectionProvider = _connectionProvider;
-            if (transactionProvider != null)
-                connectionProvider = transactionProvider;
+            if (transactionProvider is IAmARelationalDbConnectionProvider transConnectionProvider)
+                connectionProvider = transConnectionProvider;
 
             var connection = await connectionProvider.GetConnectionAsync(cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);

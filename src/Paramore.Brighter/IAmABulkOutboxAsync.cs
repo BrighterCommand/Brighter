@@ -46,8 +46,12 @@ namespace Paramore.Brighter
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="amATransactionProvider">The Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(IEnumerable<T> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmATransactionConnectionProvider amATransactionProvider = null);
+        Task AddAsync(
+            IEnumerable<T> messages, int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default, 
+            IAmABoxTransactionProvider transactionProvider = null
+            );
     }
 }

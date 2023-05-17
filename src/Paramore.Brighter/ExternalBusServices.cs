@@ -65,7 +65,13 @@ namespace Paramore.Brighter
             
         }
 
-        internal async Task AddToOutboxAsync<T>(T request, bool continueOnCapturedContext, CancellationToken cancellationToken, Message message, IAmATransactionConnectionProvider overridingAmATransactionProvider = null)
+        internal async Task AddToOutboxAsync<T>(
+            T request, bool continueOnCapturedContext, 
+            
+            CancellationToken cancellationToken, 
+            Message message, 
+            IAmABoxTransactionProvider overridingAmATransactionProvider = null
+            )
             where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
@@ -79,7 +85,12 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
 
-        internal async Task AddToOutboxAsync(IEnumerable<Message> messages, bool continueOnCapturedContext, CancellationToken cancellationToken, IAmATransactionConnectionProvider overridingAmATransactionProvider = null)
+        internal async Task AddToOutboxAsync(
+            IEnumerable<Message> messages, 
+            bool continueOnCapturedContext, 
+            CancellationToken cancellationToken, 
+            IAmABoxTransactionProvider overridingTransactionProvider = null
+            )
         {
             CheckOutboxOutstandingLimit();
 
@@ -92,7 +103,7 @@ namespace Paramore.Brighter
                     var written = await RetryAsync(
                         async ct =>
                         {
-                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingAmATransactionProvider)
+                            await box.AddAsync(chunk, OutboxTimeout, ct, overridingTransactionProvider)
                                 .ConfigureAwait(continueOnCapturedContext);
                         },
                         continueOnCapturedContext, cancellationToken).ConfigureAwait(continueOnCapturedContext);
@@ -107,7 +118,8 @@ namespace Paramore.Brighter
             }
         } 
             
-        internal void AddToOutbox<T>(T request, Message message, IAmATransactionConnectionProvider overridingAmATransactionProvider = null) where T : class, IRequest
+        internal void AddToOutbox<T>(T request, Message message, IAmABoxTransactionProvider overridingAmATransactionProvider = null) 
+            where T : class, IRequest
         {
             CheckOutboxOutstandingLimit();
                 
@@ -119,7 +131,7 @@ namespace Paramore.Brighter
                 tags: new ActivityTagsCollection {{"MessageId", message.Id}}));
         }
         
-        internal void AddToOutbox(IEnumerable<Message> messages, IAmATransactionConnectionProvider overridingAmATransactionProvider = null) 
+        internal void AddToOutbox(IEnumerable<Message> messages, IAmABoxTransactionProvider overridingTransactionProvider = null) 
         {
             CheckOutboxOutstandingLimit();
 
@@ -130,7 +142,7 @@ namespace Paramore.Brighter
                 foreach (var chunk in ChunkMessages(messages))
                 {
                     var written =
-                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingAmATransactionProvider); });
+                        Retry(() => { box.Add(chunk, OutboxTimeout, overridingTransactionProvider); });
 
                     if (!written)
                         throw new ChannelFailureException($"Could not write {chunk.Count()} messages to the outbox");

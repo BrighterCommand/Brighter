@@ -98,8 +98,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectionProvider amATransactionProvider = null)
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
@@ -119,15 +119,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmATransactionConnectionProvider amATransactionProvider = null)
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
+        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
         {
             ClearExpiredMessages();
             EnforceCapacityLimit();
 
             foreach (Message message in messages)
             {
-                Add(message, outBoxTimeout, amATransactionProvider);
+                Add(message, outBoxTimeout, transactionProvider);
             }
         }
 
@@ -137,14 +137,12 @@ namespace Paramore.Brighter
         /// <param name="message"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
-        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
-        public Task AddAsync(
-            Message message, 
-            int outBoxTimeout = -1, 
-            CancellationToken cancellationToken = default, 
-            IAmATransactionConnectionProvider amATransactionProvider = null
-            )
+        public Task AddAsync(Message message,
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider transactionProvider = null)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -166,13 +164,13 @@ namespace Paramore.Brighter
         /// <param name="messages"></param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken"></param>
-        /// <param name="amATransactionProvider">This is not used for the In Memory Outbox.</param>
+        /// <param name="transactionProvider">This is not used for the In Memory Outbox.</param>
         /// <returns></returns>
         public Task AddAsync(
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1, 
             CancellationToken cancellationToken = default, 
-            IAmATransactionConnectionProvider amATransactionProvider = null
+            IAmABoxTransactionProvider transactionProvider = null
             )
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);

@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The outBoxTimeout.</param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1, IAmATransactionConnectionProvider transactionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
@@ -93,13 +93,12 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="transactionProvider"></param>
         /// <returns><see cref="Task"/>.</returns>
-        public async Task AddAsync(
-            Message message, 
+        public async Task AddAsync(Message message,
             int outBoxTimeout = -1,
-            CancellationToken cancellationToken = default, 
-            IAmATransactionConnectionProvider transactionProvider = null
-            )
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider transactionProvider = null)
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 

@@ -38,15 +38,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="amATransactionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task.</returns>
         public void Add(
             Message message, 
             int outBoxTimeout = -1,
-            IAmATransactionConnectionProvider amATransactionProvider = null)
+            IAmABoxTransactionProvider transactionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            WriteToStore(amATransactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
+            WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
             {
                 _logger.LogWarning(
                     "MsSqlOutbox: A duplicate Message with the MessageId {Id} was inserted into the Outbox, ignoring and continuing",
@@ -59,15 +59,15 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout"></param>
-        /// <param name="amATransactionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task.</returns>
         public void Add(
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1,
-            IAmATransactionConnectionProvider amATransactionProvider = null
+            IAmABoxTransactionProvider transactionProvider = null
             )
         {
-            WriteToStore(amATransactionProvider,
+            WriteToStore(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
                 () => _logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"));
         }
@@ -88,17 +88,15 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout"></param>
         /// <param name="cancellationToken">Cancellation Token</param>
-        /// <param name="amATransactionProvider">Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Task AddAsync(
-            Message message, 
+        public Task AddAsync(Message message,
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmATransactionConnectionProvider  amATransactionProvider = null
-            )
+            IAmABoxTransactionProvider transactionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
-            return WriteToStoreAsync(amATransactionProvider,
+            return WriteToStoreAsync(transactionProvider,
                 connection => InitAddDbCommand(connection, parameters), () =>
                 {
                     _logger.LogWarning(
@@ -114,16 +112,16 @@ namespace Paramore.Brighter
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="amATransactionProvider">The Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
         public Task AddAsync(
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmATransactionConnectionProvider amATransactionProvider = null
+            IAmABoxTransactionProvider transactionProvider = null
             )
         {
-            return WriteToStoreAsync(amATransactionProvider,
+            return WriteToStoreAsync(transactionProvider,
                 connection => InitBulkAddDbCommand(messages.ToList(), connection),
                 () => _logger.LogWarning("MsSqlOutbox: At least one message already exists in the outbox"),
                 cancellationToken);
@@ -343,13 +341,13 @@ namespace Paramore.Brighter
         #endregion
 
         protected abstract void WriteToStore(
-            IAmATransactionConnectionProvider provider,
+            IAmABoxTransactionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction
             );
 
         protected abstract Task WriteToStoreAsync(
-            IAmATransactionConnectionProvider transactionConnectionProvider,
+            IAmABoxTransactionProvider transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction, 
             CancellationToken cancellationToken
