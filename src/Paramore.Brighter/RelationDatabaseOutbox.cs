@@ -335,7 +335,7 @@ namespace Paramore.Brighter
         public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
             CancellationToken cancellationToken = default)
         {
-            return ReadFromStoreAsync(connection => CreatePagedDispatchedCommand(connection, hoursDispatchedSince, pageSize),
+            return ReadFromStoreAsync(connection => CreateDispatchedCommand(connection, hoursDispatchedSince, pageSize),
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
@@ -361,9 +361,9 @@ namespace Paramore.Brighter
                 CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince));
         
-        private TCommand CreatePagedDispatchedCommand(TConnection connection, int hoursDispatchedSince,
+        private TCommand CreateDispatchedCommand(TConnection connection, int hoursDispatchedSince,
             int pageSize)
-            => CreateCommand(connection, GenerateSqlText(_queries.PagedDispatchedCommand), 0,
+            => CreateCommand(connection, GenerateSqlText(_queries.DispatchedCommand), 0,
                 CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("DispatchedSince", -1 * hoursDispatchedSince));
 
