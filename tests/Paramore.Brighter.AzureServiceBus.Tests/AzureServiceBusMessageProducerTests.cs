@@ -73,7 +73,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _producer.Send(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")));
 
-            _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic"), Times.Once);
+            _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic", null), Times.Once);
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
         }
 
@@ -152,7 +152,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _producer.SendWithDelay(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1);
 
-            _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic"), Times.Once);
+            _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic", null), Times.Once);
             Assert.Equal(messageBody, sentMessage.Body.ToArray());
             _topicClient.Verify(x => x.CloseAsync(), Times.Once);
         }
@@ -173,7 +173,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             if (topicExists == false)
             {
-                _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic"), Times.Once);
+                _nameSpaceManagerWrapper.Verify(x => x.CreateTopic("topic", null), Times.Once);
             }
 
             _nameSpaceManagerWrapper.Verify(x => x.TopicExists("topic"), Times.Once);
