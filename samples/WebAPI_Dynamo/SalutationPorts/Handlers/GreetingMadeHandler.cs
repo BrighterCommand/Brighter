@@ -20,7 +20,7 @@ namespace SalutationPorts.Handlers
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandlerAsync> _logger;
 
-        public GreetingMadeHandlerAsync(IAmABoxTransactionProvider uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsResponse> uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
         {
             _uow = (DynamoDbUnitOfWork)uow;
             _postBox = postBox;
@@ -34,7 +34,7 @@ namespace SalutationPorts.Handlers
         {
             var posts = new List<Guid>();
             var context = new DynamoDBContext(_uow.DynamoDb);
-            var tx = _uow.BeginOrGetTransaction();
+            var tx = await _uow.GetTransactionAsync(cancellationToken);
             try
             {
                 var salutation = new Salutation{ Greeting = @event.Greeting};
@@ -49,7 +49,7 @@ namespace SalutationPorts.Handlers
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
-                _uow.Rollback();
+                await _uow.RollbackAsync(cancellationToken);
                 
                 return await base.HandleAsync(@event, cancellationToken);
             }

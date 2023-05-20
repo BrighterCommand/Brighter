@@ -9,7 +9,7 @@ using Microsoft.Extensions.Logging;
 
 namespace Paramore.Brighter
 {
-    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>, IAmABulkOutboxAsync<Message> 
+    public abstract class RelationDatabaseOutbox : IAmAnOutboxSync<Message, DbTransaction>, IAmAnOutboxAsync<Message, DbTransaction>, IAmABulkOutboxAsync<Message, DbTransaction> 
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;
@@ -43,7 +43,7 @@ namespace Paramore.Brighter
         public void Add(
             Message message, 
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider transactionProvider = null)
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null)
         {
             var parameters = InitAddDbParameters(message);
             WriteToStore(transactionProvider, connection => InitAddDbCommand(connection, parameters), () =>
@@ -64,7 +64,7 @@ namespace Paramore.Brighter
         public void Add(
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1,
-            IAmABoxTransactionProvider transactionProvider = null
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
             )
         {
             WriteToStore(transactionProvider,
@@ -90,10 +90,12 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Cancellation Token</param>
         /// <param name="transactionProvider">Connection Provider to use for this call</param>
         /// <returns>Task&lt;Message&gt;.</returns>
-        public Task AddAsync(Message message,
+        public Task AddAsync(
+            Message message,
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider transactionProvider = null)
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
+            )
         {
             var parameters = InitAddDbParameters(message);
             return WriteToStoreAsync(transactionProvider,
@@ -118,7 +120,7 @@ namespace Paramore.Brighter
             IEnumerable<Message> messages, 
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider transactionProvider = null
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider = null
             )
         {
             return WriteToStoreAsync(transactionProvider,
@@ -341,13 +343,13 @@ namespace Paramore.Brighter
         #endregion
 
         protected abstract void WriteToStore(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction
             );
 
         protected abstract Task WriteToStoreAsync(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc, 
             Action loggingAction, 
             CancellationToken cancellationToken

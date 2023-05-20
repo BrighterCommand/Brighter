@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Transactions;
 using FakeItEasy;
 using FluentAssertions;
 using Xunit;
@@ -9,12 +10,12 @@ namespace Paramore.Brighter.Core.Tests.ControlBus
     {
         private IAmAControlBusSender s_sender;
         private readonly IAmAControlBusSenderFactory s_senderFactory;
-        private readonly IAmAnOutboxSync<Message> _fakeOutboxSync;
+        private readonly IAmAnOutboxSync<Message, CommittableTransaction> _fakeOutboxSync;
         private readonly IAmAMessageProducerSync s_fakeGateway;
 
         public ControlBusSenderFactoryTests()
         {
-            _fakeOutboxSync = A.Fake<IAmAnOutboxSync<Message>>();
+            _fakeOutboxSync = A.Fake<IAmAnOutboxSync<Message, CommittableTransaction>>();
             s_fakeGateway = A.Fake<IAmAMessageProducerSync>();
  
             s_senderFactory = new ControlBusSenderFactory();

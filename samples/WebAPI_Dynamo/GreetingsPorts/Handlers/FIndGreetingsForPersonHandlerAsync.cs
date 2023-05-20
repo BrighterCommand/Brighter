@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.Model;
 using GreetingsEntities;
 using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
@@ -18,7 +19,7 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _unitOfWork;
 
-        public FIndGreetingsForPersonHandlerAsync(IAmABoxTransactionProvider unitOfWork)
+        public FIndGreetingsForPersonHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsRequest> unitOfWork)
         {
             _unitOfWork = (DynamoDbUnitOfWork ) unitOfWork;
         }

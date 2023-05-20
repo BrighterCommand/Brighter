@@ -8,23 +8,23 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public class OutboxArchiver
+    public class OutboxArchiver<TMessage, TTransaction> where TMessage: Message
     {
-        private const string ARCHIVEOUTBOX = "Archive Outbox";
+        private const string ARCHIVE_OUTBOX = "Archive Outbox";
         
         private readonly int _batchSize;
-        private IAmAnOutboxSync<Message> _outboxSync;
-        private IAmAnOutboxAsync<Message> _outboxAsync;
-        private IAmAnArchiveProvider _archiveProvider;
-        private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver>();
+        private readonly IAmAnOutboxSync<TMessage, TTransaction> _outboxSync;
+        private readonly IAmAnOutboxAsync<TMessage, TTransaction> _outboxAsync;
+        private readonly IAmAnArchiveProvider _archiveProvider;
+        private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
 
-        public OutboxArchiver(IAmAnOutbox<Message> outbox,IAmAnArchiveProvider archiveProvider, int batchSize = 100)
+        public OutboxArchiver(IAmAnOutbox<TMessage, TTransaction> outbox, IAmAnArchiveProvider archiveProvider, int batchSize = 100)
         {
             _batchSize = batchSize;
-            if (outbox is IAmAnOutboxSync<Message> syncBox)
+            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncBox)
                 _outboxSync = syncBox;
             
-            if (outbox is IAmAnOutboxAsync<Message> asyncBox)
+            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncBox)
                 _outboxAsync = asyncBox;
 
             _archiveProvider = archiveProvider;
@@ -36,7 +36,7 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">Minimum age in hours</param>
         public void Archive(int minimumAge)
         {
-            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
+            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             var age = TimeSpan.FromHours(minimumAge);
 
             try
@@ -59,7 +59,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                if(activity?.DisplayName == ARCHIVEOUTBOX)
+                if(activity?.DisplayName == ARCHIVE_OUTBOX)
                     activity.Dispose();
             }
         }
@@ -71,7 +71,7 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">The Cancellation Token</param>
         public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken)
         {
-            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
+            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             
             var age = TimeSpan.FromHours(minimumAge);
 
@@ -96,7 +96,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                if(activity?.DisplayName == ARCHIVEOUTBOX)
+                if(activity?.DisplayName == ARCHIVE_OUTBOX)
                     activity.Dispose();
             }
         }

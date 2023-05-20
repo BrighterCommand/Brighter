@@ -1,6 +1,8 @@
-﻿namespace Paramore.Brighter.DynamoDb
+﻿using Amazon.DynamoDBv2.Model;
+
+namespace Paramore.Brighter.DynamoDb
 {
-    public interface IDynamoDbClientTransactionProvider : IDynamoDbClientProvider, IAmABoxTransactionProvider
+    public interface IDynamoDbClientTransactionProvider : IDynamoDbClientProvider, IAmABoxTransactionProvider<TransactWriteItemsRequest>
     {
         
     }

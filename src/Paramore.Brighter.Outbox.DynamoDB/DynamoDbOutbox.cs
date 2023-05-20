@@ -37,8 +37,8 @@ using Paramore.Brighter.DynamoDb;
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbOutbox :
-        IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>
+        IAmAnOutboxSync<Message, TransactWriteItemsRequest>,
+        IAmAnOutboxAsync<Message, TransactWriteItemsRequest>
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
@@ -76,7 +76,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>       
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
+        public void Add(
+            Message message, 
+            int outBoxTimeout = -1, 
+            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
+            )
         {
             AddAsync(message, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
@@ -92,7 +96,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public async Task AddAsync(Message message,
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider transactionProvider = null)
+            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null)
         {
             var messageToStore = new MessageItem(message);
 
@@ -397,7 +401,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
            var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
            
-           var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
+           var transaction = dynamoDbUnitOfWork.GetTransaction();
            transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
            tcs.SetResult(transaction);
            return tcs.Task;

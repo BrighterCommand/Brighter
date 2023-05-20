@@ -60,7 +60,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         { }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction)
         {
@@ -76,8 +76,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 try
                 {
-                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                        command.Transaction = transactionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
                 catch (PostgresException sqlException)
@@ -92,16 +92,13 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 }
                 finally
                 {
-                    if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    transactionProvider?.Close();
                 }
             }
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction,
             CancellationToken cancellationToken)
@@ -119,8 +116,8 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             {
                 try
                 {
-                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                        command.Transaction = transactionProvider.GetTransaction();
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch (PostgresException sqlException)
@@ -136,9 +133,9 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 }
                 finally
                 {
-                    if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction)
+                    if (transactionProvider != null)
+                        transactionProvider.Close();
+                    else
                         connection.Close();
                 }
             }
@@ -161,10 +158,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 }
                 finally
                 {
-                    if (!_connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    connection.Close();
                 }
             }
         }
@@ -187,10 +181,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
                 }
                 finally
                 {
-                    if (!_connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    connection.Close();
                 }
             }
         }

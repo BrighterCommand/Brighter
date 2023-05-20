@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.TestHelpers;
@@ -57,13 +58,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
-
+            
+            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyCommand", _fakeMessageProducerWithPublishConfirmation},});
+            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, null);
+            
+            CommandProcessor.ClearExtServiceBus();
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new InMemoryRequestContextFactory(), 
+                policyRegistry,
                 messageMapperRegistry,
-                null,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{"MyCommand", _fakeMessageProducerWithPublishConfirmation},}));
+                bus
+            );
         }
 
         [Fact]

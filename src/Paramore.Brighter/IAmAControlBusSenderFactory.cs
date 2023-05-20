@@ -36,9 +36,10 @@ namespace Paramore.Brighter
         /// <summary>
         /// Creates the specified configuration.
         /// </summary>
-        /// <param name="gateway">The gateway to the control bus</param>
         /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
+        /// <param name="producerRegistry">The list of producers to send with</param>
         /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create(IAmAnOutbox<Message> outbox, IAmAProducerRegistry producerRegistry);
+        IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox<T, TTransaction> outbox, IAmAProducerRegistry producerRegistry)
+            where T: Message;
     }
 }

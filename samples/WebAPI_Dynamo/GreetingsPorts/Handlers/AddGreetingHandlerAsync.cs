@@ -21,7 +21,7 @@ namespace GreetingsPorts.Handlers
         private readonly ILogger<AddGreetingHandlerAsync> _logger;
 
 
-        public AddGreetingHandlerAsync(IAmABoxTransactionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsRequest> uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
             _unitOfWork = (DynamoDbUnitOfWork)uow;
             _postBox = postBox;
@@ -37,7 +37,7 @@ namespace GreetingsPorts.Handlers
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'
             var context = new DynamoDBContext(_unitOfWork.DynamoDb);
-            var transaction = _unitOfWork.BeginOrGetTransaction();
+            var transaction = await _unitOfWork.GetTransactionAsync(cancellationToken);
             try
             {
                 var person = await context.LoadAsync<Person>(addGreeting.Name, cancellationToken);
@@ -61,7 +61,7 @@ namespace GreetingsPorts.Handlers
             {   
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
-                _unitOfWork.Rollback();
+                await _unitOfWork.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);
             }
 

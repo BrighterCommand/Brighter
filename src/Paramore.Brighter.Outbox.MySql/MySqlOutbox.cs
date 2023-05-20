@@ -63,7 +63,7 @@ namespace Paramore.Brighter.Outbox.MySql
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction
             )
@@ -80,8 +80,8 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 try
                 {
-                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                        command.Transaction = transactionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
                 catch (MySqlException sqlException)
@@ -97,16 +97,13 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
                 finally
                 {
-                    if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    transactionProvider?.Close();
                 }
             }
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction, 
             CancellationToken cancellationToken
@@ -125,8 +122,8 @@ namespace Paramore.Brighter.Outbox.MySql
             {
                 try
                 {
-                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                        command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch (MySqlException sqlException)
@@ -142,10 +139,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
                 finally
                 {
-                    if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    transactionProvider?.Close();
                 }
             }
         }
@@ -167,10 +161,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
                 finally
                 {
-                    if (!_connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    connection.Close();
                 }
             }
         }
@@ -192,10 +183,7 @@ namespace Paramore.Brighter.Outbox.MySql
                 }
                 finally
                 {
-                    if (!_connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    connection.Close();
                 }
             }
         }

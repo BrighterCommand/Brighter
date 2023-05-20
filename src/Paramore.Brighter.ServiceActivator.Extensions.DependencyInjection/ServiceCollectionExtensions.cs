@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
@@ -25,21 +26,27 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
         public static IBrighterBuilder AddServiceActivator(
             this IServiceCollection services,
             Action<ServiceActivatorOptions> configure = null)
-        {
-            if (services == null)
-                throw new ArgumentNullException(nameof(services));
+       {
+           return AddServiceActivatorWithTransactionalMessaging<CommittableTransaction>(services, configure);
+       }
 
-            var options = new ServiceActivatorOptions();
-            configure?.Invoke(options);
-            services.TryAddSingleton(options);
-            services.TryAddSingleton<IBrighterOptions>(options);
+       private static IBrighterBuilder AddServiceActivatorWithTransactionalMessaging<TTransaction>(IServiceCollection services,
+           Action<ServiceActivatorOptions> configure)
+       {
+           if (services == null)
+               throw new ArgumentNullException(nameof(services));
 
-            services.TryAddSingleton<IDispatcher>(BuildDispatcher);
+           var options = new ServiceActivatorOptions();
+           configure?.Invoke(options);
+           services.TryAddSingleton(options);
+           services.TryAddSingleton<IBrighterOptions>(options);
 
-            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
-        }
+           services.TryAddSingleton<IDispatcher>(BuildDispatcher);
 
-        private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
+           return ServiceCollectionExtensions.BrighterHandlerBuilder<Message, TTransaction>(services, options);
+       }
+
+       private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)
         {
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -37,7 +38,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="T"></typeparam>
     [Obsolete("Deprecated in favour of Bulk, wil be merged into IAmAnOutboxSync in v10")]
-    public interface IAmABulkOutboxSync<in T> : IAmAnOutboxSync<T> where T : Message
+    public interface IAmABulkOutboxSync<T, TTransaction> : IAmAnOutboxSync<T, TTransaction> where T : Message
     {
         /// <summary>
         /// Awaitable add the specified message.
@@ -45,6 +46,6 @@ namespace Paramore.Brighter
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
-        void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null);
+        void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
     }
 }

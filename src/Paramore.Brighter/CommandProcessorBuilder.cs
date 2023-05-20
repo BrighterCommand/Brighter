@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
 
@@ -70,7 +71,6 @@ namespace Paramore.Brighter
     /// </summary>
     public class CommandProcessorBuilder : INeedAHandlers, INeedPolicy, INeedMessaging, INeedARequestContext, IAmACommandProcessorBuilder
     {
-        private IAmAnOutbox<Message> _outbox;
         private IAmAProducerRegistry _producers;
         private IAmAMessageMapperRegistry _messageMapperRegistry;
         private IAmAMessageTransformerFactory _transformerFactory;
@@ -80,12 +80,10 @@ namespace Paramore.Brighter
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
         private IAmAChannelFactory _responseChannelFactory;
-        private int _outboxWriteTimeout;
         private bool _useExternalBus = false;
         private bool _useRequestReplyQueues = false;
         private IEnumerable<Subscription> _replySubscriptions;
-        private IAmABoxTransactionProvider _overridingBoxTransactionProvider = null;
-        private int _outboxBulkChunkSize;
+        private IAmAnExternalBusService _bus;
 
         private CommandProcessorBuilder()
         {
@@ -164,16 +162,25 @@ namespace Paramore.Brighter
         /// <param name="outbox">The Outbox.</param>
         /// <param name="boxTransactionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionProvider boxTransactionProvider = null)
+        public INeedARequestContext ExternalBus<TMessage, TTransaction>(
+            ExternalBusConfiguration configuration, 
+            IAmAnOutbox<TMessage, TTransaction> outbox 
+            ) where TMessage : Message
         {
             _useExternalBus = true;
             _producers = configuration.ProducerRegistry;
-            _outbox = outbox;
-            _overridingBoxTransactionProvider = boxTransactionProvider;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _outboxWriteTimeout = configuration.OutboxWriteTimeout;
-            _outboxBulkChunkSize = configuration.OutboxBulkChunkSize;
+            _responseChannelFactory = configuration.ResponseChannelFactory;
             _transformerFactory = configuration.TransformerFactory;
+            
+            var bus = new ExternalBusServices<TMessage, TTransaction>(
+                configuration.ProducerRegistry,
+                _policyRegistry,
+                outbox, 
+                configuration.OutboxBulkChunkSize,
+                configuration.OutboxWriteTimeout);
+            _bus = bus;
+            
             return this;
         }
 
@@ -193,16 +200,26 @@ namespace Paramore.Brighter
         /// <param name="outbox">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating reply queues</param>
         /// <returns></returns>
-        public INeedARequestContext ExternalRPC(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
+        public INeedARequestContext ExternalRPC<TMessage, TTransaction>(
+            ExternalBusConfiguration configuration, 
+            IAmAnOutbox<TMessage, TTransaction> outbox, 
+            IEnumerable<Subscription> subscriptions
+            ) where TMessage : Message
         {
             _useRequestReplyQueues = true;
             _replySubscriptions = subscriptions;
             _producers = configuration.ProducerRegistry;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _outboxWriteTimeout = configuration.OutboxWriteTimeout;
             _responseChannelFactory = configuration.ResponseChannelFactory;
-            _outbox = outbox;
             _transformerFactory = configuration.TransformerFactory;
+            
+            var bus = new ExternalBusServices<TMessage, TTransaction>(
+                configuration.ProducerRegistry,
+                _policyRegistry,
+                outbox, 
+                configuration.OutboxBulkChunkSize,
+                configuration.OutboxWriteTimeout);
+            _bus = bus;
              
             return this;
         }
@@ -243,12 +260,8 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
-                    outBox: _outbox,
-                    producerRegistry: _producers,
-                    outboxTimeout: _outboxWriteTimeout,
+                    bus: _bus,
                     featureSwitchRegistry: _featureSwitchRegistry,
-                    transactionProvider: _overridingBoxTransactionProvider,
-                    outboxBulkChunkSize: _outboxBulkChunkSize,
                     messageTransformerFactory: _transformerFactory
                 );
             }
@@ -260,10 +273,9 @@ namespace Paramore.Brighter
                     requestContextFactory: _requestContextFactory,
                     policyRegistry: _policyRegistry,
                     mapperRegistry: _messageMapperRegistry,
-                    outBox: _outbox,
-                    producerRegistry: _producers,
+                    bus: _bus,
                     replySubscriptions: _replySubscriptions,
-                    responseChannelFactory: _responseChannelFactory, transactionProvider: _overridingBoxTransactionProvider);
+                    responseChannelFactory: _responseChannelFactory);
             }
             else
             {
@@ -323,9 +335,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="outbox">The outbox.</param>
-        /// <param name="boxTransactionProvider">The transaction provider to use when adding messages to the bus</param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBus(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IAmABoxTransactionProvider boxTransactionProvider = null);
+        INeedARequestContext ExternalBus<T, TTransaction>(
+            ExternalBusConfiguration configuration,
+            IAmAnOutbox<T, TTransaction> outbox 
+            )
+            where T : Message;
         /// <summary>
         /// We don't send messages out of process
         /// </summary>
@@ -338,7 +353,11 @@ namespace Paramore.Brighter
         /// <param name="externalBusConfiguration"></param>
         /// <param name="outboxSync">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
-        INeedARequestContext ExternalRPC(ExternalBusConfiguration externalBusConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
+        INeedARequestContext ExternalRPC<T, TTransaction>(
+            ExternalBusConfiguration externalBusConfiguration,
+            IAmAnOutbox<T, TTransaction> outboxSync, 
+            IEnumerable<Subscription> subscriptions
+            ) where T: Message;
     }
 
     /// <summary>

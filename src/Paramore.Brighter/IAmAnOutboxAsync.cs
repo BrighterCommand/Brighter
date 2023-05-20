@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,8 +37,9 @@ namespace Paramore.Brighter
     /// We provide implementations of <see cref="IAmAnOutboxAsync{T}"/> for various databases. Users using unsupported databases should consider a Pull
     /// request
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IAmAnOutboxAsync<in T> : IAmAnOutbox<T> where T : Message
+    /// <typeparam name="T">The type of message</typeparam>
+    /// <typeparam name="TTransaction">The type of transaction supported by the Outbox</typeparam>
+    public interface IAmAnOutboxAsync<T, TTransaction> : IAmAnOutbox<T, TTransaction> where T : Message
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -55,8 +57,11 @@ namespace Paramore.Brighter
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(T message, int outBoxTimeout = -1, CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider transactionProvider = null);
+        Task AddAsync(
+            T message, 
+            int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
         /// Awaitable Get the specified message identifier.

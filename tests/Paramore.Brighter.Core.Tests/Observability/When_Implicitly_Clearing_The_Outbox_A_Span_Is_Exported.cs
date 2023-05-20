@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Trace;
@@ -17,14 +18,13 @@ namespace Paramore.Brighter.Core.Tests.Observability;
 public class ImplicitClearingObservabilityTests : IDisposable
 {
     private readonly CommandProcessor _commandProcessor;
-    private readonly IAmAnOutboxSync<Message> _outbox;
     private readonly MyEvent _event;
     private readonly TracerProvider _traceProvider;
     private readonly List<Activity> _exportedActivities;
 
     public ImplicitClearingObservabilityTests()
     {
-        _outbox = new InMemoryOutbox();
+        IAmAnOutboxSync<Message, CommittableTransaction> outbox = new InMemoryOutbox();
         _event = new MyEvent("TestEvent");
 
         var registry = new SubscriberRegistry();
@@ -57,8 +57,17 @@ public class ImplicitClearingObservabilityTests : IDisposable
         });
         producerRegistry.GetDefaultProducer().MaxOutStandingMessages = -1;
         
-        _commandProcessor = new CommandProcessor(registry, handlerFactory, new InMemoryRequestContextFactory(), 
-            policyRegistry, messageMapperRegistry,_outbox,producerRegistry);
+        IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, outbox);
+
+        CommandProcessor.ClearExtServiceBus();
+        
+        _commandProcessor = new CommandProcessor(
+            registry, 
+            handlerFactory, 
+            new InMemoryRequestContextFactory(), 
+            policyRegistry, 
+            messageMapperRegistry,
+            bus);
     }
 
     [Fact]

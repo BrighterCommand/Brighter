@@ -240,7 +240,7 @@ namespace SalutationAnalytics
             return new DynamoDbInbox(dynamoDb);
         }
         
-        private static IAmAnOutbox<Message> ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
+        private static IAmAnOutbox<Message, TransactWriteItemsRequest> ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
         {
             return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1));
         }

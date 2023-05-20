@@ -28,16 +28,19 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 
 namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
 {
-    public class FakeOutboxSync : IAmABulkOutboxSync<Message>, IAmABulkOutboxAsync<Message>
+#pragma warning disable CS0618
+    public class FakeOutbox : IAmABulkOutboxSync<Message, CommittableTransaction>, IAmABulkOutboxAsync<Message, CommittableTransaction>
+#pragma warning restore CS0618
     {
         private readonly List<OutboxEntry> _posts = new List<OutboxEntry>();
 
         public bool ContinueOnCapturedContext { get; set; }
 
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
+        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
             _posts.Add(new OutboxEntry {Message = message, TimeDeposited = DateTime.UtcNow});
         }
@@ -46,7 +49,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             Message message, 
             int outBoxTimeout = -1, 
             CancellationToken cancellationToken = default, 
-            IAmABoxTransactionProvider transactionProvider = null
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null
             )
         {
             if (cancellationToken.IsCancellationRequested)
@@ -116,7 +119,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return tcs.Task;
         }
 
-        public Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task MarkDispatchedAsync(
+            Guid id, 
+            DateTime? dispatchedAt = null, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
             
@@ -127,8 +134,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             return tcs.Task;
         }
 
-        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
+        public async Task MarkDispatchedAsync(
+            IEnumerable<Guid> ids, DateTime? dispatchedAt = null, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default
+            )
         {
             foreach (var id in ids)
             {
@@ -136,15 +146,23 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             }
         }
 
-        public Task<IEnumerable<Message>> DispatchedMessagesAsync(double millisecondsDispatchedSince, int pageSize = 100, int pageNumber = 1,
-            int outboxTimeout = -1, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(
+            double millisecondsDispatchedSince, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            int outboxTimeout = -1, Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(DispatchedMessages(millisecondsDispatchedSince, pageSize, pageNumber, outboxTimeout,
                 args));
         }
 
-        public Task<IEnumerable<Message>> OutstandingMessagesAsync(double millSecondsSinceSent, int pageSize = 100, int pageNumber = 1,
-            Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public Task<IEnumerable<Message>> OutstandingMessagesAsync(
+            double millSecondsSinceSent, 
+            int pageSize = 100, 
+            int pageNumber = 1,
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default)
         {
             return Task.FromResult(OutstandingMessages(millSecondsSinceSent, pageSize, pageNumber, args));
         }
@@ -192,8 +210,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             public Message Message { get; set; }
         }
 
-        public void Add(IEnumerable<Message> messages, int outBoxTimeout = -1,
-            IAmABoxTransactionProvider transactionProvider = null)
+        public void Add(
+            IEnumerable<Message> messages, 
+            int outBoxTimeout = -1,
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
             foreach (Message message in messages)
             {
@@ -201,9 +221,11 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
             }
         }
 
-        public async Task AddAsync(IEnumerable<Message> messages, int outBoxTimeout = -1,
+        public async Task AddAsync(
+            IEnumerable<Message> messages, 
+            int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider transactionProvider = null)
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
             foreach (var message in messages)
             {

@@ -31,6 +31,7 @@ using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.Logging;
 using EventStore.ClientAPI;
 using Paramore.Brighter.Logging;
@@ -41,7 +42,7 @@ namespace Paramore.Brighter.Outbox.EventStore
     /// <summary>
     ///     Class EventStoreOutbox.
     /// </summary>
-    public class EventStoreOutboxSync : IAmAnOutboxSync<Message>, IAmAnOutboxAsync<Message>
+    public class EventStoreOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>, IAmAnOutboxAsync<Message, CommittableTransaction>
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<EventStoreOutboxSync>();
 
@@ -72,8 +73,13 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The outBoxTimeout.</param>
+        /// <param name="transactionProvider">A transaction provider, leave null with an event store</param>
         /// <returns>Task.</returns>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
+        public void Add(
+            Message message, 
+            int outBoxTimeout = -1, 
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null
+            )
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 
@@ -93,12 +99,12 @@ namespace Paramore.Brighter.Outbox.EventStore
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="transactionProvider"></param>
+        /// <param name="transactionProvider">A transaction provider, leave null with an event store</param>
         /// <returns><see cref="Task"/>.</returns>
         public async Task AddAsync(Message message,
             int outBoxTimeout = -1,
             CancellationToken cancellationToken = default,
-            IAmABoxTransactionProvider transactionProvider = null)
+            IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
         {
             s_logger.LogDebug("Adding message to Event Store Outbox: {Request}", JsonSerializer.Serialize(message, JsonSerialisationOptions.Options));
 

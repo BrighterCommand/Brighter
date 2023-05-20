@@ -38,14 +38,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutboxSync _fakeOutboxSync;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public PostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutboxSync = new FakeOutboxSync();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .ExternalBus(new ExternalBusConfiguration(
                     new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}), 
                     messageMapperRegistry), 
-                    _fakeOutboxSync)
+                    _fakeOutbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }
@@ -75,14 +75,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor.Post(_myCommand);
 
             //should store the message in the sent outbox
-            _fakeOutboxSync
+            _fakeOutbox
                 .Get()
                 .SingleOrDefault(msg => msg.Id == _message.Id)
                 .Should().NotBeNull();
             //should send a message via the messaging gateway
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeTrue();
             // should convert the command into a message
-            _fakeOutboxSync.Get().First().Should().Be(_message);
+            _fakeOutbox.Get().First().Should().Be(_message);
         }
 
         public void Dispose()

@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
         }
 
         protected override void WriteToStore(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction
             )
@@ -89,8 +89,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
             {
                 try
                 {
-                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                        command.Transaction = transactionProvider.GetTransaction();
                     command.ExecuteNonQuery();
                 }
                 catch (SqliteException sqlException)
@@ -105,13 +105,16 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
-                    connection.Close();
+                    if (transactionProvider != null)
+                        transactionProvider.Close();
+                    else
+                        connection.Close();
                 }
             }
         }
 
         protected override async Task WriteToStoreAsync(
-            IAmABoxTransactionProvider transactionProvider,
+            IAmABoxTransactionProvider<DbTransaction> transactionProvider,
             Func<DbConnection, DbCommand> commandFunc,
             Action loggingAction, 
             CancellationToken cancellationToken)
@@ -128,8 +131,8 @@ namespace Paramore.Brighter.Outbox.Sqlite
             {
                 try
                 {
-                    if (transactionProvider != null && connectionProvider.HasOpenTransaction)
-                        command.Transaction = connectionProvider.GetTransaction();
+                    if (transactionProvider != null && transactionProvider.HasOpenTransaction)
+                        command.Transaction = await transactionProvider.GetTransactionAsync(cancellationToken);
                     await command.ExecuteNonQueryAsync(cancellationToken);
                 }
                 catch (SqliteException sqlException)
@@ -144,10 +147,10 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
-                    if (!connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!connectionProvider.HasOpenTransaction)
-                        await connection.CloseAsync();
+                    if (transactionProvider != null)
+                        transactionProvider.Close();
+                    else
+                        connection.Close();
                 }
             }
         }
@@ -169,17 +172,15 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
-                    if (!_connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    connection.Close();
                 }
             }
         }
 
         protected override async Task<T> ReadFromStoreAsync<T>(
             Func<DbConnection, DbCommand> commandFunc,
-            Func<DbDataReader, Task<T>> resultFunc, CancellationToken cancellationToken)
+            Func<DbDataReader, Task<T>> resultFunc, 
+            CancellationToken cancellationToken)
         {
             var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
 
@@ -193,10 +194,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
-                    if (!_connectionProvider.IsSharedConnection)
-                        connection.Dispose();
-                    else if (!_connectionProvider.HasOpenTransaction)
-                        connection.Close();
+                    await connection.CloseAsync();
                 }
             }
         }

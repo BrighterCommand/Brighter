@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -183,9 +184,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutboxSync : IAmAnOutboxSync<Message>
+        private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
-            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider transactionProvider = null)
+            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
             {
                 //discard message
             }

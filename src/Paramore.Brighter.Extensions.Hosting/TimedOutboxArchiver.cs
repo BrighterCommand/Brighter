@@ -9,15 +9,17 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.Extensions.Hosting
 {
 
-    public class TimedOutboxArchiver : IHostedService, IDisposable
+    public class TimedOutboxArchiver<TMessage, TTransaction> : IHostedService, IDisposable where TMessage : Message
     {
         private readonly TimedOutboxArchiverOptions _options;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private IAmAnOutbox<Message> _outbox;
-        private IAmAnArchiveProvider _archiveProvider;
+        private readonly IAmAnOutbox<TMessage, TTransaction> _outbox;
+        private readonly IAmAnArchiveProvider _archiveProvider;
         private Timer _timer;
 
-        public TimedOutboxArchiver(IAmAnOutbox<Message> outbox, IAmAnArchiveProvider archiveProvider,
+        public TimedOutboxArchiver(
+            IAmAnOutbox<TMessage, TTransaction> outbox, 
+            IAmAnArchiveProvider archiveProvider,
             TimedOutboxArchiverOptions options)
         {
             _outbox = outbox;
@@ -54,7 +56,7 @@ namespace Paramore.Brighter.Extensions.Hosting
 
             try
             {
-                var outBoxArchiver = new OutboxArchiver(
+                var outBoxArchiver = new OutboxArchiver<TMessage, TTransaction>(
                     _outbox,
                     _archiveProvider,
                     _options.BatchSize);

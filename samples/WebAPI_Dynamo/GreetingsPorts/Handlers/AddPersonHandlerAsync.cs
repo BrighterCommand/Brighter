@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2.DataModel;
+using Amazon.DynamoDBv2.Model;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
@@ -14,7 +15,7 @@ namespace GreetingsPorts.Handlers
     {
         private readonly DynamoDbUnitOfWork _dynamoDbUnitOfWork;
 
-        public AddPersonHandlerAsync(IAmABoxTransactionProvider  dynamoDbUnitOfWork)
+        public AddPersonHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsRequest>   dynamoDbUnitOfWork)
         {
             _dynamoDbUnitOfWork = (DynamoDbUnitOfWork )dynamoDbUnitOfWork;
         }
