@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
@@ -39,7 +40,7 @@ namespace HelloWorld
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, collection) =>
                 {
-                    collection.AddBrighter().AutoFromAssemblies();
+                    collection.AddBrighter<CommittableTransaction>().AutoFromAssemblies();
                 })
                 .UseConsoleLifetime()
                 .Build();

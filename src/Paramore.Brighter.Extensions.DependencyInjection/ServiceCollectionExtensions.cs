@@ -56,17 +56,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>A builder that can be used to populate the IoC container with handlers and mappers by inspection
         /// - used by built in factory from CommandProcessor</returns>
         /// <exception cref="ArgumentNullException">Thrown if we have no IoC provided ServiceCollection</exception>
-        public static IBrighterBuilder AddBrighter(
-            this IServiceCollection services,
-            Action<BrighterOptions> configure = null
-            )
-        {
-            return AddBrighterWithTransactionalMessaging<CommittableTransaction>(services, configure);
-        }
-
-        private static IBrighterBuilder AddBrighterWithTransactionalMessaging<TTransaction>(
-            IServiceCollection services, 
-            Action<BrighterOptions> configure)
+        public static IBrighterBuilder AddBrighter<TTransaction>(
+            this IServiceCollection services, 
+            Action<BrighterOptions> configure = null)
         {
             if (services == null)
                 throw new ArgumentNullException(nameof(services));

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Data.Common;
 using System.IO;
 using System.Threading.Tasks;
 using Greetings.Ports.Commands;
@@ -85,7 +86,7 @@ namespace GreetingsSender
                         {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
                     };
 
-                    services.AddBrighter(options =>
+                    services.AddBrighter<DbTransaction>(options =>
                         {
                             options.PolicyRegistry = policyRegistry;
                         })

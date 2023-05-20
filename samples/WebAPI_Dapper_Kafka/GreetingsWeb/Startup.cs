@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using Confluent.SchemaRegistry;
 using DapperExtensions;
 using DapperExtensions.Sql;
@@ -174,7 +175,7 @@ namespace GreetingsWeb
                 Name = "paramore.brighter.greetingsender",
                 BootStrapServers = new[] { "localhost:9092" }
             };
-            services.AddBrighter(options =>
+            services.AddBrighter<DbTransaction>(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;

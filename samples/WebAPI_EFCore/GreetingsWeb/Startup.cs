@@ -111,7 +111,7 @@ namespace GreetingsWeb
         {
             if (_env.IsDevelopment())
             {
-                 services.AddBrighter(options =>
+                 services.AddBrighter<DbTransaction>(options =>
                      {
                          //we want to use scoped, so make sure everything understands that which needs to
                          options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -147,7 +147,7 @@ namespace GreetingsWeb
             }
             else
             {
-                services.AddBrighter(options =>
+                services.AddBrighter<DbTransaction>(options =>
                     {
                         options.HandlerLifetime = ServiceLifetime.Scoped;
                         options.MapperLifetime = ServiceLifetime.Singleton;

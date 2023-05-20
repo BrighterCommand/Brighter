@@ -27,6 +27,7 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Threading.Tasks;
+using System.Transactions;
 using Confluent.SchemaRegistry;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.Configuration;
@@ -91,7 +92,7 @@ namespace GreetingsSender
                     var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
                     services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-                    services.AddBrighter(options =>
+                    services.AddBrighter<CommittableTransaction>(options =>
                         {
                             options.PolicyRegistry = policyRegistry;
                         })

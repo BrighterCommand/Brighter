@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -31,7 +32,7 @@ namespace GreetingsPumper
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                        services.AddBrighter()
+                        services.AddBrighter<CommittableTransaction>()
                             .UseInMemoryOutbox()
                             .UseExternalBus(new SnsProducerRegistryFactory(
                                 awsConnection,

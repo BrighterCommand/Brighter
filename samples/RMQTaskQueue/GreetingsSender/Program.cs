@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Transactions;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -53,7 +54,7 @@ namespace GreetingsSender
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
             
-            serviceCollection.AddBrighter()
+            serviceCollection.AddBrighter<CommittableTransaction>()
                 .UseInMemoryOutbox()
                 .UseExternalBus(new RmqProducerRegistryFactory(
                     rmqConnection,

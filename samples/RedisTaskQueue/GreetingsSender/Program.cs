@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Transactions;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -91,7 +92,7 @@ namespace GreetingsSender
                         MessageTimeToLive = TimeSpan.FromMinutes(10)
                     };
                     
-                    collection.AddBrighter()
+                    collection.AddBrighter<CommittableTransaction>()
                         .UseInMemoryOutbox()
                         .UseExternalBus(new RedisProducerRegistryFactory(
                             redisConnection,

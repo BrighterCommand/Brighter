@@ -1,3 +1,4 @@
+using System.Transactions;
 using Azure.Identity;
 using Orders.Sweeper.Settings;
 using Paramore.Brighter;
@@ -51,7 +52,7 @@ public static class BrighterExtensions
                 outboxType = typeof(MsSqlSqlAuthConnectionProvider);
             }
 
-            builder.Services.AddBrighter()
+            builder.Services.AddBrighter<CommittableTransaction>()
                 .UseExternalBus(producerRegistry)
                 .UseMsSqlOutbox(outboxSettings, outboxType)
                 .UseOutboxSweeper(options =>

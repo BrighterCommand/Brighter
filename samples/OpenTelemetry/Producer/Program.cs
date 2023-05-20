@@ -1,3 +1,4 @@
+using System.Transactions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Shared.Commands;
@@ -27,7 +28,7 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.exchange"),
 };
 
-builder.Services.AddBrighter(options =>
+builder.Services.AddBrighter<CommittableTransaction>(options =>
     {
         options.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })

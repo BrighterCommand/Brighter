@@ -32,7 +32,7 @@ IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<stri
     {"default", new FakeMessageProducer()}
 });
 
-builder.Services.AddBrighter()
+builder.Services.AddBrighter<CommittableTransaction>()
     .UseExternalBus(producerRegistry)
     .UseInMemoryOutbox()
     .UseOutboxSweeper(options =>

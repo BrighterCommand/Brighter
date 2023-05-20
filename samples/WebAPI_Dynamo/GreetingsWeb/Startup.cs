@@ -163,7 +163,7 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            services.AddBrighter(options =>
+            services.AddBrighter<TransactWriteItemsRequest>(options =>
              {
                  //we want to use scoped, so make sure everything understands that which needs to
                  options.HandlerLifetime = ServiceLifetime.Scoped;

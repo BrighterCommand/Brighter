@@ -1,4 +1,5 @@
-﻿using Events.Ports.Commands;
+﻿using System.Transactions;
+using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
@@ -25,7 +26,7 @@ namespace GreetingsSender
 
             var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
-            serviceCollection.AddBrighter()
+            serviceCollection.AddBrighter<CommittableTransaction>()
                 .UseInMemoryOutbox()
                 .UseExternalBus(new MsSqlProducerRegistryFactory(
                     messagingConfiguration,

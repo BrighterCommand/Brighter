@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Linq;
+using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Amazon.S3;
@@ -58,7 +59,7 @@ namespace GreetingsSender
 
                 var topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName());
                 
-                serviceCollection.AddBrighter()
+                serviceCollection.AddBrighter<CommittableTransaction>()
                     .UseInMemoryOutbox()
                     .UseExternalBus(new SnsProducerRegistryFactory(
                         awsConnection,

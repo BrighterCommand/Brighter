@@ -1,4 +1,5 @@
 using System;
+using System.Data.Common;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
@@ -160,7 +161,7 @@ namespace GreetingsWeb
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
-            services.AddBrighter(options =>
+            services.AddBrighter<DbTransaction>(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;

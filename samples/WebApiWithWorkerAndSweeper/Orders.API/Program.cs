@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Transactions;
 using Orders.Data;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MsSql;
@@ -34,7 +35,7 @@ var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoi
 var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 builder.Services
-    .AddBrighter(opt =>
+    .AddBrighter<CommittableTransaction>(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;

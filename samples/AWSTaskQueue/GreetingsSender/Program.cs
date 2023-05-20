@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -52,7 +53,7 @@ namespace GreetingsSender
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                serviceCollection.AddBrighter()
+                serviceCollection.AddBrighter<CommittableTransaction>()
                     .UseInMemoryOutbox()
                     .UseExternalBus(new SnsProducerRegistryFactory(
                         awsConnection,

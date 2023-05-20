@@ -1,10 +1,12 @@
 ﻿using System;
+using System.Transactions;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
+using Polly.Caching;
 
 namespace GreetingsSender
 {
@@ -19,7 +21,7 @@ namespace GreetingsSender
             //TODO: add your ASB qualified name here
             var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
 
-            serviceCollection.AddBrighter()
+            serviceCollection.AddBrighter<CommittableTransaction>()
                 .UseInMemoryOutbox()
                 .UseExternalBus(new AzureServiceBusProducerRegistryFactory(
                     asbClientProvider,

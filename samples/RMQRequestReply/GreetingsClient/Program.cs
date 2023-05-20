@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Transactions;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -62,7 +63,7 @@ namespace GreetingsSender
             };
 
             serviceCollection
-                .AddBrighter(options =>
+                .AddBrighter<CommittableTransaction>(options =>
                 {
                     options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                 })

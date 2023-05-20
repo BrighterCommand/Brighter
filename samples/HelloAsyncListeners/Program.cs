@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -20,7 +21,7 @@ namespace HelloAsyncListeners
                 .ConfigureServices((hostContext, services) =>
 
                     {
-                        services.AddBrighter().AutoFromAssemblies();
+                        services.AddBrighter<CommittableTransaction>().AutoFromAssemblies();
                         services.AddHostedService<RunCommandProcessor>();
                     }
                 )

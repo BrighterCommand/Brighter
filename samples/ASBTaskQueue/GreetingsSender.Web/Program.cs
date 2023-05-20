@@ -1,4 +1,5 @@
-﻿using Greetings.Adaptors.Data;
+﻿using System.Data.Common;
+using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.Commands;
 using Microsoft.AspNetCore.Builder;
@@ -39,7 +40,7 @@ var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoi
 var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 builder.Services
-    .AddBrighter(opt =>
+    .AddBrighter<DbTransaction>(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
