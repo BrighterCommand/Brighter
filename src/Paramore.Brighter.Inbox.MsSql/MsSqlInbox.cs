@@ -84,7 +84,6 @@ namespace Paramore.Brighter.Inbox.MsSql
 
             using (var connection = _connectionProvider.GetConnection())
             {
-                connection.Open();
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
                 try
                 {
@@ -161,7 +160,6 @@ namespace Paramore.Brighter.Inbox.MsSql
 
             using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
                 try
                 {
@@ -271,7 +269,6 @@ namespace Paramore.Brighter.Inbox.MsSql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                connection.Open();
                 var item = execute(command);
                 return item;
             }
@@ -291,7 +288,6 @@ namespace Paramore.Brighter.Inbox.MsSql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }

@@ -59,7 +59,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             using (var connection = _connectionProvider.GetConnection())
             {
-                connection.Open();
                 var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
                 sqlCmd.ExecuteNonQuery();
             }
@@ -81,7 +80,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
                 await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
@@ -122,7 +120,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             using (var connection = _connectionProvider.GetConnection())
             {
-                connection.Open();
                 var sqlCmd = InitRemoveDbCommand(connection, parameters);
                 var reader = sqlCmd.ExecuteReader();
                 if (!reader.Read())
@@ -150,7 +147,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlCmd = InitRemoveDbCommand(connection, parameters);
                 var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
                     .ConfigureAwait(ContinueOnCapturedContext);
@@ -189,7 +185,6 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             using (var connection = _connectionProvider.GetConnection())
             {
-                connection.Open();
                 var sqlCmd = InitPurgeDbCommand(connection);
                 sqlCmd.ExecuteNonQuery();
             }

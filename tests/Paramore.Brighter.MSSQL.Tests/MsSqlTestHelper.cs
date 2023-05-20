@@ -68,7 +68,6 @@ namespace Paramore.Brighter.MSSQL.Tests
         {
             using (var connection = _masterConnectionProvider.GetConnection())
             {
-                connection.Open();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = @"
@@ -106,7 +105,6 @@ namespace Paramore.Brighter.MSSQL.Tests
             var ddl = _binaryMessagePayload ? _binaryQueueDDL : _textQueueDDL;
             var createTableSql = string.Format(ddl, _tableName, Guid.NewGuid().ToString());
 
-            connection.Open();
             using (var command = connection.CreateCommand())
             {
                 command.CommandText = createTableSql;
@@ -120,7 +118,6 @@ namespace Paramore.Brighter.MSSQL.Tests
         {
             using (var connection = _connectionProvider.GetConnection())
             {
-                connection.Open();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = $@"
@@ -140,7 +137,6 @@ namespace Paramore.Brighter.MSSQL.Tests
                 _tableName = $"[message_{_tableName}]";
                 var createTableSql = SqlOutboxBuilder.GetDDL(_tableName, _binaryMessagePayload);
 
-                connection.Open();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = createTableSql;
@@ -156,7 +152,6 @@ namespace Paramore.Brighter.MSSQL.Tests
                 _tableName = $"[command_{_tableName}]";
                 var createTableSql = SqlInboxBuilder.GetDDL(_tableName);
 
-                connection.Open();
                 using (var command = connection.CreateCommand())
                 {
                     command.CommandText = createTableSql;
