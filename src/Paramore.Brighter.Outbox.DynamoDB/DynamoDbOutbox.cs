@@ -396,6 +396,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         private Task<TransactWriteItemsRequest> AddToTransactionWrite(MessageItem messageToStore, DynamoDbUnitOfWork dynamoDbUnitOfWork)
        {
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();

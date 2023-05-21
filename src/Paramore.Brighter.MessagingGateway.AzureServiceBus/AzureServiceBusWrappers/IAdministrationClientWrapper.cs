@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
 
@@ -20,7 +21,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Create a Topic
         /// </summary>
         /// <param name="topic">The name of the Topic</param>
-        void CreateTopic(string topic);
+        void CreateTopic(string topic, TimeSpan? autoDeleteOnIdle = null);
 
         /// <summary>
         /// Delete a Topic.

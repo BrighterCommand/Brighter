@@ -391,6 +391,12 @@ namespace Paramore.Brighter.Outbox.EventStore
             throw new NotImplementedException();
         }
 
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         private static int ExtractEventNumberFromHeader(Dictionary<string, object> headerBag, Guid messageId)
         {
             object version;

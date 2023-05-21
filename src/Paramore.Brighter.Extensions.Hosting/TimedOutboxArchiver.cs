@@ -17,6 +17,8 @@ namespace Paramore.Brighter.Extensions.Hosting
         private readonly IAmAnArchiveProvider _archiveProvider;
         private Timer _timer;
 
+        private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+
         public TimedOutboxArchiver(
             IAmAnOutbox outbox, 
             IAmAnArchiveProvider archiveProvider,
@@ -31,7 +33,7 @@ namespace Paramore.Brighter.Extensions.Hosting
         {
             s_logger.LogInformation("Outbox Archiver Service is starting.");
 
-            _timer = new Timer(Archive, null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
+            _timer = new Timer(async (e) => await Archive(e, cancellationToken), null, TimeSpan.Zero, TimeSpan.FromSeconds(_options.TimerInterval));
 
             return Task.CompletedTask;
         }
@@ -50,25 +52,36 @@ namespace Paramore.Brighter.Extensions.Hosting
             _timer.Dispose();
         }
 
-        private void Archive(object state)
+        private async Task Archive(object state, CancellationToken cancellationToken)
         {
-            s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
-
-            try
+            if (await _semaphore.WaitAsync(TimeSpan.Zero, cancellationToken))
             {
-                var outBoxArchiver = new OutboxArchiver<TMessage, TTransaction>(
-                    _outbox,
-                    _archiveProvider,
-                    _options.BatchSize);
+                s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
+                try
+                {
+                    var outBoxArchiver = new OutboxArchiver<TMessage, TTransaction>(
+                        _outbox,
+                        _archiveProvider,
+                        _options.BatchSize);
 
-                outBoxArchiver.Archive(_options.MinimumAge);
+                    await outBoxArchiver.ArchiveAsync(_options.MinimumAge, cancellationToken);
+                }
+                catch (Exception e)
+                {
+                    s_logger.LogError(e, "Error while sweeping the outbox.");
+                }
+                finally
+                {
+                    _semaphore.Release();
+                }
+
+                s_logger.LogInformation("Outbox Sweeper sleeping");
             }
-            catch (Exception e)
+            else
             {
-                s_logger.LogError(e, "Error while sweeping the outbox.");
+                s_logger.LogWarning("Outbox Archiver is still running - abandoning attempt.");
             }
-
-            s_logger.LogInformation("Outbox Sweeper sleeping");
+            
         }
     }
 }

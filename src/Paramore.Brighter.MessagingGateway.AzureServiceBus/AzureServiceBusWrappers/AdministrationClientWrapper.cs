@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus.Administration;
@@ -74,13 +73,17 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// Create a Topic
         /// </summary>
         /// <param name="topic">The name of the Topic</param>
-        public void CreateTopic(string topic)
+        /// <param name="autoDeleteOnIdle">Number of minutes before an ideal queue will be deleted</param>
+        public void CreateTopic(string topic, TimeSpan? autoDeleteOnIdle = null)
         {
             s_logger.LogInformation("Creating topic {Topic}...", topic);
 
             try
             {
-                _administrationClient.CreateTopicAsync(topic).GetAwaiter().GetResult();
+                _administrationClient.CreateTopicAsync(new CreateTopicOptions(topic)
+                {
+                    AutoDeleteOnIdle = autoDeleteOnIdle ?? TimeSpan.MaxValue
+                }).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
@@ -189,7 +192,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
             if (!TopicExists(topicName))
             {
-                CreateTopic(topicName);
+                CreateTopic(topicName, subscriptionConfiguration.QueueIdleBeforeDelete);
             }
 
             var subscriptionOptions = new CreateSubscriptionOptions(topicName, subscriptionName)
@@ -197,7 +200,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 MaxDeliveryCount = subscriptionConfiguration.MaxDeliveryCount,
                 DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
                 LockDuration = subscriptionConfiguration.LockDuration,
-                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive
+                DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
+                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete
             };
 
             var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)

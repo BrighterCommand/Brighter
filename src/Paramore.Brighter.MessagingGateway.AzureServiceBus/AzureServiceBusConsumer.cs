@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Azure.Messaging.ServiceBus;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -215,7 +216,11 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// </summary>
         public void Purge()
         {
-            s_logger.LogWarning("Purge method NOT IMPLEMENTED.");
+            s_logger.LogInformation("Purging messages from {Subscription} Subscription on Topic {Topic}", 
+                _subscriptionName, _topicName);
+
+            _administrationClientWrapper.DeleteTopicAsync(_topicName);
+            EnsureSubscription();
         }
 
         /// <summary>
@@ -253,18 +258,26 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
 
             var messageBody = System.Text.Encoding.Default.GetString(azureServiceBusMessage.MessageBodyValue ?? Array.Empty<byte>());
+            
             s_logger.LogDebug("Received message from topic {Topic} via subscription {ChannelName} with body {Request}.",
                 _topicName, _subscriptionName, messageBody);
+            
             MessageType messageType = GetMessageType(azureServiceBusMessage);
+            var replyAddress = GetReplyAddress(azureServiceBusMessage);
+            
             var handledCount = GetHandledCount(azureServiceBusMessage);
             var headers = new MessageHeader(azureServiceBusMessage.Id, _topicName, messageType, DateTime.UtcNow,
-                handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType);
+                handledCount, 0, azureServiceBusMessage.CorrelationId, contentType: azureServiceBusMessage.ContentType,
+                replyTo: replyAddress);
+
             if (_receiveMode.Equals(ServiceBusReceiveMode.PeekLock))
                 headers.Bag.Add(ASBConstants.LockTokenHeaderBagKey, azureServiceBusMessage.LockToken);
+            
             foreach (var property in azureServiceBusMessage.ApplicationProperties)
             {
                 headers.Bag.Add(property.Key, property.Value);
             }
+            
             var message = new Message(headers, new MessageBody(messageBody));
             return message;
         }
@@ -278,6 +291,19 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 return messageType;
 
             return MessageType.MT_EVENT;
+        }
+
+        private static string GetReplyAddress(IBrokeredMessageWrapper azureServiceBusMessage)
+        {
+            if (azureServiceBusMessage.ApplicationProperties is null ||
+                !azureServiceBusMessage.ApplicationProperties.ContainsKey(ASBConstants.ReplyToHeaderBagKey))
+            {
+                return null;
+            }
+
+            var replyAddress = azureServiceBusMessage.ApplicationProperties[ASBConstants.ReplyToHeaderBagKey].ToString();
+
+            return replyAddress;
         }
 
         private static int GetHandledCount(IBrokeredMessageWrapper azureServiceBusMessage)

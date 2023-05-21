@@ -18,7 +18,7 @@ namespace Paramore.Brighter
         private readonly IAmAnArchiveProvider _archiveProvider;
         private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
 
-        public OutboxArchiver(IAmAnOutbox outbox, IAmAnArchiveProvider archiveProvider, int batchSize = 100)
+        public OutboxArchiver(IAmAnOutbox outbox,IAmAnArchiveProvider archiveProvider, int batchSize = 100)
         {
             _batchSize = batchSize;
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncBox)
@@ -73,11 +73,9 @@ namespace Paramore.Brighter
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             
-            var age = TimeSpan.FromHours(minimumAge);
-
             try
             {
-                var messages = await _outboxAsync.DispatchedMessagesAsync(age.Milliseconds, _batchSize,
+                var messages = await _outboxAsync.DispatchedMessagesAsync(minimumAge, _batchSize,
                     cancellationToken: cancellationToken);
 
                 if (!messages.Any()) return;
