@@ -35,7 +35,7 @@ var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoi
 var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 builder.Services
-    .AddBrighter<CommittableTransaction>(opt =>
+    .AddBrighter(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;

@@ -36,7 +36,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="T">The message type</typeparam>
     /// <typeparam name="TTransaction">The transaction type of the underlying Db</typeparam>
-    public interface IAmAnOutboxSync<T, TTransaction> : IAmAnOutbox<T, TTransaction> where T : Message
+    public interface IAmAnOutboxSync<T, TTransaction> : IAmAnOutbox where T : Message
     {
         /// <summary>
         /// Adds the specified message.

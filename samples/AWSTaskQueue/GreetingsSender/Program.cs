@@ -53,7 +53,7 @@ namespace GreetingsSender
             {
                 var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                serviceCollection.AddBrighter<CommittableTransaction>()
+                serviceCollection.AddBrighter()
                     .UseInMemoryOutbox()
                     .UseExternalBus(new SnsProducerRegistryFactory(
                         awsConnection,

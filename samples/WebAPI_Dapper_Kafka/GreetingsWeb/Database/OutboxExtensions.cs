@@ -43,13 +43,7 @@ namespace GreetingsWeb.Database
         private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder,
             RelationalDatabaseConfiguration configuration)
         {
-            brighterBuilder.UseMySqlOutbox(
-                    configuration,
-                    typeof(MySqlConnectionProvider),
-                    ServiceLifetime.Singleton)
-                .UseMySqTransactionConnectionProvider(
-                    typeof(MySqlUnitOfWork), ServiceLifetime.Scoped)
-                .UseOutboxSweeper();
+            brighterBuilder.UseMySqlOutbox(configuration, typeof(MySqlUnitOfWork)).UseOutboxSweeper();
         }
 
         private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder,

@@ -175,7 +175,7 @@ namespace GreetingsWeb
                 Name = "paramore.brighter.greetingsender",
                 BootStrapServers = new[] { "localhost:9092" }
             };
-            services.AddBrighter<DbTransaction>(options =>
+            services.AddBrighter(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;

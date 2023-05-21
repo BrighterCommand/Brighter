@@ -54,7 +54,7 @@ namespace GreetingsSender
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
             
-            serviceCollection.AddBrighter<CommittableTransaction>()
+            serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
                 .UseExternalBus(new RmqProducerRegistryFactory(
                     rmqConnection,

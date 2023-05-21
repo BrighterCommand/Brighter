@@ -33,7 +33,7 @@ namespace Paramore.Brighter
     /// Interface IAmABulkOutbox
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into an OutBox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
-    /// We provide implementations of <see cref="IAmAnOutbox{T}"/> for various databases. Users using unsupported databases should consider a Pull
+    /// We provide implementations of <see cref="IAmAnOutbox"/> for various databases. Users using unsupported databases should consider a Pull
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>

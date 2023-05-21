@@ -18,7 +18,7 @@ namespace Paramore.Brighter
         private readonly IAmAnArchiveProvider _archiveProvider;
         private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
 
-        public OutboxArchiver(IAmAnOutbox<TMessage, TTransaction> outbox, IAmAnArchiveProvider archiveProvider, int batchSize = 100)
+        public OutboxArchiver(IAmAnOutbox outbox, IAmAnArchiveProvider archiveProvider, int batchSize = 100)
         {
             _batchSize = batchSize;
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncBox)

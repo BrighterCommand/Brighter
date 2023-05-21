@@ -111,7 +111,7 @@ namespace GreetingsWeb
         {
             if (_env.IsDevelopment())
             {
-                 services.AddBrighter<DbTransaction>(options =>
+                 services.AddBrighter(options =>
                      {
                          //we want to use scoped, so make sure everything understands that which needs to
                          options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -147,7 +147,7 @@ namespace GreetingsWeb
             }
             else
             {
-                services.AddBrighter<DbTransaction>(options =>
+                services.AddBrighter(options =>
                     {
                         options.HandlerLifetime = ServiceLifetime.Scoped;
                         options.MapperLifetime = ServiceLifetime.Singleton;
@@ -170,8 +170,10 @@ namespace GreetingsWeb
                                 }}
                         ).Create()
                     )
-                    .UseMySqlOutbox(new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName), typeof(MySqlConnectionProvider), ServiceLifetime.Singleton)
-                    .UseMySqTransactionConnectionProvider(typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
+                    .UseMySqlOutbox(
+                        new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName), 
+                        typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>)
+                        )
                     .UseOutboxSweeper()
                     .AutoFromAssemblies();
             }

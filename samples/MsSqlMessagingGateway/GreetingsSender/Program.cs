@@ -26,7 +26,7 @@ namespace GreetingsSender
 
             var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
-            serviceCollection.AddBrighter<CommittableTransaction>()
+            serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
                 .UseExternalBus(new MsSqlProducerRegistryFactory(
                     messagingConfiguration,

@@ -13,12 +13,12 @@ namespace Paramore.Brighter.Extensions.Hosting
     {
         private readonly TimedOutboxArchiverOptions _options;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private readonly IAmAnOutbox<TMessage, TTransaction> _outbox;
+        private readonly IAmAnOutbox _outbox;
         private readonly IAmAnArchiveProvider _archiveProvider;
         private Timer _timer;
 
         public TimedOutboxArchiver(
-            IAmAnOutbox<TMessage, TTransaction> outbox, 
+            IAmAnOutbox outbox, 
             IAmAnArchiveProvider archiveProvider,
             TimedOutboxArchiverOptions options)
         {

@@ -92,7 +92,7 @@ namespace GreetingsSender
                     var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
                     services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-                    services.AddBrighter<CommittableTransaction>(options =>
+                    services.AddBrighter(options =>
                         {
                             options.PolicyRegistry = policyRegistry;
                         })

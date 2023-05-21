@@ -86,7 +86,7 @@ namespace GreetingsSender
                         {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
                     };
 
-                    services.AddBrighter<DbTransaction>(options =>
+                    services.AddBrighter(options =>
                         {
                             options.PolicyRegistry = policyRegistry;
                         })

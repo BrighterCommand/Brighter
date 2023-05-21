@@ -28,7 +28,7 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.exchange"),
 };
 
-builder.Services.AddBrighter<CommittableTransaction>(options =>
+builder.Services.AddBrighter(options =>
     {
         options.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })

@@ -123,7 +123,7 @@ namespace SalutationAnalytics
                         actionOnExists: OnceOnlyAction.Throw
                     )
                 )
-                .UseExternalOutbox(ConfigureOutbox(awsCredentials, dynamoDb))
+                .UseExternalOutbox<Message, TransactWriteItemsRequest>(ConfigureOutbox(awsCredentials, dynamoDb))
                 .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped);
 
             services.AddHostedService<ServiceActivatorHostedService>();
@@ -240,7 +240,7 @@ namespace SalutationAnalytics
             return new DynamoDbInbox(dynamoDb);
         }
         
-        private static IAmAnOutbox<Message, TransactWriteItemsRequest> ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
+        private static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
         {
             return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1));
         }

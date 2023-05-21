@@ -52,7 +52,7 @@ public static class BrighterExtensions
                 outboxType = typeof(MsSqlSqlAuthConnectionProvider);
             }
 
-            builder.Services.AddBrighter<CommittableTransaction>()
+            builder.Services.AddBrighter()
                 .UseExternalBus(producerRegistry)
                 .UseMsSqlOutbox(outboxSettings, outboxType)
                 .UseOutboxSweeper(options =>

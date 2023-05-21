@@ -151,10 +151,13 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var outbox = new SinkOutboxSync();
             
             CommandProcessor commandProcessor = null;
+            var externalBusConfiguration = new ExternalBusConfiguration();
+            externalBusConfiguration.ProducerRegistry = producerRegistry;
+            externalBusConfiguration.MessageMapperRegistry = outgoingMessageMapperRegistry;
+            
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
-                .Policies(policyRegistry)
-                .ExternalBus(new ExternalBusConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
+                .Policies(policyRegistry).ExternalBusWithOutbox<Message,CommittableTransaction>(externalBusConfiguration, outbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             

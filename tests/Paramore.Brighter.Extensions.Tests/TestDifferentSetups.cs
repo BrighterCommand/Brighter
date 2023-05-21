@@ -20,7 +20,7 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             
-            serviceCollection.AddBrighter<CommittableTransaction>().AutoFromAssemblies();
+            serviceCollection.AddBrighter().AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
 
@@ -38,7 +38,7 @@ namespace Tests
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
             serviceCollection
-                .AddBrighter<CommittableTransaction>()
+                .AddBrighter()
                 .UseInMemoryOutbox()
                 .UseExternalBus(producer, false)
                 .AutoFromAssemblies();
@@ -70,7 +70,7 @@ namespace Tests
 
             
             serviceCollection
-                .AddBrighter<CommittableTransaction>(options => options.PolicyRegistry = policyRegistry)
+                .AddBrighter(options => options.PolicyRegistry = policyRegistry)
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -85,7 +85,7 @@ namespace Tests
         {
             var serviceCollection = new ServiceCollection();
             
-            serviceCollection.AddBrighter<CommittableTransaction>(options => options.CommandProcessorLifetime = ServiceLifetime.Scoped
+            serviceCollection.AddBrighter(options => options.CommandProcessorLifetime = ServiceLifetime.Scoped
                 ).AutoFromAssemblies();
 
             Assert.Equal( ServiceLifetime.Scoped, serviceCollection.SingleOrDefault(x => x.ServiceType == typeof(IAmACommandProcessor))?.Lifetime);

@@ -21,7 +21,7 @@ namespace GreetingsSender
             //TODO: add your ASB qualified name here
             var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
 
-            serviceCollection.AddBrighter<CommittableTransaction>()
+            serviceCollection.AddBrighter()
                 .UseInMemoryOutbox()
                 .UseExternalBus(new AzureServiceBusProducerRegistryFactory(
                     asbClientProvider,

@@ -161,7 +161,7 @@ namespace GreetingsWeb
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
-            services.AddBrighter<DbTransaction>(options =>
+            services.AddBrighter(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;

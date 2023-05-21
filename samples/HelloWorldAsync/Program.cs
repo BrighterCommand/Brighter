@@ -42,7 +42,7 @@ namespace HelloWorldAsync
                 .ConfigureServices((hostContext, services) =>
 
                     {
-                        services.AddBrighter<CommittableTransaction>()
+                        services.AddBrighter()
                             .AutoFromAssemblies();
                     }
                 )

@@ -92,7 +92,7 @@ namespace GreetingsSender
                         MessageTimeToLive = TimeSpan.FromMinutes(10)
                     };
                     
-                    collection.AddBrighter<CommittableTransaction>()
+                    collection.AddBrighter()
                         .UseInMemoryOutbox()
                         .UseExternalBus(new RedisProducerRegistryFactory(
                             redisConnection,

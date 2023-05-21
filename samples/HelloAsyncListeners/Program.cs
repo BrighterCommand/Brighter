@@ -21,7 +21,7 @@ namespace HelloAsyncListeners
                 .ConfigureServices((hostContext, services) =>
 
                     {
-                        services.AddBrighter<CommittableTransaction>().AutoFromAssemblies();
+                        services.AddBrighter().AutoFromAssemblies();
                         services.AddHostedService<RunCommandProcessor>();
                     }
                 )

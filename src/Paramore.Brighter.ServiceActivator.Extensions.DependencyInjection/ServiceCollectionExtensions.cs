@@ -43,7 +43,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
            services.TryAddSingleton<IDispatcher>(BuildDispatcher);
 
-           return ServiceCollectionExtensions.BrighterHandlerBuilder<Message, TTransaction>(services, options);
+           return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
        }
 
        private static Dispatcher BuildDispatcher(IServiceProvider serviceProvider)

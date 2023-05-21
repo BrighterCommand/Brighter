@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Xunit;
@@ -58,13 +59,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
+            var busConfiguration = new ExternalBusConfiguration { 
+                ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                }),
+                MessageMapperRegistry = messageMapperRegistry
+            };
+            
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBus(new ExternalBusConfiguration(
-                    new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}), 
-                    messageMapperRegistry), 
-                    _fakeOutbox)
+                .ExternalBusWithOutbox<Message, CommittableTransaction>(busConfiguration, _fakeOutbox)
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

@@ -59,7 +59,7 @@ namespace Paramore.Brighter
         public ExternalBusServices(
             IAmAProducerRegistry producerRegistry,  
             IPolicyRegistry<string> policyRegistry,
-            IAmAnOutbox<TMessage, TTransaction> outbox = null,
+            IAmAnOutbox outbox = null,
             int outboxBulkChunkSize = 100,
             int outboxTimeout = 300
             )
@@ -68,7 +68,7 @@ namespace Paramore.Brighter
             PolicyRegistry = policyRegistry?? throw new ConfigurationException("Missing Policy Registry for External Bus Services");
             
             //default to in-memory; expectation for a in memory box is Message and CommittableTransaction
-            if (outbox == null) outbox = new InMemoryOutbox() as IAmAnOutbox<TMessage, TTransaction>;
+            if (outbox == null) outbox = new InMemoryOutbox() as IAmAnOutbox;
             if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncOutbox) OutBox = syncOutbox;
             if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncOutbox) AsyncOutbox = asyncOutbox;
             OutboxBulkChunkSize = outboxBulkChunkSize;

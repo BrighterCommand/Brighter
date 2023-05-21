@@ -1,7 +1,7 @@
-#region Licence
+﻿#region Licence
 
 /* The MIT License (MIT)
-Copyright © 2015 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
+Copyright © 2023 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -23,23 +23,13 @@ THE SOFTWARE. */
 
 #endregion
 
-using System.Collections.Generic;
-
 namespace Paramore.Brighter
 {
-    /// <summary>
-    /// Interface IAmAControlBusSenderFactory. Helper for creating a control bus sender, which only requires
-    /// messaging configuration because it wraps the command processor and only supports the Post method, 
-    /// not Send and Publish and as such does not have handlers to register
-    /// </summary>
-    public interface IAmAControlBusSenderFactory {
-        /// <summary>
-        /// Creates the specified configuration.
-        /// </summary>
-        /// <param name="outbox">The outbox to record outbound messages on the control bus</param>
-        /// <param name="producerRegistry">The list of producers to send with</param>
-        /// <returns>IAmAControlBusSender.</returns>
-        IAmAControlBusSender Create<T, TTransaction>(IAmAnOutbox outbox, IAmAProducerRegistry producerRegistry)
-            where T: Message;
+    public enum ExternalBusType
+    {
+        None = 0,
+        InMemory = 1,
+        Db = 2,
+        RPC = 3
     }
 }

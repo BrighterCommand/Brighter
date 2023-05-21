@@ -59,7 +59,7 @@ namespace GreetingsSender
 
                 var topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName());
                 
-                serviceCollection.AddBrighter<CommittableTransaction>()
+                serviceCollection.AddBrighter()
                     .UseInMemoryOutbox()
                     .UseExternalBus(new SnsProducerRegistryFactory(
                         awsConnection,

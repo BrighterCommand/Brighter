@@ -63,7 +63,7 @@ namespace GreetingsSender
             };
 
             serviceCollection
-                .AddBrighter<CommittableTransaction>(options =>
+                .AddBrighter(options =>
                 {
                     options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                 })

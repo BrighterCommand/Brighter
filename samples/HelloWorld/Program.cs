@@ -40,7 +40,7 @@ namespace HelloWorld
             var host = Host.CreateDefaultBuilder()
                 .ConfigureServices((context, collection) =>
                 {
-                    collection.AddBrighter<CommittableTransaction>().AutoFromAssemblies();
+                    collection.AddBrighter().AutoFromAssemblies();
                 })
                 .UseConsoleLifetime()
                 .Build();

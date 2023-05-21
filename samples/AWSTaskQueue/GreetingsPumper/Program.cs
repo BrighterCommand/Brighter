@@ -32,7 +32,7 @@ namespace GreetingsPumper
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                        services.AddBrighter<CommittableTransaction>()
+                        services.AddBrighter()
                             .UseInMemoryOutbox()
                             .UseExternalBus(new SnsProducerRegistryFactory(
                                 awsConnection,

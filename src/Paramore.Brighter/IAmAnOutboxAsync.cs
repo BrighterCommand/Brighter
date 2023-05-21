@@ -39,7 +39,7 @@ namespace Paramore.Brighter
     /// </summary>
     /// <typeparam name="T">The type of message</typeparam>
     /// <typeparam name="TTransaction">The type of transaction supported by the Outbox</typeparam>
-    public interface IAmAnOutboxAsync<T, TTransaction> : IAmAnOutbox<T, TTransaction> where T : Message
+    public interface IAmAnOutboxAsync<T, TTransaction> : IAmAnOutbox where T : Message
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
