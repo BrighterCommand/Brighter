@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
-            new MsSqlSqlAuthConnectionProvider(configuration))
+            new MsSqlAuthConnectionProvider(configuration))
         {
         }
 

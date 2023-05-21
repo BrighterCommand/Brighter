@@ -49,12 +49,7 @@ namespace GreetingsWeb.Database
         private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder,
             RelationalDatabaseConfiguration configuration)
         {
-            brighterBuilder.UseSqliteOutbox(
-                    configuration,
-                    typeof(SqliteConnectionProvider),
-                    ServiceLifetime.Singleton)
-                .UseSqliteTransactionConnectionProvider(
-                    typeof(SqliteUnitOfWork), ServiceLifetime.Scoped)
+            brighterBuilder.UseSqliteOutbox(configuration, typeof(SqliteUnitOfWork))
                 .UseOutboxSweeper(options =>
                 {
                     options.TimerInterval = 5;

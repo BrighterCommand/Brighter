@@ -71,7 +71,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public MsSqlMessageProducer(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            Publication publication = null) : this(msSqlConfiguration, new MsSqlSqlAuthConnectionProvider(msSqlConfiguration), publication)
+            Publication publication = null) : this(msSqlConfiguration, new MsSqlAuthConnectionProvider(msSqlConfiguration), publication)
         {
         }
 

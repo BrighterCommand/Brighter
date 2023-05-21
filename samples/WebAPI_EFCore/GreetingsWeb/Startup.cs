@@ -136,8 +136,9 @@ namespace GreetingsWeb
                                 }}
                          ).Create()
                      )
-                     .UseSqliteOutbox(new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName), typeof(SqliteConnectionProvider), ServiceLifetime.Singleton)
-                     .UseSqliteTransactionConnectionProvider(typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>), ServiceLifetime.Scoped)
+                     .UseSqliteOutbox(
+                         new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName),
+                         typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>))
                      .UseOutboxSweeper(options =>
                      {
                          options.TimerInterval = 5;

@@ -49,7 +49,7 @@ public static class BrighterExtensions
             }
             else
             {
-                outboxType = typeof(MsSqlSqlAuthConnectionProvider);
+                outboxType = typeof(MsSqlAuthConnectionProvider);
             }
 
             builder.Services.AddBrighter()

@@ -47,8 +47,7 @@ builder.Services
             )
             .Create()
     )
-    .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(SqlConnectionProvider))
+    .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthUnitOfWork))
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(NewOrderVersionEvent)));
 
 

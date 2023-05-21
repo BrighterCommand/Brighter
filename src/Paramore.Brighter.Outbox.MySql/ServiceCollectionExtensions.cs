@@ -43,7 +43,6 @@ namespace Paramore.Brighter.Outbox.MySql
             if (!typeof(IAmATransactionConnectionProvider).IsAssignableFrom(transactionProvider))
                 throw new Exception($"Unable to register provider of type {transactionProvider.Name}. Class does not implement interface {nameof(IAmATransactionConnectionProvider)}.");
             
-            
             brighterBuilder.Services.AddSingleton<RelationalDatabaseConfiguration>(configuration);
             brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider), typeof(MySqlConnectionProvider), serviceLifetime));
             
