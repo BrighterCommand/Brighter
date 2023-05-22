@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <IsPackable>false</IsPackable>
     <TargetFrameworks>net6.0</TargetFrameworks>
@@ -9,7 +9,7 @@
     <ProjectReference Include="..\..\src\Paramore.Brighter.ServiceActivator\Paramore.Brighter.ServiceActivator.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="coverlet.collector" Version="3.2.0">
+    <PackageReference Include="coverlet.collector" Version="6.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
