@@ -161,6 +161,25 @@ namespace GreetingsWeb
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
+            var producerRegistry = new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+            
             services.AddBrighter(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
@@ -169,25 +188,11 @@ namespace GreetingsWeb
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        new RmqMessagingGatewayConnection
-                        {
-                            AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                            Exchange = new Exchange("paramore.brighter.exchange"),
-                        },
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("GreetingMade"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    ).Create()
-                )
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                    
+                })
                 //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
                 //types easily. You may just choose to call the methods directly if you do not need to support multiple
                 //db types (which we just need to allow you to see how to configure your outbox type).

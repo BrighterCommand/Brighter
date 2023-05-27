@@ -70,7 +70,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(new SubscriberRegistry(), new EmptyHandlerFactorySync()))
                 .DefaultPolicy()
-                .ExternalBusWithOutbox<Message, CommittableTransaction>(busConfiguration, _fakeOutbox)
+                .ExternalBusCreate(
+                    busConfiguration, 
+                    _fakeOutbox,
+                    new CommittableTransactionProvider())
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
         }

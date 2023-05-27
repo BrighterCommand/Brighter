@@ -26,13 +26,17 @@ namespace GreetingsSender
 
             var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
-            serviceCollection.AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(new MsSqlProducerRegistryFactory(
+            var producerRegistry = new MsSqlProducerRegistryFactory(
                     messagingConfiguration,
                     new Publication[] {new Publication()}
-                    )
-                    .Create())
+                )
+                .Create();
+            
+            serviceCollection.AddBrighter()
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

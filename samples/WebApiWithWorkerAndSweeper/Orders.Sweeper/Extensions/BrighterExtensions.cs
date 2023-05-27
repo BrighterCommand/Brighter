@@ -34,27 +34,31 @@ public static class BrighterExtensions
                 }, boxSettings.BatchChunkSize).Create();
 
             var outboxSettings = new RelationalDatabaseConfiguration(boxSettings.ConnectionString, outBoxTableName: boxSettings.OutboxTableName);
-            Type outboxType;
+            Type transactionProviderType;
 
             if (boxSettings.UseMsi)
             {
                 if (environmentName != null && environmentName.Equals(_developmentEnvironemntName, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    outboxType = typeof(MsSqlVisualStudioConnectionProvider);
+                    transactionProviderType = typeof(MsSqlVisualStudioConnectionProvider);
                 }
                 else
                 {
-                    outboxType = typeof(MsSqlDefaultAzureConnectionProvider);
+                    transactionProviderType = typeof(MsSqlDefaultAzureConnectionProvider);
                 }
             }
             else
             {
-                outboxType = typeof(MsSqlAuthConnectionProvider);
+                transactionProviderType = typeof(MsSqlAuthConnectionProvider);
             }
 
             builder.Services.AddBrighter()
-                .UseExternalBus(producerRegistry)
-                .UseMsSqlOutbox(outboxSettings, outboxType)
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                    configure.Outbox = new MsSqlOutbox(outboxSettings);
+                    configure.TransactionProvider = transactionProviderType;
+                })
                 .UseOutboxSweeper(options =>
                 {
                     options.TimerInterval = boxSettings.OutboxSweeperInterval;

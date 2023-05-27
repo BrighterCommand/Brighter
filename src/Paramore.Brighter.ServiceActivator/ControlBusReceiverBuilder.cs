@@ -157,7 +157,8 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
-                .Policies(policyRegistry).ExternalBusWithOutbox<Message,CommittableTransaction>(externalBusConfiguration, outbox)
+                .Policies(policyRegistry)
+                .ExternalBusCreate(externalBusConfiguration, outbox, new CommittableTransactionProvider())
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             

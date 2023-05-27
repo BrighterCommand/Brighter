@@ -53,30 +53,34 @@ namespace GreetingsSender
                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
                 Exchange = new Exchange("paramore.brighter.exchange"),
             };
+
+            var producerRegistry = new RmqProducerRegistryFactory(
+                rmqConnection,
+                new RmqPublication[]
+                {
+                    new()
+                    {
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels =OnMissingChannel.Create,
+                        Topic = new RoutingKey("greeting.event")
+                    },
+                    new()
+                    {
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels =OnMissingChannel.Create,
+                        Topic = new RoutingKey("farewell.event")                            
+                    }
+                }).Create();
             
             serviceCollection.AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                    rmqConnection,
-                    new RmqPublication[]
-                    {
-                        new()
-                        {
-                            MaxOutStandingMessages = 5,
-                            MaxOutStandingCheckIntervalMilliSeconds = 500,
-                            WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            MakeChannels =OnMissingChannel.Create,
-                            Topic = new RoutingKey("greeting.event")
-                        },
-                        new()
-                        {
-                            MaxOutStandingMessages = 5,
-                            MaxOutStandingCheckIntervalMilliSeconds = 500,
-                            WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            MakeChannels =OnMissingChannel.Create,
-                            Topic = new RoutingKey("farewell.event")                            
-                        }
-                    }).Create())
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

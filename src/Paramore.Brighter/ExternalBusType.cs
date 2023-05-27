@@ -28,8 +28,7 @@ namespace Paramore.Brighter
     public enum ExternalBusType
     {
         None = 0,
-        InMemory = 1,
-        Db = 2,
-        RPC = 3
+        FireAndForget = 1,
+        RPC = 2
     }
 }

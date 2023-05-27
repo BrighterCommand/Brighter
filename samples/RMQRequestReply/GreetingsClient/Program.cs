@@ -62,24 +62,25 @@ namespace GreetingsSender
                 new RmqSubscription(typeof(GreetingReply))
             };
 
-            serviceCollection
-                .AddBrighter(options =>
+            var producerRegistry = new RmqProducerRegistryFactory(
+                rmqConnection,
+                new RmqPublication[]
                 {
-                    options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("Greeting.Request")
+                    }
+                }).Create();
+            
+            serviceCollection
+                .AddBrighter()
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                    configure.UseRpc = true;
+                    configure.ReplyQueueSubscriptions = replySubscriptions;
+                    configure.ResponseChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
                 })
-                .UseInMemoryOutbox()
-                .UseExternalBus(
-                    new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("Greeting.Request")
-                            }
-                        }).Create(), 
-                    true, 
-                    replySubscriptions)
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

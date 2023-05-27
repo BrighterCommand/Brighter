@@ -62,7 +62,7 @@ builder.Services.AddServiceActivator(options =>
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
         
-    }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthUnitOfWork))
+    })
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(CreateOrderCommand)));
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

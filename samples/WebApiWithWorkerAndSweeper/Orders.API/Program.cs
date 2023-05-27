@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Data.Common;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -34,22 +35,26 @@ var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoi
 
 var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
+var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+        asbConnection,
+        new AzureServiceBusPublication[] { new() { Topic = new RoutingKey(NewOrderVersionEvent.Topic) }, }
+    )
+    .Create();
+
 builder.Services
     .AddBrighter(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus(
-        new AzureServiceBusProducerRegistryFactory(
-                asbConnection,
-                new AzureServiceBusPublication[] { new() { Topic = new RoutingKey(NewOrderVersionEvent.Topic) }, }
-            )
-            .Create()
+    .UseExternalBus<DbTransaction>((configure) =>
+        {
+            configure.ProducerRegistry = producerRegistry;
+            configure.Outbox = new MsSqlOutbox(outboxConfig);
+            configure.TransactionProvider = typeof(MsSqlSqlAuthUnitOfWork);
+        }
     )
-    .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthUnitOfWork))
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(NewOrderVersionEvent)));
-
 
 builder.Services.AddControllersWithViews().AddJsonOptions(options =>
 {

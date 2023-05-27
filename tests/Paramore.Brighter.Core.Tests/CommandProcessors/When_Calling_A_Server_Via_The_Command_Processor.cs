@@ -91,7 +91,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 policyRegistry,
                 messageMapperRegistry,
                 bus,
-                replySubs,
+                replySubscriptions:replySubs,
                 responseChannelFactory: inMemoryChannelFactory);
 
             PipelineBuilder<MyRequest>.ClearPipelineCache();

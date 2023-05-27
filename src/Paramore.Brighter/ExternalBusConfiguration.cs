@@ -22,15 +22,74 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Paramore.Brighter
 {
+    public interface IAmExternalBusConfiguration
+    {
+        /// <summary>
+        /// The registry is a collection of producers 
+        /// </summary>
+        /// <value>The registry of producers</value>
+        IAmAProducerRegistry ProducerRegistry { get; set; }
+
+        /// <summary>
+        /// Gets the message mapper registry.
+        /// </summary>
+        /// <value>The message mapper registry.</value>
+        IAmAMessageMapperRegistry MessageMapperRegistry { get; set; }
+
+        /// <summary>
+        /// The Outbox we wish to use for messaging
+        /// </summary>
+        IAmAnOutbox Outbox { get; set; }
+
+        /// <summary>
+        /// The maximum amount of messages to deposit into the outbox in one transmissions.
+        /// This is to stop insert statements getting too big
+        /// </summary>
+        int OutboxBulkChunkSize { get; set; }
+
+        /// <summary>
+        /// When do we timeout writing to the outbox
+        /// </summary>
+        int OutboxTimeout { get; set; }
+        
+        /// <summary>
+        /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
+        /// this tends to he handled by a Dispatcher not a Command Processor. 
+        /// </summary>
+        IAmAChannelFactory ResponseChannelFactory { get; set; }
+
+        /// <summary>
+        /// Sets up a transform factory. We need this if you have transforms applied to your MapToMessage or MapToRequest methods
+        /// of your MessageMappers
+        /// </summary>
+        IAmAMessageTransformerFactory TransformerFactory { get; set; }
+
+        /// <summary>
+        /// If we are using Rpc, what are the subscriptions for the reply queue?
+        /// </summary>
+        IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
+        
+        /// <summary>
+        /// The transaction provider for the outbox
+        /// </summary>
+        Type TransactionProvider { get; set; }
+
+        /// <summary>
+        /// Do we want to support RPC on an external bus?
+        /// </summary>
+        bool UseRpc { get; set; }
+    }
+
     /// <summary>
     /// Used to configure the Event Bus
     /// </summary>
-    public class ExternalBusConfiguration
+    public class ExternalBusConfiguration : IAmExternalBusConfiguration
     {
         /// <summary>
         /// The registry is a collection of producers 
@@ -58,7 +117,12 @@ namespace Paramore.Brighter
         /// <summary>
         /// When do we timeout writing to the outbox
         /// </summary>
-        public int OutboxWriteTimeout { get; set; }
+        public int OutboxTimeout { get; set; }
+        
+        /// <summary>
+        /// If we are using Rpc, what are the subscriptions for the reply queue?
+        /// </summary>
+        public IEnumerable<Subscription> ReplyQueueSubscriptions { get; set; }
         
         /// <summary>
         /// Sets a channel factory. We need this for RPC which has to create a channel itself, but otherwise
@@ -71,55 +135,26 @@ namespace Paramore.Brighter
         /// of your MessageMappers
         /// </summary>
         public IAmAMessageTransformerFactory TransformerFactory { get; set; }
+        
+        /// <summary>
+        /// The transaction provider for the outbox
+        /// </summary>
+        public Type TransactionProvider { get; set; }
 
         /// <summary>
-        /// The configuration of our inbox
+        /// Do we want to support RPC on an external bus?
         /// </summary>
-        public InboxConfiguration UseInbox { get; set; }
-
-        /// <summary>
-        /// Should we use an in-memory outbox
-        /// </summary>
-        public bool UseInMemoryOutbox { get; set; }
+        public bool UseRpc { get; set; }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
         /// </summary>
         public ExternalBusConfiguration()
         {
-           /*allows setting of properties one-by-one*/ 
+           /*allows setting of properties one-by-one, we default the required values here*/
+
+           ProducerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>());
         }
 
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.
-        /// </summary>
-        /// <param name="producerRegistry">Clients for the external bus by topic they send to. The client details are specialised by transport</param>
-        /// <param name="messageMapperRegistry">The message mapper registry.</param>
-        /// <param name="outbox">The outbox we wish to use for messaging</param>
-        /// <param name="outboxBulkChunkSize">The maximum amount of messages to deposit into the outbox in one transmissions.</param>
-        /// <param name="outboxWriteTimeout">How long to wait when writing to the outbox</param>
-        /// <param name="responseChannelFactory">in a request-response scenario how do we build response pipeline</param>
-        /// <param name="transformerFactory">The factory that builds instances of a transforms for us</param>
-        /// <param name="useInbox">Do we want to create an inbox globally i.e. on every handler (as opposed to by hand). Defaults to null, ,by hand</param>
-        public ExternalBusConfiguration(
-            IAmAProducerRegistry producerRegistry,
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAnOutbox outbox,
-            int outboxBulkChunkSize = 100,
-            int outboxWriteTimeout = 300,
-            IAmAChannelFactory responseChannelFactory = null,
-            IAmAMessageTransformerFactory transformerFactory = null,
-            InboxConfiguration useInbox = null)
-        {
-            ProducerRegistry = producerRegistry;
-            MessageMapperRegistry = messageMapperRegistry;
-            Outbox = outbox;
-            OutboxWriteTimeout = outboxWriteTimeout;
-            ResponseChannelFactory = responseChannelFactory;
-            UseInbox = useInbox;
-            OutboxBulkChunkSize = outboxBulkChunkSize;
-            TransformerFactory = transformerFactory;
-        }
     }
 }

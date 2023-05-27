@@ -44,9 +44,7 @@ namespace CompetingReceiverConsole
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
                     })
-                    .UseInMemoryOutbox()
                     .AutoFromAssemblies();
-
 
                     services.AddHostedService<ServiceActivatorHostedService>();
                     services.AddHostedService<RunStuff>();

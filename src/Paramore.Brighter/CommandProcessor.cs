@@ -103,8 +103,8 @@ namespace Paramore.Brighter
         private static readonly object padlock = new object();
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when no external bus is required and only sync handlers are needed
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class
+        /// NO EXTERNAL BUS: Use this constructor when no external bus is required
         /// </summary>
         /// <param name="subscriberRegistry">The subscriber registry.</param>
         /// <param name="handlerFactory">The handler factory.</param>
@@ -118,8 +118,7 @@ namespace Paramore.Brighter
             IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
-            InboxConfiguration inboxConfiguration = null
-        )
+            InboxConfiguration inboxConfiguration = null)
         {
             _subscriberRegistry = subscriberRegistry;
 
@@ -140,102 +139,75 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when only posting messages to an external bus is required
+        /// EXTERNAL BUS AND INTERNAL BUS: Use this constructor when both external bus and command processor support is required
+        /// OPTIONAL RPC: You can use this if you want to use the command processor as a client to an external bus, but also want to support RPC
         /// </summary>
+        /// <param name="subscriberRegistry">The subscriber registry.</param>
+        /// <param name="handlerFactory">The handler factory.</param>
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="producerRegistry">The register of producers via whom we send messages over the external bus</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
-        public CommandProcessor(IAmARequestContextFactory requestContextFactory,
+        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
+        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
+        public CommandProcessor(
+            IAmASubscriberRegistry subscriberRegistry,
+            IAmAHandlerFactory handlerFactory,
+            IAmARequestContextFactory requestContextFactory,
             IPolicyRegistry<string> policyRegistry,
             IAmAMessageMapperRegistry mapperRegistry,
             IAmAnExternalBusService bus,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
+            IAmAMessageTransformerFactory messageTransformerFactory = null,
+            IEnumerable<Subscription> replySubscriptions = null,
+            IAmAChannelFactory responseChannelFactory = null
+            )
+            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry, inboxConfiguration)
+        {
+            _responseChannelFactory = responseChannelFactory;
+            _replySubscriptions = replySubscriptions;
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+
+            InitExtServiceBus(bus); 
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
+        /// EXTERNAL BUS, NO INTERNAL BUS: Use this constructor when only posting messages to an external bus is required
+        /// </summary>
+        /// <param name="requestContextFactory">The request context factory.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
+        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="bus">The external service bus that we want to send messages over</param>
+        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
+        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
+        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
+        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
+        public CommandProcessor(
+            IAmARequestContextFactory requestContextFactory,
+            IPolicyRegistry<string> policyRegistry,
+            IAmAMessageMapperRegistry mapperRegistry,
+            IAmAnExternalBusService bus,
+            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
+            InboxConfiguration inboxConfiguration = null,
+            IAmAMessageTransformerFactory messageTransformerFactory = null,
+            IEnumerable<Subscription> replySubscriptions = null)
         {
             _requestContextFactory = requestContextFactory;
             _policyRegistry = policyRegistry;
             _featureSwitchRegistry = featureSwitchRegistry;
             _inboxConfiguration = inboxConfiguration;
             _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-
-            InitExtServiceBus(bus); 
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both rpc support is required
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="handlerFactory">The handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="bus">The external service bus that we want to send messages over</param>
-        /// <param name="replySubscriptions">The Subscriptions for creating the reply queues</param>
-        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
-        /// <param name="responseChannelFactory">If we are expecting a response, then we need a channel to listen on</param>
-        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
-        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactory handlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IPolicyRegistry<string> policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAnExternalBusService bus,
-            IEnumerable<Subscription> replySubscriptions,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
-            IAmAChannelFactory responseChannelFactory = null,
-            InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry)
-        {
-            _featureSwitchRegistry = featureSwitchRegistry;
-            _responseChannelFactory = responseChannelFactory;
-            _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-
-            InitExtServiceBus(bus);
-            
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandProcessor"/> class.
-        /// Use this constructor when both external bus and command processor support is required 
-        /// </summary>
-        /// <param name="subscriberRegistry">The subscriber registry.</param>
-        /// <param name="handlerFactory">The handler factory.</param>
-        /// <param name="requestContextFactory">The request context factory.</param>
-        /// <param name="policyRegistry">The policy registry.</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
-        /// <param name="outBox">The outbox.</param>
-        /// <param name="bus">The external service bus that we want to send messages over</param>
-        /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
-        /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
-        /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
-        public CommandProcessor(IAmASubscriberRegistry subscriberRegistry,
-            IAmAHandlerFactory handlerFactory,
-            IAmARequestContextFactory requestContextFactory,
-            IPolicyRegistry<string> policyRegistry,
-            IAmAMessageMapperRegistry mapperRegistry,
-            IAmAnExternalBusService bus,
-            IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
-            InboxConfiguration inboxConfiguration = null,
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
-            : this(subscriberRegistry, handlerFactory, requestContextFactory, policyRegistry, featureSwitchRegistry)
-        {
-            _inboxConfiguration = inboxConfiguration;
-            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
             InitExtServiceBus(bus); 
         }
 
+        
         /// <summary>
         /// Sends the specified command. We expect only one handler. The command is handled synchronously.
         /// </summary>
@@ -287,8 +259,7 @@ namespace Paramore.Brighter
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
         /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default)
+        public async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
             where T : class, IRequest
         {
             if (_handlerFactoryAsync == null)

@@ -27,20 +27,12 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             this IServiceCollection services,
             Action<ServiceActivatorOptions> configure = null)
        {
-           return AddServiceActivatorWithTransactionalMessaging<CommittableTransaction>(services, configure);
-       }
-
-       private static IBrighterBuilder AddServiceActivatorWithTransactionalMessaging<TTransaction>(IServiceCollection services,
-           Action<ServiceActivatorOptions> configure)
-       {
            if (services == null)
                throw new ArgumentNullException(nameof(services));
 
            var options = new ServiceActivatorOptions();
            configure?.Invoke(options);
            services.TryAddSingleton(options);
-           services.TryAddSingleton<IBrighterOptions>(options);
-
            services.TryAddSingleton<IDispatcher>(BuildDispatcher);
 
            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);

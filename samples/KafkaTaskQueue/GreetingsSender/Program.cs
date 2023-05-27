@@ -86,30 +86,33 @@ namespace GreetingsSender
                         {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
                     };
 
+                    var producerRegistry = new KafkaProducerRegistryFactory(
+                            new KafkaMessagingGatewayConfiguration
+                            {
+                                Name = "paramore.brighter.greetingsender",
+                                BootStrapServers = new[] {"localhost:9092"}
+                            },
+                            new KafkaPublication[]
+                            {
+                                new KafkaPublication
+                                {
+                                    Topic = new RoutingKey("greeting.event"),
+                                    NumPartitions = 3,
+                                    MessageSendMaxRetries = 3,
+                                    MessageTimeoutMs = 1000,
+                                    MaxInFlightRequestsPerConnection = 1
+                                }
+                            })
+                        .Create();
+                    
                     services.AddBrighter(options =>
                         {
                             options.PolicyRegistry = policyRegistry;
                         })
-                        .UseInMemoryOutbox()
-                        .UseExternalBus(
-                            new KafkaProducerRegistryFactory(
-                                    new KafkaMessagingGatewayConfiguration
-                                    {
-                                        Name = "paramore.brighter.greetingsender",
-                                        BootStrapServers = new[] {"localhost:9092"}
-                                    },
-                                    new KafkaPublication[]
-                                    {
-                                        new KafkaPublication
-                                        {
-                                            Topic = new RoutingKey("greeting.event"),
-                                            NumPartitions = 3,
-                                            MessageSendMaxRetries = 3,
-                                            MessageTimeoutMs = 1000,
-                                            MaxInFlightRequestsPerConnection = 1
-                                        }
-                                    })
-                                .Create())
+                        .UseExternalBus((configure) =>
+                        {
+                            configure.ProducerRegistry = producerRegistry;
+                        })
                         .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
                     services.AddHostedService<TimedMessageGenerator>();

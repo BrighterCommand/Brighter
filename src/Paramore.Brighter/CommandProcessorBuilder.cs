@@ -78,13 +78,11 @@ namespace Paramore.Brighter
         private IAmAHandlerFactory _handlerFactory;
         private IPolicyRegistry<string> _policyRegistry;
         private IAmAFeatureSwitchRegistry _featureSwitchRegistry;
-        private IAmAChannelFactory _responseChannelFactory;
-        private bool _useExternalBus = false;
+        private IAmAnExternalBusService _bus = null;
         private bool _useRequestReplyQueues = false;
+        private IAmAChannelFactory _responseChannelFactory;
         private IEnumerable<Subscription> _replySubscriptions;
-        private IAmAnExternalBusService _inMemoryBus;
-        private IAmAnExternalBusService _dbBus;
-        private IAmAnExternalBusService  _rpcBus;
+        private InboxConfiguration _inboxConfiguration;
 
         private CommandProcessorBuilder()
         {
@@ -122,24 +120,24 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             return this;
         }
-
+        
         /// <summary>
         /// Supplies the specified the policy registry, so we can use policies for Task Queues or in user-defined request handlers such as ExceptionHandler
         /// that provide quality of service concerns
         /// </summary>
-        /// <param name="thePolicyRegistry">The policy registry.</param>
+        /// <param name="policyRegistry">The policy registry.</param>
         /// <returns>INeedLogging.</returns>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required</exception>
         /// <exception cref="ConfigurationException">The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required</exception>
-        public INeedMessaging Policies(IPolicyRegistry<string> thePolicyRegistry)
+        public INeedMessaging Policies(IPolicyRegistry<string> policyRegistry)
         {
-            if (!thePolicyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
+            if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
                 
-            if (!thePolicyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
+            if (!policyRegistry.ContainsKey(CommandProcessor.CIRCUITBREAKER))
                 throw new ConfigurationException("The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
             
-            _policyRegistry = thePolicyRegistry;
+            _policyRegistry = policyRegistry;
             return this;
         }
 
@@ -159,69 +157,41 @@ namespace Paramore.Brighter
         /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
-        /// <param name="bus"></param>
+        /// <param name="bus">The service bus that we need to use to send messages externally</param>
+        /// <param name="messageMapperRegistry">The registry of mappers or messages to requests needed for outgoing messages</param>
+        /// <param name="transformerFactory">A factory for common transforms of messages</param>
+        /// <param name="responseChannelFactory">A factory for channels used to handle RPC responses</param>
         /// <param name="subscriptions">If we use a request reply queue how do we subscribe to replies</param>
         /// <returns></returns>
-        public INeedARequestContext ExternalBusNoCreate(
+        public INeedARequestContext ExternalBus(
             ExternalBusType busType, 
             IAmAnExternalBusService bus, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IAmAMessageTransformerFactory transformerFactory,
+            IAmAChannelFactory responseChannelFactory = null, 
             IEnumerable<Subscription> subscriptions = null
-            )
+        )
         {
+            _messageMapperRegistry = messageMapperRegistry;
+            _transformerFactory = transformerFactory;
+
             switch (busType)
             {
                 case ExternalBusType.None:
-                    _useExternalBus = false;
                     break;
-                case ExternalBusType.InMemory:
-                    _useExternalBus = true;
-                    _inMemoryBus = bus;
-                    break;
-                case ExternalBusType.Db:
-                    _useExternalBus = true;
-                    _dbBus = bus;
+                case ExternalBusType.FireAndForget:
+                    _bus = bus;
                     break;
                 case ExternalBusType.RPC:
-                    _useExternalBus = true;
-                    _rpcBus = bus;
+                    _bus = bus;
                     _useRequestReplyQueues = true;
                     _replySubscriptions = subscriptions;
+                    _responseChannelFactory = responseChannelFactory;
                     break;
                 default:
                     throw new ConfigurationException("Bus type not supported");
             }
 
-            return this;
-        }
-
-        /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
-        /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
-        /// are handled by adding appropriate <see cref="Policies"/> when choosing this option.
-        /// 
-        /// </summary>
-        /// <param name="configuration">The Task Queues configuration.</param>
-        /// <param name="outbox">The Outbox.</param>
-        /// <param name="boxTransactionProvider"></param>
-        /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBusWithOutbox<TMessage, TTransaction>(
-            ExternalBusConfiguration configuration, 
-            IAmAnOutbox outbox 
-            ) where TMessage : Message
-        {
-            _useExternalBus = true;
-            _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _responseChannelFactory = configuration.ResponseChannelFactory;
-            _transformerFactory = configuration.TransformerFactory;
-            
-            var bus = new ExternalBusServices<TMessage, TTransaction>(
-                configuration.ProducerRegistry,
-                _policyRegistry,
-                outbox, 
-                configuration.OutboxBulkChunkSize,
-                configuration.OutboxWriteTimeout);
-            _dbBus = bus;
-            
             return this;
         }
         
@@ -233,24 +203,23 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
         /// <param name="outbox">The Outbox.</param>
-        /// <param name="boxTransactionProvider"></param>
+        /// <param name="transactionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
-        public INeedARequestContext ExternalBusInMemoryOutbox(
-            ExternalBusConfiguration configuration 
-        ) 
+        public INeedARequestContext ExternalBusCreate<TTransaction>(
+            ExternalBusConfiguration configuration, 
+            IAmAnOutbox outbox,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider)
         {
-            _useExternalBus = true;
             _messageMapperRegistry = configuration.MessageMapperRegistry;
             _responseChannelFactory = configuration.ResponseChannelFactory;
             _transformerFactory = configuration.TransformerFactory;
             
-            var bus = new ExternalBusServices<Message, CommittableTransaction>(
+            _bus = new ExternalBusServices<Message, TTransaction>(
                 configuration.ProducerRegistry,
                 _policyRegistry,
-                new InMemoryOutbox(), 
+                outbox, 
                 configuration.OutboxBulkChunkSize,
-                configuration.OutboxWriteTimeout);
-            _inMemoryBus = bus;
+                configuration.OutboxTimeout);
             
             return this;
         }
@@ -261,36 +230,6 @@ namespace Paramore.Brighter
         /// <returns>INeedARequestContext.</returns>
         public INeedARequestContext NoExternalBus()
         {
-            return this;
-        }
-
-        /// <summary>
-        /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Call{T}(T)"/> using RPC between client and server 
-        /// </summary>
-        /// <param name="configuration"></param>
-        /// <param name="outbox">The outbox</param>
-        /// <param name="subscriptions">Subscriptions for creating reply queues</param>
-        /// <returns></returns>
-        public INeedARequestContext ExternalRPC<TMessage, TTransaction>(
-            ExternalBusConfiguration configuration, 
-            IAmAnOutbox outbox, 
-            IEnumerable<Subscription> subscriptions
-            ) where TMessage : Message
-        {
-            _useRequestReplyQueues = true;
-            _replySubscriptions = subscriptions;
-            _messageMapperRegistry = configuration.MessageMapperRegistry;
-            _responseChannelFactory = configuration.ResponseChannelFactory;
-            _transformerFactory = configuration.TransformerFactory;
-            
-            var bus = new ExternalBusServices<TMessage, TTransaction>(
-                configuration.ProducerRegistry,
-                _policyRegistry,
-                outbox, 
-                configuration.OutboxBulkChunkSize,
-                configuration.OutboxWriteTimeout);
-            _rpcBus = bus;
-             
             return this;
         }
 
@@ -312,45 +251,30 @@ namespace Paramore.Brighter
         /// <returns>CommandProcessor.</returns>
         public CommandProcessor Build()
         {
-            if (!(_useExternalBus || _useRequestReplyQueues))
+            if (_bus == null) 
             {
-                return new CommandProcessor(
-                    
-                    subscriberRegistry: _registry,
-                    handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
+                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory, 
+                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
                     featureSwitchRegistry: _featureSwitchRegistry);
             }
-            else if (_useExternalBus)
-            {
-                return new CommandProcessor(
-                    subscriberRegistry: _registry,
-                    handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry,
-                    bus: _dbBus ?? _inMemoryBus,
-                    featureSwitchRegistry: _featureSwitchRegistry,
-                    messageTransformerFactory: _transformerFactory
-                );
-            }
-            else if (_useRequestReplyQueues)
-            {
-                 return new CommandProcessor(
-                    subscriberRegistry: _registry,
-                    handlerFactory: _handlerFactory,
-                    requestContextFactory: _requestContextFactory,
-                    policyRegistry: _policyRegistry,
-                    mapperRegistry: _messageMapperRegistry,
-                    bus: _rpcBus,
-                    replySubscriptions: _replySubscriptions,
+
+            if (!_useRequestReplyQueues)
+                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
+                    mapperRegistry: _messageMapperRegistry, bus: _bus,
+                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
+                    messageTransformerFactory: _transformerFactory);
+            
+            if (_useRequestReplyQueues)
+                return new CommandProcessor(subscriberRegistry: _registry, handlerFactory: _handlerFactory,
+                    requestContextFactory: _requestContextFactory, policyRegistry: _policyRegistry,
+                    mapperRegistry: _messageMapperRegistry, bus: _bus,
+                    featureSwitchRegistry: _featureSwitchRegistry, inboxConfiguration: _inboxConfiguration,
+                    messageTransformerFactory: _transformerFactory, replySubscriptions: _replySubscriptions,
                     responseChannelFactory: _responseChannelFactory);
-            }
-            else
-            {
-                throw new ConfigurationException("Unknown Command Processor Type");
-            }
+
+            throw new ConfigurationException(
+                "The configuration options chosen cannot be used to construct a command processor");
         }
     }
 
@@ -401,27 +325,31 @@ namespace Paramore.Brighter
     public interface INeedMessaging
     {
         /// <summary>
-        /// Configure a task queue to send messages out of process
-        /// </summary>
-        /// <param name="configuration">The configuration.</param>
-        /// <param name="outbox">The outbox.</param>
-        /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBusWithOutbox<T, TTransaction>(
-            ExternalBusConfiguration configuration,
-            IAmAnOutbox outbox 
-            )
-            where T : Message;
-  
-        /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
         /// You need to provide a policy to specify how QoS issues, specifically <see cref="CommandProcessor.RETRYPOLICY "/> or <see cref="CommandProcessor.CIRCUITBREAKER "/> 
         /// are handled by adding appropriate <see cref="CommandProcessorBuilder.Policies"/> when choosing this option.
         /// </summary>
         /// <param name="busType">The type of Bus: In-memory, Db, or RPC</param>
         /// <param name="bus">The bus that we wish to use</param>
-        /// <param name="subscriptions">If we are RPC, any reply subscriptons</param>
+        /// <param name="messageMapperRegistry">The register for message mappers that map outgoing requests to messages</param>
+        /// <param name="transformerFactory">A factory for transforms used for common transformations to outgoing messages</param>
+        /// <param name="responseChannelFactory">If using RPC the factory for reply channels</param>
+        /// <param name="subscriptions">If using RPC, any reply subscriptions</param>
         /// <returns></returns>
-        INeedARequestContext ExternalBusNoCreate(ExternalBusType busType, IAmAnExternalBusService bus, IEnumerable<Subscription> subscriptions = null);
+        INeedARequestContext ExternalBus(
+            ExternalBusType busType, 
+            IAmAnExternalBusService bus, 
+            IAmAMessageMapperRegistry messageMapperRegistry,
+            IAmAMessageTransformerFactory transformerFactory,
+            IAmAChannelFactory responseChannelFactory = null, 
+            IEnumerable<Subscription> subscriptions = null
+            );
+
+        /// <summary>
+        /// We don't send messages out of process
+        /// </summary>
+        /// <returns>INeedARequestContext.</returns>
+        INeedARequestContext NoExternalBus();
 
         /// <summary>
         /// The <see cref="CommandProcessor"/> wants to support <see cref="CommandProcessor.Post{T}(T)"/> or <see cref="CommandProcessor.Repost"/> using an external bus.
@@ -431,32 +359,12 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="configuration">The Task Queues configuration.</param>
         /// <param name="outbox">The Outbox.</param>
-        /// <param name="boxTransactionProvider"></param>
+        /// <param name="transactionProvider"></param>
         /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext ExternalBusInMemoryOutbox(
-            ExternalBusConfiguration configuration 
-        );
-        
-        /// <summary>
-        ///  We want to use RPC to send messages to another process
-        /// </summary>
-        /// <param name="externalBusConfiguration"></param>
-        /// <param name="outboxSync">The outbox</param>
-        /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
-        INeedARequestContext ExternalRPC<T, TTransaction>(
-            ExternalBusConfiguration externalBusConfiguration,
-            IAmAnOutbox outboxSync, 
-            IEnumerable<Subscription> subscriptions
-        ) where T: Message;
-        
-        /// <summary>
-        /// We don't send messages out of process
-        /// </summary>
-        /// <returns>INeedARequestContext.</returns>
-        INeedARequestContext NoExternalBus();
-
-
-
+        INeedARequestContext ExternalBusCreate<TTransaction>(
+            ExternalBusConfiguration configuration, 
+            IAmAnOutbox outbox,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider);
     }
 
     /// <summary>

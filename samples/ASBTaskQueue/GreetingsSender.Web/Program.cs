@@ -39,30 +39,34 @@ var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoi
 
 var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
+var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+        asbConnection,
+        new AzureServiceBusPublication[]
+        {
+            new() { Topic = new RoutingKey("greeting.event") },
+            new() { Topic = new RoutingKey("greeting.addGreetingCommand") },
+            new() { Topic = new RoutingKey("greeting.Asyncevent") }
+        }
+    )
+    .Create();
+
 builder.Services
     .AddBrighter(opt =>
     {
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus(
-        new AzureServiceBusProducerRegistryFactory(
-                asbConnection,
-                new AzureServiceBusPublication[]
-                {
-                    new() { Topic = new RoutingKey("greeting.event") },
-                    new() { Topic = new RoutingKey("greeting.addGreetingCommand") },
-                    new() { Topic = new RoutingKey("greeting.Asyncevent") }
-                }
-            )
-            .Create()
-    )
-    .UseMsSqlOutbox(outboxConfig, typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
     .MapperRegistry(r =>
     {
         r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));
         r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
         r.Add(typeof(AddGreetingCommand), typeof(AddGreetingMessageMapper));
+    })
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+        configure.Outbox = new MsSqlOutbox(outboxConfig);
+        configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>);
     });
 
 

@@ -49,9 +49,15 @@ namespace Paramore.Brighter
             var busConfiguration = new ExternalBusConfiguration();
             busConfiguration.ProducerRegistry = producerRegistry;
             busConfiguration.MessageMapperRegistry = mapper;
-            return new ControlBusSender(CommandProcessorBuilder.With()
+            return new ControlBusSender(
+                CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration())
-                .DefaultPolicy().ExternalBusWithOutbox<T,TTransaction>(busConfiguration,outbox)
+                .DefaultPolicy()
+                .ExternalBusCreate(
+                    busConfiguration,
+                    outbox, 
+                    new CommittableTransactionProvider()
+                    )
                     .RequestContextFactory(new InMemoryRequestContextFactory())
                     .Build()
                 );

@@ -33,8 +33,10 @@ IAmAProducerRegistry producerRegistry = new ProducerRegistry(new Dictionary<stri
 });
 
 builder.Services.AddBrighter()
-    .UseExternalBus(producerRegistry)
-    .UseInMemoryOutbox()
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+    })
     .UseOutboxSweeper(options =>
     {
         options.TimerInterval = 5;

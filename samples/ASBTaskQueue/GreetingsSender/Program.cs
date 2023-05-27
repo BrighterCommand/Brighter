@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Data.Common;
 using System.Transactions;
 using Greetings.Ports.Events;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,26 +22,30 @@ namespace GreetingsSender
             //TODO: add your ASB qualified name here
             var asbClientProvider = new ServiceBusVisualStudioCredentialClientProvider("fim-development-bus.servicebus.windows.net");
 
-            serviceCollection.AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(new AzureServiceBusProducerRegistryFactory(
-                    asbClientProvider,
-                    new AzureServiceBusPublication[] 
+            var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+                asbClientProvider,
+                new AzureServiceBusPublication[] 
+                {
+                    new AzureServiceBusPublication
                     {
-                        new AzureServiceBusPublication
-                        {
-                            Topic = new RoutingKey("greeting.event")
-                        },
-                        new AzureServiceBusPublication
-                        {
-                            Topic = new RoutingKey("greeting.addGreetingCommand")
-                        },
-                        new AzureServiceBusPublication
-                        {
-                            Topic = new RoutingKey("greeting.Asyncevent")
-                        }
+                        Topic = new RoutingKey("greeting.event")
+                    },
+                    new AzureServiceBusPublication
+                    {
+                        Topic = new RoutingKey("greeting.addGreetingCommand")
+                    },
+                    new AzureServiceBusPublication
+                    {
+                        Topic = new RoutingKey("greeting.Asyncevent")
                     }
-                    ).Create())
+                }
+            ).Create();
+            
+            serviceCollection.AddBrighter()
+                .UseExternalBus((config) =>
+                {
+                    config.ProducerRegistry = producerRegistry;
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
