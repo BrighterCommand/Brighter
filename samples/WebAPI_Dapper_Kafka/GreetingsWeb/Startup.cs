@@ -201,7 +201,7 @@ namespace GreetingsWeb
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
-                .UseExternalBus((configure) =>
+                .UseExternalBus<DbTransaction>((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
                     configure.Outbox = makeOutbox.outbox;

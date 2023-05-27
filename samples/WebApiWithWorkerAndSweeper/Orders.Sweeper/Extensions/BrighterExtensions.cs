@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Transactions;
 using Azure.Identity;
 using Orders.Sweeper.Settings;
@@ -53,7 +54,7 @@ public static class BrighterExtensions
             }
 
             builder.Services.AddBrighter()
-                .UseExternalBus((configure) =>
+                .UseExternalBus<DbTransaction>((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
                     configure.Outbox = new MsSqlOutbox(outboxSettings);

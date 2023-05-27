@@ -62,7 +62,7 @@ builder.Services
         r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
         r.Add(typeof(AddGreetingCommand), typeof(AddGreetingMessageMapper));
     })
-    .UseExternalBus((configure) =>
+    .UseExternalBus<DbTransaction>((configure) =>
     {
         configure.ProducerRegistry = producerRegistry;
         configure.Outbox = new MsSqlOutbox(outboxConfig);
