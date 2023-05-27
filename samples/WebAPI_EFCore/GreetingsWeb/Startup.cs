@@ -111,7 +111,24 @@ namespace GreetingsWeb
         {
             if (_env.IsDevelopment())
             {
-                 services.AddBrighter(options =>
+                var producerRegistry = new RmqProducerRegistryFactory(
+                    new RmqMessagingGatewayConnection
+                    {
+                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                        Exchange = new Exchange("paramore.brighter.exchange"),
+                    },
+                    new RmqPublication[]{
+                        new RmqPublication
+                        {
+                            Topic = new RoutingKey("GreetingMade"),
+                            MaxOutStandingMessages = 5,
+                            MaxOutStandingCheckIntervalMilliSeconds = 500,
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels = OnMissingChannel.Create
+                        }}
+                ).Create();
+                
+                services.AddBrighter(options =>
                      {
                          //we want to use scoped, so make sure everything understands that which needs to
                          options.HandlerLifetime = ServiceLifetime.Scoped;
@@ -119,26 +136,15 @@ namespace GreetingsWeb
                          options.MapperLifetime = ServiceLifetime.Singleton;
                          options.PolicyRegistry = new GreetingsPolicy();
                      })
-                     .UseExternalBus(new RmqProducerRegistryFactory(
-                             new RmqMessagingGatewayConnection
-                             {
-                                 AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                                 Exchange = new Exchange("paramore.brighter.exchange"),
-                             },
-                             new RmqPublication[]{
-                                 new RmqPublication
-                                {
-                                    Topic = new RoutingKey("GreetingMade"),
-                                    MaxOutStandingMessages = 5,
-                                    MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                    WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                    MakeChannels = OnMissingChannel.Create
-                                }}
-                         ).Create()
+                     .UseExternalBus<DbTransaction>((configure) =>
+                         {
+                             configure.ProducerRegistry = producerRegistry;
+                             configure.Outbox =
+                                 new SqliteOutbox(
+                                     new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName));
+                             configure.TransactionProvider = typeof(SqliteUnitOfWork);
+                         }
                      )
-                     .UseSqliteOutbox(
-                         new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName),
-                         typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>))
                      .UseOutboxSweeper(options =>
                      {
                          options.TimerInterval = 5;
@@ -148,33 +154,38 @@ namespace GreetingsWeb
             }
             else
             {
+                IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
+                    new RmqMessagingGatewayConnection
+                    {
+                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
+                        Exchange = new Exchange("paramore.brighter.exchange"),
+                    },
+                    new RmqPublication[] {
+                        new RmqPublication
+                        {
+                            Topic = new RoutingKey("GreetingMade"),
+                            MaxOutStandingMessages = 5,
+                            MaxOutStandingCheckIntervalMilliSeconds = 500,
+                            WaitForConfirmsTimeOutInMilliseconds = 1000,
+                            MakeChannels = OnMissingChannel.Create
+                        }}
+                ).Create();
+                
                 services.AddBrighter(options =>
                     {
                         options.HandlerLifetime = ServiceLifetime.Scoped;
                         options.MapperLifetime = ServiceLifetime.Singleton;
                         options.PolicyRegistry = new GreetingsPolicy();
                     })
-                    .UseExternalBus(new RmqProducerRegistryFactory(
-                            new RmqMessagingGatewayConnection
-                            {
-                                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
-                                Exchange = new Exchange("paramore.brighter.exchange"),
-                            },
-                            new RmqPublication[] {
-                                new RmqPublication
-                                {
-                                    Topic = new RoutingKey("GreetingMade"),
-                                    MaxOutStandingMessages = 5,
-                                    MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                    WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                    MakeChannels = OnMissingChannel.Create
-                                }}
-                        ).Create()
+                    .UseExternalBus<DbTransaction>((config) =>
+                        {
+                            config.ProducerRegistry = producerRegistry;
+                            config.Outbox =
+                                new MySqlOutbox(
+                                    new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName));
+                            config.TransactionProvider = typeof(MySqlUnitOfWork);
+                        }
                     )
-                    .UseMySqlOutbox(
-                        new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName), 
-                        typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>)
-                        )
                     .UseOutboxSweeper()
                     .AutoFromAssemblies();
             }

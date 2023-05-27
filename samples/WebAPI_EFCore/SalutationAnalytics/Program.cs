@@ -41,7 +41,9 @@ namespace SalutationAnalytics
                     configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
                     configurationBuilder.AddJsonFile("appsettings.json", optional: true);
                     configurationBuilder.AddJsonFile($"appsettings.{GetEnvironment()}.json", optional: true);
-                    configurationBuilder.AddEnvironmentVariables(prefix: "ASPNETCORE_");  //NOTE: Although not web, we use this to grab the environment
+                    configurationBuilder
+                        .AddEnvironmentVariables(
+                            prefix: "ASPNETCORE_"); //NOTE: Although not web, we use this to grab the environment
                     configurationBuilder.AddEnvironmentVariables(prefix: "BRIGHTER_");
                     configurationBuilder.AddCommandLine(args);
                 })
@@ -68,7 +70,8 @@ namespace SalutationAnalytics
                     runAsync: true,
                     timeoutInMilliseconds: 200,
                     isDurable: true,
-                    makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
+                    makeChannels: OnMissingChannel
+                        .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
             };
 
             var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
@@ -81,6 +84,21 @@ namespace SalutationAnalytics
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+            var producerRegistry = new RmqProducerRegistryFactory(
+                rmqConnection,
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("SalutationReceived"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
@@ -90,31 +108,18 @@ namespace SalutationAnalytics
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
-                })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("SalutationReceived"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    ).Create()
-                )
-                .AutoFromAssemblies()
-                .UseExternalInbox(
-                    ConfigureInbox(hostContext),
-                    new InboxConfiguration(
+                    options.InboxConfiguration = new InboxConfiguration(
+                        ConfigureInbox(hostContext),
                         scope: InboxScope.Commands,
                         onceOnly: true,
                         actionOnExists: OnceOnlyAction.Throw
-                    )
-                );
+                    );
+                })
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                })
+                .AutoFromAssemblies();
 
             services.AddHostedService<ServiceActivatorHostedService>();
         }
@@ -124,7 +129,7 @@ namespace SalutationAnalytics
             //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
             return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         }
-        
+
         private static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection services)
         {
             string connectionString = DbConnectionString(hostContext);
@@ -134,7 +139,7 @@ namespace SalutationAnalytics
                 services.AddDbContext<SalutationsEntityGateway>(
                     builder =>
                     {
-                        builder.UseSqlite(connectionString, 
+                        builder.UseSqlite(connectionString,
                             optionsBuilder =>
                             {
                                 optionsBuilder.MigrationsAssembly("Salutations_SqliteMigrations");
@@ -143,16 +148,16 @@ namespace SalutationAnalytics
             }
             else
             {
-               services.AddDbContextPool<SalutationsEntityGateway>(builder =>
-               {
-                   builder
-                       .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
-                       {
-                           optionsBuilder.MigrationsAssembly("Salutations_MySqlMigrations");
-                       })
-                       .EnableDetailedErrors()
-                       .EnableSensitiveDataLogging();
-               });
+                services.AddDbContextPool<SalutationsEntityGateway>(builder =>
+                {
+                    builder
+                        .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
+                        {
+                            optionsBuilder.MigrationsAssembly("Salutations_MySqlMigrations");
+                        })
+                        .EnableDetailedErrors()
+                        .EnableSensitiveDataLogging();
+                });
             }
         }
 
@@ -160,17 +165,20 @@ namespace SalutationAnalytics
         {
             if (hostContext.HostingEnvironment.IsDevelopment())
             {
-                return new SqliteInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+                return new SqliteInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext),
+                    SchemaCreation.INBOX_TABLE_NAME));
             }
 
-            return new MySqlInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext), SchemaCreation.INBOX_TABLE_NAME));
+            return new MySqlInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext),
+                SchemaCreation.INBOX_TABLE_NAME));
         }
-        
+
         private static string DbConnectionString(HostBuilderContext hostContext)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return hostContext.HostingEnvironment.IsDevelopment() ? "Filename=Salutations.db;Cache=Shared" : hostContext.Configuration.GetConnectionString("Salutations");
+            return hostContext.HostingEnvironment.IsDevelopment()
+                ? "Filename=Salutations.db;Cache=Shared"
+                : hostContext.Configuration.GetConnectionString("Salutations");
         }
-
     }
 }

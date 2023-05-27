@@ -98,6 +98,25 @@ namespace SalutationAnalytics
             
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(relationalDatabaseConfiguration);
 
+            var producerRegistry = new KafkaProducerRegistryFactory(
+                new KafkaMessagingGatewayConfiguration
+                {
+                    Name = "paramore.brighter.greetingsender",
+                    BootStrapServers = new[] { "localhost:9092" }
+                },
+                new KafkaPublication[]
+                {
+                    new KafkaPublication
+                    {
+                        Topic = new RoutingKey("salutationrecieved.event"),
+                        MessageSendMaxRetries = 3,
+                        MessageTimeoutMs = 1000,
+                        MaxInFlightRequestsPerConnection = 1,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
@@ -107,41 +126,23 @@ namespace SalutationAnalytics
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
+                    options.InboxConfiguration = new InboxConfiguration(
+                        ConfigureInbox(hostContext, relationalDatabaseConfiguration),
+                        scope: InboxScope.Commands,
+                        onceOnly: true,
+                        actionOnExists: OnceOnlyAction.Throw
+                    );
                 })
                 .ConfigureJsonSerialisation((options) =>
                 {
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;
                 })
-                .UseExternalBus(
-                  new KafkaProducerRegistryFactory(
-                       new KafkaMessagingGatewayConfiguration
-                       {
-                           Name = "paramore.brighter.greetingsender",
-                           BootStrapServers = new[] { "localhost:9092" }
-                       },
-                       new KafkaPublication[]
-                       {
-                           new KafkaPublication
-                           {
-                               Topic = new RoutingKey("salutationrecieved.event"),
-                               MessageSendMaxRetries = 3,
-                               MessageTimeoutMs = 1000,
-                               MaxInFlightRequestsPerConnection = 1,
-                               MakeChannels = OnMissingChannel.Create
-                           }
-                       }
-                    ).Create()
-                )
-                .AutoFromAssemblies()
-                .UseExternalInbox(
-                    ConfigureInbox(hostContext, relationalDatabaseConfiguration),
-                    new InboxConfiguration(
-                        scope: InboxScope.Commands,
-                        onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Throw
-                    )
-                );
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                })
+                .AutoFromAssemblies();
 
             services.AddHostedService<ServiceActivatorHostedService>();
         }

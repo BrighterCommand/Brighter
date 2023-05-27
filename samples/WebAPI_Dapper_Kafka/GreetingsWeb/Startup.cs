@@ -19,6 +19,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Sqlite;
@@ -160,57 +161,57 @@ namespace GreetingsWeb
         {
             var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(),
-                outBoxTableName:_outBoxTableName,
+                outBoxTableName: _outBoxTableName,
                 //NOTE: With the Serdes serializer, if we don't use a binary payload, the payload will be corrupted
                 binaryMessagePayload: true
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
-            
-            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
+
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
             var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
             services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
             var kafkaConfiguration = new KafkaMessagingGatewayConfiguration
             {
-                Name = "paramore.brighter.greetingsender",
-                BootStrapServers = new[] { "localhost:9092" }
+                Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
             };
+            var producerRegistry = new KafkaProducerRegistryFactory(
+                    kafkaConfiguration,
+                    new KafkaPublication[]
+                    {
+                        new KafkaPublication
+                        {
+                            Topic = new RoutingKey("greeting.event"),
+                            MessageSendMaxRetries = 3,
+                            MessageTimeoutMs = 1000,
+                            MaxInFlightRequestsPerConnection = 1,
+                            MakeChannels = OnMissingChannel.Create
+                        }
+                    })
+                .Create();
+
+            (IAmAnOutbox outbox, Type transactionProvider) makeOutbox =
+                OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration);
+
             services.AddBrighter(options =>
                 {
                     //we want to use scoped, so make sure everything understands that which needs to
                     options.HandlerLifetime = ServiceLifetime.Scoped;
-                    options.ChannelFactory = new ChannelFactory(new KafkaMessageConsumerFactory(kafkaConfiguration));
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.PolicyRegistry = new GreetingsPolicy();
                 })
-                .UseExternalBus(
-                    new KafkaProducerRegistryFactory(
-                        kafkaConfiguration,
-                        new KafkaPublication[]
-                        {
-                            new KafkaPublication
-                            {
-                                Topic = new RoutingKey("greeting.event"),
-                                MessageSendMaxRetries = 3,
-                                MessageTimeoutMs = 1000,
-                                MaxInFlightRequestsPerConnection = 1,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        })
-                    .Create()
-                )
-                /*
-                 * NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
-                 * types easily. You may just choose to call the methods directly if you do not need to support multiple
-                 * db types (which we just need to allow you to see how to configure your outbox type).
-                 * It's also an example of how you can extend the DSL here easily if you have this kind of variability
-                
-                 * KAFKA and BINARY: Because Kafka here uses the Serdes serializer which sets magic bytes in the first
-                 * five bytes of the the payload we have binary payload messages, and we need to set the binaryMessagePayload to true
-                 *if we don't do that, and use text the database will corrupt the leading bytes
-                */
-                .AddOutbox(_env, GetDatabaseType(), outboxConfiguration)
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                    configure.Outbox = makeOutbox.outbox;
+                    configure.TransactionProvider = makeOutbox.transactionProvider;
+                })
+                .UseOutboxSweeper(options =>
+                {
+                    options.TimerInterval = 5;
+                    options.MinimumMessageAge = 5000;
+                })
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 

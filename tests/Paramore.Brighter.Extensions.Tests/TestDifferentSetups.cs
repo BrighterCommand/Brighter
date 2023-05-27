@@ -42,7 +42,7 @@ namespace Tests
                 .UseExternalBus<CommittableTransaction>((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
-                }, null)
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

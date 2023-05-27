@@ -84,6 +84,21 @@ namespace SalutationAnalytics
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+            var producerRegistry = new RmqProducerRegistryFactory(
+                rmqConnection,
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("SalutationReceived"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
@@ -93,38 +108,26 @@ namespace SalutationAnalytics
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
+                    options.InboxConfiguration = new InboxConfiguration(
+                        ConfigureInbox(dynamoDb),
+                        scope: InboxScope.Commands,
+                        onceOnly: true,
+                        actionOnExists: OnceOnlyAction.Throw
+                    );
                 })
                 .ConfigureJsonSerialisation((options) =>
                 {
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;
                 })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("SalutationReceived"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    ).Create()
+                .UseExternalBus<TransactWriteItemsRequest>((configure) =>
+                    {
+                        configure.ProducerRegistry = producerRegistry;
+                        configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
+                        configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                    }
                 )
-                .AutoFromAssemblies()
-                .UseExternalInbox(
-                    ConfigureInbox(dynamoDb),
-                    new InboxConfiguration(
-                        scope: InboxScope.Commands,
-                        onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Throw
-                    )
-                )
-                .UseExternalOutbox<Message, TransactWriteItemsRequest>(ConfigureOutbox(awsCredentials, dynamoDb))
-                .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped);
+                .AutoFromAssemblies();
 
             services.AddHostedService<ServiceActivatorHostedService>();
         }

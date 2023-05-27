@@ -95,11 +95,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
 
-            services.TryAddSingleton(options.InboxConfiguration);
-            var inbox = options.InboxConfiguration.Inbox;
-            if (inbox is IAmAnInboxSync inboxSync) services.TryAddSingleton(inboxSync);
-            if (inbox is IAmAnInboxAsync inboxAsync) services.TryAddSingleton(inboxAsync);
-
             if (options.FeatureSwitchRegistry != null)
                 services.TryAddSingleton(options.FeatureSwitchRegistry);
 

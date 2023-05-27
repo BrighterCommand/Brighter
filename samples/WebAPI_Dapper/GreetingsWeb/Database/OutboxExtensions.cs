@@ -13,48 +13,41 @@ using Paramore.Brighter.Sqlite;
 namespace GreetingsWeb.Database
 {
 
-    public static class OutboxExtensions
+    public class OutboxExtensions
     {
-        public static IBrighterBuilder AddOutbox(
-            this IBrighterBuilder brighterBuilder,
+        public static (IAmAnOutbox, Type) MakeOutbox(
             IWebHostEnvironment env,
             DatabaseType databaseType,
             RelationalDatabaseConfiguration configuration)
         {
+            (IAmAnOutbox, Type) outbox;
             if (env.IsDevelopment())
             {
-                AddSqliteOutBox(brighterBuilder, configuration);
+                outbox = MakeSqliteOutBox(configuration);
             }
             else
             {
                 switch (databaseType)
                 {
                     case DatabaseType.MySql:
-                        AddMySqlOutbox(brighterBuilder, configuration);
+                        outbox = MakeMySqlOutbox(configuration);
                         break;
                     default:
                         throw new InvalidOperationException("Unknown Db type for Outbox configuration");
                 }
             }
 
-            return brighterBuilder;
+            return outbox;
         }
 
-        private static void AddMySqlOutbox(IBrighterBuilder brighterBuilder,
-            RelationalDatabaseConfiguration configuration)
+        private static (IAmAnOutbox, Type)  MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            brighterBuilder.UseMySqlOutbox(configuration, typeof(MySqlUnitOfWork)).UseOutboxSweeper();
+            return (new MySqlOutbox(configuration), typeof(MySqlUnitOfWork));
         }
 
-        private static void AddSqliteOutBox(IBrighterBuilder brighterBuilder,
-            RelationalDatabaseConfiguration configuration)
+        private static (IAmAnOutbox, Type) MakeSqliteOutBox(RelationalDatabaseConfiguration configuration)
         {
-            brighterBuilder.UseSqliteOutbox(configuration, typeof(SqliteUnitOfWork))
-                .UseOutboxSweeper(options =>
-                {
-                    options.TimerInterval = 5;
-                    options.MinimumMessageAge = 5000;
-                });
+            return (new SqliteOutbox(configuration), typeof(SqliteUnitOfWork));
         }
     }
 }

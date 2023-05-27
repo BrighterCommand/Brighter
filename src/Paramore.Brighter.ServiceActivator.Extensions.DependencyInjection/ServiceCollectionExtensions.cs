@@ -33,7 +33,15 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
            var options = new ServiceActivatorOptions();
            configure?.Invoke(options);
            services.TryAddSingleton(options);
-           services.TryAddSingleton<IDispatcher>(BuildDispatcher);
+           
+           services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
+               (serviceProvider) => (IDispatcher)BuildDispatcher(serviceProvider),
+              ServiceLifetime.Singleton));
+           
+           services.TryAddSingleton(options.InboxConfiguration);
+           var inbox = options.InboxConfiguration.Inbox;
+           if (inbox is IAmAnInboxSync inboxSync) services.TryAddSingleton(inboxSync);
+           if (inbox is IAmAnInboxAsync inboxAsync) services.TryAddSingleton(inboxAsync);
 
            return ServiceCollectionExtensions.BrighterHandlerBuilder(services, options);
        }

@@ -23,11 +23,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public ServiceLifetime HandlerLifetime { get; set; } = ServiceLifetime.Transient;
 
         /// <summary>
-        /// Configures the inbox to de-duplicate requests; will default to in-memory inbox if not set.
-        /// </summary>
-        public InboxConfiguration InboxConfiguration { get; set; } = new InboxConfiguration();
-
-        /// <summary>
         /// Configures the lifetime of mappers. Defaults to Singleton
         /// </summary>
         public ServiceLifetime MapperLifetime { get; set; } = ServiceLifetime.Singleton;
@@ -67,11 +62,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// Configures the lifetime of the Handlers.
         /// </summary>
         ServiceLifetime HandlerLifetime { get; set; }
-
-         /// <summary>
-         /// Configures the inbox to de-duplicate requests; will default to in-memory inbox if not set.
-         /// </summary>
-         InboxConfiguration InboxConfiguration { get; set; }
 
         /// <summary>
         /// Configures the lifetime of mappers. 

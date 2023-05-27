@@ -18,6 +18,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -179,6 +180,9 @@ namespace GreetingsWeb
                     }
                 }
             ).Create();
+
+            (IAmAnOutbox outbox, Type transactionProvider) makeOutbox =
+                OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration);
             
             services.AddBrighter(options =>
                 {
@@ -191,13 +195,13 @@ namespace GreetingsWeb
                 .UseExternalBus((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
-                    
+                    configure.Outbox = makeOutbox.outbox;
+                    configure.TransactionProvider = makeOutbox.transactionProvider;
                 })
-                //NOTE: The extension method AddOutbox is defined locally to the sample, to allow us to switch between outbox
-                //types easily. You may just choose to call the methods directly if you do not need to support multiple
-                //db types (which we just need to allow you to see how to configure your outbox type).
-                //It's also an example of how you can extend the DSL here easily if you have this kind of variability
-                .AddOutbox(_env, GetDatabaseType(), outboxConfiguration)
+                .UseOutboxSweeper(options => {
+                    options.TimerInterval = 5;
+                    options.MinimumMessageAge = 5000;
+                 })
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 

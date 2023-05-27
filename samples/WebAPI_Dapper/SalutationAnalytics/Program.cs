@@ -86,6 +86,21 @@ namespace SalutationAnalytics
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+            var producerRegistry = new RmqProducerRegistryFactory(
+                rmqConnection,
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("SalutationReceived"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
@@ -95,36 +110,24 @@ namespace SalutationAnalytics
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
+                    options.InboxConfiguration = new InboxConfiguration(
+                        CreateInbox(hostContext, relationalDatabaseConfiguration),
+                        scope: InboxScope.Commands,
+                        onceOnly: true,
+                        actionOnExists: OnceOnlyAction.Throw
+
+                    );
                 })
                 .ConfigureJsonSerialisation((options) =>
                 {
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;
                 })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("SalutationReceived"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    ).Create()
-                )
-                .AutoFromAssemblies()
-                .UseExternalInbox(
-                    CreateInbox(hostContext, relationalDatabaseConfiguration),
-                    new InboxConfiguration(
-                        scope: InboxScope.Commands,
-                        onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Throw
-                    )
-                );
+                .UseExternalBus((config) =>
+                {
+                    config.ProducerRegistry = producerRegistry;
+                })
+                .AutoFromAssemblies();
 
             services.AddHostedService<ServiceActivatorHostedService>();
         }
