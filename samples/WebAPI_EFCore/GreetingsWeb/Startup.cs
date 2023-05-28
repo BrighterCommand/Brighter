@@ -136,7 +136,7 @@ namespace GreetingsWeb
                          options.MapperLifetime = ServiceLifetime.Singleton;
                          options.PolicyRegistry = new GreetingsPolicy();
                      })
-                     .UseExternalBus<DbTransaction>((configure) =>
+                     .UseExternalBus((configure) =>
                          {
                              configure.ProducerRegistry = producerRegistry;
                              configure.Outbox =
@@ -177,7 +177,7 @@ namespace GreetingsWeb
                         options.MapperLifetime = ServiceLifetime.Singleton;
                         options.PolicyRegistry = new GreetingsPolicy();
                     })
-                    .UseExternalBus<DbTransaction>((config) =>
+                    .UseExternalBus((config) =>
                         {
                             config.ProducerRegistry = producerRegistry;
                             config.Outbox =

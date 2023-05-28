@@ -47,7 +47,7 @@ builder.Services
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus<DbTransaction>((configure) =>
+    .UseExternalBus((configure) =>
         {
             configure.ProducerRegistry = producerRegistry;
             configure.Outbox = new MsSqlOutbox(outboxConfig);

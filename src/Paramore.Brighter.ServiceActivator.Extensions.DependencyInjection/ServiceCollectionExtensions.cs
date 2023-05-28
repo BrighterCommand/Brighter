@@ -32,7 +32,8 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
 
            var options = new ServiceActivatorOptions();
            configure?.Invoke(options);
-           services.TryAddSingleton(options);
+           services.TryAddSingleton<IBrighterOptions>(options);
+           services.TryAddSingleton<IServiceActivatorOptions>(options);
            
            services.TryAdd(new ServiceDescriptor(typeof(IDispatcher),
                (serviceProvider) => (IDispatcher)BuildDispatcher(serviceProvider),
@@ -51,7 +52,7 @@ namespace Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection
             var loggerFactory = serviceProvider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
 
-            var options = serviceProvider.GetService<ServiceActivatorOptions>();
+            var options = serviceProvider.GetService<IServiceActivatorOptions>();
 
             Func<IAmACommandProcessorProvider> providerFactory;
 

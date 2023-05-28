@@ -39,7 +39,7 @@ namespace Tests
 
             serviceCollection
                 .AddBrighter()
-                .UseExternalBus<CommittableTransaction>((config) =>
+                .UseExternalBus((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
                 })

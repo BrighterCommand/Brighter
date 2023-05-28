@@ -120,7 +120,7 @@ namespace SalutationAnalytics
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;
                 })
-                .UseExternalBus<TransactWriteItemsRequest>((configure) =>
+                .UseExternalBus((configure) =>
                     {
                         configure.ProducerRegistry = producerRegistry;
                         configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
