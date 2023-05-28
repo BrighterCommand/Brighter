@@ -11,7 +11,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
     public class ServiceBusDefaultAzureClientProvider : IServiceBusClientProvider
     {
         private readonly string _fullyQualifiedNameSpace;
-        
+
         /// <summary>
         /// Initializes an implementation is <see cref="IServiceBusClientProvider"/> using Default Azure Credentials for Authentication.
         /// </summary>
@@ -24,10 +24,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                 throw new ArgumentNullException(nameof(fullyQualifiedNameSpace),
                     "Fully qualified Namespace is null or empty, ensure this is set in the constructor.");
             }
-            
+
             _fullyQualifiedNameSpace = fullyQualifiedNameSpace;
         }
-        
+
         /// <summary>
         /// Provides an Azure Service Bus Client
         /// </summary>
@@ -36,6 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
         {
             return new ServiceBusClient(_fullyQualifiedNameSpace, new DefaultAzureCredential());
         }
+
         /// <summary>
         /// Provides an Azure Service Bus Administration Client
         /// </summary>

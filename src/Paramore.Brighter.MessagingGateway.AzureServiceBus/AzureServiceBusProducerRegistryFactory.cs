@@ -38,8 +38,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _asbPublications = asbPublications;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
-        
-        
+
         /// <summary>
         /// Creates message producers.
         /// </summary>

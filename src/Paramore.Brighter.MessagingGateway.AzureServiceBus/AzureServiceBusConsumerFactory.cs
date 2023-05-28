@@ -19,7 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// <param name="configuration">The configuration to connect to <see cref="AzureServiceBusConfiguration"/></param>
         public AzureServiceBusConsumerFactory(AzureServiceBusConfiguration configuration)
         : this (new ServiceBusConnectionStringClientProvider(configuration.ConnectionString), configuration.AckOnRead)
-        { } 
+        { }
 
         /// <summary>
         /// Factory to create an Azure Service Bus Consumer
@@ -31,7 +31,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _ackOnRead = ackOnRead;
             _clientProvider = clientProvider;
         }
-        
+
         /// <summary>
         /// Creates a consumer for the specified queue.
         /// </summary>

@@ -5,7 +5,6 @@ using Azure.Messaging.ServiceBus.Administration;
 
 namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
 {
-    
     /// <summary>
     /// Provides Azure Service Bus Clients using Managed Identity Credentials.
     /// </summary>
@@ -25,10 +24,10 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
                 throw new ArgumentNullException(nameof(fullyQualifiedNameSpace),
                     "Fully qualified Namespace is null or empty, ensure this is set in the constructor.");
             }
-            
+
             _fullyQualifiedNameSpace = fullyQualifiedNameSpace;
         }
-        
+
         /// <summary>
         /// Provides an Azure Service Bus Client
         /// </summary>
@@ -37,6 +36,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider
         {
             return new ServiceBusClient(_fullyQualifiedNameSpace, new ManagedIdentityCredential());
         }
+
         /// <summary>
         /// Provides an Azure Service Bus Administration Client
         /// </summary>

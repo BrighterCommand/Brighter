@@ -210,7 +210,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 s_logger.LogWarning("Dead Lettering Message with Id {Id} is not possible due to receive Mode being set to {ReceiveMode}", message.Id, _receiveMode);
             }
         }
-        
+
         /// <summary>
         /// Purges the specified queue name.
         /// </summary>
