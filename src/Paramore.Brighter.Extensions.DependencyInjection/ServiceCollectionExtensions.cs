@@ -88,10 +88,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             var transformRegistry = new ServiceCollectionTransformerRegistry(services, options.TransformerLifetime);
             services.TryAddSingleton(transformRegistry);
 
-            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor),
-                (serviceProvider) => (IAmACommandProcessor)BuildCommandProcessor(serviceProvider),
-                options.CommandProcessorLifetime));
-
             var mapperRegistry = new ServiceCollectionMessageMapperRegistry(services, options.MapperLifetime);
             services.TryAddSingleton(mapperRegistry);
 
@@ -102,6 +98,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IPolicyRegistry<string> policyRegistry;
             if (options.PolicyRegistry == null) policyRegistry = new DefaultPolicy();
             else policyRegistry = AddDefaults(options.PolicyRegistry);
+            
+            services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor),
+                (serviceProvider) => (IAmACommandProcessor)BuildCommandProcessor(serviceProvider),
+                options.CommandProcessorLifetime));
 
             return new ServiceCollectionBrighterBuilder(
                 services,
@@ -153,16 +153,11 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             //Find the transaction type from the provider
             Type transactionProviderInterface = typeof(IAmABoxTransactionProvider<>);
-            Type[] interfaces = transactionProvider.GetInterfaces();
             Type transactionType = null;
-            foreach (Type i in interfaces)
-            {
+            foreach (Type i in transactionProvider.GetInterfaces())
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == transactionProviderInterface)
-                {
                     transactionType = i.GetGenericArguments()[0];
-                }
-            }
-            
+
             if (transactionType == null)
                 throw new ConfigurationException(
                     $"Unable to register provider of type {transactionProvider.Name}. It does not implement {typeof(IAmABoxTransactionProvider<>).Name}.");
@@ -177,33 +172,40 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             return ExternalBusBuilder(brighterBuilder, busConfiguration, transactionType);
         }
 
-        private static INeedARequestContext AddEventBus(IServiceProvider provider, INeedMessaging messagingBuilder,
+        private static INeedARequestContext AddEventBus(
+            IServiceProvider provider, 
+            INeedMessaging messagingBuilder,
             IUseRpc useRequestResponse)
         {
             var eventBus = provider.GetService<IAmAnExternalBusService>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
-            var messageMapperRegistry = provider.GetService<IAmAMessageMapperRegistry>();
-            var messageTransformerFactory = provider.GetService<IAmAMessageTransformerFactory>();
+            var messageMapperRegistry = MessageMapperRegistry(provider);
+            var messageTransformFactory = TransformFactory(provider);
 
             INeedARequestContext ret = null;
-            if (eventBus == null) ret = messagingBuilder.NoExternalBus();
-            if (eventBus != null && useRequestResponse.RPC)
+            var hasEventBus = eventBus != null;
+            bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
+            
+            if (!hasEventBus) ret = messagingBuilder.NoExternalBus();
+            
+            if (hasEventBus && !useRpc)
             {
                 ret = messagingBuilder.ExternalBus(
-                    useRequestResponse.RPC ? ExternalBusType.RPC : ExternalBusType.FireAndForget,
+                    ExternalBusType.FireAndForget,
                     eventBus,
                     messageMapperRegistry,
-                    messageTransformerFactory,
+                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions);
             }
-            else if (eventBus != null && useRequestResponse.RPC)
+            
+            if (hasEventBus && useRpc)
             {
                 ret = messagingBuilder.ExternalBus(
-                    useRequestResponse.RPC ? ExternalBusType.RPC : ExternalBusType.FireAndForget,
+                    ExternalBusType.RPC,
                     eventBus,
                     messageMapperRegistry,
-                    messageTransformerFactory,
+                    messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions
                 );
@@ -283,18 +285,19 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             //to pass generic types as we know the transaction provider type
             var syncOutboxType = typeof(IAmAnOutboxSync<,>).MakeGenericType(typeof(Message), transactionType);
             var asyncOutboxType = typeof(IAmAnOutboxAsync<,>).MakeGenericType(typeof(Message), transactionType);
-            
-            Type[] interfaces = outbox.GetType().GetInterfaces();
-            foreach (Type i in interfaces)
+
+            foreach (Type i in outbox.GetType().GetInterfaces())
             {
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
                 {
-                    new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    var outboxDescriptor = new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    serviceCollection.Add(outboxDescriptor);
                 }
-                
+
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == asyncOutboxType)
                 {
-                    new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    var asyncOutboxdescriptor = new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
+                    serviceCollection.Add(asyncOutboxdescriptor);
                 }
             }
 
