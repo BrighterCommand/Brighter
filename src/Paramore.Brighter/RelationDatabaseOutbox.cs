@@ -10,7 +10,7 @@ namespace Paramore.Brighter
 
     public abstract class
         RelationDatabaseOutboxSync<TConnection, TCommand, TDataReader, TParameter> : IAmAnOutboxSync<Message>,
-            IAmAnOutboxAsync<Message>
+            IAmAnOutboxAsync<Message>, IAmABulkOutboxAsync<Message>
     {
         private readonly IRelationDatabaseOutboxQueries _queries;
         private readonly ILogger _logger;
@@ -325,6 +325,20 @@ namespace Paramore.Brighter
                 cancellationToken);
         }
 
+        /// <summary>
+        /// Get the messages that have been dispatched
+        /// </summary>
+        /// <param name="hoursDispatchedSince">The number of hours since the message was dispatched</param>
+        /// <param name="pageSize">The amount to return</param>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Messages that have already been dispatched</returns>
+        public Task<IEnumerable<Message>> DispatchedMessagesAsync(int hoursDispatchedSince, int pageSize = 100,
+            CancellationToken cancellationToken = default)
+        {
+            return ReadFromStoreAsync(connection => CreateDispatchedCommand(connection, hoursDispatchedSince, pageSize),
+                dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
+        }
+
         #endregion
 
         protected abstract void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
@@ -346,6 +360,12 @@ namespace Paramore.Brighter
             => CreateCommand(connection, GenerateSqlText(_queries.PagedDispatchedCommand), 0,
                 CreateSqlParameter("PageNumber", pageNumber), CreateSqlParameter("PageSize", pageSize),
                 CreateSqlParameter("OutstandingSince", -1 * millisecondsDispatchedSince));
+        
+        private TCommand CreateDispatchedCommand(TConnection connection, int hoursDispatchedSince,
+            int pageSize)
+            => CreateCommand(connection, GenerateSqlText(_queries.DispatchedCommand), 0,
+                CreateSqlParameter("PageSize", pageSize),
+                CreateSqlParameter("DispatchedSince", -1 * hoursDispatchedSince));
 
         private TCommand CreatePagedReadCommand(TConnection connection, int pageSize, int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedReadCommand), 0,

@@ -240,10 +240,13 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             var azureServiceBusMessage = new ServiceBusMessage(message.Body.Bytes);
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
+            azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
+            
             foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
             {
                 azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
             }
+            
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
             azureServiceBusMessage.ContentType = message.Header.ContentType;
             azureServiceBusMessage.MessageId = message.Header.Id.ToString();

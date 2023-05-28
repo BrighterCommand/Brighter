@@ -5,6 +5,7 @@
         public const string LockTokenHeaderBagKey = "LockToken";
         public const string MessageTypeHeaderBagKey = "MessageType";
         public const string HandledCountHeaderBagKey = "HandledCount";
+        public const string ReplyToHeaderBagKey = "ReplyTo";
 
         public static readonly string[] ReservedHeaders =
             new[] {LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey};
