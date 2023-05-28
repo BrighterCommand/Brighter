@@ -52,8 +52,11 @@ namespace GreetingsPorts.Handlers
                 await conn.InsertAsync<Greeting>(greeting, tx);
 
                 //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()),
-                    cancellationToken: cancellationToken));
+                posts.Add(await _postBox.DepositPostAsync(
+                    new GreetingMade(greeting.Greet()),
+                    _transactionConnectionProvider,
+                    cancellationToken: cancellationToken)
+                );
 
                 //commit both new greeting and outgoing message
                 await _transactionConnectionProvider.CommitAsync(cancellationToken);

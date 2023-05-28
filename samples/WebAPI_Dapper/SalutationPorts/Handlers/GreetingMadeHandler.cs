@@ -39,7 +39,10 @@ namespace SalutationPorts.Handlers
                 
                 await _transactionConnectionProvider.GetConnection().InsertAsync<Salutation>(salutation, tx);
                 
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
+                posts.Add(await _postBox.DepositPostAsync(
+                    new SalutationReceived(DateTimeOffset.Now), 
+                    _transactionConnectionProvider,
+                    cancellationToken: cancellationToken));
                 
                 await tx.CommitAsync(cancellationToken);
             }

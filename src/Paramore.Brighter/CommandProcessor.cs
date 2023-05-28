@@ -628,7 +628,9 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/> 
+        /// Pass deposited Guid to <see cref="ClearOutboxAsync"/>
+        /// NOTE: If you get an error about the transaction type not matching CommittableTransaction, then you need to
+        /// use the specialized version of this method that takes a transaction provider.
         /// </summary>
         /// <param name="request">The request to save to the outbox</param>
         /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>

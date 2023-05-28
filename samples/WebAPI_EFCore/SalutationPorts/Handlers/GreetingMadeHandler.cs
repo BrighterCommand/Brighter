@@ -16,11 +16,13 @@ namespace SalutationPorts.Handlers
     {
         private readonly SalutationsEntityGateway _uow;
         private readonly IAmACommandProcessor _postBox;
+        private readonly IAmATransactionConnectionProvider _transactionProvider;
 
-        public GreetingMadeHandlerAsync(SalutationsEntityGateway uow, IAmACommandProcessor postBox)
+        public GreetingMadeHandlerAsync(SalutationsEntityGateway uow, IAmATransactionConnectionProvider provider, IAmACommandProcessor postBox)
         {
             _uow = uow;
             _postBox = postBox;
+            _transactionProvider = provider;
         }
 
         //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
@@ -30,28 +32,36 @@ namespace SalutationPorts.Handlers
         {
             var posts = new List<Guid>();
             
-            var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
+            await _transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
                 var salutation = new Salutation(@event.Greeting);
 
                 _uow.Salutations.Add(salutation);
-                
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
-                
+
+                posts.Add(await _postBox.DepositPostAsync(
+                    new SalutationReceived(DateTimeOffset.Now),
+                    _transactionProvider,
+                    cancellationToken: cancellationToken)
+                );
+
                 await _uow.SaveChangesAsync(cancellationToken);
 
-                await tx.CommitAsync(cancellationToken);
+                await _transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                
-                await tx.RollbackAsync(cancellationToken);
-                
+
+                await _transactionProvider.RollbackAsync(cancellationToken);
+
                 Console.WriteLine("Salutation analytical record not saved");
 
                 throw;
+            }
+            finally
+            {
+                _transactionProvider.Close();
             }
 
             await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);

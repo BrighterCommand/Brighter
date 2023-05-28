@@ -42,7 +42,11 @@ namespace SalutationPorts.Handlers
                 
                 tx.TransactItems.Add(new TransactWriteItem{Put = new Put{ TableName = "Salutations", Item = attributes}});
                 
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
+                posts.Add(await _postBox.DepositPostAsync(
+                    new SalutationReceived(DateTimeOffset.Now), 
+                    _uow,
+                    cancellationToken: cancellationToken)
+                );
                 
                 await _uow.CommitAsync(cancellationToken);
             }

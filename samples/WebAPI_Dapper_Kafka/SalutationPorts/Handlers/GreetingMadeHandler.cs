@@ -47,7 +47,9 @@ namespace SalutationPorts.Handlers
                 
                 _transactionConnectionProvider.GetConnection().Insert<Salutation>(salutation, tx);
                 
-                posts.Add(_postBox.DepositPost(new SalutationReceived(DateTimeOffset.Now)));
+                posts.Add(_postBox.DepositPost(
+                    new SalutationReceived(DateTimeOffset.Now),
+                    _transactionConnectionProvider));
                 
                 _transactionConnectionProvider.Commit();
             }

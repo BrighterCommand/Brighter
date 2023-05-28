@@ -38,31 +38,37 @@ namespace GreetingsPorts.Handlers
             //to share them 'behind the scenes'
 
             var conn = await _transactionProvider.GetConnectionAsync(cancellationToken);
-            await conn.OpenAsync(cancellationToken);
-            var tx = _transactionProvider.GetTransaction();
+            var tx = await _transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
                 var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
                 var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
                 var person = people.Single();
-                
+
                 var greeting = new Greeting(addGreeting.Greeting, person);
-                
-               //write the added child entity to the Db
+
+                //write the added child entity to the Db
                 await conn.InsertAsync<Greeting>(greeting, tx);
 
                 //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
-                
+                posts.Add(await _postBox.DepositPostAsync(
+                    new GreetingMade(greeting.Greet()),
+                    _transactionProvider,
+                    cancellationToken: cancellationToken));
+
                 //commit both new greeting and outgoing message
-                await tx.CommitAsync(cancellationToken);
+                await _transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
-            {   
+            {
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
-                await tx.RollbackAsync(cancellationToken);
+                await _transactionProvider.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);
+            }
+            finally
+            {
+                _transactionProvider.Close();
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

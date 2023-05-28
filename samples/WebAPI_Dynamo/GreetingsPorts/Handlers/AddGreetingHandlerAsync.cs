@@ -52,7 +52,10 @@ namespace GreetingsPorts.Handlers
                transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = "People", Item = attributeValues}});
 
                 //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(addGreeting.Greeting), cancellationToken: cancellationToken));
+                posts.Add(await _postBox.DepositPostAsync(
+                    new GreetingMade(addGreeting.Greeting), 
+                    _unitOfWork,
+                    cancellationToken: cancellationToken));
                 
                 //commit both new greeting and outgoing message
                 await _unitOfWork.CommitAsync(cancellationToken);
