@@ -156,25 +156,21 @@ namespace Paramore.Brighter.Inbox.Sqlite
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            await using var connection = GetConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var sqlAdd = GetAddSql();
+            await using var sqlcmd = connection.CreateCommand();
+            FormatAddCommand(parameters, sqlcmd, sqlAdd, timeoutInMilliseconds);
+            try
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlAdd = GetAddSql();
-                using (var sqlcmd = connection.CreateCommand())
-                {
-                    FormatAddCommand(parameters, sqlcmd, sqlAdd, timeoutInMilliseconds);
-                    try
-                    {
-                        await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                    }
-                    catch (SqliteException sqliteException)
-                    {
-                        if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
-                        s_logger.LogWarning(
-                            "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                    }
-                }
+                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (SqliteException sqliteException)
+            {
+                if (!IsExceptionUnqiueOrDuplicateIssue(sqliteException)) throw;
+                s_logger.LogWarning(
+                    "MsSqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                    command.Id);
             }
         }
 
@@ -235,24 +231,21 @@ namespace Paramore.Brighter.Inbox.Sqlite
                 AddParamtersParamArrayToCollection(parameters, command);
 
                 connection.Open();
-                var item = execute(command);
-                return item;
+                return execute(command);
             }
         }
 
         public async Task<T> ExecuteCommandAsync<T>(Func<DbCommand, Task<T>> execute, 
             string sql, int timeoutInMilliseconds, DbParameter[] parameters, CancellationToken cancellationToken = default)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                AddParamtersParamArrayToCollection(parameters, command);
+            await using var connection = GetConnection();
+            await using var command = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
+            command.CommandText = sql;
+            AddParamtersParamArrayToCollection(parameters, command);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-            }
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         private void FormatAddCommand(DbParameter[] parameters, DbCommand sqlcmd, string sqlAdd, int timeoutInMilliseconds)

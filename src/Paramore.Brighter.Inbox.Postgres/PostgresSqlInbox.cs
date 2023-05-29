@@ -126,10 +126,8 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             try
             {
-                using (var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds))
-                {
-                    await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                }
+                await using var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             }
             catch (PostgresException sqlException)
             {
@@ -300,16 +298,14 @@ namespace Paramore.Brighter.Inbox.Postgres
 
             try
             {
-                using (var command = connection.CreateCommand())
-                {
-                    if (timeoutInMilliseconds != -1)
-                        command.CommandTimeout = timeoutInMilliseconds;
+                await using var command = connection.CreateCommand();
+                if (timeoutInMilliseconds != -1)
+                    command.CommandTimeout = timeoutInMilliseconds;
 
-                    command.CommandText = sql;
-                    command.Parameters.AddRange(parameters);
+                command.CommandText = sql;
+                command.Parameters.AddRange(parameters);
 
-                    return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                }
+                return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
             }
             finally
             {

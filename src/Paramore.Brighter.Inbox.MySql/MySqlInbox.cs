@@ -177,26 +177,24 @@ namespace Paramore.Brighter.Inbox.MySql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            using (var connection = GetConnection())
+            await using var connection = GetConnection();
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
+            try
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
-                try
+                await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            }
+            catch (MySqlException sqlException)
+            {
+                if (sqlException.Number == MySqlDuplicateKeyError)
                 {
-                    await sqlcmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+                    s_logger.LogWarning(
+                        "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
+                        command.Id);
+                    return;
                 }
-                catch (MySqlException sqlException)
-                {
-                    if (sqlException.Number == MySqlDuplicateKeyError)
-                    {
-                        s_logger.LogWarning(
-                            "MySqlOutbox: A duplicate Command with the CommandId {Id} was inserted into the Outbox, ignoring and continuing",
-                            command.Id);
-                        return;
-                    }
 
-                    throw;
-                }
+                throw;
             }
         }
 
@@ -271,17 +269,14 @@ namespace Paramore.Brighter.Inbox.MySql
             CancellationToken cancellationToken = default,
             params DbParameter[] parameters)
         {
-            using (var connection = GetConnection())
-            using (var command = connection.CreateCommand())
-            {
-                if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
-                command.CommandText = sql;
-                command.Parameters.AddRange(parameters);
+            await using var connection = GetConnection();
+            await using var command = connection.CreateCommand();
+            if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
+            command.CommandText = sql;
+            command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
-                return item;
-            }
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            return await execute(command).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         private DbConnection GetConnection()

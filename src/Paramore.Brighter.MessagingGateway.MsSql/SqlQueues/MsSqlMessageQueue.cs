@@ -79,12 +79,10 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
-            {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
-                await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-            }
+            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
+            await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
         }
 
         /// <summary>
@@ -148,20 +146,18 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
-            {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
-                var sqlCmd = InitRemoveDbCommand(connection, parameters);
-                var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
-                    .ConfigureAwait(ContinueOnCapturedContext);
-                if (!await reader.ReadAsync(cancellationToken))
-                    return ReceivedResult<T>.Empty;
-                var json = (string) reader[0];
-                var messageType = (string) reader[1];
-                var id = (int) reader[3];
-                var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
-                return new ReceivedResult<T>(true, json, topic, messageType, id, message);
-            }
+            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
+            var sqlCmd = InitRemoveDbCommand(connection, parameters);
+            var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
+                .ConfigureAwait(ContinueOnCapturedContext);
+            if (!await reader.ReadAsync(cancellationToken))
+                return ReceivedResult<T>.Empty;
+            var json = (string) reader[0];
+            var messageType = (string) reader[1];
+            var id = (int) reader[3];
+            var message = JsonSerializer.Deserialize<T>(json, JsonSerialisationOptions.Options);
+            return new ReceivedResult<T>(true, json, topic, messageType, id, message);
         }
 
         public bool IsMessageReady(string topic)
