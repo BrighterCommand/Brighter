@@ -177,7 +177,7 @@ namespace Paramore.Brighter.Inbox.MySql
         {
             var parameters = InitAddDbParameters(command, contextKey);
 
-            await using var connection = GetConnection();
+            using var connection = GetConnection();
             await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
             try
@@ -269,8 +269,8 @@ namespace Paramore.Brighter.Inbox.MySql
             CancellationToken cancellationToken = default,
             params DbParameter[] parameters)
         {
-            await using var connection = GetConnection();
-            await using var command = connection.CreateCommand();
+            using var connection = GetConnection();
+            using var command = connection.CreateCommand();
             if (timeoutInMilliseconds != -1) command.CommandTimeout = timeoutInMilliseconds;
             command.CommandText = sql;
             command.Parameters.AddRange(parameters);

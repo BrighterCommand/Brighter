@@ -79,7 +79,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitAddDbParameters(topic, message);
 
-            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             var sqlCmd = InitAddDbCommand(timeoutInMilliseconds, connection, parameters);
             await sqlCmd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
@@ -146,7 +146,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql.SqlQueues
 
             var parameters = InitRemoveDbParameters(topic);
 
-            await using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
+            using var connection = await _connectionProvider.GetConnectionAsync(cancellationToken);
             await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
             var sqlCmd = InitRemoveDbCommand(connection, parameters);
             var reader = await sqlCmd.ExecuteReaderAsync(cancellationToken)
