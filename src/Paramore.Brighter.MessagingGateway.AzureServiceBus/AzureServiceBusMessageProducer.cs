@@ -50,7 +50,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// 1+ => Allow this number of messages to stack up in an Outbox before throwing an exception (likely to fail fast)
         /// </summary>
         public int MaxOutStandingMessages { get; set; } = -1;
-  
+
         /// <summary>
         /// At what interval should we check the number of outstanding messages has not exceeded the limit set in MaxOutStandingMessages
         /// We spin off a thread to check when inserting an item into the outbox, if the interval since the last insertion is greater than this threshold
@@ -88,7 +88,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _makeChannel = makeChannel;
             _bulkSendBatchSize = bulkSendBatchSize;
         }
-        
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -97,6 +97,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         {
             SendWithDelay(message);
         }
+
         /// <summary>
         /// Sends the specified message.
         /// </summary>
@@ -124,7 +125,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             var topic = topics.Single();
 
-            var batches = Enumerable.Range(0, (int)Math.Ceiling((messages.Count() / (decimal)_bulkSendBatchSize)))
+            var batches = Enumerable.Range(0, (int)Math.Ceiling(messages.Count() / (decimal)_bulkSendBatchSize))
                 .Select(i => new List<Message>(messages
                     .Skip(i * _bulkSendBatchSize)
                     .Take(_bulkSendBatchSize)
@@ -192,7 +193,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
                 s_logger.LogDebug(
                     "Published message to topic {Topic} with a delay of {Delay} and body {Request} and id {Id}", message.Header.Topic, delayMilliseconds, message.Body.Value, message.Id);
-                ;
             }
             catch (Exception e)
             {

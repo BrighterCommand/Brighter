@@ -69,9 +69,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             _serviceBusSender.CloseAsync().Wait();
         }
 
-        public async Task CloseAsync()
+        public Task CloseAsync()
         {
-            await _serviceBusSender.CloseAsync();
+            return _serviceBusSender.CloseAsync();
         }
     }
 }

@@ -19,13 +19,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
 
         public string LockToken => _brokeredMessage.LockToken;
 
-        public Guid Id
-        {
-            get
-            {
-                return Guid.Parse(_brokeredMessage.MessageId);
-            }
-        }
+        public Guid Id => Guid.Parse(_brokeredMessage.MessageId);
 
         public Guid CorrelationId
         {
@@ -37,6 +31,6 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             }
         }
 
-        public string ContentType { get => _brokeredMessage.ContentType; }
+        public string ContentType => _brokeredMessage.ContentType;
     }
 }

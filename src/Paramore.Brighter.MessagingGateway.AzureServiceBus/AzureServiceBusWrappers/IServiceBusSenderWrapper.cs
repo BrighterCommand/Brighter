@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure.Messaging.ServiceBus;
@@ -22,9 +22,9 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="message">Message to be scheduled.</param>
         /// <param name="scheduleEnqueueTime">The time to scheduled the message.</param>
         void ScheduleMessage(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime);
-        
+
         /// <summary>
-        /// Close the Connection. 
+        /// Close the Connection.
         /// </summary>
         void Close();
 
@@ -48,14 +48,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="message">Message to be scheduled.</param>
         /// <param name="scheduleEnqueueTime">The time to scheduled the message.</param>
         /// <param name="cancellationToken">Cancellation Token.</param>
-        /// <returns></returns>
         Task ScheduleMessageAsync(ServiceBusMessage message, DateTimeOffset scheduleEnqueueTime,
             CancellationToken cancellationToken = default);
-        
+
         /// <summary>
         /// Close the Connection.
         /// </summary>
-        /// <returns></returns>
         Task CloseAsync();
     }
 }
