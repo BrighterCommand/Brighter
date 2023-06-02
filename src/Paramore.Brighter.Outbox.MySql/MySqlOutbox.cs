@@ -374,14 +374,13 @@ namespace Paramore.Brighter.Outbox.MySql
             }
 
             var body = _configuration.BinaryMessagePayload
-                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream",
-                    CharacterEncoding.Raw)
-                : new MessageBody(dr.GetString(dr.GetOrdinal("Body")), "application/json", CharacterEncoding.UTF8);
+                ? new MessageBody(GetBodyAsBytes((MySqlDataReader)dr), "application/octet-stream", CharacterEncoding.Raw)
+                : new MessageBody(GetBodyAsString(dr), "application/json", CharacterEncoding.UTF8);
 
             return new Message(header, body);
         }
 
-        private byte[] GetBodyAsBytes(MySqlDataReader dr)
+       private byte[] GetBodyAsBytes(MySqlDataReader dr)
         {
             var i = dr.GetOrdinal("Body");
             using (var ms = new MemoryStream())
@@ -402,7 +401,12 @@ namespace Paramore.Brighter.Outbox.MySql
             }
         }
 
-        private static Dictionary<string, object> GetContextBag(IDataReader dr)
+        private static string GetBodyAsString(IDataReader dr)
+        {
+            return dr.GetString(dr.GetOrdinal("Body"));
+        }
+
+         private static Dictionary<string, object> GetContextBag(IDataReader dr)
         {
             var i = dr.GetOrdinal("HeaderBag");
             var headerBag = dr.IsDBNull(i) ? "" : dr.GetString(i);
