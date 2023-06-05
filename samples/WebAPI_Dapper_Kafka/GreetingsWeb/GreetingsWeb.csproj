@@ -8,6 +8,7 @@
         <PackageReference Include="FluentMigrator" Version="3.3.2" />
         <PackageReference Include="FluentMigrator.Runner" Version="3.3.2" />
         <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
+        <PackageReference Include="Npgsql" Version="7.0.4" />
         <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
         <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
@@ -17,10 +18,14 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Extensions.Hosting\Paramore.Brighter.Extensions.Hosting.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.MessagingGateway.Kafka\Paramore.Brighter.MessagingGateway.Kafka.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.MsSql\Paramore.Brighter.Outbox.MsSql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.MySql\Paramore.Brighter.Outbox.MySql.csproj" />
+      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
       <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
+      <ProjectReference Include="..\Greetings_MsSqlMigrations\Greetings_MsSqlMigrations.csproj" />
       <ProjectReference Include="..\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj" />
+      <ProjectReference Include="..\Greetings_PostgreSqlMigrations\Greetings_PostgreSqlMigrations.csproj" />
       <ProjectReference Include="..\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj" />
     </ItemGroup>
 

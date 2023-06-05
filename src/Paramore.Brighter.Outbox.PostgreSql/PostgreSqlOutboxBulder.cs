@@ -73,7 +73,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         /// <param name="outboxTableName">The name you want to use for the table</param>
         /// <param name="binaryMessagePayload"></param>
         /// <returns>The required DDL</returns>
-        public static string GetDDL(string outboxTableName, bool binaryMessagePayload)
+        public static string GetDDL(string outboxTableName, bool binaryMessagePayload = false)
         {
             return binaryMessagePayload ? string.Format(BinaryOutboxDdl, outboxTableName) : string.Format(TextOutboxDdl, outboxTableName);
         }

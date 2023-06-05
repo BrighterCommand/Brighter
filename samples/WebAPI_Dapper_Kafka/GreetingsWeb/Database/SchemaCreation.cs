@@ -10,7 +10,10 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using MySqlConnector;
+using Npgsql;
+using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.Outbox.MySql;
+using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.Outbox.Sqlite;
 using Polly;
 
@@ -27,13 +30,13 @@ namespace GreetingsWeb.Database
             var services = scope.ServiceProvider;
             var env = services.GetService<IWebHostEnvironment>();
             var config = services.GetService<IConfiguration>();
-            string connectionString = DbServerConnectionString(config, env);
+            var (dbType, connectionString) = DbServerConnectionString(config, env);
 
-            //We don't check in development as using Sqlite
+            //We don't check db availability in development as we always use Sqlite which is a file not a server
             if (env.IsDevelopment()) return webHost;
 
-            WaitToConnect(connectionString);
-            CreateDatabaseIfNotExists(GetDbConnection(GetDatabaseType(config), connectionString));
+            WaitToConnect(dbType, connectionString);
+            CreateDatabaseIfNotExists(GetDbConnection(dbType, connectionString));
 
             return webHost;
         }
@@ -61,7 +64,7 @@ namespace GreetingsWeb.Database
             return webHost;
         }
 
-        public static IHost CreateOutbox(this IHost webHost, bool hasBinaryPayload)
+        public static IHost CreateOutbox(this IHost webHost, bool hasBinaryPayload = false)
         {
             using (var scope = webHost.Services.CreateScope())
             {
@@ -92,9 +95,9 @@ namespace GreetingsWeb.Database
                 var connectionString = DbConnectionString(config, env);
 
                 if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString, hasBinaryPayload: hasBinaryPayload);
+                    CreateOutboxDevelopment(connectionString, hasBinaryPayload);
                 else
-                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryPayload: hasBinaryPayload);
+                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryPayload);
             }
             catch (System.Exception e)
             {
@@ -109,32 +112,43 @@ namespace GreetingsWeb.Database
             CreateOutboxSqlite(connectionString, hasBinaryPayload);
         }
 
-        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryPayload)
-        {
-            using var sqlConnection = new SqliteConnection(connectionString);
-            sqlConnection.Open();
-
-            using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = SqliteOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
-
-            if (reader.HasRows) return;
-
-            using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryMessagePayload: hasBinaryPayload);
-            command.ExecuteScalar();
-        }
-
-        private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString, bool hasBinaryPayload)
-        {
+       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString,
+           bool hasBinaryPayload) 
+       {
             switch (databaseType)
             {
                 case DatabaseType.MySql:
                     CreateOutboxMySql(connectionString, hasBinaryPayload);
                     break;
+                case DatabaseType.MsSql:
+                    CreateOutboxMsSql(connectionString, hasBinaryPayload);
+                    break;
+                case DatabaseType.Postgres:
+                    CreateOutboxPostgres(connectionString, hasBinaryPayload);
+                    break;
+                case DatabaseType.Sqlite:
+                    CreateOutboxSqlite(connectionString, hasBinaryPayload);
+                    break;
                 default:
                     throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
             }
+        }
+
+       private static void CreateOutboxMsSql(string connectionString, bool hasBinaryPayload)
+       {
+            using var sqlConnection = new SqlConnection(connectionString);
+            sqlConnection.Open();
+
+            using var existsQuery = sqlConnection.CreateCommand();
+            existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+            bool exists = existsQuery.ExecuteScalar() != null;
+
+            if (exists) return;
+
+            using var command = sqlConnection.CreateCommand();
+            command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+            command.ExecuteScalar();
+            
         }
 
         private static void CreateOutboxMySql(string connectionString, bool hasBinaryPayload)
@@ -149,24 +163,53 @@ namespace GreetingsWeb.Database
             if (exists) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryMessagePayload: hasBinaryPayload);
+            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+            command.ExecuteScalar();
+        }
+        
+        private static void CreateOutboxPostgres(string connectionString, bool hasBinaryPayload)
+        {
+             using var sqlConnection = new NpgsqlConnection(connectionString);
+             sqlConnection.Open();
+ 
+             using var existsQuery = sqlConnection.CreateCommand();
+             existsQuery.CommandText = PostgreSqlOutboxBulder.GetExistsQuery(OUTBOX_TABLE_NAME);
+             bool exists = existsQuery.ExecuteScalar() != null;
+ 
+             if (exists) return;
+ 
+             using var command = sqlConnection.CreateCommand();
+             command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+             command.ExecuteScalar();
+        }
+
+        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryPayload)
+        {
+            using var sqlConnection = new SqliteConnection(connectionString);
+            sqlConnection.Open();
+
+            using var exists = sqlConnection.CreateCommand();
+            exists.CommandText = SqliteOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
+            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
+
+            if (reader.HasRows) return;
+
+            using var command = sqlConnection.CreateCommand();
+            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
             command.ExecuteScalar();
         }
 
         private static string DbConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return env.IsDevelopment() ? GetDevDbConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
+            return env.IsDevelopment() ? GetDevConnectionString() : GetProductionDbConnectionString(config, GetDatabaseType(config)); 
         }
 
-        private static string GetDevDbConnectionString()
+        private static (DatabaseType, string) DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
         {
-            return "Filename=Greetings.db;Cache=Shared";
-        }
-
-        private static string DbServerConnectionString(IConfiguration config, IWebHostEnvironment env)
-        {
-            return env.IsDevelopment() ? GetDevConnectionString() : GetProductionConnectionString(config, GetDatabaseType(config));
+            var databaseType = GetDatabaseType(config);
+            var connectionString = env.IsDevelopment() ? GetDevConnectionString() : GetProductionConnectionString(config, databaseType);
+            return (databaseType, connectionString);
         }
 
         private static string GetDevConnectionString()
@@ -179,6 +222,9 @@ namespace GreetingsWeb.Database
             return databaseType switch
             {
                 DatabaseType.MySql => new MySqlConnection(connectionString),
+                DatabaseType.MsSql => new SqlConnection(connectionString),
+                DatabaseType.Postgres => new NpgsqlConnection(connectionString),
+                DatabaseType.Sqlite => new SqliteConnection(connectionString),
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
@@ -187,7 +233,10 @@ namespace GreetingsWeb.Database
         {
             return databaseType switch
             { 
-                DatabaseType.MySql => config.GetConnectionString("GreetingsMySqlDb"),
+                DatabaseType.MySql => config.GetConnectionString("MySqlDb"),
+                DatabaseType.MsSql => config.GetConnectionString("MsSqlDb"),
+                DatabaseType.Postgres => config.GetConnectionString("PostgreSqlDb"),
+                DatabaseType.Sqlite => GetDevConnectionString(),
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
@@ -197,6 +246,9 @@ namespace GreetingsWeb.Database
             return databaseType switch
             {
                 DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
+                DatabaseType.MsSql => config.GetConnectionString("GreetingsMsSql"),
+                DatabaseType.Postgres => config.GetConnectionString("GreetingsPostgreSql"),
+                DatabaseType.Sqlite => GetDevConnectionString(),
                 _ => throw new InvalidOperationException("Could not determine the database type")
              };
         }
@@ -213,9 +265,9 @@ namespace GreetingsWeb.Database
             };
         }
 
-        private static void WaitToConnect(string connectionString)
+        private static void WaitToConnect(DatabaseType dbType, string connectionString)
         {
-            var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
+            var policy = Policy.Handle<DbException>().WaitAndRetryForever(
                 retryAttempt => TimeSpan.FromSeconds(2),
                 (exception, timespan) =>
                 {
@@ -224,9 +276,21 @@ namespace GreetingsWeb.Database
 
             policy.Execute(() =>
             {
-                using var conn = new MySqlConnection(connectionString);
+                using var conn = GetConnection(dbType, connectionString);
                 conn.Open();
             });
+        }
+
+        private static DbConnection GetConnection(DatabaseType databaseType, string connectionString)
+        {
+            return databaseType switch
+            {
+                DatabaseType.MySql => new MySqlConnection(connectionString),
+                DatabaseType.MsSql => new SqlConnection(connectionString),
+                DatabaseType.Postgres => new NpgsqlConnection(connectionString),
+                DatabaseType.Sqlite => new SqliteConnection(connectionString),
+                _ => throw new ArgumentOutOfRangeException(nameof(databaseType), databaseType, null)
+            };
         }
     }
 }

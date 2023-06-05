@@ -1,10 +1,10 @@
 using System;
-using System.Data.Common;
 using Confluent.SchemaRegistry;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
+using Greetings_PostgreSqlMigrations.Migrations;
 using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
@@ -21,8 +21,6 @@ using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.Kafka;
-using Paramore.Brighter.MySql;
-using Paramore.Brighter.Sqlite;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
@@ -31,16 +29,16 @@ namespace GreetingsWeb
 {
     public class Startup
     {
-        private const string _outBoxTableName = "Outbox";
-        private IWebHostEnvironment _env;
+        private const string OUTBOX_TABLE_NAME = "Outbox";
+        
+        private readonly IConfiguration _configuration;
+        private readonly IWebHostEnvironment _env;
 
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
-            Configuration = configuration;
+            _configuration = configuration;
             _env = env;
         }
-
-        public IConfiguration Configuration { get; }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -76,28 +74,18 @@ namespace GreetingsWeb
             });
 
             ConfigureMigration(services);
-            ConfigureDapper(services);
+            ConfigureDapper();
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
 
         private void ConfigureMigration(IServiceCollection services)
         {
+            //dev is always Sqlite
             if (_env.IsDevelopment())
-            {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c =>
-                    {
-                        c.AddSQLite()
-                            .WithGlobalConnectionString(DbConnectionString())
-                            .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations();
-                    });
-            }
+                ConfigureSqlite(services);
             else
-            {
                 ConfigureProductionDatabase(GetDatabaseType(), services);
-            }
         }
 
         private void ConfigureProductionDatabase(DatabaseType databaseType, IServiceCollection services)
@@ -107,9 +95,28 @@ namespace GreetingsWeb
                 case DatabaseType.MySql:
                     ConfigureMySql(services);
                     break;
+                case DatabaseType.MsSql:
+                    ConfigureMsSql(services);
+                    break;
+                case DatabaseType.Postgres:
+                    ConfigurePostgreSql(services);
+                    break;
+                case DatabaseType.Sqlite:
+                    ConfigureSqlite(services);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
             }
+        }
+
+       private void ConfigureMsSql(IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddSqlServer()
+                    .WithGlobalConnectionString(DbConnectionString())
+                    .ScanIn(typeof(MsSqlInitialCreate).Assembly).For.Migrations()
+                );
         }
 
         private void ConfigureMySql(IServiceCollection services)
@@ -122,46 +129,87 @@ namespace GreetingsWeb
                 );
         }
 
-        private void ConfigureDapper(IServiceCollection services)
+        private void ConfigurePostgreSql(IServiceCollection services)
         {
-            ConfigureDapperByHost(GetDatabaseType(), services);
+            //TODO: add Postgres migrations
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddMySql5()
+                    .WithGlobalConnectionString(DbConnectionString())
+                    .ScanIn(typeof(PostgreSqlInitialCreate).Assembly).For.Migrations()
+                );
+        }
+
+        private void ConfigureSqlite(IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c =>
+                {
+                    c.AddSQLite()
+                        .WithGlobalConnectionString(DbConnectionString())
+                        .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations();
+                });
+        }
+        
+        private void ConfigureDapper()
+        {
+            ConfigureDapperByHost(GetDatabaseType());
 
             DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
             DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
         }
 
-        private static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
+        private static void ConfigureDapperByHost(DatabaseType databaseType)
         {
             switch (databaseType)
             {
                 case DatabaseType.Sqlite:
-                    ConfigureDapperSqlite(services);
+                    ConfigureDapperSqlite();
                     break;
                 case DatabaseType.MySql:
-                    ConfigureDapperMySql(services);
+                    ConfigureDapperMySql();
+                    break;
+                case DatabaseType.MsSql:
+                    ConfigureDapperMsSql();
+                    break;
+                case DatabaseType.Postgres:
+                    ConfigureDapperPostgreSql();
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
             }
         }
 
-        private static void ConfigureDapperSqlite(IServiceCollection services)
+        private static void ConfigureDapperMsSql()
+        {
+            DapperExtensions.DapperExtensions.SqlDialect = new SqlServerDialect();
+            DapperAsyncExtensions.SqlDialect = new SqlServerDialect();
+         }
+
+        private static void ConfigureDapperSqlite()
         {
             DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
             DapperAsyncExtensions.SqlDialect = new SqliteDialect();
         }
 
-        private static void ConfigureDapperMySql(IServiceCollection services)
+        private static void ConfigureDapperMySql()
         {
             DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
             DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+        }
+
+        private static void ConfigureDapperPostgreSql()
+        {
+            DapperExtensions.DapperExtensions.SqlDialect = new PostgreSqlDialect();
+            DapperAsyncExtensions.SqlDialect = new PostgreSqlDialect();
          }
 
         private void ConfigureBrighter(IServiceCollection services)
         {
             var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(),
-                outBoxTableName: _outBoxTableName,
+                outBoxTableName: OUTBOX_TABLE_NAME,
                 //NOTE: With the Serdes serializer, if we don't use a binary payload, the payload will be corrupted
                 binaryMessagePayload: true
             );
@@ -215,7 +263,6 @@ namespace GreetingsWeb
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
-
         private void ConfigureDarker(IServiceCollection services)
         {
             services.AddDarker(options =>
@@ -236,7 +283,7 @@ namespace GreetingsWeb
 
         private DatabaseType GetDatabaseType()
         {
-            return Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
+            return _configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
             {
                 DatabaseGlobals.MYSQL => DatabaseType.MySql,
                 DatabaseGlobals.MSSQL => DatabaseType.MsSql,
@@ -255,7 +302,10 @@ namespace GreetingsWeb
         {
             return databaseType switch
             {
-                DatabaseType.MySql => Configuration.GetConnectionString("GreetingsMySql"),
+                DatabaseType.MySql => _configuration.GetConnectionString("GreetingsMySql"),
+                DatabaseType.MsSql => _configuration.GetConnectionString("GreetingsMsSql"),
+                DatabaseType.Postgres => _configuration.GetConnectionString("GreetingsPostgreSql"),
+                DatabaseType.Sqlite => GetDevDbConnectionString(),
                 _ => throw new InvalidOperationException("Could not determine the database type")
             };
         }
