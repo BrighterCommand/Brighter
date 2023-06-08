@@ -16,6 +16,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
@@ -71,6 +73,14 @@ namespace GreetingsWeb
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "GreetingsAPI", Version = "v1" });
             });
+
+            services.AddOpenTelemetry()
+                .WithTracing(builder => builder
+                    .AddAspNetCoreInstrumentation()
+                    .AddConsoleExporter())
+                .WithMetrics(builder => builder
+                    .AddAspNetCoreInstrumentation()
+                    .AddConsoleExporter());
 
             ConfigureMigration(services);
             ConfigureDapper();
