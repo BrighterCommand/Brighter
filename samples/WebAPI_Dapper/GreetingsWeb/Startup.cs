@@ -3,8 +3,6 @@ using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
-using Greetings_PostgreSqlMigrations.Migrations;
-using Greetings_SqliteMigrations.Migrations;
 using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
@@ -124,7 +122,7 @@ namespace GreetingsWeb
                 .AddFluentMigratorCore()
                 .ConfigureRunner(c => c.AddSqlServer()
                     .WithGlobalConnectionString(DbConnectionString())
-                    .ScanIn(typeof(MsSqlInitialCreate).Assembly).For.Migrations()
+                    .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
                 );
         }
 
@@ -134,7 +132,7 @@ namespace GreetingsWeb
                 .AddFluentMigratorCore()
                 .ConfigureRunner(c => c.AddMySql5()
                     .WithGlobalConnectionString(DbConnectionString())
-                    .ScanIn(typeof(MySqlInitialCreate).Assembly).For.Migrations()
+                    .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
                 );
         }
 
@@ -143,9 +141,9 @@ namespace GreetingsWeb
             //TODO: add Postgres migrations
             services
                 .AddFluentMigratorCore()
-                .ConfigureRunner(c => c.AddMySql5()
+                .ConfigureRunner(c => c.AddPostgres()
                     .WithGlobalConnectionString(DbConnectionString())
-                    .ScanIn(typeof(PostgreSqlInitialCreate).Assembly).For.Migrations()
+                    .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
                 );
         }
 
@@ -153,12 +151,10 @@ namespace GreetingsWeb
         {
             services
                 .AddFluentMigratorCore()
-                .ConfigureRunner(c =>
-                {
-                    c.AddSQLite()
+                .ConfigureRunner(c => c.AddSQLite()
                         .WithGlobalConnectionString(DbConnectionString())
-                        .ScanIn(typeof(SqlliteInitialCreate).Assembly).For.Migrations();
-                });
+                        .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
+                );
         }
         
         private void ConfigureDapper()

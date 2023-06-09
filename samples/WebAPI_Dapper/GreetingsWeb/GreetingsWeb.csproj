@@ -27,10 +27,7 @@
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.PostgreSql\Paramore.Brighter.Outbox.PostgreSql.csproj" />
       <ProjectReference Include="..\..\..\src\Paramore.Brighter.Outbox.Sqlite\Paramore.Brighter.Outbox.Sqlite.csproj" />
       <ProjectReference Include="..\GreetingsPorts\GreetingsPorts.csproj" />
-      <ProjectReference Include="..\Greetings_MsSqlMigrations\Greetings_MsSqlMigrations.csproj" />
-      <ProjectReference Include="..\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj" />
-      <ProjectReference Include="..\Greetings_PostgreSqlMigrations\Greetings_PostgreSqlMigrations.csproj" />
-      <ProjectReference Include="..\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj" />
+      <ProjectReference Include="..\Greetings_Migrations\Greetings_Migrations.csproj" />
     </ItemGroup>
 
     <ItemGroup>

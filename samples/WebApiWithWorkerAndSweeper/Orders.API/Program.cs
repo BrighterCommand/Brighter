@@ -51,7 +51,7 @@ builder.Services
         {
             configure.ProducerRegistry = producerRegistry;
             configure.Outbox = new MsSqlOutbox(outboxConfig);
-            configure.TransactionProvider = typeof(MsSqlSqlAuthUnitOfWork);
+            configure.TransactionProvider = typeof(MsSqlUnitOfWork);
         }
     )
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(NewOrderVersionEvent)));

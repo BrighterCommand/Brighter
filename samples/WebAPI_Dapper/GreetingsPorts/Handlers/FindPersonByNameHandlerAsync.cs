@@ -27,14 +27,12 @@ namespace GreetingsPorts.Handlers
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
-            var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
-            using (var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken))
-            {
-                var people = await connection.GetListAsync<Person>(searchbyName);
-                var person = people.Single();
+            var searchByName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
+            await using var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken);
+            var people = await connection.GetListAsync<Person>(searchByName);
+            var person = people.Single();
 
-                return new FindPersonResult(person);
-            }
+            return new FindPersonResult(person);
         }
     }
 }

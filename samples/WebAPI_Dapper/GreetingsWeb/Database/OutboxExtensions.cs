@@ -5,9 +5,13 @@ using Microsoft.Extensions.Hosting;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
+using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.Outbox.MySql;
+using Paramore.Brighter.Outbox.PostgreSql;
 using Paramore.Brighter.Outbox.Sqlite;
+using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.Sqlite;
 
 namespace GreetingsWeb.Database
@@ -27,17 +31,27 @@ namespace GreetingsWeb.Database
             }
             else
             {
-                switch (databaseType)
+                outbox = databaseType switch
                 {
-                    case DatabaseType.MySql:
-                        outbox = MakeMySqlOutbox(configuration);
-                        break;
-                    default:
-                        throw new InvalidOperationException("Unknown Db type for Outbox configuration");
-                }
+                    DatabaseType.MySql => MakeMySqlOutbox(configuration),
+                    DatabaseType.MsSql => MakeMsSqlOutbox(configuration),
+                    DatabaseType.Postgres => MakePostgresSqlOutbox(configuration),
+                    DatabaseType.Sqlite => MakeSqliteOutBox(configuration),
+                    _ => throw new InvalidOperationException("Unknown Db type for Outbox configuration")
+                };
             }
 
             return outbox;
+        }
+
+        private static (IAmAnOutbox, Type) MakePostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
+        {
+            return (new PostgreSqlOutbox(configuration), typeof(NpgsqlUnitOfWork));
+        }
+
+        private static (IAmAnOutbox, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)
+        {
+            return new(new MsSqlOutbox(configuration), typeof(MsSqlUnitOfWork));
         }
 
         private static (IAmAnOutbox, Type)  MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)

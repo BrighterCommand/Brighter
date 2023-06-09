@@ -36,7 +36,7 @@ namespace GreetingsWeb.Database
             if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(dbType, connectionString);
-            CreateDatabaseIfNotExists(GetDbConnection(dbType, connectionString));
+            CreateDatabaseIfNotExists(dbType, GetDbConnection(dbType, connectionString));
 
             return webHost;
         }
@@ -66,25 +66,42 @@ namespace GreetingsWeb.Database
 
         public static IHost CreateOutbox(this IHost webHost)
         {
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IWebHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IWebHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateOutbox(config, env);
-            }
+            CreateOutbox(config, env);
 
             return webHost;
         }
 
-        private static void CreateDatabaseIfNotExists(DbConnection conn)
+        private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
         {
             //The migration does not create the Db, so we need to create it sot that it will add it
             conn.Open();
             using var command = conn.CreateCommand();
-            command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
-            command.ExecuteScalar();
+            if (databaseType != DatabaseType.Postgres)
+                command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
+            else
+                command.CommandText = "CREATE DATABASE Greetings";
+
+            try
+            {
+                command.ExecuteScalar();
+            }
+            catch (NpgsqlException pe)
+            {
+                //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
+                if (!pe.Message.Contains("already exists"))
+                    throw;
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
+                //Rethrow, if we can't create the Outbox, shut down
+                throw;
+            }
         }
 
 
@@ -98,6 +115,15 @@ namespace GreetingsWeb.Database
                     CreateOutboxDevelopment(connectionString);
                 else
                     CreateOutboxProduction(GetDatabaseType(config), connectionString);
+            }
+            catch (NpgsqlException pe)
+            {
+                //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
+                if (!pe.Message.Contains("already exists"))
+                {
+                    Console.WriteLine($"Issue with creating Outbox table, {pe.Message}");
+                    throw;
+                }
             }
             catch (System.Exception e)
             {

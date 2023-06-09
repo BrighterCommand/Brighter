@@ -10,7 +10,7 @@ namespace Paramore.Brighter.PostgreSql
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class PostgreSqlNpgsqlUnitOfWork : RelationalDbTransactionProvider
+    public class NpgsqlUnitOfWork : RelationalDbTransactionProvider
     {
         private readonly string _connectionString;
 
@@ -18,7 +18,7 @@ namespace Paramore.Brighter.PostgreSql
         /// Initialise a new instance of PostgreSQl Connection provider from a connection string
         /// </summary>
         /// <param name="configuration">PostgreSQL Configuration</param>
-        public PostgreSqlNpgsqlUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
+        public NpgsqlUnitOfWork(IAmARelationalDatabaseConfiguration configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));

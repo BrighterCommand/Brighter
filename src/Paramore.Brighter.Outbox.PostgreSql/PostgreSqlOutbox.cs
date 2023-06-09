@@ -201,14 +201,15 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             return command;
         }
 
-        protected override IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber)
+        protected override IDbDataParameter[] CreatePagedOutstandingParameters(
+            double milliSecondsSinceAdded,
+            int pageSize, 
+            int pageNumber)
         {
-            var offset = (pageNumber - 1) * pageSize;
             var parameters = new IDbDataParameter[3];
-            parameters[0] = CreateSqlParameter("OffsetValue", offset);
+            parameters[0] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
             parameters[1] = CreateSqlParameter("PageSize", pageSize);
-            parameters[2] = CreateSqlParameter("OutstandingSince", milliSecondsSinceAdded);
+            parameters[2] = CreateSqlParameter("PageNumber", pageNumber);
 
             return parameters;
         }

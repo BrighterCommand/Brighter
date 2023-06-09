@@ -253,11 +253,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "GreetingsEntities", "sample
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Paramore.Brighter.Dapper", "src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj", "{5FDA646C-30DA-4F13-8399-A3C533D2D16E}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_SqliteMigrations", "samples\WebAPI_Dapper\Greetings_SqliteMigrations\Greetings_SqliteMigrations.csproj", "{026230E1-F388-425A-98CB-6E17C174FE62}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutations_SqliteMigrations", "samples\WebAPI_Dapper\Salutations_SqliteMigrations\Salutations_SqliteMigrations.csproj", "{C601A031-963B-4EA9-82C7-1221B1EE9E51}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_MySqlMigrations", "samples\WebAPI_Dapper\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj", "{ECD2C752-4E20-4EC5-BB6B-B06731BDE5BD}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Greetings_Migrations", "samples\WebAPI_Dapper\Greetings_Migrations\Greetings_Migrations.csproj", "{ECD2C752-4E20-4EC5-BB6B-B06731BDE5BD}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Salutations_mySqlMigrations", "samples\WebAPI_Dapper\Salutations_mySqlMigrations\Salutations_mySqlMigrations.csproj", "{F72FF4C5-4CD8-4EFE-B468-5FAE45D20931}"
 EndProject
@@ -355,10 +353,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Salutations_mySqlMigrations", "samples\WebAPI_Dapper_Kafka\Salutations_mySqlMigrations\Salutations_mySqlMigrations.csproj", "{E66CA4D7-8339-4674-B102-BC7CA890B7C5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_MySqlMigrations", "samples\WebAPI_Dapper_Kafka\Greetings_MySqlMigrations\Greetings_MySqlMigrations.csproj", "{2FADCED2-8563-4261-9AA8-514E5888075F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_PostgreSqlMigrations", "samples\WebAPI_Dapper\Greetings_PostgreSqlMigrations\Greetings_PostgreSqlMigrations.csproj", "{BD636016-AC13-45BA-85CB-2A077568EDFA}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_MsSqlMigrations", "samples\WebAPI_Dapper\Greetings_MsSqlMigrations\Greetings_MsSqlMigrations.csproj", "{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Greetings_PostgreSqlMigrations", "samples\WebAPI_Dapper_Kafka\Greetings_PostgreSqlMigrations\Greetings_PostgreSqlMigrations.csproj", "{B64979D7-5FAD-4C5E-BCFC-B7FFA9C962C4}"
 EndProject
@@ -1538,18 +1532,6 @@ Global
 		{5FDA646C-30DA-4F13-8399-A3C533D2D16E}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{5FDA646C-30DA-4F13-8399-A3C533D2D16E}.Release|x86.ActiveCfg = Release|Any CPU
 		{5FDA646C-30DA-4F13-8399-A3C533D2D16E}.Release|x86.Build.0 = Release|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Debug|x86.Build.0 = Debug|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Any CPU.Build.0 = Release|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|x86.ActiveCfg = Release|Any CPU
-		{026230E1-F388-425A-98CB-6E17C174FE62}.Release|x86.Build.0 = Release|Any CPU
 		{C601A031-963B-4EA9-82C7-1221B1EE9E51}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{C601A031-963B-4EA9-82C7-1221B1EE9E51}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C601A031-963B-4EA9-82C7-1221B1EE9E51}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -2066,30 +2048,6 @@ Global
 		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|Mixed Platforms.Build.0 = Release|Any CPU
 		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|x86.ActiveCfg = Release|Any CPU
 		{2FADCED2-8563-4261-9AA8-514E5888075F}.Release|x86.Build.0 = Release|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Debug|x86.Build.0 = Debug|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Release|x86.ActiveCfg = Release|Any CPU
-		{BD636016-AC13-45BA-85CB-2A077568EDFA}.Release|x86.Build.0 = Release|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Debug|Mixed Platforms.Build.0 = Debug|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Debug|x86.Build.0 = Debug|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Release|Any CPU.Build.0 = Release|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Release|Mixed Platforms.ActiveCfg = Release|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Release|Mixed Platforms.Build.0 = Release|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Release|x86.ActiveCfg = Release|Any CPU
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58}.Release|x86.Build.0 = Release|Any CPU
 		{B64979D7-5FAD-4C5E-BCFC-B7FFA9C962C4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{B64979D7-5FAD-4C5E-BCFC-B7FFA9C962C4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{B64979D7-5FAD-4C5E-BCFC-B7FFA9C962C4}.Debug|Mixed Platforms.ActiveCfg = Debug|Any CPU
@@ -2193,7 +2151,6 @@ Global
 		{526E4E1A-9E8E-4233-B851-D6172D013AF6} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{79A46154-4754-48B1-849F-374AD729C040} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{4164912F-F69E-4AD7-A521-6D58253B5ABC} = {202BA107-89D5-4868-AC5A-3527114C0109}
-		{026230E1-F388-425A-98CB-6E17C174FE62} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{C601A031-963B-4EA9-82C7-1221B1EE9E51} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{ECD2C752-4E20-4EC5-BB6B-B06731BDE5BD} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{F72FF4C5-4CD8-4EFE-B468-5FAE45D20931} = {202BA107-89D5-4868-AC5A-3527114C0109}
@@ -2240,8 +2197,6 @@ Global
 		{B50A44CE-5F54-4559-90E0-1AF81655E944} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 		{E66CA4D7-8339-4674-B102-BC7CA890B7C5} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 		{2FADCED2-8563-4261-9AA8-514E5888075F} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
-		{BD636016-AC13-45BA-85CB-2A077568EDFA} = {202BA107-89D5-4868-AC5A-3527114C0109}
-		{838E3E45-7546-4EC2-B4C5-0CB239A3BD58} = {202BA107-89D5-4868-AC5A-3527114C0109}
 		{B64979D7-5FAD-4C5E-BCFC-B7FFA9C962C4} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 		{2B11781D-13B0-4602-A6B4-96881F670CC0} = {36612AF5-23DB-46C0-9EB5-0F21911741F3}
 	EndGlobalSection
