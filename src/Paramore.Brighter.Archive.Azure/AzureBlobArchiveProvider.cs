@@ -1,8 +1,6 @@
-using Azure;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
-using Microsoft.Extensions.Azure;
 
 namespace Paramore.Brighter.Storage.Azure;
 
@@ -39,7 +37,7 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     /// </summary>
     /// <param name="message">Message to send</param>
     /// <param name="cancellationToken">The Cancellation Token</param>
-    public async Task<Guid?> ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
+    public async Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
     {
         var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
 
@@ -49,21 +47,40 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
             var opts = GetUploadOptions(message);
             await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
         }
-        return message.Id;
     }
 
+    /// <summary>
+    /// Archive messages in Parallel
+    /// </summary>
+    /// <param name="message">Message to send</param>
+    /// <param name="cancellationToken">The Cancellation Token</param>
+    /// <returns>IDs of successfully archived messages</returns>
     public async Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
     {
         var uploads = new Queue<Task<Guid?>>();
 
         foreach (var message in messages)
         {
-            uploads.Enqueue(ArchiveMessageAsync(message, cancellationToken));
+            uploads.Enqueue(UploadSafe(message, cancellationToken));
         }
 
         var results = await Task.WhenAll(uploads);
         return results.Where(r => r.HasValue).Select(r => r.Value).ToArray();
 
+    }
+
+    private async Task<Guid?> UploadSafe(Message message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ArchiveMessageAsync(message, cancellationToken);
+            return message.Id;
+        }
+        catch(Exception e)
+        {
+            
+            return null;
+        }
     }
 
     private BlobUploadOptions GetUploadOptions(Message message)

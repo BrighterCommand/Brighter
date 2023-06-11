@@ -23,11 +23,11 @@ namespace Paramore.Brighter
             _logger.LogDebug("Message with Id {MessageId} will not be stored", message.Id);
         }
 
-        public Task<Guid?> ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
+        public Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Message with Id {MessageId} will not be stored", message.Id);
-            
-            return Task.FromResult((Guid?)message.Id);
+
+            return Task.CompletedTask;
         }
 
         public Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
