@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Azure.Identity;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -100,6 +101,50 @@ public class AzureBlobArchiveProviderTests
         var tier = await blobClient.GetPropertiesAsync();
         Assert.That(tier.Value.AccessTier, Is.EqualTo(AccessTier.Cool.ToString()));
         
+    }
+
+    [Test]
+    public async Task GivenARequestToArchiveAMessageAsync_WhenParallel_TheMessageIsArchived()
+    {
+        var superAwesomeCommands = new List<SuperAwesomeCommand>();
+        var superAwesomeEvents = new List<SuperAwesomeEvent>();
+
+        var containerClient = GetClient(AccessTier.Cool);
+
+        for (var i = 0; i < 10; i++)
+        {
+            superAwesomeCommands.Add(new SuperAwesomeCommand { Message = $"do the thing {Guid.NewGuid()}" });
+            superAwesomeEvents.Add(new SuperAwesomeEvent { Announcement = $"The thing was done {Guid.NewGuid()}" });
+        }
+
+        var messages = new List<Message>();
+        messages.AddRange(superAwesomeCommands.Select(c => _commandMapper.MapToMessage(c)));
+        messages.AddRange(superAwesomeEvents.Select(c => _eventMapper.MapToMessage(c)));
+
+        await _provider.ArchiveMessagesAsync(messages.ToArray(), CancellationToken.None);
+
+        foreach (var message in messages)
+        {
+            var blobClient = containerClient.GetBlobClient(message.Id.ToString());
+            Assert.That((bool)await blobClient.ExistsAsync(), Is.True);
+
+            var tags = (await blobClient.GetTagsAsync()).Value.Tags;
+            Assert.That(tags.Count, Is.EqualTo(0));
+
+            var body = (await blobClient.DownloadContentAsync()).Value.Content.ToString();
+
+            string brighterBody = "";
+            if (message.Header.MessageType == MessageType.MT_COMMAND)
+                brighterBody = JsonSerializer.Serialize(superAwesomeCommands.First(c => c.Id == message.Id));
+            else if (message.Header.MessageType == MessageType.MT_EVENT)
+                brighterBody = JsonSerializer.Serialize(superAwesomeEvents.First(c => c.Id == message.Id));
+            
+            Assert.That(body, Is.EqualTo(brighterBody));
+
+            var tier = await blobClient.GetPropertiesAsync();
+            Assert.That(tier.Value.AccessTier, Is.EqualTo(AccessTier.Cool.ToString()));
+        }
+
     }
 
     [Test]

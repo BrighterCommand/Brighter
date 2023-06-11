@@ -8,6 +8,8 @@ namespace Paramore.Brighter
     {
         void ArchiveMessage(Message message);
         
-        Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken);
+        Task<Guid?> ArchiveMessageAsync(Message message, CancellationToken cancellationToken);
+        
+        Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken);
     }
 }
