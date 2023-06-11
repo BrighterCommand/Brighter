@@ -24,4 +24,14 @@ public class AzureBlobArchiveProviderOptions
     /// If enable write tags to the blobs
     /// </summary>
     public bool TagBlobs = false;
+
+    /// <summary>
+    /// The maximum number of parallel uploads when using parallel
+    /// </summary>
+    public int MaxConcurrentUploads = 8;
+
+    /// <summary>
+    /// The maximum upload size in mb
+    /// </summary>
+    public int MaxUploadSize = 50;
 }
