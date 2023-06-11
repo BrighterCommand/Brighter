@@ -24,7 +24,7 @@ THE SOFTWARE. */
 using System;
 
 namespace Paramore.Brighter
-{         
+{
     /// <summary>
     /// class UnwrapWithAttribute
     /// Indicates that you want to run a <see cref="IAmAMessageTransformAsync"/> before the <see cref="Message"/> has
@@ -33,11 +33,9 @@ namespace Paramore.Brighter
     /// </summary>
     public abstract class UnwrapWithAttribute : TransformAttribute
     {
-        private int _step;
-
         protected UnwrapWithAttribute(int step)
         {
-            _step = step;
+            Step = step;
         }
     }
 }
