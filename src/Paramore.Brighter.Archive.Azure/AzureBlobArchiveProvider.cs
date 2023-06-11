@@ -1,3 +1,4 @@
+using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 
@@ -48,11 +49,54 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
         }
     }
 
+    /// <summary>
+    /// Archive messages in Parallel
+    /// </summary>
+    /// <param name="message">Message to send</param>
+    /// <param name="cancellationToken">The Cancellation Token</param>
+    /// <returns>IDs of successfully archived messages</returns>
+    public async Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+    {
+        var uploads = new Queue<Task<Guid?>>();
+
+        foreach (var message in messages)
+        {
+            uploads.Enqueue(UploadSafe(message, cancellationToken));
+        }
+
+        var results = await Task.WhenAll(uploads);
+        return results.Where(r => r.HasValue).Select(r => r.Value).ToArray();
+
+    }
+
+    private async Task<Guid?> UploadSafe(Message message, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await ArchiveMessageAsync(message, cancellationToken);
+            return message.Id;
+        }
+        catch(Exception e)
+        {
+            
+            return null;
+        }
+    }
+
     private BlobUploadOptions GetUploadOptions(Message message)
     {
         var opts = new BlobUploadOptions()
         {
-            AccessTier = _options.AccessTier
+            AccessTier = _options.AccessTier,
+            TransferOptions = new StorageTransferOptions
+            {
+                // Set the maximum number of workers that 
+                // may be used in a parallel transfer.
+                MaximumConcurrency = _options.MaxConcurrentUploads,
+
+                // Set the maximum length of a transfer to 50MB.
+                MaximumTransferSize = _options.MaxUploadSize * 1024 * 1024
+            }
         };
 
         if (_options.TagBlobs)
