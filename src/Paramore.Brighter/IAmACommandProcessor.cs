@@ -85,18 +85,6 @@ namespace Paramore.Brighter
         void Post<TRequest>(TRequest request) where TRequest : class, IRequest;
         
         /// <summary>
-        /// Posts the specified request.
-        /// </summary>
-        /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <typeparam name="TTransaction">The type of any transaction used by the request</typeparam>
-        /// <param name="request">The request.</param>
-        /// <param name="transactionProvider">If you wish to use an outbox with this request, the transaction provider for that outbox</param>
-        void Post<TRequest, TTransaction>(
-            TRequest request, 
-            IAmABoxTransactionProvider<TTransaction> transactionProvider 
-            ) where TRequest : class, IRequest;
-
-        /// <summary>
         /// Posts the specified request with async/await support.
         /// </summary>
         /// <typeparam name="TRequest">The type of the request</typeparam>
@@ -109,23 +97,6 @@ namespace Paramore.Brighter
             bool continueOnCapturedContext = false, 
             CancellationToken cancellationToken = default
         ) where TRequest : class, IRequest;
-        
-        /// <summary>
-        /// Posts the specified request with async/await support.
-        /// </summary>
-        /// <typeparam name="TRequest">The type of the request</typeparam>
-        /// <typeparam name="TTransaction">GThe type of transaction used by any outbox</typeparam>
-        /// <param name="request">The request.</param>
-        /// <param name="transactionProvider">If you wish to use an outbox with this request, the transaction provider for that outbox</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        Task PostAsync<TRequest, TTransaction>(
-            TRequest request, 
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null, 
-            bool continueOnCapturedContext = false, 
-            CancellationToken cancellationToken = default
-            ) where TRequest : class, IRequest;
         
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.

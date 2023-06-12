@@ -440,30 +440,10 @@ namespace Paramore.Brighter
         /// <exception cref="System.ArgumentOutOfRangeException"></exception>
         public void Post<TRequest>(TRequest request) where TRequest : class, IRequest
         {
-            Post<TRequest, CommittableTransaction>(request, null);
+            ClearOutbox(DepositPost(request, (IAmABoxTransactionProvider<CommittableTransaction>)null));
         }
 
         /// <summary>
-        /// Posts the specified request. The message is placed on a task queue and into a outbox for reposting in the event of failure.
-        /// You will need to configure a service that reads from the task queue to process the message
-        /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
-        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
-        /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use Deposit,
-        /// and then after you have committed your transaction use ClearOutbox
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <param name="transactionProvider">The transaction provider</param>
-        /// <typeparam name="TRequest">The type of request</typeparam>
-        /// <typeparam name="TTransaction">The type of transaction used by the Outbox</typeparam>
-        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        public void Post<TRequest, TTransaction>(TRequest request, IAmABoxTransactionProvider<TTransaction> transactionProvider) where TRequest : class, IRequest
-        {
-            ClearOutbox(DepositPost(request, transactionProvider));
-        }
-        
-              /// <summary>
         /// Posts the specified request with async/await support. The message is placed on a task queue and into a outbox for reposting in the event of failure.
         /// You will need to configure a service that reads from the task queue to process the message
         /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
@@ -485,40 +465,11 @@ namespace Paramore.Brighter
             CancellationToken cancellationToken = default
             )
             where TRequest : class, IRequest
-              {
-                  await PostAsync<TRequest, CommittableTransaction>(request, null, continueOnCapturedContext, cancellationToken);
-              }
-
-        /// <summary>
-        /// Posts the specified request with async/await support. The message is placed on a task queue and into a outbox for reposting in the event of failure.
-        /// You will need to configure a service that reads from the task queue to process the message
-        /// Paramore.Brighter.ServiceActivator provides an endpoint for use in a windows service that reads from a queue
-        /// and then Sends or Publishes the message to a <see cref="CommandProcessor"/> within that service. The decision to <see cref="Send{T}"/> or <see cref="Publish{T}"/> is based on the
-        /// mapper. Your mapper can map to a <see cref="Message"/> with either a <see cref="T:MessageType.MT_COMMAND"/> , which results in a <see cref="Send{T}(T)"/> or a
-        /// <see cref="T:MessageType.MT_EVENT"/> which results in a <see cref="Publish{T}(T)"/>
-        /// Please note that this call will not participate in any ambient Transactions, if you wish to have the outbox participate in a Transaction please Use DepositAsync,
-        /// and then after you have committed your transaction use ClearOutboxAsync
-        /// </summary>
-        /// <param name="request">The request.</param>
-        /// <param name="transactionProvider">The transaction provider used to share a transaction with an Outbox</param>
-        /// <param name="continueOnCapturedContext">Should we use the calling thread's synchronization context when continuing or a default thread synchronization context. Defaults to false</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <typeparam name="TRequest">The type of request</typeparam>
-        /// <typeparam name="TTransaction">The type of a transaction i.e. DbTransaction etc</typeparam>
-        /// <exception cref="System.ArgumentOutOfRangeException"></exception>
-        /// <returns>awaitable <see cref="Task"/>.</returns>
-        public async Task PostAsync<TRequest, TTransaction>(
-            TRequest request, 
-            IAmABoxTransactionProvider<TTransaction> transactionProvider = null,
-            bool continueOnCapturedContext = false,
-            CancellationToken cancellationToken = default
-            )
-            where TRequest : class, IRequest
         {
-            var messageId = await DepositPostAsync(request, transactionProvider, continueOnCapturedContext, cancellationToken);
+            var messageId = await DepositPostAsync(request, (IAmABoxTransactionProvider<CommittableTransaction>)null, continueOnCapturedContext, cancellationToken);
             await ClearOutboxAsync(new Guid[] { messageId }, continueOnCapturedContext, cancellationToken);
         }
-        
+ 
         /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
