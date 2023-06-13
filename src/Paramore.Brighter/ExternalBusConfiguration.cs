@@ -92,6 +92,12 @@ namespace Paramore.Brighter
     public class ExternalBusConfiguration : IAmExternalBusConfiguration
     {
         /// <summary>
+        /// How do obtain a connection to the Outbox that is not part of a shared transaction.
+        /// NOTE: Must implement IAmARelationalDbConnectionProvider
+        /// </summary>
+        public Type ConnectionProvider { get; set; }
+        
+        /// <summary>
         /// The registry is a collection of producers 
         /// </summary>
         /// <value>The registry of producers</value>
@@ -138,6 +144,7 @@ namespace Paramore.Brighter
         
         /// <summary>
         /// The transaction provider for the outbox
+        /// NOTE: Must implement IAmABoxTransactionProvider&lt; &gt;
         /// </summary>
         public Type TransactionProvider { get; set; }
 
@@ -145,6 +152,7 @@ namespace Paramore.Brighter
         /// Do we want to support RPC on an external bus?
         /// </summary>
         public bool UseRpc { get; set; }
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ExternalBusConfiguration"/> class.

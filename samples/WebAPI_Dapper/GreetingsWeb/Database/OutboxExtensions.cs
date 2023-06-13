@@ -19,12 +19,12 @@ namespace GreetingsWeb.Database
 
     public class OutboxExtensions
     {
-        public static (IAmAnOutbox, Type) MakeOutbox(
+        public static (IAmAnOutbox, Type, Type) MakeOutbox(
             IWebHostEnvironment env,
             DatabaseType databaseType,
             RelationalDatabaseConfiguration configuration)
         {
-            (IAmAnOutbox, Type) outbox;
+            (IAmAnOutbox, Type, Type) outbox;
             if (env.IsDevelopment())
             {
                 outbox = MakeSqliteOutBox(configuration);
@@ -44,24 +44,24 @@ namespace GreetingsWeb.Database
             return outbox;
         }
 
-        private static (IAmAnOutbox, Type) MakePostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
+        private static (IAmAnOutbox, Type, Type) MakePostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            return (new PostgreSqlOutbox(configuration), typeof(NpgsqlUnitOfWork));
+            return (new PostgreSqlOutbox(configuration), typeof(NpgsqConnectionProvider), typeof(NpgsqlUnitOfWork));
         }
 
-        private static (IAmAnOutbox, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)
+        private static (IAmAnOutbox, Type, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            return new(new MsSqlOutbox(configuration), typeof(MsSqlUnitOfWork));
+            return new(new MsSqlOutbox(configuration), typeof(MsSqlAuthConnectionProvider), typeof(MsSqlUnitOfWork));
         }
 
-        private static (IAmAnOutbox, Type)  MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)
+        private static (IAmAnOutbox, Type, Type)  MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            return (new MySqlOutbox(configuration), typeof(MySqlUnitOfWork));
+            return (new MySqlOutbox(configuration), typeof (MySqlConnectionProvider), typeof(MySqlUnitOfWork));
         }
 
-        private static (IAmAnOutbox, Type) MakeSqliteOutBox(RelationalDatabaseConfiguration configuration)
+        private static (IAmAnOutbox, Type, Type) MakeSqliteOutBox(RelationalDatabaseConfiguration configuration)
         {
-            return (new SqliteOutbox(configuration), typeof(SqliteUnitOfWork));
+            return (new SqliteOutbox(configuration), typeof(SqliteConnectionProvider), typeof(SqliteUnitOfWork));
         }
     }
 }

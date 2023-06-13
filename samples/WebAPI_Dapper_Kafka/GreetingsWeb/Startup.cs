@@ -248,7 +248,7 @@ namespace GreetingsWeb
                     })
                 .Create();
 
-            (IAmAnOutbox outbox, Type transactionProvider) makeOutbox =
+            (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
                 OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration);
 
             services.AddBrighter(options =>
@@ -263,6 +263,7 @@ namespace GreetingsWeb
                 {
                     configure.ProducerRegistry = producerRegistry;
                     configure.Outbox = makeOutbox.outbox;
+                    configure.ConnectionProvider = makeOutbox.connectionProvider;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
                 })
                 .UseOutboxSweeper(options =>

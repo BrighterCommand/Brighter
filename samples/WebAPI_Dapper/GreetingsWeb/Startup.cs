@@ -1,4 +1,5 @@
 using System;
+using Dapper;
 using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
@@ -123,7 +124,8 @@ namespace GreetingsWeb
                 .ConfigureRunner(c => c.AddSqlServer()
                     .WithGlobalConnectionString(DbConnectionString())
                     .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
-                );
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.MsSql.ToString()});
         }
 
         private void ConfigureMySql(IServiceCollection services)
@@ -133,7 +135,8 @@ namespace GreetingsWeb
                 .ConfigureRunner(c => c.AddMySql5()
                     .WithGlobalConnectionString(DbConnectionString())
                     .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
-                );
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.MySql.ToString()});
         }
 
         private void ConfigurePostgreSql(IServiceCollection services)
@@ -144,7 +147,8 @@ namespace GreetingsWeb
                 .ConfigureRunner(c => c.AddPostgres()
                     .WithGlobalConnectionString(DbConnectionString())
                     .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
-                );
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.Postgres.ToString()});
         }
 
         private void ConfigureSqlite(IServiceCollection services)
@@ -154,7 +158,8 @@ namespace GreetingsWeb
                 .ConfigureRunner(c => c.AddSQLite()
                         .WithGlobalConnectionString(DbConnectionString())
                         .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
-                );
+                )
+                .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.Sqlite.ToString()});
         }
         
         private void ConfigureDapper()
@@ -188,26 +193,30 @@ namespace GreetingsWeb
 
         private static void ConfigureDapperMsSql()
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqlServerDialect();
-            DapperAsyncExtensions.SqlDialect = new SqlServerDialect();
+            var sqlDialect = new SqlServerDialect();
+            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
+            DapperAsyncExtensions.SqlDialect = sqlDialect;
          }
 
         private static void ConfigureDapperSqlite()
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
+            var sqlDialect = new SqliteDialect();
+            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
+            DapperAsyncExtensions.SqlDialect = sqlDialect;
         }
 
         private static void ConfigureDapperMySql()
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
+            var sqlDialect = new MySqlDialect();
+            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
+            DapperAsyncExtensions.SqlDialect = sqlDialect;
         }
 
         private static void ConfigureDapperPostgreSql()
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new PostgreSqlDialect();
-            DapperAsyncExtensions.SqlDialect = new PostgreSqlDialect();
+            var sqlDialect = new PostgreSqlDialect();
+            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
+            DapperAsyncExtensions.SqlDialect = sqlDialect;
          }
 
         private void ConfigureBrighter(IServiceCollection services)
@@ -237,7 +246,7 @@ namespace GreetingsWeb
                 }
             ).Create();
 
-            (IAmAnOutbox outbox, Type transactionProvider) makeOutbox =
+            (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
                 OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration);
             
             services.AddBrighter(options =>
@@ -253,6 +262,7 @@ namespace GreetingsWeb
                     configure.ProducerRegistry = producerRegistry;
                     configure.Outbox = makeOutbox.outbox;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
+                    configure.ConnectionProvider = makeOutbox.connectionProvider;
                 })
                 .UseOutboxSweeper(options => {
                     options.TimerInterval = 5;

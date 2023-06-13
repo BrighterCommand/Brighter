@@ -16,7 +16,7 @@ namespace GreetingsPorts.Handlers
     {
         private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider; 
 
-        public DeletePersonHandlerAsync(IAmATransactionConnectionProvider relationalDbConnectionProvider)
+        public DeletePersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
         {
             _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }

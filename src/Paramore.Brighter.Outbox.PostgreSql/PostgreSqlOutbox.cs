@@ -56,7 +56,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         }
 
         public PostgreSqlOutbox(IAmARelationalDatabaseConfiguration configuration)
-            : this(configuration, new PostgreSqlNpgsqlConnectionProvider(configuration))
+            : this(configuration, new NpgsqConnectionProvider(configuration))
         { }
 
         protected override void WriteToStore(
