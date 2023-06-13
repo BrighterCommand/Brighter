@@ -17,6 +17,8 @@ namespace Paramore.Brighter
         private readonly IAmAnOutboxAsync<TMessage, TTransaction> _outboxAsync;
         private readonly IAmAnArchiveProvider _archiveProvider;
         private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
+        
+        private const string SUCCESS_MESSAGE = "Successfully archiver {NumberOfMessageArchived} out of {MessagesToArchive}, batch size : {BatchSize}";
 
         public OutboxArchiver(IAmAnOutbox outbox,IAmAnArchiveProvider archiveProvider, int batchSize = 100)
         {
@@ -37,11 +39,10 @@ namespace Paramore.Brighter
         public void Archive(int minimumAge)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
-            var age = TimeSpan.FromHours(minimumAge);
 
             try
             {
-                var messages = _outboxSync.DispatchedMessages(age.Milliseconds, _batchSize);
+                var messages = _outboxSync.DispatchedMessages(minimumAge, _batchSize);
 
                 if (!messages.Any()) return;
                 foreach (var message in messages)
@@ -50,6 +51,7 @@ namespace Paramore.Brighter
                 }
 
                 _outboxSync.Delete(messages.Select(e => e.Id).ToArray());
+                _logger.LogInformation(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
             }
             catch (Exception e)
             {
@@ -69,7 +71,8 @@ namespace Paramore.Brighter
         /// </summary>
         /// <param name="minimumAge">Minimum age in hours</param>
         /// <param name="cancellationToken">The Cancellation Token</param>
-        public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken)
+        /// <param name="parallelArchiving">Send messages to archive provider in parallel</param>
+        public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken, bool parallelArchiving = false)
         {
             var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
             
@@ -79,9 +82,19 @@ namespace Paramore.Brighter
                     cancellationToken: cancellationToken);
 
                 if (!messages.Any()) return;
-                foreach (var message in messages)
+
+                Guid[] successfullyArchivedMessages;
+                if (parallelArchiving)
                 {
-                    await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
+                    successfullyArchivedMessages = await _archiveProvider.ArchiveMessagesAsync(messages.ToArray(), cancellationToken);
+                }
+                else
+                {
+                    foreach (var message in messages)
+                    {
+                        await _archiveProvider.ArchiveMessageAsync(message, cancellationToken);
+                    }
+                    successfullyArchivedMessages = messages.Select(m => m.Id).ToArray();
                 }
 
                 await _outboxAsync.DeleteAsync(cancellationToken, messages.Select(e => e.Id).ToArray());

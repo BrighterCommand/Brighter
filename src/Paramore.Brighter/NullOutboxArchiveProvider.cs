@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
@@ -24,8 +26,16 @@ namespace Paramore.Brighter
         public Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
         {
             _logger.LogDebug("Message with Id {MessageId} will not be stored", message.Id);
-            
+
             return Task.CompletedTask;
+        }
+
+        public Task<Guid[]> ArchiveMessagesAsync(Message[] messages, CancellationToken cancellationToken)
+        {
+            _logger.LogDebug("Messages with Ids {MessageIds} will not be stored",
+                string.Join(",", messages.Select(m => m.Id.ToString()).ToArray()));
+
+            return Task.FromResult(messages.Select(m => m.Id).ToArray());
         }
     }
 }

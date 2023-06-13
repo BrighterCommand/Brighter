@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                         _archiveProvider,
                         _options.BatchSize);
 
-                    await outBoxArchiver.ArchiveAsync(_options.MinimumAge, cancellationToken);
+                    await outBoxArchiver.ArchiveAsync(_options.MinimumAge, cancellationToken, _options.ParallelArchiving);
                 }
                 catch (Exception e)
                 {
