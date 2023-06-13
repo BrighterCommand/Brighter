@@ -31,9 +31,8 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// TopicFindBy.Convention -> The routing key is a name, but use convention to make an Arn for this account
         /// TopicFindBy.Name -> Treat the routing key as a name & use ListTopics to find it (rate limited 30/s)
         /// </summary>
-
         public TopicFindBy FindTopicBy { get; set; } = TopicFindBy.Convention;
-        
+
         /// <summary>
         /// The attributes of the topic. If TopicARNs is set we will always assume that we do not
         /// need to create or validate the SNS Topic

@@ -23,7 +23,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Text.Json;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -44,7 +43,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         TopicName = 5,
         SubscriptionId = 6
     }
-    
+
     internal class SqsMessageCreator : SqsMessageCreatorBase, ISqsMessageCreator
     {
         private static readonly ILogger s_logger= ApplicationLogging.CreateLogger<SqsMessageCreator>();
@@ -53,27 +52,19 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var topic = HeaderResult<string>.Empty();
             var messageId = HeaderResult<Guid>.Empty();
-            var contentType = HeaderResult<string>.Empty();
-            var correlationId = HeaderResult<Guid>.Empty();
-            var handledCount = HeaderResult<int>.Empty();
-            var messageType = HeaderResult<MessageType>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
-            var receiptHandle = HeaderResult<string>.Empty();
-            var replyTo = HeaderResult<string>.Empty();
-            
 
             Message message;
+            HeaderResult<string> receiptHandle = ReadReceiptHandle(sqsMessage);
             try
             {
                 topic = ReadTopic(sqsMessage);
                 messageId = ReadMessageId(sqsMessage);
-                contentType = ReadContentType(sqsMessage);
-                correlationId = ReadCorrelationid(sqsMessage);
-                handledCount = ReadHandledCount(sqsMessage);
-                messageType = ReadMessageType(sqsMessage);
-                timeStamp = ReadTimestamp(sqsMessage);
-                replyTo = ReadReplyTo(sqsMessage);
-                receiptHandle = ReadReceiptHandle(sqsMessage);
+                var contentType = ReadContentType(sqsMessage);
+                var correlationId = ReadCorrelationid(sqsMessage);
+                var handledCount = ReadHandledCount(sqsMessage);
+                var messageType = ReadMessageType(sqsMessage);
+                var timeStamp = ReadTimestamp(sqsMessage);
+                var replyTo = ReadReplyTo(sqsMessage);
 
                 var messageHeader = timeStamp.Success
                     ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
@@ -87,10 +78,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 if (contentType.Success)
                     messageHeader.ContentType = contentType.Result;
-                   
+
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage, messageHeader.ContentType));
-                    
-                //deserialize the bag 
+
+                //deserialize the bag
                 var bag = ReadMessageBag(sqsMessage);
                 foreach (var key in bag.Keys)
                 {
@@ -105,8 +96,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning(e, "Failed to create message from amqp message");
                 message = FailureMessage(topic, messageId);
             }
-            
-            
+
             return message;
         }
 
@@ -114,7 +104,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if(contentType == CompressPayloadTransformer.GZIP || contentType == CompressPayloadTransformer.DEFLATE || contentType == CompressPayloadTransformer.BROTLI)
                 return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.Base64);
-            
+
             return new MessageBody(sqsMessage.Body, contentType, CharacterEncoding.UTF8);
         }
 
@@ -143,7 +133,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             }
             return new HeaderResult<string>(String.Empty, true);
         }
-        
+
         private HeaderResult<DateTime> ReadTimestamp(Amazon.SQS.Model.Message sqsMessage)
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.Timestamp, out MessageAttributeValue value))
@@ -160,7 +150,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             if (sqsMessage.MessageAttributes.TryGetValue(HeaderNames.MessageType, out MessageAttributeValue value))
             {
-                if (Enum.TryParse<MessageType>(value.StringValue, out MessageType messageType))
+                if (Enum.TryParse(value.StringValue, out MessageType messageType))
                 {
                     return new HeaderResult<MessageType>(messageType, true);
                 }
@@ -190,7 +180,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 }
             }
             return new HeaderResult<Guid>(Guid.Empty, true);
-         }
+        }
 
         private HeaderResult<string> ReadContentType(Amazon.SQS.Model.Message sqsMessage)
         {

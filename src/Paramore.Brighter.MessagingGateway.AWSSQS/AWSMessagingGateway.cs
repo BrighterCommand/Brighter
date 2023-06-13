@@ -24,7 +24,6 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
-using System.Net;
 using Amazon.SimpleNotificationService;
 using Amazon.SimpleNotificationService.Model;
 using Microsoft.Extensions.Logging;
@@ -68,10 +67,10 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                     Attributes = attributes,
                     Tags = new List<Tag> {new Tag {Key = "Source", Value = "Brighter"}}
                 };
-                
+
                 //create topic is idempotent, so safe to call even if topic already exists
                 var createTopic = snsClient.CreateTopicAsync(createTopicRequest).Result;
-                
+
                 if (!string.IsNullOrEmpty(createTopic.TopicArn))
                     ChannelTopicArn = createTopic.TopicArn;
                 else

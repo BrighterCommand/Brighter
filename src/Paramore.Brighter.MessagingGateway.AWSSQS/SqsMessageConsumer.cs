@@ -24,7 +24,6 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Microsoft.Extensions.Logging;
@@ -257,17 +256,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
             {
                 s_logger.LogError(exception, "SqsMessageConsumer: Error during re-queueing the message {Id} with receipt handle {ReceiptHandle} on the queue {ChannelName}", message.Id, receiptHandle, _queueName);
                 return false;
-            }
-        }
-
-        private string FindTopicArnByName(RoutingKey topicName)
-        {
-            using (var snsClient = new AmazonSimpleNotificationServiceClient(_awsConnection.Credentials, _awsConnection.Region))
-            {
-                var topic = snsClient.FindTopicAsync(topicName.Value).GetAwaiter().GetResult();
-                if (topic == null)
-                    throw new BrokerUnreachableException($"Unable to find a Topic ARN for {topicName.Value}");
-                return topic.TopicArn;
             }
         }
 

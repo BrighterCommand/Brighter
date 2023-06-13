@@ -39,13 +39,6 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         {
             var topic = HeaderResult<string>.Empty();
             var messageId = HeaderResult<Guid>.Empty();
-            var contentType = HeaderResult<string>.Empty();
-            var correlationId = HeaderResult<Guid>.Empty();
-            var handledCount = HeaderResult<int>.Empty();
-            var messageType = HeaderResult<MessageType>.Empty();
-            var timeStamp = HeaderResult<DateTime>.Empty();
-            var receiptHandle = HeaderResult<string>.Empty();
-            var replyTo = HeaderResult<string>.Empty();
 
             Message message;
             try
@@ -54,13 +47,13 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 topic = ReadTopic();
                 messageId = ReadMessageId();
-                contentType = ReadContentType();
-                correlationId = ReadCorrelationId();
-                handledCount = ReadHandledCount();
-                messageType = ReadMessageType();
-                timeStamp = ReadTimestamp();
-                replyTo = ReadReplyTo();
-                receiptHandle = ReadReceiptHandle(sqsMessage);
+                var contentType = ReadContentType();
+                var correlationId = ReadCorrelationId();
+                var handledCount = ReadHandledCount();
+                var messageType = ReadMessageType();
+                var timeStamp = ReadTimestamp();
+                var replyTo = ReadReplyTo();
+                var receiptHandle = ReadReceiptHandle(sqsMessage);
 
                 var messageHeader = timeStamp.Success
                     ? new MessageHeader(messageId.Result, topic.Result, messageType.Result, timeStamp.Result, handledCount.Result, 0)
@@ -77,7 +70,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
 
                 message = new Message(messageHeader, ReadMessageBody(sqsMessage));
 
-                //deserialize the bag 
+                //deserialize the bag
                 var bag = ReadMessageBag();
                 foreach (var key in bag.Keys)
                 {
@@ -92,8 +85,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
                 s_logger.LogWarning(e, "Failed to create message from Aws Sqs message");
                 message = FailureMessage(topic, messageId);
             }
-            
-            
+
             return message;
         }
 

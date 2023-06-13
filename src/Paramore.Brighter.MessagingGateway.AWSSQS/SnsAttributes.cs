@@ -40,7 +40,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// Ignored if TopicARN is set
         /// </summary>
         public string Policy { get; set; } = null;
-        
+
         /// <summary>
         /// A list of resource tags to use when creating the publication
         /// Ignored if TopicARN is set

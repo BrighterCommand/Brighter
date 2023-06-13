@@ -34,7 +34,7 @@ namespace Paramore.Brighter.MessagingGateway.AWSSQS
         /// No additional data, but the topic was not found
         /// </summary>
         public BrokerUnreachableException() { }
-        
+
         /// <summary>
         /// The topic was not found with additional information
         /// </summary>
