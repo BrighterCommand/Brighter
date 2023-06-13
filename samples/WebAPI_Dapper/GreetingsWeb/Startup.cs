@@ -141,10 +141,10 @@ namespace GreetingsWeb
 
         private void ConfigurePostgreSql(IServiceCollection services)
         {
-            //TODO: add Postgres migrations
             services
                 .AddFluentMigratorCore()
                 .ConfigureRunner(c => c.AddPostgres()
+                    .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
                     .WithGlobalConnectionString(DbConnectionString())
                     .ScanIn(typeof(SqlInitialCreate).Assembly).For.Migrations()
                 )

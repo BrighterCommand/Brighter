@@ -30,7 +30,7 @@ namespace GreetingsPorts.Handlers
             var searchByName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
             await using var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken);
             var people = await connection.GetListAsync<Person>(searchByName);
-            var person = people.Single();
+            var person = people.SingleOrDefault();
 
             return new FindPersonResult(person);
         }
