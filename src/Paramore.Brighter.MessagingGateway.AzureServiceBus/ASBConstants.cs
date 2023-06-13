@@ -8,6 +8,6 @@
         public const string ReplyToHeaderBagKey = "ReplyTo";
 
         public static readonly string[] ReservedHeaders =
-            new[] {LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey};
+            new[] {LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey };
     }
 }
