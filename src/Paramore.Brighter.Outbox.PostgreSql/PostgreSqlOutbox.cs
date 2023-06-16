@@ -38,6 +38,9 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Outbox.PostgreSql
 {
+    /// <summary>
+    /// Implements an outbox using PostgreSQL as a backing store
+    /// </summary>
     public class PostgreSqlOutbox : RelationDatabaseOutbox
     {
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlOutbox>();
@@ -45,6 +48,11 @@ namespace Paramore.Brighter.Outbox.PostgreSql
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PostgreSqlOutbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration to connect to this data store</param>
+        /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
 
         public PostgreSqlOutbox(
             IAmARelationalDatabaseConfiguration configuration,
@@ -55,8 +63,17 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             _connectionProvider = connectionProvider;
         }
 
-        public PostgreSqlOutbox(IAmARelationalDatabaseConfiguration configuration)
-            : this(configuration, new NpgsqConnectionProvider(configuration))
+        /// <summary>
+        /// Initializes a new instance of the <see cref="PostgreSqlOutbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration to connect to this data store</param>
+        /// <param name="dataSource">From v7.0 Npgsql uses an Npgsql data source, leave null to have Brighter manage
+        /// connections; Brighter will not manage type mapping for you in this case so you must register them
+        /// globally</param>
+        public PostgreSqlOutbox(
+            IAmARelationalDatabaseConfiguration configuration,
+            NpgsqlDataSource dataSource = null)
+            : this(configuration, new NpgsqConnectionProvider(configuration, dataSource))
         { }
 
         protected override void WriteToStore(

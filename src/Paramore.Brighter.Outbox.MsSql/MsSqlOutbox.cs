@@ -38,7 +38,7 @@ using Paramore.Brighter.MsSql;
 namespace Paramore.Brighter.Outbox.MsSql
 {
     /// <summary>
-    /// Class MsSqlOutbox.
+    /// Implements an Outbox using MSSQL as a backing store 
     /// </summary>
     public class MsSqlOutbox : RelationDatabaseOutbox
     {
@@ -48,7 +48,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
+        /// Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
+        /// Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,

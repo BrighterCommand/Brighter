@@ -1,7 +1,9 @@
 ﻿using System;
+using GreetingsEntities;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Npgsql;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
@@ -46,7 +48,16 @@ namespace GreetingsWeb.Database
 
         private static (IAmAnOutbox, Type, Type) MakePostgresSqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            return (new PostgreSqlOutbox(configuration), typeof(NpgsqConnectionProvider), typeof(NpgsqlUnitOfWork));
+            //if we want to use our IAmARelationalDatabaseConnectionProvider or IAmAABoxTransactionProvider<DbTransaction>
+            //from the Outbox in our handlers, then we need to construct an NpgsqlDataSource and register the composite types
+            //then pass that to the Outbox constructor so that connections created by the Outbox will be aware of
+            //those composite types
+            var dataSourceBuilder = new NpgsqlDataSourceBuilder(configuration.ConnectionString);
+            dataSourceBuilder.MapComposite<Person>();
+            dataSourceBuilder.MapComposite<Greeting>();
+            var dataSource = dataSourceBuilder.Build();
+            
+            return (new PostgreSqlOutbox(configuration, dataSource), typeof(NpgsqConnectionProvider), typeof(NpgsqlUnitOfWork));
         }
 
         private static (IAmAnOutbox, Type, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)

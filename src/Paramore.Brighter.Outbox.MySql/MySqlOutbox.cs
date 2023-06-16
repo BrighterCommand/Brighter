@@ -39,7 +39,7 @@ using Paramore.Brighter.MySql;
 namespace Paramore.Brighter.Outbox.MySql
 {
     /// <summary>
-    ///     Class MySqlOutbox.
+    /// Implements an outbox using Sqlite as a backing store  
     /// </summary>
     public class MySqlOutbox : RelationDatabaseOutbox
     {
@@ -49,6 +49,11 @@ namespace Paramore.Brighter.Outbox.MySql
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider  _connectionProvider;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration to connect to this data store</param>
+        /// <param name="connectionProvider">Provides a connection to the Db that allows us to enlist in an ambient transaction</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider) 
             : base(configuration.OutBoxTableName, new MySqlQueries(), ApplicationLogging.CreateLogger<MySqlOutbox>())
         {
@@ -57,6 +62,10 @@ namespace Paramore.Brighter.Outbox.MySql
             ContinueOnCapturedContext = false;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="MySqlOutbox" /> class.
+        /// </summary>
+        /// <param name="configuration">The configuration to connect to this data store</param>
         public MySqlOutbox(IAmARelationalDatabaseConfiguration configuration) 
             : this(configuration, new MySqlConnectionProvider(configuration))
         {

@@ -4,6 +4,7 @@ using DapperExtensions;
 using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
+using GreetingsEntities;
 using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
@@ -15,6 +16,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
+using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
@@ -81,8 +83,8 @@ namespace GreetingsWeb
                     .AddAspNetCoreInstrumentation()
                     .AddConsoleExporter());
 
-            ConfigureMigration(services);
             ConfigureDapper();
+            ConfigureMigration(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
@@ -217,7 +219,7 @@ namespace GreetingsWeb
             var sqlDialect = new PostgreSqlDialect();
             DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
             DapperAsyncExtensions.SqlDialect = sqlDialect;
-         }
+        }
 
         private void ConfigureBrighter(IServiceCollection services)
         {
@@ -247,7 +249,7 @@ namespace GreetingsWeb
             ).Create();
 
             (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
-                OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration);
+                OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration, services);
             
             services.AddBrighter(options =>
                 {

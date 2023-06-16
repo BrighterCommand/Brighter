@@ -14,13 +14,12 @@ public class SqlInitialCreate : Migration
     
     public override void Up()
     {
-        /*
         var timestampColumn = _configuration.DbType == "Postgres" ? "timeStamp" : "TimeStamp";
-        */
+        
         var person = Create.Table("Person")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
             .WithColumn("Name").AsString().Unique()
-            .WithColumn("TimeStamp").AsDateTime().Nullable().WithDefault(SystemMethods.CurrentDateTime);
+            .WithColumn(timestampColumn).AsDateTime().Nullable().WithDefault(SystemMethods.CurrentDateTime);
         
         var greeting = Create.Table("Greeting")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
