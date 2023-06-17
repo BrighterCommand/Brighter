@@ -2,8 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Predicate;
+using Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
@@ -14,7 +13,7 @@ namespace GreetingsPorts.Handlers
 {
     public class DeletePersonHandlerAsync : RequestHandlerAsync<DeletePerson>
     {
-        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider; 
 
         public DeletePersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
         {
@@ -26,22 +25,24 @@ namespace GreetingsPorts.Handlers
         public override async Task<DeletePerson> HandleAsync(DeletePerson deletePerson, CancellationToken cancellationToken = default)
         {
             var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
-            await connection.OpenAsync(cancellationToken);
-            
-            //NOTE: we are using a transaction, but a connection provider will not manage one for us, so we need to do it ourselves
             var tx = await connection.BeginTransactionAsync(cancellationToken);
             try
             {
+                var people = await connection.QueryAsync<Person>(
+                    "select * from Person where name = @name",
+                    new {name = deletePerson.Name}
+                    );
+                var person = people.SingleOrDefault();
 
-                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, deletePerson.Name);
-                var people = await _relationalDbConnectionProvider.GetConnection()
-                    .GetListAsync<Person>(searchbyName, transaction: tx);
-                var person = people.Single();
+                if (person != null)
+                {
+                    await connection.ExecuteAsync(
+                        "delete from Greeting where PersonId = @PersonId",
+                        new { PersonId = person.Id },
+                        tx);
 
-                var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
-                await _relationalDbConnectionProvider.GetConnection().DeleteAsync(deleteById, tx);
-
-                await tx.CommitAsync(cancellationToken);
+                    await tx.CommitAsync(cancellationToken);
+                }
             }
             catch (Exception)
             {
@@ -53,6 +54,7 @@ namespace GreetingsPorts.Handlers
             {
                 await connection.DisposeAsync();
                 await tx.DisposeAsync();
+
             }
 
             return await base.HandleAsync(deletePerson, cancellationToken);

@@ -1,11 +1,6 @@
 using System;
-using Dapper;
-using DapperExtensions;
-using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
-using GreetingsEntities;
-using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
 using GreetingsWeb.Database;
@@ -16,12 +11,10 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.OpenApi.Models;
-using Npgsql;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -83,7 +76,6 @@ namespace GreetingsWeb
                     .AddAspNetCoreInstrumentation()
                     .AddConsoleExporter());
 
-            ConfigureDapper();
             ConfigureMigration(services);
             ConfigureBrighter(services);
             ConfigureDarker(services);
@@ -164,63 +156,6 @@ namespace GreetingsWeb
                 .AddSingleton<IAmAMigrationConfiguration>(new MigrationConfiguration(){DbType = DatabaseType.Sqlite.ToString()});
         }
         
-        private void ConfigureDapper()
-        {
-            ConfigureDapperByHost(GetDatabaseType());
-
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
-        }
-
-        private static void ConfigureDapperByHost(DatabaseType databaseType)
-        {
-            switch (databaseType)
-            {
-                case DatabaseType.Sqlite:
-                    ConfigureDapperSqlite();
-                    break;
-                case DatabaseType.MySql:
-                    ConfigureDapperMySql();
-                    break;
-                case DatabaseType.MsSql:
-                    ConfigureDapperMsSql();
-                    break;
-                case DatabaseType.Postgres:
-                    ConfigureDapperPostgreSql();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
-            }
-        }
-
-        private static void ConfigureDapperMsSql()
-        {
-            var sqlDialect = new SqlServerDialect();
-            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
-            DapperAsyncExtensions.SqlDialect = sqlDialect;
-         }
-
-        private static void ConfigureDapperSqlite()
-        {
-            var sqlDialect = new SqliteDialect();
-            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
-            DapperAsyncExtensions.SqlDialect = sqlDialect;
-        }
-
-        private static void ConfigureDapperMySql()
-        {
-            var sqlDialect = new MySqlDialect();
-            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
-            DapperAsyncExtensions.SqlDialect = sqlDialect;
-        }
-
-        private static void ConfigureDapperPostgreSql()
-        {
-            var sqlDialect = new PostgreSqlDialect();
-            DapperExtensions.DapperExtensions.SqlDialect = sqlDialect;
-            DapperAsyncExtensions.SqlDialect = sqlDialect;
-        }
-
         private void ConfigureBrighter(IServiceCollection services)
         {
             var outboxConfiguration = new RelationalDatabaseConfiguration(
@@ -266,10 +201,12 @@ namespace GreetingsWeb
                     configure.TransactionProvider = makeOutbox.transactionProvider;
                     configure.ConnectionProvider = makeOutbox.connectionProvider;
                 })
+                /*
                 .UseOutboxSweeper(options => {
                     options.TimerInterval = 5;
                     options.MinimumMessageAge = 5000;
                  })
+                 */
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 

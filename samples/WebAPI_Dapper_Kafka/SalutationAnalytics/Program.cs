@@ -3,8 +3,6 @@ using System.IO;
 using System.Threading.Tasks;
 using Confluent.Kafka;
 using Confluent.SchemaRegistry;
-using DapperExtensions;
-using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,7 +19,6 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
 using SalutationAnalytics.Database;
-using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
 using SalutationPorts.Requests;
 
@@ -174,8 +171,6 @@ namespace SalutationAnalytics
         private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
             ConfigureDapperByHost(GetDatabaseType(hostBuilderContext), services);
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
         }
 
         private static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
@@ -195,16 +190,12 @@ namespace SalutationAnalytics
 
         private static void ConfigureDapperSqlite(IServiceCollection services)
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
             services.AddScoped<IAmARelationalDbConnectionProvider, SqliteConnectionProvider>();
             services.AddScoped<IAmATransactionConnectionProvider, SqliteUnitOfWork>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
             services.AddScoped<IAmARelationalDbConnectionProvider, MySqlConnectionProvider>();
             services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
         }

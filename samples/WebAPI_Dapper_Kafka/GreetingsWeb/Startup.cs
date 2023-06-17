@@ -1,12 +1,9 @@
 using System;
 using Confluent.SchemaRegistry;
-using DapperExtensions;
-using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
 using Greetings_PostgreSqlMigrations.Migrations;
 using Greetings_SqliteMigrations.Migrations;
-using GreetingsPorts.EntityMappers;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
 using GreetingsWeb.Database;
@@ -84,7 +81,6 @@ namespace GreetingsWeb
                     .AddConsoleExporter());
 
             ConfigureMigration(services);
-            ConfigureDapper();
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
@@ -162,59 +158,6 @@ namespace GreetingsWeb
                 });
         }
         
-        private void ConfigureDapper()
-        {
-            ConfigureDapperByHost(GetDatabaseType());
-
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(PersonMapper).Assembly });
-        }
-
-        private static void ConfigureDapperByHost(DatabaseType databaseType)
-        {
-            switch (databaseType)
-            {
-                case DatabaseType.Sqlite:
-                    ConfigureDapperSqlite();
-                    break;
-                case DatabaseType.MySql:
-                    ConfigureDapperMySql();
-                    break;
-                case DatabaseType.MsSql:
-                    ConfigureDapperMsSql();
-                    break;
-                case DatabaseType.Postgres:
-                    ConfigureDapperPostgreSql();
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
-            }
-        }
-
-        private static void ConfigureDapperMsSql()
-        {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqlServerDialect();
-            DapperAsyncExtensions.SqlDialect = new SqlServerDialect();
-         }
-
-        private static void ConfigureDapperSqlite()
-        {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
-        }
-
-        private static void ConfigureDapperMySql()
-        {
-            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
-        }
-
-        private static void ConfigureDapperPostgreSql()
-        {
-            DapperExtensions.DapperExtensions.SqlDialect = new PostgreSqlDialect();
-            DapperAsyncExtensions.SqlDialect = new PostgreSqlDialect();
-         }
-
         private void ConfigureBrighter(IServiceCollection services)
         {
             var outboxConfiguration = new RelationalDatabaseConfiguration(

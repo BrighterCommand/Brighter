@@ -1,9 +1,7 @@
-using System.Data.Common;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Predicate;
+using Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Policies;
 using GreetingsPorts.Requests;
@@ -28,14 +26,11 @@ namespace GreetingsPorts.Handlers
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonResult> ExecuteAsync(FindPersonByName query, CancellationToken cancellationToken = new CancellationToken())
         {
-            var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, query.Name);
-            using (var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken))
-            {
-                var people = await connection.GetListAsync<Person>(searchbyName);
-                var person = people.Single();
+            await using var connection = await _relationalDbConnectionProvider .GetConnectionAsync(cancellationToken);
+            var people = await connection.QueryAsync<Person>("select * from Person where name = @name", new {name = query.Name});
+            var person = people.SingleOrDefault();
 
-                return new FindPersonResult(person);
-            }
+            return new FindPersonResult(person);
         }
     }
 }

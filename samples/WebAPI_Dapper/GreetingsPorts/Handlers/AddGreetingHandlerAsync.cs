@@ -3,8 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Predicate;
+using Dapper;
 using Paramore.Brighter;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
@@ -41,23 +40,32 @@ namespace GreetingsPorts.Handlers
             var tx = await _transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
-                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, addGreeting.Name);
-                var people = await conn.GetListAsync<Person>(searchbyName, transaction: tx);
-                var person = people.Single();
+                var people = await conn.QueryAsync<Person>(
+                    "select * from Person where name = @name",
+                    new {name = addGreeting.Name},
+                    tx
+                );
+                var person = people.SingleOrDefault();
 
-                var greeting = new Greeting(addGreeting.Greeting, person);
+                if (person != null)
+                {
+                    var greeting = new Greeting(addGreeting.Greeting, person);
 
-                //write the added child entity to the Db
-                await conn.InsertAsync<Greeting>(greeting, tx);
+                    //write the added child entity to the Db
+                    await conn.ExecuteAsync(
+                        "insert into Greeting (Message, Recipient_Id) values (@Message, @RecipientId)",
+                        new { greeting.Message, RecipientId = greeting.RecipientId },
+                        tx);
 
-                //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(
-                    new GreetingMade(greeting.Greet()),
-                    _transactionProvider,
-                    cancellationToken: cancellationToken));
+                    //Now write the message we want to send to the Db in the same transaction.
+                    posts.Add(await _postBox.DepositPostAsync(
+                        new GreetingMade(greeting.Greet()),
+                        _transactionProvider,
+                        cancellationToken: cancellationToken));
 
-                //commit both new greeting and outgoing message
-                await _transactionProvider.CommitAsync(cancellationToken);
+                    //commit both new greeting and outgoing message
+                    await _transactionProvider.CommitAsync(cancellationToken);
+                }
             }
             catch (Exception e)
             {

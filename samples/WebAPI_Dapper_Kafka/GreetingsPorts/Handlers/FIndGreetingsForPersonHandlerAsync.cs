@@ -1,5 +1,4 @@
-﻿using System.Data.Common;
-using System.Linq;
+﻿using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -16,9 +15,9 @@ namespace GreetingsPorts.Handlers
 {
     public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
-        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider; 
+        private readonly IAmARelationalDbConnectionProvider  _relationalDbConnectionProvider;
 
-        public FIndGreetingsForPersonHandlerAsync(IAmARelationalDbConnectionProvider  relationalDbConnectionProvider)
+        public FIndGreetingsForPersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
         {
             _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }
@@ -34,29 +33,26 @@ namespace GreetingsPorts.Handlers
             var sql = @"select p.Id, p.Name, g.Id, g.Message 
                         from Person p
                         inner join Greeting g on g.Recipient_Id = p.Id";
-
-            using (var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken))
+            await using var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
+            var people = await connection.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
             {
-                var people = await connection.QueryAsync<Person, Greeting, Person>(sql, (person, greeting) =>
-                {
-                    person.Greetings.Add(greeting);
-                    return person;
-                }, splitOn: "Id");
+                person.Greetings.Add(greeting);
+                return person;
+            }, splitOn: "Id");
 
-                var peopleGreetings = people.GroupBy(p => p.Id).Select(grp =>
-                {
-                    var groupedPerson = grp.First();
-                    groupedPerson.Greetings = grp.Select(p => p.Greetings.Single()).ToList();
-                    return groupedPerson;
-                });
+            var peopleGreetings = people.GroupBy(p => p.Id).Select(grp =>
+            {
+                var groupedPerson = grp.First();
+                groupedPerson.Greetings = grp.Select(p => p.Greetings.Single()).ToList();
+                return groupedPerson;
+            });
 
-                var person = peopleGreetings.Single();
+            var person = peopleGreetings.Single();
 
-                return new FindPersonsGreetings
-                {
-                    Name = person.Name, Greetings = person.Greetings.Select(g => new Salutation(g.Greet()))
-                };
-            }
+            return new FindPersonsGreetings
+            {
+                Name = person.Name, Greetings = person.Greetings.Select(g => new Salutation(g.Greet()))
+            };
         }
         
     }

@@ -2,8 +2,7 @@
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Predicate;
+using Dapper;
 using GreetingsEntities;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
@@ -29,16 +28,21 @@ namespace GreetingsPorts.Handlers
             var tx = await connection.BeginTransactionAsync(cancellationToken);
             try
             {
+                var people = await connection.QueryAsync<Person>(
+                    "select * from Person where name = @name",
+                    new {name = deletePerson.Name}
+                    );
+                var person = people.SingleOrDefault();
 
-                var searchbyName = Predicates.Field<Person>(p => p.Name, Operator.Eq, deletePerson.Name);
-                var people = await connection
-                    .GetListAsync<Person>(searchbyName, transaction: tx);
-                var person = people.Single();
+                if (person != null)
+                {
+                    await connection.ExecuteAsync(
+                        "delete from Greeting where PersonId = @PersonId",
+                        new { PersonId = person.Id },
+                        tx);
 
-                var deleteById = Predicates.Field<Greeting>(g => g.RecipientId, Operator.Eq, person.Id);
-                await connection.DeleteAsync(deleteById, tx);
-
-                await tx.CommitAsync(cancellationToken);
+                    await tx.CommitAsync(cancellationToken);
+                }
             }
             catch (Exception)
             {

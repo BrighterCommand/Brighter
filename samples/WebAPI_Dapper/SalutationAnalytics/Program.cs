@@ -1,8 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using DapperExtensions;
-using DapperExtensions.Sql;
 using FluentMigrator.Runner;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -19,7 +17,6 @@ using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
 using SalutationAnalytics.Database;
-using SalutationPorts.EntityMappers;
 using SalutationPorts.Policies;
 using SalutationPorts.Requests;
 
@@ -69,7 +66,7 @@ namespace SalutationAnalytics
                     new SubscriptionName("paramore.sample.salutationanalytics"),
                     new ChannelName("SalutationAnalytics"),
                     new RoutingKey("GreetingMade"),
-                    runAsync: true,
+                    runAsync: false,
                     timeoutInMilliseconds: 200,
                     isDurable: true,
                     makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -159,8 +156,6 @@ namespace SalutationAnalytics
         private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
             ConfigureDapperByHost(GetDatabaseType(hostBuilderContext), services);
-            DapperExtensions.DapperExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
-            DapperAsyncExtensions.SetMappingAssemblies(new[] { typeof(SalutationMapper).Assembly });
         }
 
         private static void ConfigureDapperByHost(DatabaseType databaseType, IServiceCollection services)
@@ -180,16 +175,12 @@ namespace SalutationAnalytics
 
         private static void ConfigureDapperSqlite(IServiceCollection services)
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new SqliteDialect();
-            DapperAsyncExtensions.SqlDialect = new SqliteDialect();
             services.AddScoped<IAmARelationalDbConnectionProvider, SqliteConnectionProvider>();
             services.AddScoped<IAmATransactionConnectionProvider, SqliteUnitOfWork>();
         }
 
         private static void ConfigureDapperMySql(IServiceCollection services)
         {
-            DapperExtensions.DapperExtensions.SqlDialect = new MySqlDialect();
-            DapperAsyncExtensions.SqlDialect = new MySqlDialect();
             services.AddScoped<IAmARelationalDbConnectionProvider, MySqlConnectionProvider>();
             services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
         }

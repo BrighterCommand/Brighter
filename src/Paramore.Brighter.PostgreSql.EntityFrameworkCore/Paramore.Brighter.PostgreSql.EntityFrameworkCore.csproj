@@ -9,8 +9,6 @@
 
   <ItemGroup>
 
-    <PackageReference Include="Npgsql" Version="7.0.4" />
-
     <PackageReference Update="MinVer" Version="4.3.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -34,6 +32,12 @@
   
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.PostgreSql\Paramore.Brighter.PostgreSql.csproj" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="Npgsql">
+      <HintPath>..\..\libs\Npgsql\netstandard2.0\Npgsql.dll</HintPath>
+    </Reference>
   </ItemGroup>
   
 

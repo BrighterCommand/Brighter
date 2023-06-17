@@ -1,7 +1,6 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
-using DapperExtensions;
-using GreetingsEntities;
+using Dapper;
 using GreetingsPorts.Requests;
 using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
@@ -11,22 +10,19 @@ namespace GreetingsPorts.Handlers
 {
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
-        private readonly IAmARelationalDbConnectionProvider _connectionProvider; 
+        private readonly IAmARelationalDbConnectionProvider _relationalDbConnectionProvider;
 
-        public AddPersonHandlerAsync(IAmARelationalDbConnectionProvider connectionProvider)
+        public AddPersonHandlerAsync(IAmARelationalDbConnectionProvider relationalDbConnectionProvider)
         {
-            _connectionProvider = connectionProvider;
+            _relationalDbConnectionProvider = relationalDbConnectionProvider;
         }
 
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default)
         {
-            using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
-            {
-                await connection.InsertAsync(new Person(addPerson.Name));
-            }
-
+            await using var connection = await _relationalDbConnectionProvider.GetConnectionAsync(cancellationToken);
+            await connection.ExecuteAsync("insert into Person (Name) values (@Name)", new {Name = addPerson.Name});
             return await base.HandleAsync(addPerson, cancellationToken);
         }
     }
