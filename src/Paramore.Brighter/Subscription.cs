@@ -85,7 +85,7 @@ namespace Paramore.Brighter
         /// Gets the no of threads that we will use to read from  this channel.
         /// </summary>
         /// <value>The no of peformers.</value>
-        public int NoOfPeformers { get; }
+        public int NoOfPeformers { get; private set; }
 
         /// <summary>
         /// Gets or sets the number of times that we can requeue a message before we abandon it as poison pill.
@@ -183,6 +183,11 @@ namespace Paramore.Brighter
             MakeChannels = makeChannels;
             EmptyChannelDelay = emptyChannelDelay;
             ChannelFailureDelay = channelFailureDelay;
+        }
+        
+        public void SetNumberOfPerformers(int numberOfPerformers)
+        {
+            NoOfPeformers = numberOfPerformers < 0 ? 0 : numberOfPerformers;
         }
     }
 

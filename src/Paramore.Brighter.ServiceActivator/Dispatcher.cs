@@ -30,6 +30,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Extensions;
 using Paramore.Brighter.Logging;
+using Paramore.Brighter.ServiceActivator.Status;
 
 namespace Paramore.Brighter.ServiceActivator
 {
@@ -78,7 +79,7 @@ namespace Paramore.Brighter.ServiceActivator
         /// Used when communicating with this instance via the Control Bus
         /// </summary>
         /// <value>The name of the host.</value>
-        public HostName HostName { get; set; }
+        public HostName HostName { get; set; } = new HostName($"Brighter{Guid.NewGuid()}");
 
         /// <summary>
         /// Gets the state of the <see cref="Dispatcher"/>
@@ -221,6 +222,50 @@ namespace Paramore.Brighter.ServiceActivator
             }
         }
 
+        public DispatcherStateItem[] GetState()
+        {
+            return Connections.Select(s => new DispatcherStateItem()
+            {
+                Name = s.Name,
+                ExpectPerformers = s.NoOfPeformers,
+                Performers = _consumers.Where(c => c.Value.SubscriptionName == s.Name).Select(c => new PerformerInformation()
+                {
+                    Name = c.Value.Name,
+                    State = c.Value.State
+                }).ToArray()
+            }).ToArray();
+        }
+
+        public void SetActivePerformers(string connectionName, int numberOfPerformers)
+        {
+            var subscription = Connections.SingleOrDefault(c => c.Name == connectionName);
+            var currentPerformers = subscription.NoOfPeformers;
+            if(currentPerformers == numberOfPerformers)
+                return;
+
+            subscription.SetNumberOfPerformers(numberOfPerformers);
+            if (currentPerformers < numberOfPerformers)
+            {
+                for (var i = currentPerformers; i < numberOfPerformers; i++)
+                {
+                    var consumer = CreateConsumer(subscription, i);
+                    _consumers.TryAdd(consumer.Name, consumer);
+                    consumer.Open();
+                    _tasks.TryAdd(consumer.JobId, consumer.Job);
+                }
+            }
+            else
+            {
+                var consumersForConnection = Consumers.Where(consumer => consumer.SubscriptionName == subscription.Name)
+                    .ToArray();
+                var consumersToClose = currentPerformers - numberOfPerformers;
+                for (int i = 0; i < consumersToClose; ++i)
+                {
+                    consumersForConnection[i].Shut();
+                }
+            }
+        }
+
         private void Start()
         {
             _controlTask = Task.Factory.StartNew(() =>
@@ -292,15 +337,19 @@ namespace Paramore.Brighter.ServiceActivator
             {
                 for (var i = 0; i < subscription.NoOfPeformers; i++)
                 {
-                    int performer = i;
-                    s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", performer + 1, subscription.Name);
-                    var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
-                    var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessorFactory.Invoke(), _messageMapperRegistry, subscription, _messageTransformerFactory);
-
-                    list.Add(consumerFactory.Create());
+                    list.Add(CreateConsumer(subscription, i + 1));
                 }
             });
             return list;
+        }
+        
+        private Consumer CreateConsumer(Subscription subscription, int consumerNumber)
+        {
+            s_logger.LogInformation("Dispatcher: Creating consumer number {ConsumerNumber} for subscription: {ChannelName}", consumerNumber, subscription.Name);
+            var consumerFactoryType = typeof(ConsumerFactory<>).MakeGenericType(subscription.DataType);
+            var consumerFactory = (IConsumerFactory)Activator.CreateInstance(consumerFactoryType, CommandProcessorFactory.Invoke(), _messageMapperRegistry, subscription, _messageTransformerFactory);
+
+            return consumerFactory.Create();
         }
     }
 }
