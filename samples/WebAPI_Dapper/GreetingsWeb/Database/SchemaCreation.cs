@@ -81,10 +81,16 @@ namespace GreetingsWeb.Database
             //The migration does not create the Db, so we need to create it sot that it will add it
             conn.Open();
             using var command = conn.CreateCommand();
-            if (databaseType != DatabaseType.Postgres)
-                command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
-            else
-                command.CommandText = "CREATE DATABASE Greetings";
+
+            command.CommandText = databaseType switch
+            {
+                DatabaseType.Sqlite => "CREATE DATABASE IF NOT EXISTS Greetings",
+                DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Greetings",
+                DatabaseType.Postgres => "CREATE DATABASE Greetings",
+                DatabaseType.MsSql =>
+                    "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Greetings') CREATE DATABASE Greetings",
+                _ => throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type")
+            };
 
             try
             {

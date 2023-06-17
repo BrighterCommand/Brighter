@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Dapper;
@@ -39,6 +40,11 @@ namespace GreetingsPorts.Handlers
                 person.Greetings.Add(greeting);
                 return person;
             }, splitOn: "Id");
+            
+            if (!people.Any())
+            {
+                return new FindPersonsGreetings(){Name = query.Name, Greetings = Array.Empty<Salutation>()};
+            }
 
             var peopleGreetings = people.GroupBy(p => p.Id).Select(grp =>
             {

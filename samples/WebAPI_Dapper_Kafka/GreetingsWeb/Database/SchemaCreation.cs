@@ -36,7 +36,7 @@ namespace GreetingsWeb.Database
             if (env.IsDevelopment()) return webHost;
 
             WaitToConnect(dbType, connectionString);
-            CreateDatabaseIfNotExists(GetDbConnection(dbType, connectionString));
+            CreateDatabaseIfNotExists(dbType, GetDbConnection(dbType, connectionString));
 
             return webHost;
         }
@@ -64,40 +64,72 @@ namespace GreetingsWeb.Database
             return webHost;
         }
 
-        public static IHost CreateOutbox(this IHost webHost, bool hasBinaryPayload = false)
+        public static IHost CreateOutbox(this IHost webHost)
         {
-            using (var scope = webHost.Services.CreateScope())
-            {
-                var services = scope.ServiceProvider;
-                var env = services.GetService<IWebHostEnvironment>();
-                var config = services.GetService<IConfiguration>();
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IWebHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
 
-                CreateOutbox(config, env, hasBinaryPayload);
-            }
+            CreateOutbox(config, env);
 
             return webHost;
         }
 
-        private static void CreateDatabaseIfNotExists(DbConnection conn)
+        private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
         {
             //The migration does not create the Db, so we need to create it sot that it will add it
             conn.Open();
             using var command = conn.CreateCommand();
-            command.CommandText = "CREATE DATABASE IF NOT EXISTS Greetings";
-            command.ExecuteScalar();
+
+            command.CommandText = databaseType switch
+            {
+                DatabaseType.Sqlite => "CREATE DATABASE IF NOT EXISTS Greetings",
+                DatabaseType.MySql => "CREATE DATABASE IF NOT EXISTS Greetings",
+                DatabaseType.Postgres => "CREATE DATABASE Greetings",
+                DatabaseType.MsSql =>
+                    "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Greetings') CREATE DATABASE Greetings",
+                _ => throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type")
+            };
+
+            try
+            {
+                command.ExecuteScalar();
+            }
+            catch (NpgsqlException pe)
+            {
+                //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
+                if (!pe.Message.Contains("already exists"))
+                    throw;
+            }
+            catch (System.Exception e)
+            {
+                Console.WriteLine($"Issue with creating Greetings tables, {e.Message}");
+                //Rethrow, if we can't create the Outbox, shut down
+                throw;
+            }
         }
 
 
-        private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env, bool hasBinaryPayload)
+        private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env)
         {
             try
             {
                 var connectionString = DbConnectionString(config, env);
 
                 if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString, hasBinaryPayload);
+                    CreateOutboxDevelopment(connectionString);
                 else
-                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryPayload);
+                    CreateOutboxProduction(GetDatabaseType(config), connectionString);
+            }
+            catch (NpgsqlException pe)
+            {
+                //Ignore if the Db already exists - we can't test for this in the SQL for Postgres
+                if (!pe.Message.Contains("already exists"))
+                {
+                    Console.WriteLine($"Issue with creating Outbox table, {pe.Message}");
+                    throw;
+                }
             }
             catch (System.Exception e)
             {
@@ -107,34 +139,33 @@ namespace GreetingsWeb.Database
             }
         }
 
-        private static void CreateOutboxDevelopment(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxDevelopment(string connectionString)
         {
-            CreateOutboxSqlite(connectionString, hasBinaryPayload);
+            CreateOutboxSqlite(connectionString);
         }
 
-       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString,
-           bool hasBinaryPayload) 
+       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString) 
        {
             switch (databaseType)
             {
                 case DatabaseType.MySql:
-                    CreateOutboxMySql(connectionString, hasBinaryPayload);
+                    CreateOutboxMySql(connectionString);
                     break;
                 case DatabaseType.MsSql:
-                    CreateOutboxMsSql(connectionString, hasBinaryPayload);
+                    CreateOutboxMsSql(connectionString);
                     break;
                 case DatabaseType.Postgres:
-                    CreateOutboxPostgres(connectionString, hasBinaryPayload);
+                    CreateOutboxPostgres(connectionString);
                     break;
                 case DatabaseType.Sqlite:
-                    CreateOutboxSqlite(connectionString, hasBinaryPayload);
+                    CreateOutboxSqlite(connectionString);
                     break;
                 default:
                     throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
             }
         }
 
-       private static void CreateOutboxMsSql(string connectionString, bool hasBinaryPayload)
+       private static void CreateOutboxMsSql(string connectionString)
        {
             using var sqlConnection = new SqlConnection(connectionString);
             sqlConnection.Open();
@@ -146,12 +177,12 @@ namespace GreetingsWeb.Database
             if (exists) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+            command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
             command.ExecuteScalar();
             
         }
 
-        private static void CreateOutboxMySql(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxMySql(string connectionString)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -163,11 +194,11 @@ namespace GreetingsWeb.Database
             if (exists) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
             command.ExecuteScalar();
         }
         
-        private static void CreateOutboxPostgres(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxPostgres(string connectionString)
         {
              using var sqlConnection = new NpgsqlConnection(connectionString);
              sqlConnection.Open();
@@ -179,11 +210,11 @@ namespace GreetingsWeb.Database
              if (exists) return;
  
              using var command = sqlConnection.CreateCommand();
-             command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+             command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME);
              command.ExecuteScalar();
         }
 
-        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryPayload)
+        private static void CreateOutboxSqlite(string connectionString)
         {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
@@ -195,7 +226,7 @@ namespace GreetingsWeb.Database
             if (reader.HasRows) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
+            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
             command.ExecuteScalar();
         }
 

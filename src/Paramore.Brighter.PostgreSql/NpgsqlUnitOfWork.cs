@@ -24,7 +24,7 @@ namespace Paramore.Brighter.PostgreSql
         /// globally</param>
         public NpgsqlUnitOfWork(
             IAmARelationalDatabaseConfiguration configuration,
-            NpgsqlDataSource dataSource)
+            NpgsqlDataSource dataSource = null)
         {
             if (string.IsNullOrWhiteSpace(configuration?.ConnectionString))
                 throw new ArgumentNullException(nameof(configuration.ConnectionString));
