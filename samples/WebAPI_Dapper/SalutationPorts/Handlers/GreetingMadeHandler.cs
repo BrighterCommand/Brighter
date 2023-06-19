@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
@@ -12,11 +13,11 @@ namespace SalutationPorts.Handlers
 {
     public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
-        private readonly IAmATransactionConnectionProvider _transactionConnectionProvider;
+        private readonly IAmABoxTransactionProvider<DbTransaction> _transactionConnectionProvider;
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<GreetingMadeHandler> _logger;
 
-        public GreetingMadeHandler(IAmATransactionConnectionProvider transactionConnectionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
+        public GreetingMadeHandler(IAmABoxTransactionProvider<DbTransaction> transactionConnectionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
         {
             _transactionConnectionProvider = transactionConnectionProvider;
             _postBox = postBox;
@@ -31,11 +32,12 @@ namespace SalutationPorts.Handlers
             var posts = new List<Guid>();
             
             var tx = _transactionConnectionProvider.GetTransaction();
+            var conn = tx.Connection; 
             try
             {
                 var salutation = new Salutation(@event.Greeting);
                 
-               _transactionConnectionProvider.GetConnection().Execute(
+               conn.Execute(
                    "insert into Salutation (greeting) values (@greeting)", 
                    new {greeting = salutation.Greeting}, 
                    tx); 
@@ -44,14 +46,14 @@ namespace SalutationPorts.Handlers
                     new SalutationReceived(DateTimeOffset.Now), 
                     _transactionConnectionProvider));
                 
-                tx.Commit();
+                _transactionConnectionProvider.Commit();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
                 
                 //if it went wrong rollback entity write and Outbox write
-                tx.Rollback();
+                _transactionConnectionProvider.Rollback();
                 
                 return base.Handle(@event);
             }

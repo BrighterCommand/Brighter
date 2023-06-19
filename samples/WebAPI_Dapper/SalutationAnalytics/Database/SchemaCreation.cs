@@ -371,7 +371,7 @@ namespace SalutationAnalytics.Database
 
         private static string GetDevConnectionString()
         {
-            return "Filename=Greetings.db;Cache=Shared";
+            return "Filename=Salutations.db;Cache=Shared";
         }
 
         private static DbConnection GetDbConnection(DatabaseType databaseType, string connectionString)

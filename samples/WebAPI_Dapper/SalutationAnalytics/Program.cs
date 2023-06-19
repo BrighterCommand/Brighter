@@ -24,6 +24,8 @@ namespace SalutationAnalytics
 {
     class Program
     {
+        private const string OUTBOX_TABLE_NAME = "Outbox";
+        
         public static async Task Main(string[] args)
         {
             var host = CreateHostBuilder(args).Build();
@@ -97,6 +99,15 @@ namespace SalutationAnalytics
                     }
                 }
             ).Create();
+            
+            var outboxConfiguration = new RelationalDatabaseConfiguration(
+                DbConnectionString(hostContext),
+                outBoxTableName:OUTBOX_TABLE_NAME
+            );
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
+            
+            (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
+                OutboxExtensions.MakeOutbox(hostContext, GetDatabaseType(hostContext), outboxConfiguration, services);
 
             services.AddServiceActivator(options =>
                 {
@@ -123,6 +134,9 @@ namespace SalutationAnalytics
                 .UseExternalBus((config) =>
                 {
                     config.ProducerRegistry = producerRegistry;
+                    config.Outbox = makeOutbox.outbox;
+                    config.ConnectionProvider = makeOutbox.connectionProvider;
+                    config.TransactionProvider = makeOutbox.transactionProvider;
                 })
                 .AutoFromAssemblies();
 

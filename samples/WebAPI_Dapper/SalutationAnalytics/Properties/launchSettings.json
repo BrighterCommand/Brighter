@@ -5,7 +5,7 @@
       "commandName": "Project",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "BRIGHTER_GREETINGS_DATABASE" : "Sqlite"
+        "BRIGHTER_GREETINGS_DATABASE": "Sqlite"
       }
     },
     "ProductionMySql": {
@@ -40,5 +40,6 @@
         "ASPNETCORE_ENVIRONMENT": "Production",
         "BRIGHTER_GREETINGS_DATABASE": "MsSQL"
       }
+    }
   }
 }

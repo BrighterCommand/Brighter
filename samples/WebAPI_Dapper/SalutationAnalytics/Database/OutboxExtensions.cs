@@ -1,13 +1,7 @@
 ﻿using System;
-using GreetingsEntities;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Npgsql;
-using Npgsql.NameTranslation;
 using Paramore.Brighter;
-using Paramore.Brighter.Extensions.DependencyInjection;
-using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
 using Paramore.Brighter.Outbox.MsSql;
@@ -17,19 +11,19 @@ using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.Sqlite;
 
-namespace GreetingsWeb.Database
+namespace SalutationAnalytics.Database
 {
 
     public class OutboxExtensions
     {
         public static (IAmAnOutbox, Type, Type) MakeOutbox(
-            IWebHostEnvironment env,
+            HostBuilderContext hostContext,
             DatabaseType databaseType,
             RelationalDatabaseConfiguration configuration,
             IServiceCollection services)
         {
             (IAmAnOutbox, Type, Type) outbox;
-            if (env.IsDevelopment())
+            if (hostContext.HostingEnvironment.IsDevelopment())
             {
                 outbox = MakeSqliteOutBox(configuration);
             }

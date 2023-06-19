@@ -15,6 +15,7 @@ using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
+using Paramore.Brighter.Extensions.Hosting;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -201,12 +202,10 @@ namespace GreetingsWeb
                     configure.TransactionProvider = makeOutbox.transactionProvider;
                     configure.ConnectionProvider = makeOutbox.connectionProvider;
                 })
-                /*
                 .UseOutboxSweeper(options => {
                     options.TimerInterval = 5;
                     options.MinimumMessageAge = 5000;
                  })
-                 */
                 .AutoFromAssemblies(typeof(AddPersonHandlerAsync).Assembly);
         }
 
