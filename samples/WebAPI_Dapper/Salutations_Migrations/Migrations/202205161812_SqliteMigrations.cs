@@ -1,9 +1,9 @@
 ﻿using FluentMigrator;
 
-namespace Salutations_SqliteMigrations.Migrations;
+namespace Salutations_Migrations.Migrations;
 
 [Migration(1)]
-public class SqliteInitialCreate : Migration
+public class SqlInitialMigrations : Migration
 {
     public override void Up()
     {

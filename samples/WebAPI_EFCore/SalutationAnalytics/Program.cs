@@ -142,7 +142,7 @@ namespace SalutationAnalytics
                         builder.UseSqlite(connectionString,
                             optionsBuilder =>
                             {
-                                optionsBuilder.MigrationsAssembly("Salutations_SqliteMigrations");
+                                optionsBuilder.MigrationsAssembly("Salutations_Migrations");
                             });
                     });
             }

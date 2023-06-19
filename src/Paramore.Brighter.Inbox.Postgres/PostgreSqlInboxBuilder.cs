@@ -28,7 +28,7 @@ namespace Paramore.Brighter.Inbox.Postgres
     /// <summary>
     /// Provide SQL statement helpers for creation of an Inbox
     /// </summary>
-    public class PostgresSqlInboxBuilder
+    public class PostgreSqlInboxBuilder
     {
         private const string OutboxDDL = @"
                     CREATE TABLE {0}

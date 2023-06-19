@@ -38,11 +38,11 @@ using Paramore.Brighter.PostgreSql;
 
 namespace Paramore.Brighter.Inbox.Postgres
 {
-    public class PostgresSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
+    public class PostgreSqlInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
-        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlInbox>();
+        private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgreSqlInbox>();
         /// <summary>
         ///     If false we the default thread synchronization context to run any continuation, if true we re-use the original
         ///     synchronization context.
@@ -53,7 +53,7 @@ namespace Paramore.Brighter.Inbox.Postgres
         /// </summary>
         public bool ContinueOnCapturedContext { get; set; }
 
-        public PostgresSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
+        public PostgreSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider = null)
         {
             _configuration = configuration;
             _connectionProvider = connectionProvider;

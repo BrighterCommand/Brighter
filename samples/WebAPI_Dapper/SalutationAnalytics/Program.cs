@@ -131,26 +131,77 @@ namespace SalutationAnalytics
 
         private static void ConfigureMigration(HostBuilderContext hostBuilderContext, IServiceCollection services)
         {
+            //dev is always Sqlite
             if (hostBuilderContext.HostingEnvironment.IsDevelopment())
-            {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c =>
-                    {
-                        c.AddSQLite()
-                            .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-                            .ScanIn(typeof(Salutations_SqliteMigrations.Migrations.SqliteInitialCreate).Assembly).For.Migrations();
-                    });
-            }
+                ConfigureSqlite(hostBuilderContext, services);
             else
+                ConfigureProductionDatabase(hostBuilderContext, GetDatabaseType(hostBuilderContext), services);
+        }
+
+        private static void ConfigureProductionDatabase(
+            HostBuilderContext hostBuilderContext, 
+            DatabaseType databaseType,
+            IServiceCollection services)
+        {
+            switch (databaseType)
             {
-                services
-                    .AddFluentMigratorCore()
-                    .ConfigureRunner(c => c.AddMySql5()
-                        .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
-                        .ScanIn(typeof(Salutations_mySqlMigrations.Migrations.MySqlInitialCreate).Assembly).For.Migrations()
-                    );
+                case DatabaseType.MySql:
+                    ConfigureMySql(hostBuilderContext, services);
+                    break;
+                case DatabaseType.MsSql:
+                    ConfigureMsSql(hostBuilderContext, services);
+                    break;
+                case DatabaseType.Postgres:
+                    ConfigurePostgreSql(hostBuilderContext, services);
+                    break;
+                case DatabaseType.Sqlite:
+                    ConfigureSqlite(hostBuilderContext, services);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
             }
+        }
+        
+        private static void ConfigureMySql(HostBuilderContext hostBuilderContext, IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddMySql5()
+                    .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
+                    .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
+                );
+        }
+        
+        private static void ConfigureMsSql(HostBuilderContext hostBuilderContext, IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddSqlServer()
+                    .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
+                    .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
+                );
+        }
+        
+        private static void ConfigurePostgreSql(HostBuilderContext hostBuilderContext, IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c => c.AddPostgres()
+                    .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
+                    .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
+                );
+        }
+
+        private static void ConfigureSqlite(HostBuilderContext hostBuilderContext, IServiceCollection services)
+        {
+            services
+                .AddFluentMigratorCore()
+                .ConfigureRunner(c =>
+                {
+                    c.AddSQLite()
+                        .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
+                        .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations();
+                });
         }
 
         private static void ConfigureDapper(HostBuilderContext hostBuilderContext, IServiceCollection services)

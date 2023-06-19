@@ -89,7 +89,7 @@ namespace GreetingsWeb.Database
                 DatabaseType.Postgres => "CREATE DATABASE Greetings",
                 DatabaseType.MsSql =>
                     "IF NOT EXISTS(SELECT * FROM sys.databases WHERE name = 'Greetings') CREATE DATABASE Greetings",
-                _ => throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type")
+                _ => throw new InvalidOperationException("Could not create instance of Greetings for unknown Db type")
             };
 
             try
