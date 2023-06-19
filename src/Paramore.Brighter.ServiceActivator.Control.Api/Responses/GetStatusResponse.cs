@@ -4,16 +4,16 @@ namespace Paramore.Brighter.ServiceActivator.Control.Api.Responses;
 
 public record GetStatusResponse
 {
-    public GetStatusResponse(NodeStatusEvent nodeStatusEvent)
+    public GetStatusResponse(NodeStatus nodeStatus)
     {
-        NodeName = nodeStatusEvent.NodeName;
-        AvailableTopics = nodeStatusEvent.AvailableTopics;
-        Subscriptions = nodeStatusEvent.Subscriptions.Select(s => new GetStatusResponseSubscriptionInformation(s))
+        NodeName = nodeStatus.NodeName;
+        AvailableTopics = nodeStatus.AvailableTopics;
+        Subscriptions = nodeStatus.Subscriptions.Select(s => new GetStatusResponseSubscriptionInformation(s))
             .ToArray();
-        IsHealthy = nodeStatusEvent.IsHealthy;
-        NumberOfActivePerformers = nodeStatusEvent.NumberOfActivePerformers;
-        TimeStamp = nodeStatusEvent.TimeStamp;
-        ExecutingAssemblyVersion = nodeStatusEvent.ExecutingAssemblyVersion;
+        IsHealthy = nodeStatus.IsHealthy;
+        NumberOfActivePerformers = nodeStatus.NumberOfActivePerformers;
+        TimeStamp = nodeStatus.TimeStamp;
+        ExecutingAssemblyVersion = nodeStatus.ExecutingAssemblyVersion;
     }
     
     /// <summary>

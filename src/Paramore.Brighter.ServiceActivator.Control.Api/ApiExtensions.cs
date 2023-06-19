@@ -13,8 +13,8 @@ public static class ApiExtensions
     /// <returns></returns>
     public static IEndpointRouteBuilder MapBrighterControlEndpoints(this IEndpointRouteBuilder builder, string baseRoute = "/control")
     {
-        builder.MapGet($"{baseRoute}/status", (IDispatcher dispatcher) => new GetStatusResponse(dispatcher.GetNodeStatusEvent()));
-        builder.MapPut($"{baseRoute}/subscriptions/{{subscriptionName}}/performers/{{numberOfPerformers:int}}",
+        builder.MapGet($"{baseRoute}/status", (IDispatcher dispatcher) => new GetStatusResponse(dispatcher.GetNodeStatus()));
+        builder.MapMethods($"{baseRoute}/subscriptions/{{subscriptionName}}/performers/{{numberOfPerformers:int}}", new[] { "PATCH" },
             (string subscriptionName, int numberOfPerformers, IDispatcher dispatcher) =>
             {
                 var status = dispatcher.GetState();

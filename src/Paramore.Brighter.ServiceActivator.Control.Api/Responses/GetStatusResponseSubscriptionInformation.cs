@@ -4,7 +4,7 @@ namespace Paramore.Brighter.ServiceActivator.Control.Api.Responses;
 
 public class GetStatusResponseSubscriptionInformation
 {
-    public GetStatusResponseSubscriptionInformation(SubscriptionInformation subscriptionInformation)
+    public GetStatusResponseSubscriptionInformation(NodeStatusSubscriptionInformation subscriptionInformation)
     {
         TopicName = subscriptionInformation.TopicName;
         Performers = subscriptionInformation.Performers;

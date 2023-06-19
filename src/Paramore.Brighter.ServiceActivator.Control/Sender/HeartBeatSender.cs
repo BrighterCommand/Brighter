@@ -6,6 +6,6 @@ public static class HeartBeatSender
 {
     public static void Send(IAmACommandProcessor commandProcessor, IDispatcher dispatcher)
     {
-        commandProcessor.Post(dispatcher.GetNodeStatusEvent());
+        commandProcessor.Post(dispatcher.GetNodeStatus().AsEvent());
     }
 }

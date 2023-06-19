@@ -32,17 +32,17 @@ public record NodeStatusEvent : IEvent
     /// <summary>
     /// Is this node Healthy
     /// </summary>
-    public bool IsHealthy { get => Subscriptions.Any(s => s.IsHealty != true); }
+    public bool IsHealthy { get; init; }
     
     /// <summary>
     /// The Number of Performers currently running on the Node
     /// </summary>
-    public int NumberOfActivePerformers { get => Subscriptions.Sum(s => s.ActivePerformers); }
+    public int NumberOfActivePerformers { get; init; }
     
     /// <summary>
     /// Timestamp of Status Event
     /// </summary>
-    public DateTime TimeStamp { get; } = DateTime.UtcNow;
+    public DateTime TimeStamp { get; init; }
     
     /// <summary>
     /// The version of the running process
@@ -65,7 +65,7 @@ public record SubscriptionInformation
     /// <summary>
     /// Number of currently active performers
     /// </summary>
-    public int ActivePerformers { get => Performers.Count(); }
+    public int ActivePerformers { get; init; }
     
     /// <summary>
     /// Number of expected performers
@@ -75,8 +75,5 @@ public record SubscriptionInformation
     /// <summary>
     /// Is this subscription healthy on this node
     /// </summary>
-    public bool IsHealty
-    {
-        get => ActivePerformers == ExpectedPerformers;
-    }
+    public bool IsHealty { get; init; }
 }
