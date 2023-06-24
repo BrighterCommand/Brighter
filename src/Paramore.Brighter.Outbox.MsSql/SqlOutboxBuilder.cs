@@ -70,7 +70,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         ";
  
         
-        private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        private const string OutboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
 
         /// <summary>
         /// Gets the DDL statements required to create an Outbox in MSSQL

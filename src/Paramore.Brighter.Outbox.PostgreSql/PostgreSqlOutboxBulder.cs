@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Outbox.PostgreSql
             );
         ";
         
-        private const string OutboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        private const string OutboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{0}')";
 
         /// <summary>
         /// Get the DDL required to create the Outbox in Postgres

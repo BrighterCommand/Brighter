@@ -69,7 +69,7 @@ namespace Paramore.Brighter.Outbox.MySql
 	PRIMARY KEY (`MessageId`)
 ) ENGINE = InnoDB;";
 
-        const string outboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
+        const string outboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{0}') AS TableExists;";
 
         /// <summary>
         /// Get the DDL that describes the table we will store messages in

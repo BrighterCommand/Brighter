@@ -41,8 +41,7 @@ namespace Paramore.Brighter.Inbox.MySql
                 PRIMARY KEY (`CommandId`)
             ) ENGINE = InnoDB;";
 
-        const string InboxExistsQuery = @"SHOW TABLES LIKE '{0}'; ";
-
+        const string InboxExistsQuery = @"SELECT EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = '{0}') AS TableExists;";
 
         /// <summary>
         /// Gets the DDL statements to create an Inbox in MySQL
