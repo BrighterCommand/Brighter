@@ -110,7 +110,6 @@ namespace GreetingsWeb.Database
             }
         }
 
-
         private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env)
         {
             try

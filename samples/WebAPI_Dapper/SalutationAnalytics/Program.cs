@@ -265,11 +265,11 @@ namespace SalutationAnalytics
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
             return hostContext.HostingEnvironment.IsDevelopment()
-                ? "Filename=Salutations.db;Cache=Shared"
-                : hostContext.Configuration.GetConnectionString("Salutations");
+                ? GetDevDbConnectionString()
+                :GetConnectionString(hostContext, GetDatabaseType(hostContext));
         }
 
-        private static DatabaseType GetDatabaseType(HostBuilderContext hostContext)
+       private static DatabaseType GetDatabaseType(HostBuilderContext hostContext)
         {
             return hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
 
@@ -287,5 +287,22 @@ namespace SalutationAnalytics
             //NOTE: Hosting Context will always return Production outside of ASPNET_CORE at this point, so grab it directly
             return Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
         }
-    }
+        
+        private static string GetConnectionString(HostBuilderContext hostContext, DatabaseType databaseType)
+        {
+            return databaseType switch
+            {
+                DatabaseType.MySql => hostContext.Configuration.GetConnectionString("SalutationsMySql"),
+                DatabaseType.MsSql => hostContext.Configuration.GetConnectionString("SalutationsMsSql"),
+                DatabaseType.Postgres => hostContext.Configuration.GetConnectionString("SalutationsPostgreSql"),
+                DatabaseType.Sqlite => GetDevDbConnectionString(),
+                _ => throw new InvalidOperationException("Could not determine the database type")
+            };
+        }
+        private static string GetDevDbConnectionString()
+        {
+          return "Filename=Salutations.db;Cache=Shared";
+        }
+
+     }
 }

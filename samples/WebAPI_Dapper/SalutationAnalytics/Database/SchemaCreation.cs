@@ -402,9 +402,9 @@ namespace SalutationAnalytics.Database
         {
             return databaseType switch
             {
-                DatabaseType.MySql => config.GetConnectionString("GreetingsMySql"),
-                DatabaseType.MsSql => config.GetConnectionString("GreetingsMsSql"),
-                DatabaseType.Postgres => config.GetConnectionString("GreetingsPostgreSql"),
+                DatabaseType.MySql => config.GetConnectionString("SalutationsMySql"),
+                DatabaseType.MsSql => config.GetConnectionString("SalutationsMsSql"),
+                DatabaseType.Postgres => config.GetConnectionString("SalutationsPostgreSql"),
                 DatabaseType.Sqlite => GetDevConnectionString(),
                 _ => throw new InvalidOperationException("Could not determine the database type")
              };
