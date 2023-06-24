@@ -50,7 +50,7 @@ public static class BrighterExtensions
             }
             else
             {
-                transactionProviderType = typeof(MsSqlAuthConnectionProvider);
+                transactionProviderType = typeof(MsSqlConnectionProvider);
             }
 
             builder.Services.AddBrighter()

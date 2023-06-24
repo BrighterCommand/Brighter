@@ -46,12 +46,12 @@ namespace SalutationAnalytics.Database
             RelationalDatabaseConfiguration configuration,
             IServiceCollection services)
         {
-            return (new PostgreSqlOutbox(configuration), typeof(NpgsqConnectionProvider), typeof(NpgsqlUnitOfWork));
+            return (new PostgreSqlOutbox(configuration), typeof(PostgreSqlConnectionProvider), typeof(PostgreSqlUnitOfWork));
         }
 
         private static (IAmAnOutbox, Type, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            return new(new MsSqlOutbox(configuration), typeof(MsSqlAuthConnectionProvider), typeof(MsSqlUnitOfWork));
+            return new(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider), typeof(MsSqlUnitOfWork));
         }
 
         private static (IAmAnOutbox, Type, Type)  MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)

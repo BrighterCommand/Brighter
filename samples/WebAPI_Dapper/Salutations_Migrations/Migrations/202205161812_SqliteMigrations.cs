@@ -10,7 +10,7 @@ public class SqlInitialMigrations : Migration
         Create.Table("Salutation")
             .WithColumn("Id").AsInt32().NotNullable().PrimaryKey().Identity()
             .WithColumn("Greeting").AsString()
-            .WithColumn("TimeStamp").AsBinary().WithDefault(SystemMethods.CurrentDateTime);
+            .WithColumn("TimeStamp").AsDateTime().Nullable().WithDefault(SystemMethods.CurrentDateTime);
     }
 
     public override void Down()

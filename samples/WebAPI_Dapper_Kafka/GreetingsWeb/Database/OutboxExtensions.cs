@@ -57,12 +57,12 @@ namespace GreetingsWeb.Database
             dataSourceBuilder.MapComposite<Greeting>();
             var dataSource = dataSourceBuilder.Build();
             
-            return (new PostgreSqlOutbox(configuration, dataSource), typeof(NpgsqConnectionProvider), typeof(NpgsqlUnitOfWork));
+            return (new PostgreSqlOutbox(configuration, dataSource), typeof(PostgreSqlConnectionProvider), typeof(PostgreSqlUnitOfWork));
         }
 
         private static (IAmAnOutbox, Type, Type) MakeMsSqlOutbox(RelationalDatabaseConfiguration configuration)
         {
-            return new(new MsSqlOutbox(configuration), typeof(MsSqlAuthConnectionProvider), typeof(MsSqlUnitOfWork));
+            return new(new MsSqlOutbox(configuration), typeof(MsSqlConnectionProvider), typeof(MsSqlUnitOfWork));
         }
 
         private static (IAmAnOutbox, Type, Type)  MakeMySqlOutbox(RelationalDatabaseConfiguration configuration)

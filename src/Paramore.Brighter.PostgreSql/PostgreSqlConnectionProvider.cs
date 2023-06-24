@@ -9,7 +9,7 @@ namespace Paramore.Brighter.PostgreSql
     /// <summary>
     /// A connection provider that uses the connection string to create a connection
     /// </summary>
-    public class NpgsqConnectionProvider : RelationalDbConnectionProvider
+    public class PostgreSqlConnectionProvider : RelationalDbConnectionProvider
     {
         private NpgsqlDataSource _dataSource;
         private readonly string _connectionString;
@@ -21,7 +21,7 @@ namespace Paramore.Brighter.PostgreSql
         /// <param name="dataSource">From v7.0 Npgsql uses an Npgsql data source, leave null to have Brighter manage
         /// connections; Brighter will not manage type mapping for you in this case so you must register them
         /// globally</param>
-        public NpgsqConnectionProvider(
+        public PostgreSqlConnectionProvider(
             IAmARelationalDatabaseConfiguration configuration,
             NpgsqlDataSource dataSource = null)
         {

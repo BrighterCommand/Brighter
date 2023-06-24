@@ -12,7 +12,9 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MySql;
+using Paramore.Brighter.PostgreSql;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
 using Paramore.Brighter.Sqlite;
@@ -233,6 +235,12 @@ namespace SalutationAnalytics
                 case DatabaseType.MySql:
                     ConfigureDapperMySql(services);
                     break;
+                case DatabaseType.MsSql:
+                    ConfigureDapperMsSql(services);
+                    break;
+                case DatabaseType.Postgres:
+                    ConfigureDapperPostgreSql(services);
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported");
             }
@@ -250,7 +258,18 @@ namespace SalutationAnalytics
             services.AddScoped<IAmATransactionConnectionProvider, MySqlUnitOfWork>();
         }
 
+        private static void ConfigureDapperMsSql(IServiceCollection services)
+        {
+            services.AddScoped<IAmARelationalDbConnectionProvider, MsSqlConnectionProvider>();
+            services.AddScoped<IAmATransactionConnectionProvider, MsSqlUnitOfWork>();
+        }
 
+        private static void ConfigureDapperPostgreSql(IServiceCollection services)
+        {
+            services.AddScoped<IAmARelationalDbConnectionProvider, PostgreSqlConnectionProvider>();
+            services.AddScoped<IAmATransactionConnectionProvider, PostgreSqlUnitOfWork>();
+        }
+        
         private static IAmAnInbox CreateInbox(HostBuilderContext hostContext, IAmARelationalDatabaseConfiguration configuration)
         {
             if (hostContext.HostingEnvironment.IsDevelopment())

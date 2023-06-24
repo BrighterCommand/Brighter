@@ -59,9 +59,9 @@ namespace Paramore.Brighter.MSSQL.Tests
             _tableName = $"test_{Guid.NewGuid()}";
 
             _connectionProvider =
-                new MsSqlAuthConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString));
+                new MsSqlConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsBrighterConnectionString));
             _masterConnectionProvider =
-                new MsSqlAuthConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsMasterConnectionString));
+                new MsSqlConnectionProvider(new RelationalDatabaseConfiguration(_sqlSettings.TestsMasterConnectionString));
         }
 
         public void CreateDatabase()

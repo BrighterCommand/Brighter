@@ -25,7 +25,7 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 
         public MsSqlMessageConsumer(
             RelationalDatabaseConfiguration msSqlConfiguration,
-            string topic) :this(msSqlConfiguration, topic, new MsSqlAuthConnectionProvider(msSqlConfiguration))
+            string topic) :this(msSqlConfiguration, topic, new MsSqlConnectionProvider(msSqlConfiguration))
         {
         }
 

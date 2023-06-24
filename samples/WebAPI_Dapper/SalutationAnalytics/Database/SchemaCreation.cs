@@ -207,7 +207,7 @@ namespace SalutationAnalytics.Database
         
         private static void CreateInboxMsSql(string connectionString)
         {
-            using var sqlConnection = new SqliteConnection(connectionString);
+            using var sqlConnection = new SqlConnection(connectionString);
             sqlConnection.Open();
 
             using var exists = sqlConnection.CreateCommand();
@@ -223,7 +223,7 @@ namespace SalutationAnalytics.Database
         
         private static void CreateInboxPostgres(string connectionString)
         {
-            using var sqlConnection = new SqliteConnection(connectionString);
+            using var sqlConnection = new NpgsqlConnection(connectionString);
             sqlConnection.Open();
 
             using var exists = sqlConnection.CreateCommand();
