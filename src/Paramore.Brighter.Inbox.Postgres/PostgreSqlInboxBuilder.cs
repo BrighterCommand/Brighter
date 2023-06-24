@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Inbox.Postgres
                             PRIMARY KEY (CommandId, ContextKey)
                         );";
         
-        private const string InboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        private const string InboxExistsSQL = @"SELECT EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = '{0}')";
  
         /// <summary>
         /// Get the DDL statements to create an Inbox in Postgres
