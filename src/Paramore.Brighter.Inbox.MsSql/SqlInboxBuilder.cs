@@ -41,7 +41,7 @@ namespace Paramore.Brighter.Inbox.MsSql
                             PRIMARY KEY ( [Id] )
                         );";
 
-        private const string InboxExistsSQL = @"SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'{0}'";
+        private const string InboxExistsSQL = @"IF EXISTS (SELECT 1  FROM sys.tables WHERE  name = '{0}')  SELECT 1 AS TableExists; ELSE SELECT 0 AS TableExists;";
         
         /// <summary>
         /// Get the DDL statements to create an Inbox in MSSQL
