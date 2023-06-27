@@ -9,6 +9,330 @@ Accept-Encoding: br,deflate,gzip,x-gzip
   "Greeting" : "I drink, and I know things"
 }
 
+<> 2023-06-27T091728.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T091727.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T091726-1.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T091726.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T091721.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T091718.200.json
+
+###
+
+GET http://localhost:5000/Greetings/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T090113.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T090110.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T090108.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T090104.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T090100.200.json
+
+###
+
+GET http://localhost:5000/Greetings/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T090051.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+Content-Length: 23
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2023-06-27T090042.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T090039.404.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T085001.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T085000.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T084959.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T084958.200.json
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
+<> 2023-06-27T084956.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T084954.200.json
+
+###
+
+POST http://localhost:5000/People/new
+Content-Type: application/json
+Content-Length: 23
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Name" : "Tyrion"
+}
+
+<> 2023-06-27T084950.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T084946.404.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+<> 2023-06-27T084900.200.json
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+###
+
+GET http://localhost:5000/People/Tyrion
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+###
+
+POST http://localhost:5000/Greetings/Tyrion/new
+Content-Type: application/json
+Content-Length: 47
+Connection: Keep-Alive
+User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
+Accept-Encoding: br,deflate,gzip,x-gzip
+
+{
+  "Greeting" : "I drink, and I know things"
+}
+
 <> 2023-06-24T121016.200.json
 
 ###
@@ -337,328 +661,6 @@ Accept-Encoding: br,deflate,gzip,x-gzip
 }
 
 <> 2023-06-24T091631.200.json
-
-###
-
-GET http://localhost:5000/Greetings/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-24T091625.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-24T091620.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-24T091307.500.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-24T091303.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-24T091302.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-24T091301.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-24T091259.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-24T091255.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T203414.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T203413.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T203412.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T203410.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T203409.200.json
-
-###
-
-GET http://localhost:5000/Greetings/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-19T203406.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-19T203359.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T191748.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-19T191743.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-19T191738.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-17T210322.200.json
-
-###
-
-GET http://localhost:5000/Greetings/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-17T210320.200.json
-
-###
-
-POST http://localhost:5000/People/new
-Content-Type: application/json
-Content-Length: 23
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Name" : "Tyrion"
-}
-
-<> 2023-06-17T210317.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-17T210315.404.json
-
-###
-
-DELETE http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-###
-
-GET http://localhost:5000/Greetings/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-17T210308.200.json
-
-###
-
-POST http://localhost:5000/Greetings/Tyrion/new
-Content-Type: application/json
-Content-Length: 47
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-{
-  "Greeting" : "I drink, and I know things"
-}
-
-<> 2023-06-17T210303.200.json
-
-###
-
-GET http://localhost:5000/People/Tyrion
-Connection: Keep-Alive
-User-Agent: Apache-HttpClient/4.5.14 (Java/17.0.6)
-Accept-Encoding: br,deflate,gzip,x-gzip
-
-<> 2023-06-17T210258.200.json
 
 ###
 

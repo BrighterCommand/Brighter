@@ -196,7 +196,8 @@ namespace SalutationAnalytics.Database
 
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = MySqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
-            bool exists = existsQuery.ExecuteScalar() != null;
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
             if (exists) return;
 
@@ -210,11 +211,12 @@ namespace SalutationAnalytics.Database
             using var sqlConnection = new SqlConnection(connectionString);
             sqlConnection.Open();
 
-            using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = SqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
-            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
+            using var existsQuery = sqlConnection.CreateCommand();
+            existsQuery.CommandText = SqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
-            if (reader.HasRows) return;
+            if (exists) return;
 
             using var command = sqlConnection.CreateCommand();
             command.CommandText = SqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
@@ -226,11 +228,14 @@ namespace SalutationAnalytics.Database
             using var sqlConnection = new NpgsqlConnection(connectionString);
             sqlConnection.Open();
 
-            using var exists = sqlConnection.CreateCommand();
-            exists.CommandText = PostgreSqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
-            using var reader = exists.ExecuteReader(CommandBehavior.SingleRow);
+            using var existsQuery = sqlConnection.CreateCommand();
+            existsQuery.CommandText = PostgreSqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
+            
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
-            if (reader.HasRows) return;
+            if (exists) return;
+
 
             using var command = sqlConnection.CreateCommand();
             command.CommandText = PostgreSqlInboxBuilder.GetDDL(INBOX_TABLE_NAME);
@@ -298,7 +303,8 @@ namespace SalutationAnalytics.Database
 
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            bool exists = existsQuery.ExecuteScalar() != null;
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
             if (exists) return;
 
@@ -315,7 +321,8 @@ namespace SalutationAnalytics.Database
 
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = MySqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
-            bool exists = existsQuery.ExecuteScalar() != null;
+            var findOutbox = existsQuery.ExecuteScalar();
+            bool exists = findOutbox is long and > 0;
 
             if (exists) return;
 
@@ -331,8 +338,9 @@ namespace SalutationAnalytics.Database
  
              using var existsQuery = sqlConnection.CreateCommand();
              existsQuery.CommandText = PostgreSqlOutboxBulder.GetExistsQuery(OUTBOX_TABLE_NAME);
-             bool exists = existsQuery.ExecuteScalar() != null;
- 
+             var findOutbox = existsQuery.ExecuteScalar();
+             bool exists = findOutbox is long and > 0;
+
              if (exists) return;
  
              using var command = sqlConnection.CreateCommand();

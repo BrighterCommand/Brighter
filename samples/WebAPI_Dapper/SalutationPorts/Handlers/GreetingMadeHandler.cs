@@ -4,6 +4,7 @@ using System.Data.Common;
 using Dapper;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -24,7 +25,7 @@ namespace SalutationPorts.Handlers
             _logger = logger;
         }
 
-        //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
+        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandler), onceOnly: true )] 
         [RequestLogging(step: 1, timing: HandlerTiming.Before)]
         [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
         public override GreetingMade Handle(GreetingMade @event)
