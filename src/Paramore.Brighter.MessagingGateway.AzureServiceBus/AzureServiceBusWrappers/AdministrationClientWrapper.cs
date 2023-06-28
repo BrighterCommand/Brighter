@@ -201,7 +201,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
                 DeadLetteringOnMessageExpiration = subscriptionConfiguration.DeadLetteringOnMessageExpiration,
                 LockDuration = subscriptionConfiguration.LockDuration,
                 DefaultMessageTimeToLive = subscriptionConfiguration.DefaultMessageTimeToLive,
-                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete
+                AutoDeleteOnIdle = subscriptionConfiguration.QueueIdleBeforeDelete,
+                RequiresSession = subscriptionConfiguration.RequireSession
             };
 
             var ruleOptions = string.IsNullOrEmpty(subscriptionConfiguration.SqlFilter)

@@ -13,7 +13,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
         /// <param name="topicName">The name of the Topic.</param>
         /// <param name="subscriptionName">The name of the Subscription on the Topic.</param>
         /// <param name="receiveMode">The Receive Mode.</param>
+        /// <param name="sessionEnabled">Use Sessions for Processing</param>
         /// <returns>A ServiceBusReceiverWrapper.</returns>
-        IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, ServiceBusReceiveMode receiveMode);
+        IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, ServiceBusReceiveMode receiveMode, bool sessionEnabled);
     }
 }

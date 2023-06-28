@@ -241,7 +241,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.MessageTypeHeaderBagKey, message.Header.MessageType.ToString());
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.HandledCountHeaderBagKey, message.Header.HandledCount);
             azureServiceBusMessage.ApplicationProperties.Add(ASBConstants.ReplyToHeaderBagKey, message.Header.ReplyTo);
-            
+
             foreach (var header in message.Header.Bag.Where(h => !ASBConstants.ReservedHeaders.Contains(h.Key)))
             {
                 azureServiceBusMessage.ApplicationProperties.Add(header.Key, header.Value);
@@ -250,6 +250,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             azureServiceBusMessage.CorrelationId = message.Header.CorrelationId.ToString();
             azureServiceBusMessage.ContentType = message.Header.ContentType;
             azureServiceBusMessage.MessageId = message.Header.Id.ToString();
+            if (message.Header.Bag.ContainsKey(ASBConstants.SessionIdKey))
+                azureServiceBusMessage.SessionId = message.Header.Bag[ASBConstants.SessionIdKey].ToString();
 
             return azureServiceBusMessage;
         }
