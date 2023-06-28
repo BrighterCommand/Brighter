@@ -29,7 +29,12 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         /// Default is TimeSpan.MaxValue.
         /// </summary>
         public TimeSpan QueueIdleBeforeDelete { get; set; } = TimeSpan.MaxValue;
-        
+
+        /// <summary>
+        /// Subscription is Session Enabled
+        /// </summary>
+        public bool RequireSession { get; set; } = false;
+
         /// <summary>
         /// A Sql Filter to apply to the subscription
         /// </summary>

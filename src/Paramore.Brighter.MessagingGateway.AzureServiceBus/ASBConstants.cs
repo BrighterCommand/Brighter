@@ -6,8 +6,11 @@
         public const string MessageTypeHeaderBagKey = "MessageType";
         public const string HandledCountHeaderBagKey = "HandledCount";
         public const string ReplyToHeaderBagKey = "ReplyTo";
+        public const string SessionIdKey = "SessionId";
 
         public static readonly string[] ReservedHeaders =
-            new[] {LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey };
+            new[] {LockTokenHeaderBagKey, MessageTypeHeaderBagKey, HandledCountHeaderBagKey, ReplyToHeaderBagKey, SessionIdKey };
+
+        
     }
 }
