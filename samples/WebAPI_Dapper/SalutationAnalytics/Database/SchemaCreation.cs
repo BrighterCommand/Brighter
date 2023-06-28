@@ -214,7 +214,7 @@ namespace SalutationAnalytics.Database
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = SqlInboxBuilder.GetExistsQuery(INBOX_TABLE_NAME);
             var findInbox = existsQuery.ExecuteScalar();
-            bool exists = findInbox is long and > 0;
+            bool exists = findInbox is > 0;
 
             if (exists) return;
 
@@ -304,7 +304,7 @@ namespace SalutationAnalytics.Database
             using var existsQuery = sqlConnection.CreateCommand();
             existsQuery.CommandText = SqlOutboxBuilder.GetExistsQuery(OUTBOX_TABLE_NAME);
             var findOutbox = existsQuery.ExecuteScalar();
-            bool exists = findOutbox is long and > 0;
+            bool exists = findOutbox is > 0;
 
             if (exists) return;
 
