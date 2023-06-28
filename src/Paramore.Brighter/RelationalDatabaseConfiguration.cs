@@ -2,6 +2,8 @@
 {
     public class RelationalDatabaseConfiguration : IAmARelationalDatabaseConfiguration
     {
+        private const string OUTBOX_TABLE_NAME = "Outbox";
+        private const string INBOX_TABLE_NAME = "Inbox";
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RelationalDatabaseConfiguration"/> class. 
@@ -19,8 +21,8 @@
             bool binaryMessagePayload = false
         )
         {
-            OutBoxTableName = outBoxTableName;
-            InBoxTableName = inboxTableName;
+            OutBoxTableName = outBoxTableName ?? OUTBOX_TABLE_NAME;
+            InBoxTableName = inboxTableName ?? INBOX_TABLE_NAME;
             ConnectionString = connectionString;
             QueueStoreTable = queueStoreTable;
             BinaryMessagePayload = binaryMessagePayload;

@@ -51,7 +51,7 @@ namespace Paramore.Brighter
             OnceOnlyAction actionOnExists = OnceOnlyAction.Throw, 
             Func<Type, string> context = null)
         {
-            if (inbox == null) Inbox = new InMemoryInbox(); 
+            Inbox = inbox ?? new InMemoryInbox(); 
             
             Scope = scope;
             Context = context;

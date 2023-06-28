@@ -9,7 +9,9 @@ using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Inbox;
+using Paramore.Brighter.Inbox.MsSql;
 using Paramore.Brighter.Inbox.MySql;
+using Paramore.Brighter.Inbox.Postgres;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Brighter.MsSql;
@@ -27,6 +29,7 @@ namespace SalutationAnalytics
     class Program
     {
         private const string OUTBOX_TABLE_NAME = "Outbox";
+        private const string INBOX_TABLE_NAME = "Inbox";
         
         public static async Task Main(string[] args)
         {
@@ -104,7 +107,8 @@ namespace SalutationAnalytics
             
             var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(hostContext),
-                outBoxTableName:OUTBOX_TABLE_NAME
+                outBoxTableName:OUTBOX_TABLE_NAME,
+                inboxTableName: INBOX_TABLE_NAME
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             
@@ -203,6 +207,7 @@ namespace SalutationAnalytics
             services
                 .AddFluentMigratorCore()
                 .ConfigureRunner(c => c.AddPostgres()
+                    .ConfigureGlobalProcessorOptions(opt => opt.ProviderSwitches = "Force Quote=false")
                     .WithGlobalConnectionString(DbConnectionString(hostBuilderContext))
                     .ScanIn(typeof(Salutations_Migrations.Migrations.SqlInitialMigrations).Assembly).For.Migrations()
                 );
@@ -277,7 +282,19 @@ namespace SalutationAnalytics
                 return new SqliteInbox(configuration);
             }
 
-            return new MySqlInbox(configuration);
+            return CreateProductionInbox(GetDatabaseType(hostContext), configuration);
+        }
+
+        private static IAmAnInbox CreateProductionInbox(DatabaseType databaseType, IAmARelationalDatabaseConfiguration configuration)
+        {
+            return databaseType switch
+            {
+                DatabaseType.Sqlite => new SqliteInbox(configuration),
+                DatabaseType.MySql => new MySqlInbox(configuration),
+                DatabaseType.MsSql => new MsSqlInbox(configuration),
+                DatabaseType.Postgres => new PostgreSqlInbox(configuration),
+                _ => throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported")
+            };
         }
 
         private static string DbConnectionString(HostBuilderContext hostContext)
@@ -291,7 +308,6 @@ namespace SalutationAnalytics
        private static DatabaseType GetDatabaseType(HostBuilderContext hostContext)
         {
             return hostContext.Configuration[DatabaseGlobals.DATABASE_TYPE_ENV] switch
-
             {
                 DatabaseGlobals.MYSQL => DatabaseType.MySql,
                 DatabaseGlobals.MSSQL => DatabaseType.MsSql,
