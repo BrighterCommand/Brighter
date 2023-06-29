@@ -20,7 +20,7 @@ public record NodeStatus
     /// <summary>
     /// Is this node Healthy
     /// </summary>
-    public bool IsHealthy { get => Subscriptions.Any(s => s.IsHealty != true); }
+    public bool IsHealthy { get => Subscriptions.All(s => s.IsHealty); }
     
     /// <summary>
     /// The Number of Performers currently running on the Node
