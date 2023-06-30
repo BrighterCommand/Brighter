@@ -59,7 +59,7 @@ namespace SalutationAnalytics.Database
             return host;
         }
         
-        public static IHost CreateOutbox(this IHost webHost)
+        public static IHost CreateOutbox(this IHost webHost, bool hasBinaryMessagePayload)
         {
             using (var scope = webHost.Services.CreateScope())
             {
@@ -67,7 +67,7 @@ namespace SalutationAnalytics.Database
                 var env = services.GetService<IHostEnvironment>();
                 var config = services.GetService<IConfiguration>();
 
-                CreateOutbox(config, env);
+                CreateOutbox(config, env, hasBinaryMessagePayload);
             }
 
             return webHost;
@@ -242,16 +242,16 @@ namespace SalutationAnalytics.Database
             command.ExecuteScalar();
         }
 
-        private static void CreateOutbox(IConfiguration config, IHostEnvironment env)
+        private static void CreateOutbox(IConfiguration config, IHostEnvironment env, bool hasBinaryMessagePayload)
         {
             try
             {
                 var connectionString = DbConnectionString(config, env);
 
                 if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString);
+                    CreateOutboxDevelopment(connectionString, hasBinaryMessagePayload);
                 else
-                    CreateOutboxProduction(GetDatabaseType(config), connectionString);
+                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryMessagePayload);
             }
             catch (NpgsqlException pe)
             {
@@ -270,33 +270,33 @@ namespace SalutationAnalytics.Database
             }
         }
 
-        private static void CreateOutboxDevelopment(string connectionString)
+        private static void CreateOutboxDevelopment(string connectionString, bool hasBinaryMessagePayload)
         {
-            CreateOutboxSqlite(connectionString);
+            CreateOutboxSqlite(connectionString, hasBinaryMessagePayload);
         }
 
-       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString) 
+       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString, bool hasBinaryMessagePayload) 
        {
             switch (databaseType)
             {
                 case DatabaseType.MySql:
-                    CreateOutboxMySql(connectionString);
+                    CreateOutboxMySql(connectionString, hasBinaryMessagePayload);
                     break;
                 case DatabaseType.MsSql:
-                    CreateOutboxMsSql(connectionString);
+                    CreateOutboxMsSql(connectionString, hasBinaryMessagePayload);
                     break;
                 case DatabaseType.Postgres:
-                    CreateOutboxPostgres(connectionString);
+                    CreateOutboxPostgres(connectionString, hasBinaryMessagePayload);
                     break;
                 case DatabaseType.Sqlite:
-                    CreateOutboxSqlite(connectionString);
+                    CreateOutboxSqlite(connectionString, hasBinaryMessagePayload);
                     break;
                 default:
                     throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
             }
         }
 
-       private static void CreateOutboxMsSql(string connectionString)
+       private static void CreateOutboxMsSql(string connectionString, bool hasBinaryMessagePayload)
        {
             using var sqlConnection = new SqlConnection(connectionString);
             sqlConnection.Open();
@@ -314,7 +314,7 @@ namespace SalutationAnalytics.Database
             
         }
 
-        private static void CreateOutboxMySql(string connectionString)
+        private static void CreateOutboxMySql(string connectionString, bool hasBinaryMessagePayload)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -331,7 +331,7 @@ namespace SalutationAnalytics.Database
             command.ExecuteScalar();
         }
         
-        private static void CreateOutboxPostgres(string connectionString)
+        private static void CreateOutboxPostgres(string connectionString, bool hasBinaryMessagePayload)
         {
              using var sqlConnection = new NpgsqlConnection(connectionString);
              sqlConnection.Open();
@@ -348,7 +348,7 @@ namespace SalutationAnalytics.Database
              command.ExecuteScalar();
         }
 
-        private static void CreateOutboxSqlite(string connectionString)
+        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryMessagePayload)
         {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
@@ -360,7 +360,7 @@ namespace SalutationAnalytics.Database
             if (reader.HasRows) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryMessagePayload);
             command.ExecuteScalar();
         }
 

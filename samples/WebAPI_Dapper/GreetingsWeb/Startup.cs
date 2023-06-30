@@ -273,7 +273,7 @@ namespace GreetingsWeb
                     {
                         new KafkaPublication
                         {
-                            Topic = new RoutingKey("greeting.event"),
+                            Topic = new RoutingKey("GreetingMade"),
                             MessageSendMaxRetries = 3,
                             MessageTimeoutMs = 1000,
                             MaxInFlightRequestsPerConnection = 1,

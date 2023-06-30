@@ -2,6 +2,7 @@
 using System.Data;
 using System.Data.Common;
 using FluentMigrator.Runner;
+using GreetingsWeb.Messaging;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Data.SqlClient;
 using Microsoft.Data.Sqlite;
@@ -40,6 +41,23 @@ namespace GreetingsWeb.Database
 
             return webHost;
         }
+        
+        public static IHost CreateOutbox(this IHost webHost, bool hasBinaryPayload)
+        {
+            using var scope = webHost.Services.CreateScope();
+            var services = scope.ServiceProvider;
+            var env = services.GetService<IWebHostEnvironment>();
+            var config = services.GetService<IConfiguration>();
+
+            CreateOutbox(config, env, hasBinaryPayload);
+
+            return webHost;
+        }
+
+        public static bool HasBinaryMessagePayload(this IHost webHost)
+        {
+            return GetTransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
+        }
 
         public static IHost MigrateDatabase(this IHost webHost)
         {
@@ -64,17 +82,6 @@ namespace GreetingsWeb.Database
             return webHost;
         }
 
-        public static IHost CreateOutbox(this IHost webHost)
-        {
-            using var scope = webHost.Services.CreateScope();
-            var services = scope.ServiceProvider;
-            var env = services.GetService<IWebHostEnvironment>();
-            var config = services.GetService<IConfiguration>();
-
-            CreateOutbox(config, env);
-
-            return webHost;
-        }
 
         private static void CreateDatabaseIfNotExists(DatabaseType databaseType, DbConnection conn)
         {
@@ -110,16 +117,16 @@ namespace GreetingsWeb.Database
             }
         }
 
-        private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env)
+        private static void CreateOutbox(IConfiguration config, IWebHostEnvironment env, bool hasBinaryPayload)
         {
             try
             {
                 var connectionString = DbConnectionString(config, env);
 
                 if (env.IsDevelopment())
-                    CreateOutboxDevelopment(connectionString);
+                    CreateOutboxDevelopment(connectionString, hasBinaryPayload);
                 else
-                    CreateOutboxProduction(GetDatabaseType(config), connectionString);
+                    CreateOutboxProduction(GetDatabaseType(config), connectionString, hasBinaryPayload);
             }
             catch (NpgsqlException pe)
             {
@@ -138,33 +145,33 @@ namespace GreetingsWeb.Database
             }
         }
 
-        private static void CreateOutboxDevelopment(string connectionString)
+        private static void CreateOutboxDevelopment(string connectionString, bool hasBinaryPayload)
         {
-            CreateOutboxSqlite(connectionString);
+            CreateOutboxSqlite(connectionString, hasBinaryPayload);
         }
 
-       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString) 
+       private static void CreateOutboxProduction(DatabaseType databaseType, string connectionString, bool hasBinaryPayload) 
        {
             switch (databaseType)
             {
                 case DatabaseType.MySql:
-                    CreateOutboxMySql(connectionString);
+                    CreateOutboxMySql(connectionString, hasBinaryPayload);
                     break;
                 case DatabaseType.MsSql:
-                    CreateOutboxMsSql(connectionString);
+                    CreateOutboxMsSql(connectionString, hasBinaryPayload);
                     break;
                 case DatabaseType.Postgres:
-                    CreateOutboxPostgres(connectionString);
+                    CreateOutboxPostgres(connectionString, hasBinaryPayload);
                     break;
                 case DatabaseType.Sqlite:
-                    CreateOutboxSqlite(connectionString);
+                    CreateOutboxSqlite(connectionString, hasBinaryPayload);
                     break;
                 default:
                     throw new InvalidOperationException("Could not create instance of Outbox for unknown Db type");
             }
         }
 
-       private static void CreateOutboxMsSql(string connectionString)
+       private static void CreateOutboxMsSql(string connectionString, bool hasBinaryPayload)
        {
             using var sqlConnection = new SqlConnection(connectionString);
             sqlConnection.Open();
@@ -177,12 +184,12 @@ namespace GreetingsWeb.Database
             if (exists) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+            command.CommandText = SqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
             command.ExecuteScalar();
             
         }
 
-        private static void CreateOutboxMySql(string connectionString)
+        private static void CreateOutboxMySql(string connectionString, bool hasBinaryPayload)
         {
             using var sqlConnection = new MySqlConnection(connectionString);
             sqlConnection.Open();
@@ -195,11 +202,11 @@ namespace GreetingsWeb.Database
             if (exists) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+            command.CommandText = MySqlOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
             command.ExecuteScalar();
         }
         
-        private static void CreateOutboxPostgres(string connectionString)
+        private static void CreateOutboxPostgres(string connectionString, bool hasBinaryPayload)
         {
              using var sqlConnection = new NpgsqlConnection(connectionString);
              sqlConnection.Open();
@@ -212,11 +219,11 @@ namespace GreetingsWeb.Database
              if (exists) return;
  
              using var command = sqlConnection.CreateCommand();
-             command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME);
+             command.CommandText = PostgreSqlOutboxBulder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
              command.ExecuteScalar();
         }
 
-        private static void CreateOutboxSqlite(string connectionString)
+        private static void CreateOutboxSqlite(string connectionString, bool hasBinaryPayload)
         {
             using var sqlConnection = new SqliteConnection(connectionString);
             sqlConnection.Open();
@@ -228,7 +235,7 @@ namespace GreetingsWeb.Database
             if (reader.HasRows) return;
 
             using var command = sqlConnection.CreateCommand();
-            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME);
+            command.CommandText = SqliteOutboxBuilder.GetDDL(OUTBOX_TABLE_NAME, hasBinaryPayload);
             command.ExecuteScalar();
         }
 
@@ -325,5 +332,17 @@ namespace GreetingsWeb.Database
                 _ => throw new ArgumentOutOfRangeException(nameof(databaseType), databaseType, null)
             };
         }
+        
+        private static MessagingTransport GetTransportType(string brighterTransport)
+        {
+            return brighterTransport switch
+            {
+                MessagingGlobals.RMQ => MessagingTransport.Rmq,
+                MessagingGlobals.KAFKA => MessagingTransport.Kafka,
+                _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
+                    "Messaging transport is not supported")
+            };
+        }
+ 
     }
 }

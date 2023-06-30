@@ -39,10 +39,10 @@ namespace SalutationAnalytics
             host.CheckDbIsUp();
             host.MigrateDatabase();
             host.CreateInbox();
-            host.CreateOutbox();
+            host.CreateOutbox(HasBinaryMessagePayload());
             await host.RunAsync();
         }
-        
+
         private static void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
         {
             if (messagingTransport != MessagingTransport.Kafka) return;
@@ -78,7 +78,7 @@ namespace SalutationAnalytics
 
         private static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
         {
-            var messagingTransport = GetTransportType(hostContext);
+            var messagingTransport = GetTransportType(hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT]);
             
             AddSchemaRegistryMaybe(services, messagingTransport);
             
@@ -364,7 +364,7 @@ namespace SalutationAnalytics
                     {
                         new KafkaPublication
                         {
-                            Topic = new RoutingKey("greeting.event"),
+                            Topic = new RoutingKey("SalutationReceived"),
                             MessageSendMaxRetries = 3,
                             MessageTimeoutMs = 1000,
                             MaxInFlightRequestsPerConnection = 1,
@@ -443,7 +443,7 @@ namespace SalutationAnalytics
                 new KafkaSubscription<GreetingMade>(
                     new SubscriptionName("paramore.sample.salutationanalytics"),
                     channelName: new ChannelName("SalutationAnalytics"),
-                    routingKey: new RoutingKey("greeting.event"),
+                    routingKey: new RoutingKey("GreetingMade"),
                     groupId: "kafka-GreetingsReceiverConsole-Sample",
                     timeoutInMilliseconds: 100,
                     offsetDefault: AutoOffsetReset.Earliest,
@@ -454,15 +454,20 @@ namespace SalutationAnalytics
             return subscriptions;
         }
 
-        private static MessagingTransport GetTransportType(HostBuilderContext hostContext)
+        private static MessagingTransport GetTransportType(string brighterTransport)
         {
-            return hostContext.Configuration[MessagingGlobals.BRIGHTER_TRANSPORT] switch
+            return brighterTransport switch
             {
                 MessagingGlobals.RMQ => MessagingTransport.Rmq,
                 MessagingGlobals.KAFKA => MessagingTransport.Kafka,
                 _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
                     "Messaging transport is not supported")
             };
+        }
+        
+        private static bool HasBinaryMessagePayload()
+        {
+            return GetTransportType(Environment.GetEnvironmentVariable("BRIGHTER_TRANSPORT")) == MessagingTransport.Kafka;
         }
     }
 }

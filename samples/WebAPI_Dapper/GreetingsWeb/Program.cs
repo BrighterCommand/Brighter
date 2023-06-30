@@ -16,7 +16,7 @@ namespace GreetingsWeb
             
             host.CheckDbIsUp();
             host.MigrateDatabase();
-            host.CreateOutbox();
+            host.CreateOutbox(host.HasBinaryMessagePayload());
             
             host.Run();
         }
