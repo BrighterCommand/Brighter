@@ -1,9 +1,11 @@
 using System;
+using Confluent.SchemaRegistry;
 using FluentMigrator.Runner;
 using Greetings_MySqlMigrations.Migrations;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
 using GreetingsWeb.Database;
+using GreetingsWeb.Messaging;
 using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -16,6 +18,7 @@ using OpenTelemetry.Trace;
 using Paramore.Brighter;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.Hosting;
+using Paramore.Brighter.MessagingGateway.Kafka;
 using Paramore.Brighter.MessagingGateway.RMQ;
 using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
@@ -25,7 +28,6 @@ namespace GreetingsWeb
 {
     public class Startup
     {
-        private const string OUTBOX_TABLE_NAME = "Outbox";
         
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _env;
@@ -34,6 +36,15 @@ namespace GreetingsWeb
         {
             _configuration = configuration;
             _env = env;
+        }
+
+        private void AddSchemaRegistryMaybe(IServiceCollection services, MessagingTransport messagingTransport)
+        {
+            if (messagingTransport != MessagingTransport.Kafka) return;
+            
+            var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
+            var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+            services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -159,30 +170,15 @@ namespace GreetingsWeb
         
         private void ConfigureBrighter(IServiceCollection services)
         {
+            var messagingTransport = GetTransportType();
+            
+            AddSchemaRegistryMaybe(services, messagingTransport);
+            
             var outboxConfiguration = new RelationalDatabaseConfiguration(
                 DbConnectionString(),
-                outBoxTableName:OUTBOX_TABLE_NAME
+                binaryMessagePayload: messagingTransport == MessagingTransport.Kafka
             );
             services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
-
-            var producerRegistry = new RmqProducerRegistryFactory(
-                new RmqMessagingGatewayConnection
-                {
-                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                    Exchange = new Exchange("paramore.brighter.exchange"),
-                },
-                new RmqPublication[]
-                {
-                    new RmqPublication
-                    {
-                        Topic = new RoutingKey("GreetingMade"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels = OnMissingChannel.Create
-                    }
-                }
-            ).Create();
 
             (IAmAnOutbox outbox, Type connectionProvider, Type transactionProvider) makeOutbox =
                 OutboxExtensions.MakeOutbox(_env, GetDatabaseType(), outboxConfiguration, services);
@@ -197,7 +193,7 @@ namespace GreetingsWeb
                 })
                 .UseExternalBus((configure) =>
                 {
-                    configure.ProducerRegistry = producerRegistry;
+                    configure.ProducerRegistry = ConfigureProducerRegistry(messagingTransport);
                     configure.Outbox = makeOutbox.outbox;
                     configure.TransactionProvider = makeOutbox.transactionProvider;
                     configure.ConnectionProvider = makeOutbox.connectionProvider;
@@ -221,6 +217,16 @@ namespace GreetingsWeb
                 .AddPolicies(new GreetingsPolicy());
         }
 
+        private static IAmAProducerRegistry ConfigureProducerRegistry(MessagingTransport messagingTransport)
+        {
+            return messagingTransport switch
+            {
+                MessagingTransport.Rmq => GetRmqProducerRegistry(),
+                MessagingTransport.Kafka => GetKafkaProducerRegistry(),
+                _ => throw new ArgumentOutOfRangeException(nameof(messagingTransport), "Messaging transport is not supported")
+            };
+        }
+
         private string DbConnectionString()
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
@@ -235,7 +241,7 @@ namespace GreetingsWeb
                 DatabaseGlobals.MSSQL => DatabaseType.MsSql,
                 DatabaseGlobals.POSTGRESSQL => DatabaseType.Postgres,
                 DatabaseGlobals.SQLITE => DatabaseType.Sqlite,
-                _ => throw new InvalidOperationException("Could not determine the database type")
+                _ => throw new ArgumentOutOfRangeException(nameof(DatabaseGlobals.DATABASE_TYPE_ENV), "Database type is not supported")
             };
         }
 
@@ -252,8 +258,65 @@ namespace GreetingsWeb
                 DatabaseType.MsSql => _configuration.GetConnectionString("GreetingsMsSql"),
                 DatabaseType.Postgres => _configuration.GetConnectionString("GreetingsPostgreSql"),
                 DatabaseType.Sqlite => GetDevDbConnectionString(),
-                _ => throw new InvalidOperationException("Could not determine the database type")
+                _ => throw new ArgumentOutOfRangeException(nameof(databaseType), "Database type is not supported") 
             };
         }
+        
+        private static IAmAProducerRegistry GetKafkaProducerRegistry()
+        {
+            var producerRegistry = new KafkaProducerRegistryFactory(
+                    new KafkaMessagingGatewayConfiguration
+                    {
+                        Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                    },
+                    new KafkaPublication[]
+                    {
+                        new KafkaPublication
+                        {
+                            Topic = new RoutingKey("greeting.event"),
+                            MessageSendMaxRetries = 3,
+                            MessageTimeoutMs = 1000,
+                            MaxInFlightRequestsPerConnection = 1,
+                            MakeChannels = OnMissingChannel.Create
+                        }
+                    })
+                .Create();
+            
+            return producerRegistry;
+        }
+        
+        private static IAmAProducerRegistry GetRmqProducerRegistry()
+        {
+            var producerRegistry = new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+            return producerRegistry;
+        }
+       
+       private MessagingTransport GetTransportType()
+       {
+           return _configuration[MessagingGlobals.BRIGHTER_TRANSPORT] switch
+           {
+               MessagingGlobals.RMQ => MessagingTransport.Rmq,
+               MessagingGlobals.KAFKA => MessagingTransport.Kafka,
+               _ => throw new ArgumentOutOfRangeException(nameof(MessagingGlobals.BRIGHTER_TRANSPORT),
+                   "Messaging transport is not supported")
+           };
+       }
     }
 }
