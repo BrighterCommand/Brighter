@@ -1,13 +1,9 @@
 using System;
-using System.Data;
-using System.Data.Common;
 using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Handlers;
 using GreetingsPorts.Policies;
-using Hellang.Middleware.ProblemDetails;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,7 +24,6 @@ using Paramore.Darker.AspNetCore;
 using Paramore.Darker.Policies;
 using Paramore.Darker.QueryLogging;
 using Polly;
-using Polly.Registry;
 
 namespace GreetingsWeb
 {
@@ -36,7 +31,7 @@ namespace GreetingsWeb
     {
         private const string _outBoxTableName = "Outbox";
         private IWebHostEnvironment _env;
-        
+
         public Startup(IConfiguration configuration, IWebHostEnvironment env)
         {
             Configuration = configuration;
@@ -48,8 +43,6 @@ namespace GreetingsWeb
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
-            app.UseProblemDetails();
-
             if (env.IsDevelopment())
             {
                 app.UseSwagger();
@@ -82,16 +75,17 @@ namespace GreetingsWeb
             ConfigureBrighter(services);
             ConfigureDarker(services);
         }
-        
+
         private void CheckDbIsUp()
         {
             string connectionString = DbConnectionString();
-            
+
             var policy = Policy.Handle<MySqlException>().WaitAndRetryForever(
                 retryAttempt => TimeSpan.FromSeconds(2),
                 (exception, timespan) =>
                 {
-                    Console.WriteLine($"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
+                    Console.WriteLine(
+                        $"Healthcheck: Waiting for the database {connectionString} to come online - {exception.Message}");
                 });
 
             policy.Execute(() =>
@@ -109,87 +103,38 @@ namespace GreetingsWeb
 
         private void ConfigureBrighter(IServiceCollection services)
         {
-            if (_env.IsDevelopment())
-            {
-                var producerRegistry = new RmqProducerRegistryFactory(
-                    new RmqMessagingGatewayConnection
-                    {
-                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
-                        Exchange = new Exchange("paramore.brighter.exchange"),
-                    },
-                    new RmqPublication[]{
-                        new RmqPublication
-                        {
-                            Topic = new RoutingKey("GreetingMade"),
-                            MaxOutStandingMessages = 5,
-                            MaxOutStandingCheckIntervalMilliSeconds = 500,
-                            WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            MakeChannels = OnMissingChannel.Create
-                        }}
-                ).Create();
-                
-                services.AddBrighter(options =>
-                     {
-                         //we want to use scoped, so make sure everything understands that which needs to
-                         options.HandlerLifetime = ServiceLifetime.Scoped;
-                         options.CommandProcessorLifetime = ServiceLifetime.Scoped;
-                         options.MapperLifetime = ServiceLifetime.Singleton;
-                         options.PolicyRegistry = new GreetingsPolicy();
-                     })
-                     .UseExternalBus((configure) =>
-                         {
-                             configure.ProducerRegistry = producerRegistry;
-                             configure.Outbox =
-                                 new SqliteOutbox(
-                                     new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName));
-                             configure.TransactionProvider = typeof(SqliteUnitOfWork);
-                         }
-                     )
-                     .UseOutboxSweeper(options =>
-                     {
-                         options.TimerInterval = 5;
-                         options.MinimumMessageAge = 5000;
-                     })
-                     .AutoFromAssemblies();
-            }
-            else
-            {
-                IAmAProducerRegistry producerRegistry = new RmqProducerRegistryFactory(
-                    new RmqMessagingGatewayConnection
-                    {
-                        AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@rabbitmq:5672")),
-                        Exchange = new Exchange("paramore.brighter.exchange"),
-                    },
-                    new RmqPublication[] {
-                        new RmqPublication
-                        {
-                            Topic = new RoutingKey("GreetingMade"),
-                            MaxOutStandingMessages = 5,
-                            MaxOutStandingCheckIntervalMilliSeconds = 500,
-                            WaitForConfirmsTimeOutInMilliseconds = 1000,
-                            MakeChannels = OnMissingChannel.Create
-                        }}
-                ).Create();
-                
-                services.AddBrighter(options =>
-                    {
-                        options.HandlerLifetime = ServiceLifetime.Scoped;
-                        options.MapperLifetime = ServiceLifetime.Singleton;
-                        options.PolicyRegistry = new GreetingsPolicy();
-                    })
-                    .UseExternalBus((config) =>
-                        {
-                            config.ProducerRegistry = producerRegistry;
-                            config.Outbox =
-                                new MySqlOutbox(
-                                    new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName));
-                            config.TransactionProvider = typeof(MySqlUnitOfWork);
-                        }
-                    )
-                    .UseOutboxSweeper()
-                    .AutoFromAssemblies();
-            }
+            (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = MakeOutbox();
+            
+            IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
+            
+            var outboxConfiguration = new RelationalDatabaseConfiguration(
+                DbConnectionString()
+            );
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
+            services.AddBrighter(options =>
+                {
+                    //we want to use scoped, so make sure everything understands that which needs to
+                    options.HandlerLifetime = ServiceLifetime.Scoped;
+                    options.CommandProcessorLifetime = ServiceLifetime.Scoped;
+                    options.MapperLifetime = ServiceLifetime.Singleton;
+                    options.PolicyRegistry = new GreetingsPolicy();
+                })
+                .UseExternalBus((configure) =>
+                    {
+                        configure.ProducerRegistry = producerRegistry;
+                        configure.Outbox = outbox;
+                        configure.TransactionProvider = transactionProvider;
+                        configure.ConnectionProvider = connectionProvider;
+                    }
+                )
+                .UseOutboxSweeper(options =>
+                {
+                    options.TimerInterval = 5;
+                    options.MinimumMessageAge = 5000;
+                })
+                .UseOutboxSweeper()
+                .AutoFromAssemblies();
         }
 
         private void ConfigureDarker(IServiceCollection services)
@@ -202,7 +147,6 @@ namespace GreetingsWeb
                 .AddHandlersFromAssemblies(typeof(FindPersonByNameHandlerAsync).Assembly)
                 .AddJsonQueryLogging()
                 .AddPolicies(new GreetingsPolicy());
-            
         }
 
         private void ConfigureEFCore(IServiceCollection services)
@@ -214,33 +158,79 @@ namespace GreetingsWeb
                 services.AddDbContext<GreetingsEntityGateway>(
                     builder =>
                     {
-                        builder.UseSqlite(connectionString, 
+                        builder.UseSqlite(connectionString,
                             optionsBuilder =>
                             {
                                 optionsBuilder.MigrationsAssembly("Greetings_SqliteMigrations");
-                            });
+                            })
+                            .EnableDetailedErrors()
+                            .EnableSensitiveDataLogging();
                     });
             }
             else
             {
-               services.AddDbContextPool<GreetingsEntityGateway>(builder =>
-               {
-                   builder
-                       .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
-                       {
-                           optionsBuilder.MigrationsAssembly("Greetings_MySqlMigrations");
-                       })
-                       .EnableDetailedErrors()
-                       .EnableSensitiveDataLogging();
-               });
+                services.AddDbContextPool<GreetingsEntityGateway>(builder =>
+                {
+                    builder
+                        .UseMySql(connectionString, ServerVersion.AutoDetect(connectionString), optionsBuilder =>
+                        {
+                            optionsBuilder.MigrationsAssembly("Greetings_MySqlMigrations");
+                        })
+                        .EnableDetailedErrors()
+                        .EnableSensitiveDataLogging();
+                });
             }
         }
 
+        private static IAmAProducerRegistry ConfigureProducerRegistry()
+        {
+            var producerRegistry = new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("GreetingMade"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+            return producerRegistry;
+        }
 
         private string DbConnectionString()
         {
             //NOTE: Sqlite needs to use a shared cache to allow Db writes to the Outbox as well as entities
-            return _env.IsDevelopment() ? "Filename=Greetings.db;Cache=Shared" : Configuration.GetConnectionString("Greetings");
+            return _env.IsDevelopment()
+                ? "Filename=Greetings.db;Cache=Shared"
+                : Configuration.GetConnectionString("Greetings");
+        }
+
+        private (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) MakeOutbox()
+        {
+            if (_env.IsDevelopment())
+            {
+                var outbox = new SqliteOutbox(
+                    new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName));
+                var transactionProvider = typeof(SqliteEntityFrameworkConnectionProvider<GreetingsEntityGateway>);
+                var connectionProvider = typeof(SqliteConnectionProvider);
+                return (outbox, transactionProvider, connectionProvider);
+            }
+            else
+            {
+                var outbox = new MySqlOutbox(
+                    new RelationalDatabaseConfiguration(DbConnectionString(), _outBoxTableName));
+                var transactionProvider = typeof(MySqlEntityFrameworkConnectionProvider<GreetingsEntityGateway>);
+                var connectionProvider = typeof(MySqlConnectionProvider);
+                return (outbox, transactionProvider, connectionProvider);
+            }
         }
     }
 }

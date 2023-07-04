@@ -38,6 +38,7 @@ In case you are using Command Line Interface for running the project, consider a
 ```sh
 dotnet run --launch-profile XXXXXX -d
 ```
+
 ## Architecture
 
 ### GreetingsAPI
