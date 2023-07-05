@@ -31,7 +31,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
 
             _messageReceiver = new Mock<IServiceBusReceiverWrapper>();
 
-            _mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.ReceiveAndDelete)).Returns(_messageReceiver.Object);
+            _mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.ReceiveAndDelete, false)).Returns(_messageReceiver.Object);
 
             _azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer.Object,
                 _nameSpaceManagerWrapper.Object, _mockMessageReceiver.Object, makeChannels: OnMissingChannel.Create, subscriptionConfiguration: _subConfig);
@@ -282,7 +282,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             _messageReceiver.Setup(f => f.Receive(It.IsAny<int>(), It.IsAny<TimeSpan>())).Throws(new Exception());
 
             Assert.Throws<ChannelFailureException>(() => _azureServiceBusConsumer.Receive(400));
-            _mockMessageReceiver.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ServiceBusReceiveMode>()), Times.Exactly(2));
+            _mockMessageReceiver.Verify(x => x.Get(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<ServiceBusReceiveMode>(), false), Times.Exactly(2));
         }
 
         [Theory]
@@ -383,7 +383,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
             var mockMessageReceiver = new Mock<IServiceBusReceiverProvider>();
 
-            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
+            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.PeekLock, false)).Returns(_messageReceiver.Object);
 
             var lockToken = Guid.NewGuid().ToString();
 
@@ -413,7 +413,7 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
             var message1 = new Mock<IBrokeredMessageWrapper>();
             var mockMessageReceiver = new Mock<IServiceBusReceiverProvider>();
 
-            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.PeekLock)).Returns(_messageReceiver.Object);
+            mockMessageReceiver.Setup(x => x.Get("topic", "subscription", ServiceBusReceiveMode.PeekLock, false)).Returns(_messageReceiver.Object);
 
             var lockToken = Guid.NewGuid().ToString();
 

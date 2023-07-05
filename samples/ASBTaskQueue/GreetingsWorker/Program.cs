@@ -7,6 +7,7 @@ using Greetings.Ports.Commands;
 using Greetings.Ports.Events;
 using Greetings.Ports.Mappers;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter;
@@ -16,6 +17,7 @@ using Paramore.Brighter.MsSql;
 using Paramore.Brighter.MsSql.EntityFrameworkCore;
 using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.Control.Api;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Diagnostics.HealthChecks;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
@@ -128,6 +130,7 @@ app.UseEndpoints(endpoints =>
             await context.Response.WriteAsync(JsonSerializer.Serialize(content, jsonOptions));
         }
     });
+    endpoints.MapBrighterControlEndpoints();
     
     endpoints.Map("Dispatcher", (IDispatcher dispatcher) => { return dispatcher.Consumers.Count(); });
 });

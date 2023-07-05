@@ -12,11 +12,14 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus.AzureServiceBusWrap
             _client = clientProvider.GetServiceBusClient();
         }
 
-        public IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, ServiceBusReceiveMode receiveMode)
+        public IServiceBusReceiverWrapper Get(string topicName, string subscriptionName, ServiceBusReceiveMode receiveMode, bool sessionEnabled)
         {
-            var messageReceiver = _client.CreateReceiver(topicName, subscriptionName,
-                new ServiceBusReceiverOptions {ReceiveMode = receiveMode,});
-            return new ServiceBusReceiverWrapper(messageReceiver);
+            return sessionEnabled ?
+                new ServiceBusReceiverWrapper(_client.AcceptNextSessionAsync(topicName, subscriptionName,
+                    new ServiceBusSessionReceiverOptions(){ ReceiveMode = receiveMode }).GetAwaiter().GetResult()) :
+            new ServiceBusReceiverWrapper(_client.CreateReceiver(topicName, subscriptionName,
+                    new ServiceBusReceiverOptions { ReceiveMode = receiveMode, }));
+            
         }
     }
 }
