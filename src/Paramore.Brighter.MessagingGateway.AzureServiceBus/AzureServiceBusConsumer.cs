@@ -55,7 +55,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             _subscriptionConfiguration = subscriptionConfiguration ?? new AzureServiceBusSubscriptionConfiguration();
             _receiveMode = receiveMode;
 
-            GetMessageReceiverProvider();
+            if(!_subscriptionConfiguration.RequireSession)
+                GetMessageReceiverProvider();
         }
 
         /// <summary>
@@ -78,6 +79,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
+                if(_subscriptionConfiguration.RequireSession)
+                    GetMessageReceiverProvider();
                 messages = _serviceBusReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds)).GetAwaiter().GetResult();
             }
             catch (Exception e)
@@ -152,6 +155,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                         lockToken);
 
                     _serviceBusReceiver.Complete(lockToken).Wait();
+                    if(_subscriptionConfiguration.RequireSession)
+                        _serviceBusReceiver.Close();
                 }
                 catch (AggregateException ex)
                 {
@@ -198,6 +203,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                     s_logger.LogDebug("Dead Lettering Message with Id {Id} Lock Token : {LockToken}", message.Id, lockToken);
 
                     _serviceBusReceiver.DeadLetter(lockToken).Wait();
+                    if(_subscriptionConfiguration.RequireSession)
+                        _serviceBusReceiver.Close();
                 }
                 catch (Exception ex)
                 {
@@ -240,7 +247,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 _topicName, _subscriptionName, _receiveMode);
             try
             {
-                _serviceBusReceiver = _serviceBusReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode);
+                _serviceBusReceiver = _serviceBusReceiverProvider.Get(_topicName, _subscriptionName, _receiveMode, _subscriptionConfiguration.RequireSession);
             }
             catch (Exception e)
             {
