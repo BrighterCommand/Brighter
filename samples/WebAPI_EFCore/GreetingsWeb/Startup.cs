@@ -104,13 +104,10 @@ namespace GreetingsWeb
         private void ConfigureBrighter(IServiceCollection services)
         {
             (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = MakeOutbox();
+            var outboxConfiguration = new RelationalDatabaseConfiguration(DbConnectionString());
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
             
             IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
-            
-            var outboxConfiguration = new RelationalDatabaseConfiguration(
-                DbConnectionString()
-            );
-            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
 
             services.AddBrighter(options =>
                 {

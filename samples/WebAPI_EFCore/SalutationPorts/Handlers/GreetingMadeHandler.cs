@@ -12,48 +12,47 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
         private readonly SalutationsEntityGateway _uow;
         private readonly IAmACommandProcessor _postBox;
         private readonly IAmATransactionConnectionProvider _transactionProvider;
 
-        public GreetingMadeHandlerAsync(SalutationsEntityGateway uow, IAmATransactionConnectionProvider provider, IAmACommandProcessor postBox)
+        public GreetingMadeHandler(SalutationsEntityGateway uow, IAmATransactionConnectionProvider provider, IAmACommandProcessor postBox)
         {
             _uow = uow;
             _postBox = postBox;
             _transactionProvider = provider;
         }
 
-        //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
-        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
+        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandler), onceOnly: true )] 
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
+        public override GreetingMade Handle(GreetingMade @event)
         {
             var posts = new List<Guid>();
             
-            await _transactionProvider.GetTransactionAsync(cancellationToken);
+            var tx =_transactionProvider.GetTransaction();
             try
             {
                 var salutation = new Salutation(@event.Greeting);
 
                 _uow.Salutations.Add(salutation);
 
-                posts.Add(await _postBox.DepositPostAsync(
+                posts.Add(_postBox.DepositPost(
                     new SalutationReceived(DateTimeOffset.Now),
-                    _transactionProvider,
-                    cancellationToken: cancellationToken)
+                    _transactionProvider)
                 );
 
-                await _uow.SaveChangesAsync(cancellationToken);
+                _uow.SaveChanges();
 
-                await _transactionProvider.CommitAsync(cancellationToken);
+                _transactionProvider.Commit();
             }
             catch (Exception e)
             {
                 Console.WriteLine(e);
 
-                await _transactionProvider.RollbackAsync(cancellationToken);
+                _transactionProvider.Rollback();
 
                 Console.WriteLine("Salutation analytical record not saved");
 
@@ -64,9 +63,9 @@ namespace SalutationPorts.Handlers
                 _transactionProvider.Close();
             }
 
-            await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+            _postBox.ClearOutbox(posts.ToArray());
             
-            return await base.HandleAsync(@event, cancellationToken);
+            return base.Handle(@event);
         }
     }
 }

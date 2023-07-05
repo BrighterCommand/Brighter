@@ -12,9 +12,14 @@ using Paramore.Brighter.Inbox;
 using Paramore.Brighter.Inbox.MySql;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.MessagingGateway.RMQ;
+using Paramore.Brighter.MySql;
+using Paramore.Brighter.MySql.EntityFrameworkCore;
+using Paramore.Brighter.Outbox.MySql;
+using Paramore.Brighter.Outbox.Sqlite;
 using Paramore.Brighter.ServiceActivator.Extensions.DependencyInjection;
 using Paramore.Brighter.ServiceActivator.Extensions.Hosting;
-using Polly.Registry;
+using Paramore.Brighter.Sqlite;
+using Paramore.Brighter.Sqlite.EntityFrameworkCore;
 using SalutationAnalytics.Database;
 using SalutationPorts.EntityGateway;
 using SalutationPorts.Policies;
@@ -61,43 +66,30 @@ namespace SalutationAnalytics
 
         private static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection services)
         {
+            (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) = MakeOutbox(hostContext);
+            var outboxConfiguration = new RelationalDatabaseConfiguration(DbConnectionString(hostContext));
+            services.AddSingleton<IAmARelationalDatabaseConfiguration>(outboxConfiguration);
+            
+            IAmAProducerRegistry producerRegistry = ConfigureProducerRegistry();
+            
             var subscriptions = new Subscription[]
             {
                 new RmqSubscription<GreetingMade>(
                     new SubscriptionName("paramore.sample.salutationanalytics"),
                     new ChannelName("SalutationAnalytics"),
                     new RoutingKey("GreetingMade"),
-                    runAsync: true,
+                    runAsync: false,
                     timeoutInMilliseconds: 200,
                     isDurable: true,
                     makeChannels: OnMissingChannel
                         .Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
             };
 
-            var host = hostContext.HostingEnvironment.IsDevelopment() ? "localhost" : "rabbitmq";
-
-            var rmqConnection = new RmqMessagingGatewayConnection
+            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(new RmqMessagingGatewayConnection
             {
-                AmpqUri = new AmqpUriSpecification(new Uri($"amqp://guest:guest@{host}:5672")),
-                Exchange = new Exchange("paramore.brighter.exchange")
-            };
-
-            var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
-
-            var producerRegistry = new RmqProducerRegistryFactory(
-                rmqConnection,
-                new RmqPublication[]
-                {
-                    new RmqPublication
-                    {
-                        Topic = new RoutingKey("SalutationReceived"),
-                        MaxOutStandingMessages = 5,
-                        MaxOutStandingCheckIntervalMilliSeconds = 500,
-                        WaitForConfirmsTimeOutInMilliseconds = 1000,
-                        MakeChannels = OnMissingChannel.Create
-                    }
-                }
-            ).Create();
+                AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                Exchange = new Exchange("paramore.brighter.exchange"),
+            });
 
             services.AddServiceActivator(options =>
                 {
@@ -118,11 +110,15 @@ namespace SalutationAnalytics
                 .UseExternalBus((configure) =>
                 {
                     configure.ProducerRegistry = producerRegistry;
+                    configure.Outbox = outbox;
+                    configure.TransactionProvider = transactionProvider;
+                    configure.ConnectionProvider = connectionProvider;
                 })
                 .AutoFromAssemblies();
 
             services.AddHostedService<ServiceActivatorHostedService>();
         }
+
 
         private static string GetEnvironment()
         {
@@ -172,6 +168,31 @@ namespace SalutationAnalytics
             return new MySqlInbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext),
                 SchemaCreation.INBOX_TABLE_NAME));
         }
+        
+        private static IAmAProducerRegistry ConfigureProducerRegistry()
+        {
+            var producerRegistry = new RmqProducerRegistryFactory(
+                new RmqMessagingGatewayConnection
+                {
+                    AmpqUri = new AmqpUriSpecification(new Uri("amqp://guest:guest@localhost:5672")),
+                    Exchange = new Exchange("paramore.brighter.exchange"),
+                },
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("SalutationReceived"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+
+            return producerRegistry;
+        }
+
 
         private static string DbConnectionString(HostBuilderContext hostContext)
         {
@@ -179,6 +200,24 @@ namespace SalutationAnalytics
             return hostContext.HostingEnvironment.IsDevelopment()
                 ? "Filename=Salutations.db;Cache=Shared"
                 : hostContext.Configuration.GetConnectionString("Salutations");
+        }
+        
+        private static (IAmAnOutbox outbox, Type transactionProvider, Type connectionProvider) MakeOutbox(HostBuilderContext hostContext)
+        {
+            if (hostContext.HostingEnvironment.IsDevelopment())
+            {
+                var outbox = new SqliteOutbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext)));
+                var transactionProvider = typeof(SqliteEntityFrameworkConnectionProvider<SalutationsEntityGateway>);
+                var connectionProvider = typeof(SqliteConnectionProvider);
+                return (outbox, transactionProvider, connectionProvider);
+            }
+            else
+            {
+                var outbox = new MySqlOutbox(new RelationalDatabaseConfiguration(DbConnectionString(hostContext)));
+                var transactionProvider = typeof(MySqlEntityFrameworkConnectionProvider<SalutationsEntityGateway>);
+                var connectionProvider = typeof(MySqlConnectionProvider);
+                return (outbox, transactionProvider, connectionProvider);
+            }
         }
     }
 }
