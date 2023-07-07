@@ -11,13 +11,6 @@ namespace Paramore.Brighter
     public interface IAmARelationalDbConnectionProvider
     {
         /// <summary>
-        /// Commit any transaction that we are managing
-        /// </summary>
-        /// <param name="cancellationToken">A cancellation token</param>
-        /// <returns></returns>
-        Task CommitAsync(CancellationToken cancellationToken = default);
-        
-        /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
         /// The connection is not opened, you need to open it yourself.
         /// </summary>
@@ -30,10 +23,5 @@ namespace Paramore.Brighter
         /// </summary>
         /// <returns>A database connection</returns>
         Task<DbConnection> GetConnectionAsync(CancellationToken cancellationToken);
-
- 
-     
-        
- 
     }
 }

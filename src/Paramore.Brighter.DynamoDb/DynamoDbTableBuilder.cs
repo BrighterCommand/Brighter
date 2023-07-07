@@ -49,7 +49,7 @@ namespace Paramore.Brighter.DynamoDb
             Dictionary<string, bool> tableResults = null;
             do
             {
-                var tableQuery = new DynampDbTableQuery();
+                var tableQuery = new DynamoDbTableQuery();
                 tableResults = await tableQuery.HasTables(_client, tableNames, ct: ct);
             } while (tableResults.Any(tr => tr.Value));
         }

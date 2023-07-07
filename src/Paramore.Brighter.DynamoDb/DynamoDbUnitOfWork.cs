@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -7,7 +8,7 @@ using Amazon.DynamoDBv2.Model;
 
 namespace Paramore.Brighter.DynamoDb
 {
-    public class DynamoDbUnitOfWork : IDynamoDbClientTransactionProvider, IDisposable
+    public class DynamoDbUnitOfWork : IAmADynamoDbTransactionProvider, IDisposable
     {
         private TransactWriteItemsRequest _tx;
         
@@ -46,14 +47,22 @@ namespace Paramore.Brighter.DynamoDb
         /// <summary>
         /// Commit a transaction, performing all associated write actions
         /// </summary>
-        /// <returns>A response indicating the status of the transaction</returns>
-        public async Task<TransactWriteItemsResponse> CommitAsync(CancellationToken ct = default)
+        /// <param name="ct">A cancellation token</param>
+        /// <exception cref="InvalidOperationException"></exception>
+        public async Task CommitAsync(CancellationToken ct = default)
         {
             if (!HasOpenTransaction)
                 throw new InvalidOperationException("No transaction to commit");
-             
-            LastResponse = await DynamoDb.TransactWriteItemsAsync(_tx, ct);
-            return LastResponse;
+            try
+            {
+               LastResponse = await DynamoDb.TransactWriteItemsAsync(_tx, ct);
+                if (LastResponse.HttpStatusCode != HttpStatusCode.OK)
+                    throw new InvalidOperationException($"HTTP error writing to DynamoDb {LastResponse.HttpStatusCode}");
+            }
+            catch (AmazonDynamoDBException e)
+            {
+                throw new InvalidOperationException($"HTTP error writing to DynamoDb {e.Message}");
+            }
         }
 
 

@@ -21,6 +21,11 @@ namespace Paramore.Brighter
             Close();
         }
 
+        public Task CommitAsync(CancellationToken cancellationToken = default)
+        {
+            return Task.Factory.FromAsync(_transaction.BeginCommit, _transaction.EndCommit, null, TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+
         public CommittableTransaction GetTransaction()
         {
             if (_transaction == null)

@@ -17,18 +17,18 @@ namespace GreetingsPorts.Handlers
 {
     public class FIndGreetingsForPersonHandlerAsync : QueryHandlerAsync<FindGreetingsForPerson, FindPersonsGreetings>
     {
-        private readonly DynamoDbUnitOfWork _unitOfWork;
+        private readonly IAmADynamoDbConnectionProvider _dynamoDbConnectionProvider;
 
-        public FIndGreetingsForPersonHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsRequest> unitOfWork)
+        public FIndGreetingsForPersonHandlerAsync(IAmADynamoDbConnectionProvider dynamoDbConnectionProvider)
         {
-            _unitOfWork = (DynamoDbUnitOfWork ) unitOfWork;
+            _dynamoDbConnectionProvider = dynamoDbConnectionProvider;
         }
         
         [QueryLogging(0)]
         [RetryableQuery(1, Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<FindPersonsGreetings> ExecuteAsync(FindGreetingsForPerson query, CancellationToken cancellationToken = new CancellationToken())
         {
-            var context = new DynamoDBContext(_unitOfWork.DynamoDb);
+            var context = new DynamoDBContext(_dynamoDbConnectionProvider.DynamoDb);
 
             var person = await context.LoadAsync<Person>(query.Name, cancellationToken);
 

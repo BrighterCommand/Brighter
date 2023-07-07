@@ -18,6 +18,11 @@ namespace Paramore.Brighter
         /// Commit any transaction that we are managing
         /// </summary>
         void Commit();
+
+        /// <summary>
+        /// Allows asynchronous commit of a transaction 
+        /// </summary>
+        Task CommitAsync(CancellationToken cancellationToken = default);
         
         /// <summary>
         /// Gets an existing transaction; creates a new one from the connection if it does not exist and we support

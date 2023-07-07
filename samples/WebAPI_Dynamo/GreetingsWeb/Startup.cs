@@ -191,6 +191,7 @@ namespace GreetingsWeb
              {
                  configure.ProducerRegistry = producerRegistry;
                  configure.Outbox = new DynamoDbOutbox(_client, new DynamoDbConfiguration());
+                 configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                  configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
              })
              .UseOutboxSweeper(options => { options.Args.Add("Topic", "GreetingMade"); })

@@ -76,7 +76,8 @@ public class DynamoDbOutboxTransactionTests : DynamoDBOutboxBaseTest
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = _entityTableName, Item = attributes, } });
             transaction.TransactItems.Add(new TransactWriteItem { Put = new Put { TableName = OutboxTableName, Item = messageAttributes}});
 
-            response = await uow.CommitAsync();
+            await uow.CommitAsync();
+            response = uow.LastResponse;
         }
         catch (Exception e)
         {

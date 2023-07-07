@@ -23,7 +23,7 @@ POST http://localhost:5000/Greetings/Tyrion/new HTTP/1.1
 Content-Type: application/json
 
 {
-  "Greeting" : "I drink, and I know things"
+  "Greeting" : "I drink, and I know things #1"
 }
 
 ### And now look up Tyrion's greetings

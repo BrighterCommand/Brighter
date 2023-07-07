@@ -7,6 +7,7 @@ using Amazon.DynamoDBv2.Model;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
 using Paramore.Brighter.DynamoDb;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -14,53 +15,56 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
-        private readonly DynamoDbUnitOfWork  _uow;
+        private readonly IAmADynamoDbTransactionProvider _transactionProvider;
         private readonly IAmACommandProcessor _postBox;
-        private readonly ILogger<GreetingMadeHandlerAsync> _logger;
+        private readonly ILogger<GreetingMadeHandler> _logger;
 
-        public GreetingMadeHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsResponse> uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandler(IAmADynamoDbTransactionProvider transactionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
         {
-            _uow = (DynamoDbUnitOfWork)uow;
+            _transactionProvider = transactionProvider;
             _postBox = postBox;
             _logger = logger;
         }
 
-        //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
-        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
+        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandler), onceOnly: true )] 
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
+        public override GreetingMade Handle(GreetingMade @event)
         {
             var posts = new List<Guid>();
-            var context = new DynamoDBContext(_uow.DynamoDb);
-            var tx = await _uow.GetTransactionAsync(cancellationToken);
+            var context = new DynamoDBContext(_transactionProvider.DynamoDb);
+            var tx = _transactionProvider.GetTransaction();
             try
             {
-                var salutation = new Salutation{ Greeting = @event.Greeting};
+                var salutation = new Salutation { Greeting = @event.Greeting };
                 var attributes = context.ToDocument(salutation).ToAttributeMap();
-                
-                tx.TransactItems.Add(new TransactWriteItem{Put = new Put{ TableName = "Salutations", Item = attributes}});
-                
-                posts.Add(await _postBox.DepositPostAsync(
-                    new SalutationReceived(DateTimeOffset.Now), 
-                    _uow,
-                    cancellationToken: cancellationToken)
-                );
-                
-                await _uow.CommitAsync(cancellationToken);
+
+                tx.TransactItems.Add(new TransactWriteItem
+                {
+                    Put = new Put { TableName = "Salutations", Item = attributes }
+                });
+
+                posts.Add(_postBox.DepositPost(new SalutationReceived(DateTimeOffset.Now), _transactionProvider));
+
+                _transactionProvider.Commit();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
-                await _uow.RollbackAsync(cancellationToken);
-                
-                return await base.HandleAsync(@event, cancellationToken);
+                _transactionProvider.Rollback();
+
+                return base.Handle(@event);
+            }
+            finally
+            {
+                _transactionProvider.Close();
             }
 
-            await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+            _postBox.ClearOutboxAsync(posts);
             
-            return await base.HandleAsync(@event, cancellationToken);
+            return base.Handle(@event);
         }
     }
 }

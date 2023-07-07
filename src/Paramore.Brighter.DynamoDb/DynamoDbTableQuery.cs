@@ -7,7 +7,7 @@ using Amazon.DynamoDBv2.Model;
 
 namespace Paramore.Brighter.DynamoDb
 {
-    public class DynampDbTableQuery
+    public class DynamoDbTableQuery
     {
         public async Task<Dictionary<string, bool>> HasTables(
             IAmazonDynamoDB client,

@@ -69,7 +69,7 @@ namespace SalutationAnalytics
                     new SubscriptionName("paramore.sample.salutationanalytics"),
                     new ChannelName("SalutationAnalytics"),
                     new RoutingKey("GreetingMade"),
-                    runAsync: true,
+                    runAsync: false,
                     timeoutInMilliseconds: 200,
                     isDurable: true,
                     makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -124,6 +124,7 @@ namespace SalutationAnalytics
                     {
                         configure.ProducerRegistry = producerRegistry;
                         configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
+                        configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
                         configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
                     }
                 )

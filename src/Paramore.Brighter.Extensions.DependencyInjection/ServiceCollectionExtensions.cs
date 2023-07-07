@@ -31,6 +31,7 @@ using Paramore.Brighter.FeatureSwitch;
 using Paramore.Brighter.Logging;
 using System.Text.Json;
 using System.Transactions;
+using Paramore.Brighter.DynamoDb;
 using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
@@ -167,7 +168,9 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             
             brighterBuilder.Services.Add(new ServiceDescriptor(boxProviderType, transactionProvider, serviceLifetime));
 
+            //NOTE: It is a little unsatisfactory to hard code our types in here
             RegisterRelationalProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
+            RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
 
             return ExternalBusBuilder(brighterBuilder, busConfiguration, transactionType);
         }
@@ -360,6 +363,28 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return messageMapperRegistry;
         }
+        
+        private static void RegisterDynamoProviderServicesMaybe(
+            IBrighterBuilder brighterBuilder, 
+            Type connectionProvider, 
+            Type transactionProvider, 
+            ServiceLifetime serviceLifetime)
+        {
+            //not all box transaction providers are also relational connection providers
+            if (typeof(IAmADynamoDbConnectionProvider).IsAssignableFrom(connectionProvider))
+            {
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbConnectionProvider),
+                    connectionProvider, serviceLifetime));
+            }
+            
+            //not all box transaction providers are also relational connection providers
+            if (typeof(IAmADynamoDbTransactionProvider).IsAssignableFrom(transactionProvider))
+            {
+                //register the combined interface just in case
+                brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbTransactionProvider),
+                    transactionProvider, serviceLifetime));
+            }
+        }
 
         private static void RegisterRelationalProviderServicesMaybe(
             IBrighterBuilder brighterBuilder,
@@ -369,14 +394,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             )
         {
             //not all box transaction providers are also relational connection providers
-            if (connectionProvider != null)
+            if (typeof(IAmARelationalDbConnectionProvider).IsAssignableFrom(connectionProvider))
             {
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider),
                     connectionProvider, serviceLifetime));
             }
             
             //not all box transaction providers are also relational connection providers
-            if (typeof(IAmARelationalDbConnectionProvider).IsAssignableFrom(transactionProvider))
+            if (typeof(IAmATransactionConnectionProvider).IsAssignableFrom(transactionProvider))
             {
                 //register the combined interface just in case
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmATransactionConnectionProvider),

@@ -13,18 +13,18 @@ namespace GreetingsPorts.Handlers
 {
     public class AddPersonHandlerAsync : RequestHandlerAsync<AddPerson>
     {
-        private readonly DynamoDbUnitOfWork _dynamoDbUnitOfWork;
+        private readonly IAmADynamoDbConnectionProvider _dynamoDbConnectionProvider;
 
-        public AddPersonHandlerAsync(IAmABoxTransactionProvider<TransactWriteItemsRequest>   dynamoDbUnitOfWork)
+        public AddPersonHandlerAsync(IAmADynamoDbConnectionProvider dynamoDbConnectionProvider)
         {
-            _dynamoDbUnitOfWork = (DynamoDbUnitOfWork )dynamoDbUnitOfWork;
+            _dynamoDbConnectionProvider = dynamoDbConnectionProvider;
         }
 
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddPerson> HandleAsync(AddPerson addPerson, CancellationToken cancellationToken = default)
         {
-            var context = new DynamoDBContext(_dynamoDbUnitOfWork.DynamoDb);
+            var context = new DynamoDBContext(_dynamoDbConnectionProvider.DynamoDb);
             await context.SaveAsync(new Person { Name = addPerson.Name }, cancellationToken);
 
             return await base.HandleAsync(addPerson, cancellationToken);
