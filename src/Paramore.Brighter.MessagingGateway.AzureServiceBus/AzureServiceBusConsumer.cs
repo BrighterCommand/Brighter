@@ -79,13 +79,21 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
 
             try
             {
-                if(_subscriptionConfiguration.RequireSession)
+                if (_subscriptionConfiguration.RequireSession)
+                {
                     GetMessageReceiverProvider();
+                    if (_serviceBusReceiver == null)
+                    {
+                        s_logger.LogInformation("Message Gateway: Could not get a lock on a session for {TopicName}",
+                            _topicName);
+                        return messagesToReturn.ToArray();   
+                    }
+                }
                 messages = _serviceBusReceiver.Receive(_batchSize, TimeSpan.FromMilliseconds(timeoutInMilliseconds)).GetAwaiter().GetResult();
             }
             catch (Exception e)
             {
-                if (_serviceBusReceiver.IsClosedOrClosing)
+                if (_serviceBusReceiver is {IsClosedOrClosing: true})
                 {
                     s_logger.LogDebug("Message Receiver is closing...");
                     var message = new Message(new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_QUIT), new MessageBody(string.Empty));
@@ -96,7 +104,8 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
                 s_logger.LogError(e, "Failing to receive messages.");
 
                 //The connection to Azure Service bus may have failed so we re-establish the connection.
-                GetMessageReceiverProvider();
+                if(!_subscriptionConfiguration.RequireSession)
+                    GetMessageReceiverProvider();
 
                 throw new ChannelFailureException("Failing to receive messages.", e);
             }
@@ -236,7 +245,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
         public void Dispose()
         {
             s_logger.LogInformation("Disposing the consumer...");
-            _serviceBusReceiver.Close();
+            _serviceBusReceiver?.Close();
             s_logger.LogInformation("Consumer disposed.");
         }
 
