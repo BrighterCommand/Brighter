@@ -10,8 +10,8 @@
         public string MarkDispatchedCommand { get; } = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId = @MessageId";
         public string MarkMultipleDispatchedCommand { get; } = "UPDATE {0} SET Dispatched = @DispatchedAt WHERE MessageId in ( {1} )";
         public string GetMessageCommand { get; } = "SELECT * FROM {0} WHERE MessageId = @MessageId";
-        public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE MessageId IN ( {1} ) ORDER BY Timestamp ASC";
+        public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE MessageId IN ( {1} )";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE MessageId IN ( {1} )";
-        public string DispatchedCommand { get; } = "SELECT * FROM {0} WHERE Dispatched IS NOT NULL AND Dispatched < datetime('now', '-' || @DispatchedSince || ' hours') ORDER BY Dispatched LIMIT @PageSize;";
+        public string DispatchedCommand { get; } = "Select top(@PageSize) * FROM {0} WHERE Dispatched is not NULL and Dispatched < DATEADD(hour, @DispatchedSince, getutcdate()) Order BY Dispatched";
     }
 }

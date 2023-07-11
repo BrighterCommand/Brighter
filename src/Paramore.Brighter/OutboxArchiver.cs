@@ -79,7 +79,7 @@ namespace Paramore.Brighter
             try
             {
                 var messages = await _outboxAsync.DispatchedMessagesAsync(minimumAge, _batchSize,
-                    cancellationToken: cancellationToken);
+                    cancellationToken);
 
                 if (!messages.Any()) return;
 
