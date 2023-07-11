@@ -13,6 +13,6 @@
         public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE MessageId IN ( {1} )";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE MessageId IN ( {1} )";
         
-        public string DispatchedCommand { get; } = "Select top(@PageSize) * FROM {0} WHERE Dispatched is not NULL and Dispatched < DATEADD(hour, -@DispatchedSince, getutcdate()) Order BY Dispatched";
+        public string DispatchedCommand { get; } = "Select top(@PageSize) * FROM {0} WHERE Dispatched is not NULL and Dispatched < DATEADD(hour, @DispatchedSince, getutcdate()) Order BY Dispatched";
     }
 }
