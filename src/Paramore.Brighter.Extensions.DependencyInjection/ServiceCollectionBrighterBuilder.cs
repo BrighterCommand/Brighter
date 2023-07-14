@@ -100,18 +100,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="extraAssemblies">The assemblies to scan</param>
         /// <returns></returns>
-        public IBrighterBuilder AutoFromAssemblies(params Assembly[] extraAssemblies)
+        public IBrighterBuilder AutoFromAssemblies(params Assembly[] assemblies)
         {
             var appDomainAssemblies = AppDomain.CurrentDomain.GetAssemblies().Where(a =>
                 !a.IsDynamic && !a.FullName.StartsWith("Microsoft.", true, CultureInfo.InvariantCulture) &&
                 !a.FullName.StartsWith("System.", true, CultureInfo.InvariantCulture));
 
-            var assemblies = appDomainAssemblies.Concat(extraAssemblies).ToArray();
+            var allAssemblies = appDomainAssemblies.Concat(assemblies).ToArray();
 
-            MapperRegistryFromAssemblies(assemblies);
-            HandlersFromAssemblies(assemblies);
-            AsyncHandlersFromAssemblies(assemblies);
-            TransformsFromAssemblies(assemblies);
+            MapperRegistryFromAssemblies(allAssemblies);
+            HandlersFromAssemblies(allAssemblies);
+            AsyncHandlersFromAssemblies(allAssemblies);
+            TransformsFromAssemblies(allAssemblies);
 
             return this;
         }

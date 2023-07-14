@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2022 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
@@ -42,7 +42,6 @@ namespace Paramore.Brighter.Transforms.Transformers
         /// it retrieves the payload, via the claim check and replaces the payload.
         /// </summary>
         /// <param name="store">The storage to use for the payload</param>
-        /// <param name="threshold">The size at which checking luggage is triggered. If size is 0 or less, the check will always be triggered</param>
         public ClaimCheckTransformer(IAmAStorageProvider store)
         {
             _store = store;

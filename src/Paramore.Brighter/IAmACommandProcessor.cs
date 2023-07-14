@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -83,7 +83,7 @@ namespace Paramore.Brighter
         /// <typeparam name="TRequest">The type of the request</typeparam>
         /// <param name="request">The request.</param>
         void Post<TRequest>(TRequest request) where TRequest : class, IRequest;
-        
+
         /// <summary>
         /// Posts the specified request with async/await support.
         /// </summary>
@@ -145,7 +145,7 @@ namespace Paramore.Brighter
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
         /// database, that you want to signal via the request to downstream consumers
-        /// Pass deposited Guid to <see cref="ClearOutbox"/> 
+        /// Pass deposited Guid to <see cref="ClearOutbox(System.Guid[])"/> 
         /// </summary>
         /// <param name="requests">The requests to save to the outbox</param>
         /// <param name="transactionProvider">If using an Outbox, the transaction provider for the Outbox</param>
@@ -254,7 +254,7 @@ namespace Paramore.Brighter
         void ClearOutbox(int amountToClear = 100, int minimumAge = 5000, Dictionary<string, object> args = null);
 
         /// <summary>
-        /// Flushes the message box message given by <param name="posts"> to the broker.
+        /// Flushes the message box message given by <param name="posts"/> to the broker.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ <see cref="DepositPostBoxAsync"/>
         /// </summary>
         /// <param name="posts">The ids to flush</param>

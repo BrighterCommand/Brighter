@@ -28,7 +28,7 @@ namespace Paramore.Brighter
 {
     /// <summary>
     /// class UnwrapPipeline
-    /// A pipeline with a sink of a <see cref="MessageMapper"/> that:
+    /// A pipeline with a sink of a <see cref="TransformPipeline{TRequest}.MessageMapper"/> that:
     /// Takes a message and maps it to a request
     /// Runs transforms on that message
     /// </summary>

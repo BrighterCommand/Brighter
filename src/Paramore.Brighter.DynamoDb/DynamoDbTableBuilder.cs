@@ -98,7 +98,7 @@ namespace Paramore.Brighter.DynamoDb
             
             var tableCheck = tableNames.ToDictionary(tableName => tableName, tableName => false);
             
-            string lastEvalutatedTableName = null;
+            string lastEvaluatedTableName = null;
             do
             {
                 var tablesResponse = await _client.ListTablesAsync(ct);
@@ -109,8 +109,8 @@ namespace Paramore.Brighter.DynamoDb
                         tableCheck[tableName] = true;
                 }
                 
-                lastEvalutatedTableName = tablesResponse.LastEvaluatedTableName;
-            } while (lastEvalutatedTableName != null);
+                lastEvaluatedTableName = tablesResponse.LastEvaluatedTableName;
+            } while (lastEvaluatedTableName != null);
 
             return tableCheck.Any(kv => kv.Value) ? 
                 (true, tableCheck.Where(tbl => tbl.Value).Select(tbl => tbl.Key)) : 
@@ -131,7 +131,7 @@ namespace Paramore.Brighter.DynamoDb
 
                 if (!added)
                 {
-                     added = AddGobalSecondaryIndexUsedFields(tableRequest, attribute, keyMatchedAttributes);
+                     added = AddGlobalSecondaryIndexUsedFields(tableRequest, attribute, keyMatchedAttributes);
                 }
 
                 if (!added)
@@ -164,7 +164,7 @@ namespace Paramore.Brighter.DynamoDb
             return false;
         }
 
-        private static bool AddGobalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
+        private static bool AddGlobalSecondaryIndexUsedFields(CreateTableRequest tableRequest, AttributeDefinition attribute,
             List<AttributeDefinition> keyMatchedAttributes)
         {
             foreach (var index in tableRequest.GlobalSecondaryIndexes)

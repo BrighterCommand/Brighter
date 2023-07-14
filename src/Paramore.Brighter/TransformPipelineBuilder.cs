@@ -80,7 +80,6 @@ namespace Paramore.Brighter
         /// Anything marked with <see cref=""/> will run before the <see cref="IAmAMessageMapper{TRequest}"/>
         /// Anything marked with
         /// </summary>
-        /// <param name="request"></param>
         /// <typeparam name="TRequest"></typeparam>
         /// <returns></returns>
         public WrapPipeline<TRequest> BuildWrapPipeline<TRequest>() where TRequest : class, IRequest
