@@ -33,33 +33,32 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpEventProcessingExceptionTests
+    public class MessagePumpEventProcessingDeferMessageActionTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
-        public MessagePumpEventProcessingExceptionTests()
+        public MessagePumpEventProcessingDeferMessageActionTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper())); 
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
              
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+            _messagePump = new MessagePumpAsync<MyEvent>(_commandProcessor, messageMapperRegistry) 
+                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, null);
-
-            var msg = transformPipelineBuilder.BuildWrapPipeline<MyEvent>()
-                .WrapAsync(new MyEvent()).GetAwaiter().GetResult();
-            
+            var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
+                .BuildWrapPipeline<MyEvent>().WrapAsync(new MyEvent())
+                .GetAwaiter().GetResult();
             _channel.Enqueue(msg);
         }
 
         [Fact]
-        public void When_an_event_handler_throws_Then_message_is_requeued_until_rejected()
+        public void When_an_event_handler_throws_a_defer_message_Then_message_is_requeued_until_rejectedAsync()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();

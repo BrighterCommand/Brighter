@@ -256,4 +256,50 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles
         }
 
     }
+
+    internal class SpyExceptionCommandProcessor : SpyCommandProcessor
+    {
+        public int SendCount { get; set; }
+        public int PublishCount { get; set; }
+
+        public SpyExceptionCommandProcessor()
+        {
+            SendCount = 0;
+            PublishCount = 0;
+        }
+
+        public override void Send<T>(T command)
+        {
+            base.Send(command);
+            SendCount++;
+            throw new Exception();
+        }
+
+        public override void Publish<T>(T @event)
+        {
+            base.Publish(@event);
+            PublishCount++;
+
+            var exceptions = new List<Exception> { new Exception() };
+
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+        public override async Task SendAsync<T>(T command, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        {
+            await base.SendAsync(command, continueOnCapturedContext, cancellationToken);
+            SendCount++;
+            throw new Exception();
+        }
+
+        public override async Task PublishAsync<T>(T @event, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default)
+        {
+            await base.PublishAsync(@event, continueOnCapturedContext, cancellationToken);
+            PublishCount++;
+
+            var exceptions = new List<Exception> { new Exception() };
+
+            throw new AggregateException("Failed to publish to one more handlers successfully, see inner exceptions for details", exceptions);
+        }
+
+    }
 }

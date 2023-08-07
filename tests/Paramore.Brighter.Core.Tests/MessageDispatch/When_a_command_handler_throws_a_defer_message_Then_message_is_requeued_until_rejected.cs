@@ -33,32 +33,33 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpCommandProcessingExceptionTestsAsync
+    public class MessagePumpCommandProcessingDeferMessageActionTests
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
-        public MessagePumpCommandProcessingExceptionTestsAsync()
+        public MessagePumpCommandProcessingDeferMessageActionTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-             
-            _messagePump = new MessagePumpAsync<MyCommand>(_commandProcessor, messageMapperRegistry) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, messageMapperRegistry) 
+                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
             var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand())
                 .GetAwaiter().GetResult();
+
             _channel.Enqueue(msg);
         }
 
         [Fact]
-        public void When_a_command_handler_throws_Then_message_is_requeued_until_rejectedAsync()
+        public void When_a_command_handler_throws_a_defer_message_Then_message_is_requeued_until_rejected()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
             Task.Delay(1000).Wait();
