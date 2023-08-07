@@ -30,47 +30,57 @@ using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using Serilog.Events;
+using Serilog.Sinks.TestCorrelator;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpCommandProcessingExceptionTests
+    public class MessagePumpCommandProcessingExceptionTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
+        private readonly SpyExceptionCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
-        public MessagePumpCommandProcessingExceptionTests()
+        public MessagePumpCommandProcessingExceptionTestsAsync()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
+
+            _commandProcessor = new SpyExceptionCommandProcessor();
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, messageMapperRegistry) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
+             
+            _messagePump = new MessagePumpAsync<MyCommand>(_commandProcessor, messageMapperRegistry) { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
             var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
                 .WrapAsync(new MyCommand())
                 .GetAwaiter().GetResult();
-
             _channel.Enqueue(msg);
         }
 
         [Fact]
-        public void When_a_command_handler_throws_Then_message_is_requeued_until_rejected()
+        public void When_a_command_handler_throws_unhandled_exception_Then_message_is_acked_async()
         {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            using (TestCorrelator.CreateContext())
+            {
+                var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+                Task.Delay(1000).Wait();
 
-            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            _channel.Enqueue(quitMessage);
+                var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT),
+                    new MessageBody(""));
+                _channel.Enqueue(quitMessage);
 
-            Task.WaitAll(new[] { task });
+                Task.WaitAll(new[] {task});
 
-            _channel.RequeueCount.Should().Be(_requeueCount-1);
-            _channel.RejectCount.Should().Be(1);
+                _channel.AcknowledgeCount.Should().Be(1);
+
+                TestCorrelator.GetLogEventsFromCurrentContext()
+                    .Should().Contain(x => x.Level == LogEventLevel.Error)
+                    .Which.MessageTemplate.Text
+                    .Should().Be("MessagePump: Failed to dispatch message '{Id}' from {ChannelName} on thread # {ManagementThreadId}");
+            }
         }
     }
 }
