@@ -34,8 +34,6 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
                     _mockMessageReceiver.Get("topic", "subscription", ServiceBusReceiveMode.ReceiveAndDelete, false))
                 .Returns(_messageReceiver);
 
-            //A.CallTo(() => _mockMessageReceiver.Get("topic", "subscription", ServiceBusReceiveMode.ReceiveAndDelete, false)).Returns(_messageReceiver);
-
             _azureServiceBusConsumer = new AzureServiceBusConsumer("topic", "subscription", _mockMessageProducer,
                 _nameSpaceManagerWrapper, _mockMessageReceiver, makeChannels: OnMissingChannel.Create, subscriptionConfiguration: _subConfig);
         }
@@ -44,7 +42,6 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         public void When_a_subscription_exists_and_messages_are_in_the_queue_the_messages_are_returned()
         {
             A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
-            //A.CallTo(() => _nameSpaceManagerWrapper.SubscriptionExists("topic", "subscription")).Returns(true);
 
             var brokeredMessageList = new List<IBrokeredMessageWrapper>();
             var message1 = A.Fake<IBrokeredMessageWrapper>();
