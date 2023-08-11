@@ -310,16 +310,14 @@ namespace Paramore.Brighter.ServiceActivator
                     var originalMessageId = message.Header.Bag.TryGetValue(Message.OriginalMessageIdHeaderName, out object value) ? value.ToString() : null;
 
                     s_logger.LogError(
-                        "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} on thread # {ManagementThreadId}, dropping message.{5}Message Body:{Request}",
+                        "MessagePump: Have tried {RequeueCount} times to handle this message {Id}{OriginalMessageId} from {ChannelName} on thread # {ManagementThreadId}, dropping message.",
                         RequeueCount,
                         message.Id,
                         string.IsNullOrEmpty(originalMessageId)
                             ? string.Empty
                             : $" (original message id {originalMessageId})",
                         Channel.Name,
-                        Thread.CurrentThread.ManagedThreadId,
-                        Environment.NewLine,
-                        message.Body.Value);
+                        Thread.CurrentThread.ManagedThreadId);
 
                     RejectMessage(message);
                     return false;
