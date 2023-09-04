@@ -175,8 +175,15 @@ public class AzureBlobArchiveProviderTests
             BlobContainerUri = new Uri("https://brighterarchivertest.blob.core.windows.net/messagearchive"), 
             TokenCredential = new AzureCliCredential(),
             AccessTier = tier,
-            TagBlobs = tags
-            
+            TagBlobs = tags,
+            TagsFunc = (message => new Dictionary<string, string>()
+            {
+                { "topic", message.Header.Topic },
+                { "correlationId", message.Header.CorrelationId.ToString() },
+                { "message_type", message.Header.MessageType.ToString() },
+                { "timestamp", message.Header.TimeStamp.ToString() },
+                { "content_type", message.Header.ContentType }
+            })
         };
         _provider = new AzureBlobArchiveProvider(options);
 
