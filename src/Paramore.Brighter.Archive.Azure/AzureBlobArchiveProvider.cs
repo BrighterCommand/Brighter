@@ -100,16 +100,7 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
         };
 
         if (_options.TagBlobs)
-        {
-            opts.Tags = new Dictionary<string, string>()
-            {
-                { "topic", message.Header.Topic },
-                { "correlationId", message.Header.CorrelationId.ToString() },
-                { "message_type", message.Header.MessageType.ToString() },
-                { "timestamp", message.Header.TimeStamp.ToString() },
-                { "content_type", message.Header.ContentType }
-            };
-        }
+            opts.Tags = _options.TagsFunc.Invoke(message);
 
         return opts;
     }

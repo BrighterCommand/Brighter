@@ -34,4 +34,16 @@ public class AzureBlobArchiveProviderOptions
     /// The maximum upload size in mb
     /// </summary>
     public int MaxUploadSize = 50;
+    
+    /// <summary>
+    /// The function to arrange the tags to add when storing, please note that <see cref="TagBlobs"/> must be True for these to be used
+    /// </summary>
+    public Func<Message, Dictionary<string, string>> TagsFunc = (message) => new Dictionary<string, string>()
+    {
+        { "topic", message.Header.Topic },
+        { "correlationId", message.Header.CorrelationId.ToString() },
+        { "message_type", message.Header.MessageType.ToString() },
+        { "timestamp", message.Header.TimeStamp.ToString() },
+        { "content_type", message.Header.ContentType }
+    };
 }
