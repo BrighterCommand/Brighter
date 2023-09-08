@@ -33,7 +33,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         public int Timeout { get; }
         /// <summary>
-        /// Number of shards to use for the outstanding index
+        /// Number of shards to use for the outstanding index. Maximum of 20
         /// </summary>
         public int NumberOfShards { get; }
         /// <summary>

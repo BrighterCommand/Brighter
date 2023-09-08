@@ -44,6 +44,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
+        private readonly Random _random = new Random();
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -61,6 +62,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 OverrideTableName = _configuration.TableName,
                 ConsistentRead = true
             };
+
+            if (_configuration.NumberOfShards > 20)
+            {
+                throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
+            }
         }
 
         /// <summary>
@@ -73,6 +79,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             _context = context;
             _configuration = configuration;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
+            
+            if (_configuration.NumberOfShards > 20)
+            {
+                throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
+            }
         }
 
         /// <inheritdoc />
@@ -401,18 +412,10 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         
         private async Task<IEnumerable<MessageItem>> QueryAllOutstandingShardsAsync(string topic, DateTime minimumAge, CancellationToken cancellationToken = default)
         {
-            using var semaphore = new SemaphoreSlim(20);
             var tasks = new List<Task<IEnumerable<MessageItem>>>();
 
             for (int shard = 0; shard < _configuration.NumberOfShards; shard++)
             {
-                await semaphore.WaitAsync(cancellationToken);
-                
-                if (cancellationToken.IsCancellationRequested)
-                {
-                    break;
-                }
-                
                 // We get all the messages for topic, added within a time range
                 // There should be few enough of those that we can efficiently filter for those
                 // that don't have a delivery date.
@@ -424,14 +427,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     ConsistentRead = false
                 };
 
-                var task = PageAllMessagesAsync(queryConfig, cancellationToken)
-                    .ContinueWith(t =>
-                    {
-                        semaphore.Release();
-                        return t.Result;
-                    }, cancellationToken);
-
-                tasks.Add(task);
+                tasks.Add(PageAllMessagesAsync(queryConfig, cancellationToken));
             }
 
             await Task.WhenAll(tasks);
@@ -457,7 +453,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 return 0;
             }
 
-            return RandomNumberGenerator.GetInt32(_configuration.NumberOfShards);
+            return _random.Next(0, _configuration.NumberOfShards);
         }
 
         private long? GetExpirationTime()
