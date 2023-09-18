@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using PostgreSql</Description>
     <Authors>Tarun Pothulapati</Authors>
@@ -12,7 +12,7 @@
   </ItemGroup>
   <ItemGroup>
 
-    <PackageReference Include="Npgsql" Version="7.0.4" />
+    <PackageReference Include="Npgsql" Version="7.0.6" />
 
     <PackageReference Update="MinVer" Version="4.3.0">
       <PrivateAssets>all</PrivateAssets>

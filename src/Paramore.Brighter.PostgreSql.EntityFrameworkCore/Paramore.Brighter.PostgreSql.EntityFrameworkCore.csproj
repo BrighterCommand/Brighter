@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <Authors>Sam Rumley</Authors>
@@ -9,7 +9,7 @@
 
   <ItemGroup>
 
-    <PackageReference Include="Npgsql" Version="7.0.4" />
+    <PackageReference Include="Npgsql" Version="7.0.6" />
 
     <PackageReference Update="MinVer" Version="4.3.0">
       <PrivateAssets>all</PrivateAssets>
