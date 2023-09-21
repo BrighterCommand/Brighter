@@ -118,7 +118,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_a_consumer_declares_topics_on_a_confluent_cluster()
+        public async Task When_a_consumer_declares_topics_on_a_confluent_cluster()
         {
             var message = new Message(
                 new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
@@ -137,7 +137,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 try
                 {
                     maxTries++;
-                    Task.Delay(500).Wait(); //Let topic propagate in the broker
+                    await Task.Delay(500); //Let topic propagate in the broker
                     messages = _consumer.Receive(10000);
                     _consumer.Acknowledge(messages[0]);
                     
