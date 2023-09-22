@@ -62,11 +62,11 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_An_Unacceptable_Message_Limit_Is_Reached()
+        public async Task When_An_Unacceptable_Message_Limit_Is_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //should_have_acknowledge_the_3_messages
             _channel.AcknowledgeCount.Should().Be(3);

@@ -60,6 +60,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
+#pragma warning disable xUnit1031
         [Fact]
         public void When_A_Message_Dispatcher_Shuts_A_Connection()
         {
@@ -74,6 +75,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_no_consumers
             _dispatcher.Consumers.Should().BeEmpty();
         }
+#pragma warning restore xUnit1031
         
         public void Dispose()
         {

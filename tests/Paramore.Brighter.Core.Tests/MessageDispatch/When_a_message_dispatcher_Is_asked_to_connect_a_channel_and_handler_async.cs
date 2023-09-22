@@ -43,6 +43,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.State.Should().Be(DispatcherState.DS_AWAITING);
             _dispatcher.Receive();
         }
+#pragma warning disable xUnit1031
         
         [Fact(Timeout = 10000)]
         public void When_a_message_dispatcher_is_asked_to_connect_a_channel_and_handler_async()

@@ -74,12 +74,12 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_infrastructure_exists_can_verify()
+        public async Task When_infrastructure_exists_can_verify()
         {
             //arrange
             _messageProducer.Send(_message);
 
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
             
             var messages = _consumer.Receive(5000);
             

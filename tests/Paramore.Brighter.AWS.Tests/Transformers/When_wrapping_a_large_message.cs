@@ -78,7 +78,7 @@ namespace Paramore.Brighter.AWS.Tests.Transformers
         {
             //act
             _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-            var message = _transformPipeline.WrapAsync(_myCommand).Result;
+            var message = await _transformPipeline.WrapAsync(_myCommand);
 
             //assert
             message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();

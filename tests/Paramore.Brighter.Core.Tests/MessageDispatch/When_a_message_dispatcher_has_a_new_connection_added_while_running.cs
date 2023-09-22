@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
+        public async Task When_A_Message_Dispatcher_Has_A_New_Connection_Added_While_Running()
         {
             _dispatcher.Open(_newSubscription);
 
@@ -72,7 +72,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
 
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);

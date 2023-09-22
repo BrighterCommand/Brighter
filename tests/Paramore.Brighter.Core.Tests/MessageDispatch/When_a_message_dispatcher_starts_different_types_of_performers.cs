@@ -77,6 +77,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
 
+#pragma warning disable xUnit1031
         [Fact]
         public void When_A_Message_Dispatcher_Starts_Different_Types_Of_Performers()
         {
@@ -95,6 +96,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_of_had_2_consumers_when_running
             _numberOfConsumers.Should().Be(2);
         }
+#pragma warning restore xUnit1031
         
         public void Dispose()
         {

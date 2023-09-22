@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         }
 
         [Fact]
-        public void When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
+        public async void When_Posting_Fails_Limit_Total_Writes_To_OutBox_In_Window()
         {
             //We are only going to allow 50 erroring messages
             _fakeMessageProducer.MaxOutStandingMessages = 3;
@@ -78,7 +78,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     sentList.Add(command.Id);
 
                     //We need to wait for the sweeper thread to check the outstanding in the outbox
-                    Task.Delay(50).Wait();
+                    await Task.Delay(50);
 
                 } while (sentList.Count < 10);
             }

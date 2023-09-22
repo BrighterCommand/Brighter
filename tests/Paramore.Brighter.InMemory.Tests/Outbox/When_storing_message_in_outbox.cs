@@ -128,7 +128,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
         }
 
         [Fact]
-        public void When_there_are_multiple_items_and_some_are_dispatched()
+        public async Task When_there_are_multiple_items_and_some_are_dispatched()
         {
             //Arrange
             var outbox = new InMemoryOutbox();
@@ -142,7 +142,7 @@ namespace Paramore.Brighter.InMemory.Tests.Outbox
             outbox.MarkDispatched(messageIds[0], now);
             outbox.MarkDispatched(messageIds[4], now);
 
-            Task.Delay(500).Wait();
+            await Task.Delay(500);
 
             var sentMessages = outbox.DispatchedMessages(5000);
             var outstandingMessages = outbox.OutstandingMessages(0);
