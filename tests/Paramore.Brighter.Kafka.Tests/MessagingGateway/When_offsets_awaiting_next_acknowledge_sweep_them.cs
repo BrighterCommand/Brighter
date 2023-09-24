@@ -64,7 +64,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
         }
 
         [Fact]
-        public void When_a_message_is_acknowldeged_but_no_batch_sent_sweep_offsets()
+        public async Task When_a_message_is_acknowldeged_but_no_batch_sent_sweep_offsets()
         {
             var groupId = Guid.NewGuid().ToString();
             
@@ -80,27 +80,26 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var consumedMessages = new List<Message>();
             for (int j = 0; j < 9; j++)
             {
-                consumedMessages.Add(ReadMessage());
+                consumedMessages.Add(await ReadMessageAsync());
             }
 
             consumedMessages.Count.Should().Be(9);
             _consumer.StoredOffsets().Should().Be(9);
 
             //Let time elapse with no activity
-            Task.Delay(10000).Wait();
+            await Task.Delay(10000);
             
             //This should trigger a sweeper run (can be fragile when non scheduled in containers etc)
-            consumedMessages.Add(ReadMessage());
+            consumedMessages.Add(await ReadMessageAsync());
             
             //Let the sweeper run, can be slow in CI environments to run the thread
             //Let the sweeper run, can be slow in CI environments to run the thread
-            Task.Delay(10000).Wait();
-            
+            await Task.Delay(10000);
 
             //Sweeper will commit these
             _consumer.StoredOffsets().Should().Be(0);
             
-            Message ReadMessage()
+            async Task<Message> ReadMessageAsync()
             {
                 Message[] messages = new []{new Message()};
                 int maxTries = 0;
@@ -109,7 +108,7 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                     try
                     {
                         maxTries++;
-                        Task.Delay(500).Wait(); //Let topic propagate in the broker
+                        await Task.Delay(500); //Let topic propagate in the broker
                         messages = _consumer.Receive(1000);
 
                         if (messages[0].Header.MessageType != MessageType.MT_NONE)
@@ -137,9 +136,6 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
                 new MessageBody($"test content [{_queueName}]")));
         }
 
-  
-
-    
 
         public void Dispose()
         {

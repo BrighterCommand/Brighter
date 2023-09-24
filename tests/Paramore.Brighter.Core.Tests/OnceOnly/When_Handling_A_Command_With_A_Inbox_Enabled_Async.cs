@@ -50,7 +50,7 @@ namespace Paramore.Brighter.Core.Tests.OnceOnly
             await _commandProcessor.SendAsync(_command);
 
            // should_store_the_command_to_the_inbox
-            _inbox.GetAsync<MyCommand>(_command.Id, _contextKey).Result.Value.Should().Be(_command.Value);
+            (await _inbox.GetAsync<MyCommand>(_command.Id, _contextKey)).Value.Should().Be(_command.Value);
         }
 
         [Fact]

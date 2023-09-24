@@ -69,14 +69,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
+        public async Task When_A_Message_Dispatcher_Restarts_A_Connection_After_All_Connections_Have_Stopped()
         {
             _dispatcher.Open("newTest");
             var @event = new MyEvent();
             var message = new MyEventMessageMapper().MapToMessage(@event);
             _channel.Enqueue(message);
-            Task.Delay(500).Wait();
-
+            await Task.Delay(500);
 
             //_should_have_consumed_the_messages_in_the_event_channel
             _channel.Length.Should().Be(0);
