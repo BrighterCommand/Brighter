@@ -39,11 +39,11 @@ public class DynamoDbOutboxOutstandingMessageTests : DynamoDBOutboxBaseTest
     }
 
     [Fact]
-    public void When_there_are_outstanding_messages_in_the_outbox()
+    public async Task When_there_are_outstanding_messages_in_the_outbox()
     {
         _dynamoDbOutbox.Add(_message);
 
-        Task.Delay(1000).Wait();
+        await Task.Delay(1000);
 
         var args = new Dictionary<string, object> {{"Topic", "test_topic"}};
 

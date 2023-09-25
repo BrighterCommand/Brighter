@@ -13,7 +13,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
     {
 
         [Fact]
-        public void When_outstanding_in_outbox_sweep_clears_them()
+        public async Task When_outstanding_in_outbox_sweep_clears_them()
         {
             //Arrange
             const int milliSecondsSinceSent = 500;
@@ -31,7 +31,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
             }
 
             //Act
-            Task.Delay(1000).Wait(); // -- let the messages expire
+            await Task.Delay(1000); // -- let the messages expire
             
             sweeper.Sweep();
 
@@ -77,7 +77,7 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
         }
 
         [Fact]
-        public void When_too_new_to_sweep_leaves_them()
+        public async Task When_too_new_to_sweep_leaves_them()
         {
              //Arrange
              const int milliSecondsSinceSent = 500;
@@ -100,11 +100,11 @@ namespace Paramore.Brighter.InMemory.Tests.Sweeper
              //Act
              sweeper.Sweep();
 
-             Thread.Sleep(200);
+             await Task.Delay(200);
 
             //Assert
             commandProcessor.Dispatched.Count.Should().Be(1);
-             commandProcessor.Deposited.Count.Should().Be(4);
+            commandProcessor.Deposited.Count.Should().Be(4);
            
         }
         

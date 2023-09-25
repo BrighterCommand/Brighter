@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
-
+#pragma warning disable xUnit1031
         [Fact]
         public void WhenAMessageDispatcherStartsMultiplePerformers()
         {
@@ -76,6 +76,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_a_stopped_state
             _dispatcher.State.Should().Be(DispatcherState.DS_STOPPED);
         }
-
+#pragma warning restore xUnit1031
     }
 }

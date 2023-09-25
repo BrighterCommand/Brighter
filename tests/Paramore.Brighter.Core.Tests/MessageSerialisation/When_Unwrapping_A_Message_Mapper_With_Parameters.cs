@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
@@ -34,11 +35,11 @@ public class MessageUnwrapRequestWithAttributesTests
     }
     
     [Fact]
-    public void When_Wrapping_A_Message_Mapper_With_Attributes()
+    public async Task When_Wrapping_A_Message_Mapper_With_Attributes()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.UnwrapAsync(_message).Result;
+        var request = await _transformPipeline.UnwrapAsync(_message);
         
         //assert
         request.Value.Should().Be("I am a parameterized template: Hello World");

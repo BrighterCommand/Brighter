@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
@@ -28,18 +29,17 @@ public class MessageWrapCleanupTests
     }
     
     [Fact]
-    public void When_Wrapping_Clean_Up_The_Pipeline()
+    public async Task When_Wrapping_Clean_Up_The_Pipeline()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
-        var message = _transformPipeline.WrapAsync(_myCommand).Result;
+        var message = await _transformPipeline.WrapAsync(_myCommand);
         _transformPipeline.Dispose();
         
         //assert
         s_released.Should().Be("|MySimpleTransformAsync");
 
     }
-    
     
     private class MyReleaseTrackingTransformFactory : IAmAMessageTransformerFactory
     {

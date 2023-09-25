@@ -32,13 +32,23 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// Timeout in milliseconds
         /// </summary>
         public int Timeout { get; }
+        /// <summary>
+        /// Number of shards to use for the outstanding index. Maximum of 20
+        /// </summary>
+        public int NumberOfShards { get; }
+        /// <summary>
+        /// Optional time to live for the messages in the outbox
+        /// By default, messages will not expire
+        /// </summary>
+        public TimeSpan? TimeToLive { get; set; }
     
         [Obsolete("Use the DynamoDbConfiguration without AWSCredentials and without RegionEndpoint")]
         public DynamoDbConfiguration(
             AWSCredentials credentials, 
             RegionEndpoint region,
             string tableName = null,
-            int timeout = 500)
+            int timeout = 500,
+            int numberOfShards = 3)
         {
             Credentials = credentials;
             Region = region;
@@ -46,14 +56,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             OutstandingIndexName = "Outstanding";
             DeliveredIndexName = "Delivered";
             Timeout = timeout;
+            NumberOfShards = numberOfShards;
         }
 
-        public DynamoDbConfiguration(string tableName = null, int timeout = 500)
+        public DynamoDbConfiguration(string tableName = null, int timeout = 500, int numberOfShards = 3)
         {
             TableName = tableName ?? "brighter_outbox";
             OutstandingIndexName = "Outstanding";
             DeliveredIndexName = "Delivered";
             Timeout = timeout;
+            NumberOfShards = numberOfShards;
         }
     }
 }
