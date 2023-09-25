@@ -19,7 +19,7 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Http" Version="7.0.0" />
     <PackageReference Include="AWSSDK.S3" Version="3.7.203.16" />
-    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.201.37" />
+    <PackageReference Include="AWSSDK.SecurityToken" Version="3.7.201.39" />
     <PackageReference Include="Polly" Version="7.2.4" />
     <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
   </ItemGroup>

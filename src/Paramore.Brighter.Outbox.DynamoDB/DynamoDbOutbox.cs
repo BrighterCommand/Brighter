@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using Amazon.DynamoDBv2;
@@ -43,6 +44,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
         private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
+        private readonly Random _random = new Random();
 
         public bool ContinueOnCapturedContext { get; set; }
 
@@ -55,7 +57,16 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         {
             _configuration = configuration;
             _context = new DynamoDBContext(client);
-            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
+            {
+                OverrideTableName = _configuration.TableName,
+                ConsistentRead = true
+            };
+
+            if (_configuration.NumberOfShards > 20)
+            {
+                throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
+            }
         }
 
         /// <summary>
@@ -68,6 +79,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             _context = context;
             _configuration = configuration;
             _dynamoOverwriteTableConfig = new DynamoDBOperationConfig { OverrideTableName = _configuration.TableName };
+            
+            if (_configuration.NumberOfShards > 20)
+            {
+                throw new ArgumentOutOfRangeException(nameof(DynamoDbConfiguration.NumberOfShards), "Maximum number of shards is 20");
+            }
         }
 
         /// <inheritdoc />
@@ -90,7 +106,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>        
         public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
         {
-            var messageToStore = new MessageItem(message);
+            var shard = GetShardNumber();
+            var expiresAt = GetExpirationTime();
+            var messageToStore = new MessageItem(message, shard, expiresAt);
 
             if (transactionConnectionProvider != null)
             {
@@ -311,19 +329,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var dispatchedTime = now.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
-            // We get all the messages for topic, added within a time range
-            // There should be few enough of those that we can efficiently filter for those
-            // that don't have a delivery date.
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, dispatchedTime),
-                FilterExpression = new NoDispatchTimeExpression().Generate(),
-                ConsistentRead = false
-            };
-           
             //block async to make this sync
-            var messages = PageAllMessagesAsync(queryConfig).Result.ToList();
+            var messages = QueryAllOutstandingShardsAsync(topic, dispatchedTime).Result.ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
@@ -357,19 +364,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var minimumAge = DateTime.UtcNow.Subtract(TimeSpan.FromMilliseconds(millisecondsDispatchedSince));
             var topic = (string)args["Topic"];
 
-            // We get all the messages for topic, added within a time range
-            // There should be few enough of those that we can efficiently filter for those
-            // that don't have a delivery date.
-            var queryConfig = new QueryOperationConfig
-            {
-                IndexName = _configuration.OutstandingIndexName,
-                KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge),
-                FilterExpression = new NoDispatchTimeExpression().Generate(),
-                ConsistentRead = false
-            };
-           
             //block async to make this sync
-            var messages = (await PageAllMessagesAsync(queryConfig, cancellationToken)).ToList();
+            var messages = (await QueryAllOutstandingShardsAsync(topic, minimumAge, cancellationToken)).ToList();
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
@@ -413,6 +409,34 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return messages;
         }
+        
+        private async Task<IEnumerable<MessageItem>> QueryAllOutstandingShardsAsync(string topic, DateTime minimumAge, CancellationToken cancellationToken = default)
+        {
+            var tasks = new List<Task<IEnumerable<MessageItem>>>();
+
+            for (int shard = 0; shard < _configuration.NumberOfShards; shard++)
+            {
+                // We get all the messages for topic, added within a time range
+                // There should be few enough of those that we can efficiently filter for those
+                // that don't have a delivery date.
+                var queryConfig = new QueryOperationConfig
+                {
+                    IndexName = _configuration.OutstandingIndexName,
+                    KeyExpression = new KeyTopicCreatedTimeExpression().Generate(topic, minimumAge, shard),
+                    FilterExpression = new NoDispatchTimeExpression().Generate(),
+                    ConsistentRead = false
+                };
+
+                tasks.Add(PageAllMessagesAsync(queryConfig, cancellationToken));
+            }
+
+            await Task.WhenAll(tasks);
+
+            return tasks
+                .SelectMany(x => x.Result)
+                .OrderBy(x => x.CreatedAt);
+        }
+        
         private async Task WriteMessageToOutbox(CancellationToken cancellationToken, MessageItem messageToStore)
         {
             await _context.SaveAsync(
@@ -420,6 +444,26 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                     _dynamoOverwriteTableConfig,
                     cancellationToken)
                 .ConfigureAwait(ContinueOnCapturedContext);
+        }
+
+        private int GetShardNumber()
+        {
+            if (_configuration.NumberOfShards <= 0)
+            {
+                return 0;
+            }
+
+            return _random.Next(0, _configuration.NumberOfShards);
+        }
+
+        private long? GetExpirationTime()
+        {
+            if (_configuration.TimeToLive.HasValue)
+            {
+                return DateTimeOffset.UtcNow.Add(_configuration.TimeToLive.Value).ToUnixTimeSeconds();
+            }
+
+            return null;
         }
      }
 }
