@@ -55,7 +55,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
         }
             
         [Fact]
-        public void When_a_message_consumer_reads_multiple_messages()
+        public async Task When_a_message_consumer_reads_multiple_messages()
         {
             var messageOne = new Message(
                 new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_COMMAND, Guid.NewGuid(), string.Empty, _contentType),
@@ -109,7 +109,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                  
                 messagesReceivedCount = messagesReceived.Count;
                 
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000);
 
             } while ((iteration <= 5) && (messagesReceivedCount <  _messageCount));
     

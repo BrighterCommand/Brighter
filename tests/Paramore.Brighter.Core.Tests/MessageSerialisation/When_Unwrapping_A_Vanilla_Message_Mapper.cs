@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using Paramore.Brighter.Core.Tests.MessageSerialisation.Test_Doubles;
 using Xunit;
 
@@ -36,11 +37,11 @@ public class VanillaMessageUnwrapRequestTests
     }
     
     [Fact]
-    public void When_Unwrapping_A_Vanilla_Message_Mapper()
+    public async Task When_Unwrapping_A_Vanilla_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = _transformPipeline.UnwrapAsync(_message).Result;
+        var request = await _transformPipeline.UnwrapAsync(_message);
         
         //assert
         request.Value = _myCommand.Value;
