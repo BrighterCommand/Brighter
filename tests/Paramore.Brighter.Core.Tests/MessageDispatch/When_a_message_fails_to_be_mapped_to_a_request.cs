@@ -32,13 +32,13 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
+        public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request ()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
 
             _channel.Stop();
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             //should_have_acknowledge_the_message
             _channel.AcknowledgeHappened.Should().BeTrue();

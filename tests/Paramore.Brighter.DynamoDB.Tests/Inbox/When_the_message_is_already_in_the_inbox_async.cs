@@ -41,7 +41,7 @@ namespace Paramore.Brighter.DynamoDB.Tests.Inbox
 
         public DynamoDbInboxDuplicateMessageAsyncTests()
         {
-            _dynamoDbInbox = new DynamoDbInbox(Client);
+            _dynamoDbInbox = new DynamoDbInbox(Client, new DynamoDbInboxConfiguration());
 
             _raisedCommand = new MyCommand {Value = "Test"};
             _contextKey = "context-key";

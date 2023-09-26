@@ -57,12 +57,12 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
+        public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(new[] { task });
 
             //should_have_acknowledge_the_3_messages
             _channel.AcknowledgeCount.Should().Be(3);

@@ -61,7 +61,8 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _performerTask = _performer.Run();
             _performer.Stop();
         }
-
+        
+#pragma warning disable xUnit1031
         [Fact]
         public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
         {
@@ -76,5 +77,6 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_consumed_the_messages_in_the_channel
             _channel.Length.Should().Be(0);
         }
+#pragma warning restore xUnit1031
     }
 }

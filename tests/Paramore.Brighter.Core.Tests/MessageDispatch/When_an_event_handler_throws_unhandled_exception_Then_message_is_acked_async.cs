@@ -62,18 +62,18 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_an_event_handler_throws_unhandled_exception_Then_message_is_acked_async()
+        public async Task When_an_event_handler_throws_unhandled_exception_Then_message_is_acked_async()
         {
             using (TestCorrelator.CreateContext())
             {
                 var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-                Task.Delay(1000).Wait();
+                await Task.Delay(1000);
 
                 var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT),
                     new MessageBody(""));
                 _channel.Enqueue(quitMessage);
 
-                Task.WaitAll(new[] {task});
+                await Task.WhenAll(task);
 
                 _channel.AcknowledgeCount.Should().Be(1);
 

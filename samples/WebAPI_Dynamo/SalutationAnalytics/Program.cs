@@ -116,7 +116,7 @@ namespace SalutationAnalytics
                 )
                 .AutoFromAssemblies()
                 .UseExternalInbox(
-                    ConfigureInbox(dynamoDb),
+                    ConfigureInbox(awsCredentials, dynamoDb),
                     new InboxConfiguration(
                         scope: InboxScope.Commands,
                         onceOnly: true,
@@ -235,9 +235,9 @@ namespace SalutationAnalytics
             }
         }
 
-        private static IAmAnInbox ConfigureInbox(IAmazonDynamoDB dynamoDb)
+        private static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
         {
-            return new DynamoDbInbox(dynamoDb);
+            return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration(credentials, RegionEndpoint.EUWest1));
         }
         
         private static IAmAnOutbox<Message> ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
