@@ -411,27 +411,33 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         /// </summary>
         private void CommitOffsets()
         {
-           
-           var listOffsets = new List<TopicPartitionOffset>();
-           for (int i = 0; i < _maxBatchSize; i++)
-           {
-               bool hasOffsets = _offsetStorage.TryTake(out var offset);
-               if (hasOffsets)
-                   listOffsets.Add(offset);
-               else
-                   break;
+            try
+            {
+                var listOffsets = new List<TopicPartitionOffset>();
+                for (int i = 0; i < _maxBatchSize; i++)
+                {
+                    bool hasOffsets = _offsetStorage.TryTake(out var offset);
+                    if (hasOffsets)
+                        listOffsets.Add(offset);
+                    else
+                        break;
 
-           }
-           
-           if (s_logger.IsEnabled(LogLevel.Information))
-           {
-               var offsets = listOffsets.Select(tpo => $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
-               var offsetAsString = string.Join(Environment.NewLine, offsets);
-               s_logger.LogInformation("Commiting offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
-           }
-           
-           _consumer.Commit(listOffsets);
-           _flushToken.Release(1);
+                }
+
+                if (s_logger.IsEnabled(LogLevel.Information))
+                {
+                    var offsets = listOffsets.Select(tpo =>
+                        $"Topic: {tpo.Topic} Partition: {tpo.Partition.Value} Offset: {tpo.Offset.Value}");
+                    var offsetAsString = string.Join(Environment.NewLine, offsets);
+                    s_logger.LogInformation("Commiting offsets: {0} {Offset}", Environment.NewLine, offsetAsString);
+                }
+
+                _consumer.Commit(listOffsets);
+            }
+            finally
+            {
+                _flushToken.Release(1);
+            }
         }
         
         private void CommitAllOffsets(DateTime flushTime)
