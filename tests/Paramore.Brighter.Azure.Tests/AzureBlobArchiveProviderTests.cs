@@ -19,6 +19,8 @@ public class AzureBlobArchiveProviderTests
 
     private Dictionary<string, string> _topicDirectory;
 
+    private Func<Message, string> _storageLocatioFuncion;
+
     [SetUp]
     public void Setup()
     {
@@ -34,6 +36,8 @@ public class AzureBlobArchiveProviderTests
 
         _commandMapper = new JsonBodyMessageMapper<SuperAwesomeCommand>(_topicDirectory);
         _eventMapper = new JsonBodyMessageMapper<SuperAwesomeEvent>(_topicDirectory);
+
+        _storageLocatioFuncion = (message) => $"{message.Header.Topic}/{message.Id}".ToLower();
     }
     
     [Test]
@@ -41,7 +45,7 @@ public class AzureBlobArchiveProviderTests
     {
         var commandMessage = _commandMapper.MapToMessage(_command);
 
-        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(commandMessage.Id.ToString());
+        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(_storageLocatioFuncion.Invoke(commandMessage));
         
         _provider.ArchiveMessage(commandMessage);
 
@@ -64,7 +68,7 @@ public class AzureBlobArchiveProviderTests
     {
         var eventMessage = _eventMapper.MapToMessage(_event);
         
-        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(eventMessage.Id.ToString());
+        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocatioFuncion.Invoke(eventMessage));
         
         _provider.ArchiveMessage(eventMessage);
         
@@ -85,7 +89,7 @@ public class AzureBlobArchiveProviderTests
     {
         var commandMessage = _commandMapper.MapToMessage(_command);
 
-        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(commandMessage.Id.ToString());
+        var blobClient = GetClient(AccessTier.Cool).GetBlobClient(_storageLocatioFuncion.Invoke(commandMessage));
         
         await _provider.ArchiveMessageAsync(commandMessage, CancellationToken.None);
 
@@ -125,7 +129,7 @@ public class AzureBlobArchiveProviderTests
 
         foreach (var message in messages)
         {
-            var blobClient = containerClient.GetBlobClient(message.Id.ToString());
+            var blobClient = containerClient.GetBlobClient(_storageLocatioFuncion.Invoke(message));
             Assert.That((bool)await blobClient.ExistsAsync(), Is.True);
 
             var tags = (await blobClient.GetTagsAsync()).Value.Tags;
@@ -152,7 +156,7 @@ public class AzureBlobArchiveProviderTests
     {
         var eventMessage = _eventMapper.MapToMessage(_event);
         
-        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(eventMessage.Id.ToString());
+        var blobClient = GetClient(AccessTier.Hot, true).GetBlobClient(_storageLocatioFuncion.Invoke(eventMessage));
         
         await _provider.ArchiveMessageAsync(eventMessage, CancellationToken.None);
         
@@ -183,7 +187,8 @@ public class AzureBlobArchiveProviderTests
                 { "message_type", message.Header.MessageType.ToString() },
                 { "timestamp", message.Header.TimeStamp.ToString() },
                 { "content_type", message.Header.ContentType }
-            })
+            }),
+            StorageLocationFunc = _storageLocatioFuncion
         };
         _provider = new AzureBlobArchiveProvider(options);
 

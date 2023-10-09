@@ -46,4 +46,9 @@ public class AzureBlobArchiveProviderOptions
         { "timestamp", message.Header.TimeStamp.ToString() },
         { "content_type", message.Header.ContentType }
     };
+
+    /// <summary>
+    /// The function to provide the location to store the message inside of the Blob container
+    /// </summary>
+    public Func<Message, string> StorageLocationFunc = (message) => $"{message.Id}";
 }
