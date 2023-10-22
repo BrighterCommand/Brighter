@@ -67,6 +67,11 @@ namespace Paramore.Brighter.MessagingGateway.RMQ
         /// </summary>
         public bool PersistMessages { get; set; }
 
+        /// <summary>
+        ///     Gets or sets RabbitMq protocol timeouts, in seconds. Defaults to 20s.
+        ///     <see cref="ConnectionFactory.ContinuationTimeout" /> for more information.
+        /// </summary>
+        public ushort ContinuationTimeout { get; set; } = 20;
     }
 
     /// <summary>
