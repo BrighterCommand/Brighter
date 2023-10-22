@@ -12,7 +12,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.1.4" />
+      <PackageReference Include="Dapper" Version="2.1.15" />
       <PackageReference Include="DapperExtensions" Version="1.7.0" />
       <PackageReference Include="Paramore.Darker" Version="3.0.0" />
       <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
