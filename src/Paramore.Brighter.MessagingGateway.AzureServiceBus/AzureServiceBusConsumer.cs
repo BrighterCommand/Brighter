@@ -93,7 +93,7 @@ namespace Paramore.Brighter.MessagingGateway.AzureServiceBus
             }
             catch (Exception e)
             {
-                if (_serviceBusReceiver is {IsClosedOrClosing: true})
+                if (_serviceBusReceiver is {IsClosedOrClosing: true} && !_subscriptionConfiguration.RequireSession)
                 {
                     s_logger.LogDebug("Message Receiver is closing...");
                     var message = new Message(new MessageHeader(Guid.NewGuid(), _topicName, MessageType.MT_QUIT), new MessageBody(string.Empty));

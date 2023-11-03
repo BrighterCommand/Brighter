@@ -71,7 +71,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
     }
 
     [Fact]
-    public void When_Clearing_Implicitly()
+    public async Task When_Clearing_Implicitly()
     {
         using (var activity = new ActivitySource("Paramore.Brighter.Tests").StartActivity("RunTest"))
         {
@@ -80,7 +80,7 @@ public class ImplicitClearingObservabilityTests : IDisposable
         }
 
         //wait for Background Process
-        Task.Delay(100).Wait();
+        await Task.Delay(100);
 
         _traceProvider.ForceFlush();
         

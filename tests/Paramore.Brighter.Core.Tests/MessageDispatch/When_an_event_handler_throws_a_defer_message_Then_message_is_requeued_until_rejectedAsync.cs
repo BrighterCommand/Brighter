@@ -33,41 +33,40 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpCommandProcessingExceptionTests
+    public class MessagePumpEventProcessingDeferMessageActionTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
-        public MessagePumpCommandProcessingExceptionTests()
+        public MessagePumpEventProcessingDeferMessageActionTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()));
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new MessagePumpBlocking<MyCommand>(_commandProcessor, messageMapperRegistry) 
+                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()));
+            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+             
+            _messagePump = new MessagePumpAsync<MyEvent>(_commandProcessor, messageMapperRegistry) 
                 { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount };
 
             var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
-                .BuildWrapPipeline<MyCommand>()
-                .WrapAsync(new MyCommand())
+                .BuildWrapPipeline<MyEvent>().WrapAsync(new MyEvent())
                 .GetAwaiter().GetResult();
-
             _channel.Enqueue(msg);
         }
 
         [Fact]
-        public void When_a_command_handler_throws_Then_message_is_requeued_until_rejected()
+        public async Task When_an_event_handler_throws_a_defer_message_Then_message_is_requeued_until_rejectedAsync()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             _channel.RequeueCount.Should().Be(_requeueCount-1);
             _channel.RejectCount.Should().Be(1);

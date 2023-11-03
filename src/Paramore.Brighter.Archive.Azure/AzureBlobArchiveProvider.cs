@@ -1,13 +1,16 @@
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
+using Microsoft.Extensions.Logging;
+using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter.Storage.Azure;
 
 public class AzureBlobArchiveProvider : IAmAnArchiveProvider
 {
-    private BlobContainerClient _containerClient;
+    private readonly BlobContainerClient _containerClient;
     private readonly AzureBlobArchiveProviderOptions _options;
+    private readonly ILogger _logger = ApplicationLogging.CreateLogger<AzureBlobArchiveProvider>();
 
     public AzureBlobArchiveProvider(AzureBlobArchiveProviderOptions options)
     {
@@ -21,15 +24,18 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     /// <param name="message">Message to send</param>
     public void ArchiveMessage(Message message)
     {
-        var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
+        var blobClient = GetBlobClient(message);
 
         var alreadyUploaded = blobClient.Exists();
 
-        if (!alreadyUploaded.Value)
+        if (alreadyUploaded.Value)
         {
-            var opts = GetUploadOptions(message);
-            blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes), opts);
+            _logger.LogDebug("Message with Id {MessageId} has already been uploaded", message.Id);
+            return;
         }
+
+        var opts = GetUploadOptions(message);
+        blobClient.Upload(BinaryData.FromBytes(message.Body.Bytes), opts);
     }
 
     /// <summary>
@@ -39,14 +45,17 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
     /// <param name="cancellationToken">The Cancellation Token</param>
     public async Task ArchiveMessageAsync(Message message, CancellationToken cancellationToken)
     {
-        var blobClient = _containerClient.GetBlobClient(message.Id.ToString());
+        var blobClient = GetBlobClient(message);
 
         var alreadyUploaded = await blobClient.ExistsAsync(cancellationToken);
-        if (!alreadyUploaded.Value)
+        if (alreadyUploaded.Value)
         {
-            var opts = GetUploadOptions(message);
-            await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
+            _logger.LogDebug("Message with Id {MessageId} has already been uploaded", message.Id);
+            return;
         }
+
+        var opts = GetUploadOptions(message);
+        await blobClient.UploadAsync(BinaryData.FromBytes(message.Body.Bytes), opts, cancellationToken);
     }
 
     /// <summary>
@@ -78,11 +87,18 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
         }
         catch(Exception e)
         {
-            
+            _logger.LogError(e, "Error archiving message with Id {MessageId}", message.Id);
             return null;
         }
     }
 
+    private BlobClient GetBlobClient(Message message)
+    {
+        var storageLocation = _options.StorageLocationFunc.Invoke(message);
+        _logger.LogDebug("Uploading Message with Id {MessageId} to {ArchiveLocation}", message.Id, storageLocation);
+        return _containerClient.GetBlobClient(storageLocation);
+    }
+    
     private BlobUploadOptions GetUploadOptions(Message message)
     {
         var opts = new BlobUploadOptions()
@@ -100,16 +116,7 @@ public class AzureBlobArchiveProvider : IAmAnArchiveProvider
         };
 
         if (_options.TagBlobs)
-        {
-            opts.Tags = new Dictionary<string, string>()
-            {
-                { "topic", message.Header.Topic },
-                { "correlationId", message.Header.CorrelationId.ToString() },
-                { "message_type", message.Header.MessageType.ToString() },
-                { "timestamp", message.Header.TimeStamp.ToString() },
-                { "content_type", message.Header.ContentType }
-            };
-        }
+            opts.Tags = _options.TagsFunc.Invoke(message);
 
         return opts;
     }

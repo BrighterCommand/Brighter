@@ -93,9 +93,19 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// The Topic the message was published to
         /// </summary>
         /// 
-        [DynamoDBGlobalSecondaryIndexHashKey("Delivered", "Outstanding")]
+        [DynamoDBGlobalSecondaryIndexHashKey("Delivered")]
         [DynamoDBProperty]
         public string Topic { get; set; }
+        
+        /// <summary>
+        /// The Topic suffixed with the shard number
+        /// </summary>
+        [DynamoDBGlobalSecondaryIndexHashKey("Outstanding")]
+        [DynamoDBProperty]
+        public string TopicShard { get; set; }
+        
+        [DynamoDBProperty]
+        public long? ExpiresAt { get; set; }
 
 
         public MessageItem()
@@ -103,7 +113,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             /*Deserialization*/
         }
 
-        public MessageItem(Message message)
+        public MessageItem(Message message, int shard = 0, long? expiresAt = null)
         {
             var date = message.Header.TimeStamp == DateTime.MinValue ? DateTime.UtcNow : message.Header.TimeStamp;
 
@@ -120,6 +130,8 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             PartitionKey = message.Header.PartitionKey;
             ReplyTo = message.Header.ReplyTo;
             Topic = message.Header.Topic;
+            TopicShard = $"{Topic}_{shard}";
+            ExpiresAt = expiresAt;
         }
 
         public Message ConvertToMessage()

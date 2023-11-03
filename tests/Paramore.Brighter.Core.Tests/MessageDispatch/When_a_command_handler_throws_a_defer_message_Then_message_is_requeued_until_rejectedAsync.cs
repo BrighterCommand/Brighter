@@ -33,14 +33,14 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpCommandProcessingExceptionTestsAsync
+    public class MessagePumpCommandProcessingDeferMessageActionTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
         private readonly SpyRequeueCommandProcessor _commandProcessor;
         private readonly int _requeueCount = 5;
 
-        public MessagePumpCommandProcessingExceptionTestsAsync()
+        public MessagePumpCommandProcessingDeferMessageActionTestsAsync()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
             _channel = new FakeChannel();
@@ -58,15 +58,15 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         }
 
         [Fact]
-        public void When_a_command_handler_throws_Then_message_is_requeued_until_rejectedAsync()
+        public async Task When_a_command_handler_throws_a_defer_message_Then_message_is_requeued_until_rejectedAsync()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            Task.Delay(1000).Wait();
+            await Task.Delay(1000);
 
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
             _channel.Enqueue(quitMessage);
 
-            Task.WaitAll(new[] { task });
+            await Task.WhenAll(task);
 
             _channel.RequeueCount.Should().Be(_requeueCount-1);
             _channel.RejectCount.Should().Be(1);

@@ -39,7 +39,7 @@ jobs:
           dotnet-version: |
             6.0.x
       - run: dotnet --info
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
       - uses: actions/cache@v3
@@ -85,7 +85,7 @@ jobs:
     needs: [build]
     
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -113,7 +113,7 @@ jobs:
           --health-retries 5             
       
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -142,7 +142,7 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -204,7 +204,7 @@ jobs:
     - name: docker check
       run: docker ps -a
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
     - name: Setup dotnet 6
       uses: actions/setup-dotnet@v3
       with:
@@ -233,7 +233,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -266,7 +266,7 @@ jobs:
          EVENTSTORE_ENABLE_ATOM_PUB_OVER_HTTP: true   
      
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -291,7 +291,7 @@ jobs:
           ACCEPT_EULA: Y
           SA_PASSWORD: Password123!
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -318,7 +318,7 @@ jobs:
         options: --health-cmd="mysqladmin ping" --health-interval=5s --health-timeout=2s --health-retries=3
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -348,7 +348,7 @@ jobs:
           - 8000:8000
       
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -370,7 +370,7 @@ jobs:
       AWS_DEFAULT_OUTPUT: json    
       
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -379,7 +379,7 @@ jobs:
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v3
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -396,7 +396,7 @@ jobs:
     needs: [ build ]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:
@@ -412,7 +412,7 @@ jobs:
     timeout-minutes: 5
     needs: [build]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Setup dotnet 6
         uses: actions/setup-dotnet@v3
         with:

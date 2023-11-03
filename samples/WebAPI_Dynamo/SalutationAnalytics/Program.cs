@@ -109,7 +109,7 @@ namespace SalutationAnalytics
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
                     options.InboxConfiguration = new InboxConfiguration(
-                        ConfigureInbox(dynamoDb),
+                        ConfigureInbox(awsCredentials, dynamoDb),
                         scope: InboxScope.Commands,
                         onceOnly: true,
                         actionOnExists: OnceOnlyAction.Throw
@@ -239,9 +239,9 @@ namespace SalutationAnalytics
             }
         }
 
-        private static IAmAnInbox ConfigureInbox(IAmazonDynamoDB dynamoDb)
+        private static IAmAnInbox ConfigureInbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
         {
-            return new DynamoDbInbox(dynamoDb);
+            return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration(credentials, RegionEndpoint.EUWest1));
         }
         
         private static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)

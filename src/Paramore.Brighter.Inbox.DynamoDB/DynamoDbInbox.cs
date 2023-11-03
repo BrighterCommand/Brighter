@@ -37,8 +37,8 @@ namespace Paramore.Brighter.Inbox.DynamoDB
 {
     public class DynamoDbInbox : IAmAnInboxSync, IAmAnInboxAsync
     {
-       
-        private readonly DynamoDBContext _context;
+       private readonly DynamoDBContext _context;
+       private readonly DynamoDBOperationConfig _dynamoOverwriteTableConfig;
 
        public bool ContinueOnCapturedContext { get; set; }
        
@@ -48,9 +48,13 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// <param name="context">The DynamoDBContext</param>
         /// <param name="configuration">The DynamoDB Operation Configuration</param>
         /// <param name="client">The Amazon Dynamo Db client to use</param>
-        public DynamoDbInbox(IAmazonDynamoDB client )
+        public DynamoDbInbox(IAmazonDynamoDB client, DynamoDbInboxConfiguration configuration)
         {
             _context = new DynamoDBContext(client);
+            _dynamoOverwriteTableConfig = new DynamoDBOperationConfig
+            {
+                OverrideTableName = configuration.TableName
+            };
         }
 
         /// <summary>
@@ -95,7 +99,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         public async Task AddAsync<T>(T command, string contextKey, int timeoutInMilliseconds = -1, CancellationToken cancellationToken = default) where T : class, IRequest
         {
             await _context
-                .SaveAsync(new CommandItem<T>(command, contextKey), cancellationToken)
+                .SaveAsync(new CommandItem<T>(command, contextKey), _dynamoOverwriteTableConfig, cancellationToken)
                 .ConfigureAwait(false);
         }
 
@@ -127,7 +131,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
            try
            {
                var command = await GetCommandAsync<T>(id, contextKey, cancellationToken).ConfigureAwait(false);
-               return command !=null;
+               return command != null;
            }
            catch (RequestNotFoundException<T>)
            {
@@ -161,7 +165,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
             var messages = await PageAllMessagesAsync<T>(queryConfig).ConfigureAwait(false);
 
             var result = messages.Select(msg => msg.ConvertToCommand()).FirstOrDefault();
-            if ( result == null)
+            if (result == null)
                 throw new RequestNotFoundException<T>(id);
 
             return result;
@@ -170,7 +174,7 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         private async Task<IEnumerable<CommandItem<T>>> PageAllMessagesAsync<T>(QueryOperationConfig queryConfig) 
             where T: class, IRequest 
         {
-            var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig);
+            var asyncSearch = _context.FromQueryAsync<CommandItem<T>>(queryConfig, _dynamoOverwriteTableConfig);
             
             var messages = new List<CommandItem<T>>();
             do

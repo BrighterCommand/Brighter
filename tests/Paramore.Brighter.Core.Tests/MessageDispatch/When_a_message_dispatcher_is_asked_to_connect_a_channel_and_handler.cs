@@ -66,6 +66,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             _dispatcher.Receive();
         }
 
+#pragma warning disable xUnit1031
         [Fact]
         public void When_A_Message_Dispatcher_Is_Asked_To_Connect_A_Channel_And_Handler()
         {
@@ -81,6 +82,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             //_should_have_published_async
             _commandProcessor.Commands.Should().Contain(ctype => ctype == CommandType.Publish);
         }
+#pragma warning restore xUnit1031
         
         public void Dispose()
         {

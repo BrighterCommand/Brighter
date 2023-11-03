@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using Amazon;
 using Amazon.Runtime;
 
@@ -43,14 +44,20 @@ namespace Paramore.Brighter.Inbox.DynamoDB
         /// </summary>
         public string TableName { get; set; }
 
+        [Obsolete("Use the DynamoDbConfiguration without AWSCredentials and without RegionEndpoint")]
         public DynamoDbInboxConfiguration(
             AWSCredentials credentials, 
             RegionEndpoint region,
-            string tableName)
+            string tableName = null)
         {
             Credentials = credentials;
             Region = region;
-            TableName = tableName;
+            TableName = tableName ?? "brighter_inbox";
+        }
+        
+        public DynamoDbInboxConfiguration(string tableName = null)
+        {
+            TableName = tableName ?? "brighter_inbox";
         }
    }     
 }
