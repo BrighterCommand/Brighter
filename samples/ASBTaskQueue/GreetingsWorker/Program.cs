@@ -71,7 +71,7 @@ builder.Services.AddDbContext<GreetingsDataContext>(o =>
     o.UseSqlServer(dbConnString);
 });
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
 
 //TODO: add your ASB qualified name here
 var clientProvider = new ServiceBusVisualStudioCredentialClientProvider(".servicebus.windows.net");
@@ -83,8 +83,7 @@ builder.Services.AddServiceActivator(options =>
         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
         options.UseScoped = true;
         
-    }).UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
+    })
     .AutoFromAssemblies();
 
 builder.Services.AddHostedService<ServiceActivatorHostedService>();

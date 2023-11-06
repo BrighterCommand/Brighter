@@ -42,7 +42,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupCommandDb();
-            _sqlInbox = new SqliteInbox(new SqliteInboxConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName));
+            _sqlInbox = new SqliteInbox(_sqliteTestHelper.InboxConfiguration);
             _contextKey = "context-key";
         }
 

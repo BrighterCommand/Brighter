@@ -38,14 +38,14 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
     public class  SqlInboxEmptyWhenSearchedAsyncTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;
-        private readonly PostgresSqlInbox _sqlSqlInbox;
+        private readonly PostgreSqlInbox _sqlSqlInbox;
 
         public SqlInboxEmptyWhenSearchedAsyncTests()
         {
             _pgTestHelper = new PostgresSqlTestHelper();
             _pgTestHelper.SetupCommandDb();
 
-            _sqlSqlInbox = new PostgresSqlInbox(_pgTestHelper.InboxConfiguration);
+            _sqlSqlInbox = new PostgreSqlInbox(_pgTestHelper.InboxConfiguration);
         }
 
         [Fact]

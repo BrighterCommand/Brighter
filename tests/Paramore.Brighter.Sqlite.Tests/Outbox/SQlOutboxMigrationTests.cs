@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     [Trait("Category", "Sqlite")]
     public class SQlOutboxMigrationTests : IDisposable
     {
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly Message _message;
         private Message _storedMessage;
         private readonly SqliteTestHelper _sqliteTestHelper;
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync  = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox  = new SqliteOutbox(new RelationalDatabaseConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.OutboxTableName));
 
             _message = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT), new MessageBody("message body"));
             AddHistoricMessage(_message);
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
 
         private void AddHistoricMessage(Message message)
         {
-            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqliteTestHelper.TableName_Messages);
+            var sql = string.Format("INSERT INTO {0} (MessageId, MessageType, Topic, Timestamp, HeaderBag, Body) VALUES (@MessageId, @MessageType, @Topic, @Timestamp, @HeaderBag, @Body)", _sqliteTestHelper.OutboxTableName);
             var parameters = new[]
             {
                 new SqliteParameter("MessageId", message.Id.ToString()),
@@ -80,7 +80,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public void When_writing_a_message_with_minimal_header_information_to_the_outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_message.Id);
+            _storedMessage = _sqlOutbox.Get(_message.Id);
 
             //_should_read_the_message_from_the__sql_outbox
             _storedMessage.Body.Value.Should().Be(_message.Body.Value);
@@ -89,7 +89,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             //_should_read_the_message_header_topic_from_the__sql_outbox
             _storedMessage.Header.Topic.Should().Be(_message.Header.Topic);
             //_should_default_the_timestamp_from_the__sql_outbox
-            _storedMessage.Header.TimeStamp.Should().BeOnOrAfter(_message.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss").Should()
+                .Be(_message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             //_should_read_empty_header_bag_from_the__sql_outbox
             _storedMessage.Header.Bag.Keys.Should().BeEmpty();
         }

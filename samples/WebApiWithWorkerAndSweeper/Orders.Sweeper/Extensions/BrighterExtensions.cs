@@ -1,3 +1,5 @@
+using System.Data.Common;
+using System.Transactions;
 using Azure.Identity;
 using Orders.Sweeper.Settings;
 using Paramore.Brighter;
@@ -32,28 +34,32 @@ public static class BrighterExtensions
                     new() {MakeChannels = OnMissingChannel.Validate, Topic = new RoutingKey("default")}
                 }, boxSettings.BatchChunkSize).Create();
 
-            var outboxSettings = new MsSqlConfiguration(boxSettings.ConnectionString, boxSettings.OutboxTableName);
-            Type outboxType;
+            var outboxSettings = new RelationalDatabaseConfiguration(boxSettings.ConnectionString, outBoxTableName: boxSettings.OutboxTableName);
+            Type transactionProviderType;
 
             if (boxSettings.UseMsi)
             {
                 if (environmentName != null && environmentName.Equals(_developmentEnvironemntName, StringComparison.InvariantCultureIgnoreCase))
                 {
-                    outboxType = typeof(MsSqlVisualStudioConnectionProvider);
+                    transactionProviderType = typeof(MsSqlVisualStudioConnectionProvider);
                 }
                 else
                 {
-                    outboxType = typeof(MsSqlDefaultAzureConnectionProvider);
+                    transactionProviderType = typeof(MsSqlDefaultAzureConnectionProvider);
                 }
             }
             else
             {
-                outboxType = typeof(MsSqlSqlAuthConnectionProvider);
+                transactionProviderType = typeof(MsSqlConnectionProvider);
             }
 
             builder.Services.AddBrighter()
-                .UseExternalBus(producerRegistry)
-                .UseMsSqlOutbox(outboxSettings, outboxType)
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                    configure.Outbox = new MsSqlOutbox(outboxSettings);
+                    configure.TransactionProvider = transactionProviderType;
+                })
                 .UseOutboxSweeper(options =>
                 {
                     options.TimerInterval = boxSettings.OutboxSweeperInterval;

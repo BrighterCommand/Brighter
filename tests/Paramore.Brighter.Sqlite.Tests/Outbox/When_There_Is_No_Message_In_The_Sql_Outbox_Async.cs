@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     public class SqliteOutboxEmptyStoreAsyncTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly Message _messageEarliest;
         private Message _storedMessage;
 
@@ -43,7 +43,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "test_topic", MessageType.MT_DOCUMENT),
                 new MessageBody("message body"));
         }
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public async Task When_There_Is_No_Message_In_The_Sql_Outbox_Async()
         {
-            _storedMessage = await _sqlOutboxSync.GetAsync(_messageEarliest.Id);
+            _storedMessage = await _sqlOutbox.GetAsync(_messageEarliest.Id);
 
             //should return a empty message
             _storedMessage.Header.MessageType.Should().Be(MessageType.MT_NONE);

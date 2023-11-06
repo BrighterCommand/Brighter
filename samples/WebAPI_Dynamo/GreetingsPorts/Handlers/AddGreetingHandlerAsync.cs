@@ -16,14 +16,14 @@ namespace GreetingsPorts.Handlers
 {
     public class AddGreetingHandlerAsync: RequestHandlerAsync<AddGreeting>
     {
-        private readonly DynamoDbUnitOfWork _unitOfWork;
+        private readonly IAmADynamoDbTransactionProvider _transactionProvider;
         private readonly IAmACommandProcessor _postBox;
         private readonly ILogger<AddGreetingHandlerAsync> _logger;
 
 
-        public AddGreetingHandlerAsync(IAmABoxTransactionConnectionProvider uow, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
+        public AddGreetingHandlerAsync(IAmADynamoDbTransactionProvider transactionProvider, IAmACommandProcessor postBox, ILogger<AddGreetingHandlerAsync> logger)
         {
-            _unitOfWork = (DynamoDbUnitOfWork)uow;
+            _transactionProvider = transactionProvider;
             _postBox = postBox;
             _logger = logger;
         }
@@ -36,33 +36,43 @@ namespace GreetingsPorts.Handlers
             
             //We use the unit of work to grab connection and transaction, because Outbox needs
             //to share them 'behind the scenes'
-            var context = new DynamoDBContext(_unitOfWork.DynamoDb);
-            var transaction = _unitOfWork.BeginOrGetTransaction();
+            var context = new DynamoDBContext(_transactionProvider.DynamoDb);
+            var transaction = await _transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
                 var person = await context.LoadAsync<Person>(addGreeting.Name, cancellationToken);
-                
+
                 person.Greetings.Add(addGreeting.Greeting);
 
                 var document = context.ToDocument(person);
                 var attributeValues = document.ToAttributeMap();
-               
-               //write the added child entity to the Db - just replace the whole entity as we grabbed the original
-               //in production code, an update expression would be faster
-               transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = "People", Item = attributeValues}});
+
+                //write the added child entity to the Db - just replace the whole entity as we grabbed the original
+                //in production code, an update expression would be faster
+                transaction.TransactItems.Add(new TransactWriteItem
+                {
+                    Put = new Put { TableName = "People", Item = attributeValues }
+                });
 
                 //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(addGreeting.Greeting), cancellationToken: cancellationToken));
-                
+                posts.Add(await _postBox.DepositPostAsync(
+                    new GreetingMade(addGreeting.Greeting),
+                    _transactionProvider,
+                    cancellationToken: cancellationToken));
+
                 //commit both new greeting and outgoing message
-                await _unitOfWork.CommitAsync(cancellationToken);
+                await _transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
-            {   
+            {
                 _logger.LogError(e, "Exception thrown handling Add Greeting request");
                 //it went wrong, rollback the entity change and the downstream message
-                _unitOfWork.Rollback();
+                await _transactionProvider.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);
+            }
+            finally
+            {
+                _transactionProvider.Close();
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

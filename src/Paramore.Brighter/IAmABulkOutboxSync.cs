@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading.Tasks;
 
 namespace Paramore.Brighter
@@ -32,19 +33,19 @@ namespace Paramore.Brighter
     /// Interface IAmABulkOutbox
     /// In order to provide reliability for messages sent over a <a href="http://parlab.eecs.berkeley.edu/wiki/_media/patterns/taskqueue.pdf">Task Queue</a> we
     /// store the message into an OutBox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
-    /// We provide implementations of <see cref="IAmAnOutbox{T}"/> for various databases. Users using unsupported databases should consider a Pull
+    /// We provide implementations of <see cref="IAmAnOutbox"/> for various databases. Users using unsupported databases should consider a Pull
     /// request
     /// </summary>
     /// <typeparam name="T"></typeparam>
     [Obsolete("Deprecated in favour of Bulk, wil be merged into IAmAnOutboxSync in v10")]
-    public interface IAmABulkOutboxSync<in T> : IAmAnOutboxSync<T> where T : Message
+    public interface IAmABulkOutboxSync<T, TTransaction> : IAmAnOutboxSync<T, TTransaction> where T : Message
     {
         /// <summary>
         /// Awaitable add the specified message.
         /// </summary>
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        void Add(IEnumerable<T> messages, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
     }
 }

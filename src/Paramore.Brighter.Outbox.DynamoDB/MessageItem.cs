@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Text;
 using System.Text.Json;
 using Amazon.DynamoDBv2.DataModel;
@@ -34,7 +35,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         public string CorrelationId { get; set; }
 
         /// <summary>
-        /// The time at which the message was created, formatted as a string yyyy-MM-dd
+        /// The time at which the message was created, formatted as a string yyyy-MM-ddTHH:mm:ss.fffZ
         /// </summary>
         public string CreatedAt { get; set; }
 
@@ -120,7 +121,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             ContentType = message.Header.ContentType;
             CorrelationId = message.Header.CorrelationId.ToString();
             CharacterEncoding = message.Body.CharacterEncoding.ToString();
-            CreatedAt = $"{date}";
+            CreatedAt = date.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
             CreatedTime = date.Ticks;
             DeliveryTime = 0;
             HeaderBag = JsonSerializer.Serialize(message.Header.Bag, JsonSerialisationOptions.Options);
@@ -142,7 +143,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 JsonSerialisationOptions.Options);
             var messageId = Guid.Parse(MessageId);
             var messageType = (MessageType)Enum.Parse(typeof(MessageType), MessageType);
-            var timestamp = DateTime.Parse(CreatedAt);
+            var timestamp = new DateTime(CreatedTime, DateTimeKind.Utc);
 
             var header = new MessageHeader(
                 messageId: messageId,
@@ -162,12 +163,6 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             var body = new MessageBody(Body, ContentType, characterEncoding);
 
             return new Message(header, body);
-        }
-
-        public void MarkMessageDelivered(DateTime deliveredAt)
-        {
-            DeliveryTime = deliveredAt.Ticks;
-            DeliveredAt = $"{deliveredAt:yyyy-MM-dd}";
         }
     }
 

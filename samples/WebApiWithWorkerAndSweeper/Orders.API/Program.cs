@@ -1,7 +1,9 @@
 using System.ComponentModel;
+using System.Data.Common;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Transactions;
 using Orders.Data;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MsSql;
@@ -31,7 +33,13 @@ string asbEndpoint = ".servicebus.windows.net";
 
 var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoint);
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
+
+var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+        asbConnection,
+        new AzureServiceBusPublication[] { new() { Topic = new RoutingKey(NewOrderVersionEvent.Topic) }, }
+    )
+    .Create();
 
 builder.Services
     .AddBrighter(opt =>
@@ -39,17 +47,14 @@ builder.Services
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus(
-        new AzureServiceBusProducerRegistryFactory(
-                asbConnection,
-                new AzureServiceBusPublication[] { new() { Topic = new RoutingKey(NewOrderVersionEvent.Topic) }, }
-            )
-            .Create()
+    .UseExternalBus((configure) =>
+        {
+            configure.ProducerRegistry = producerRegistry;
+            configure.Outbox = new MsSqlOutbox(outboxConfig);
+            configure.TransactionProvider = typeof(MsSqlUnitOfWork);
+        }
     )
-    .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(SqlConnectionProvider))
     .AutoFromAssemblies(Assembly.GetAssembly(typeof(NewOrderVersionEvent)));
-
 
 builder.Services.AddControllersWithViews().AddJsonOptions(options =>
 {

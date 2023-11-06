@@ -9,6 +9,7 @@ public class BrighterBoxSettings
     public int OutboxSweeperInterval { get; set; } = 5;
 
     public bool UseMsi { get; set; } = true;
+    
     public string ConnectionString { get; set; }
 
     public int MinimumMessageAge { get; set; } = 5000;

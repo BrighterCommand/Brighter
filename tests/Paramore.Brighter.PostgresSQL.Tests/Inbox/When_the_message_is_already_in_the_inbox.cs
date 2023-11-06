@@ -36,7 +36,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
     public class SqlInboxDuplicateMessageTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _pgTestHelper;
-        private readonly PostgresSqlInbox _pgSqlInbox;
+        private readonly PostgreSqlInbox _pgSqlInbox;
         private readonly MyCommand _raisedCommand;
         private readonly string _contextKey;
         private Exception _exception;
@@ -46,7 +46,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Inbox
             _pgTestHelper = new PostgresSqlTestHelper();
             _pgTestHelper.SetupCommandDb();
 
-            _pgSqlInbox = new PostgresSqlInbox(_pgTestHelper.InboxConfiguration);
+            _pgSqlInbox = new PostgreSqlInbox(_pgTestHelper.InboxConfiguration);
             _raisedCommand = new MyCommand { Value = "Test" };
             _contextKey = Guid.NewGuid().ToString();
         }

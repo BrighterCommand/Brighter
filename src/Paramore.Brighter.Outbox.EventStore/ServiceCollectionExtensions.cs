@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Transactions;
 using EventStore.ClientAPI;
 using Microsoft.Extensions.DependencyInjection;
 using Paramore.Brighter.Extensions.DependencyInjection;
@@ -12,8 +13,8 @@ namespace Paramore.Brighter.Outbox.EventStore
         {
             brighterBuilder.Services.AddSingleton<IEventStoreConnection>(connection);
 
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message>), BuildEventStoreOutbox, serviceLifetime));
-            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message>), BuildEventStoreOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxSync<Message, CommittableTransaction>), BuildEventStoreOutbox, serviceLifetime));
+            brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmAnOutboxAsync<Message, CommittableTransaction>), BuildEventStoreOutbox, serviceLifetime));
              
             return brighterBuilder;
         }

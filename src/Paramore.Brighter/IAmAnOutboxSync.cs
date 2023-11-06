@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 
 namespace Paramore.Brighter
 {
@@ -33,16 +34,17 @@ namespace Paramore.Brighter
     /// store the message into an OutBox to allow later replay of those messages in the event of failure. We automatically copy any posted message into the store
     /// We provide implementations of <see cref="IAmAnOutboxSync{T}"/> for various databases. Users using other databases should consider a Pull Request
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IAmAnOutboxSync<in T> : IAmAnOutbox<T> where T : Message
+    /// <typeparam name="T">The message type</typeparam>
+    /// <typeparam name="TTransaction">The transaction type of the underlying Db</typeparam>
+    public interface IAmAnOutboxSync<T, TTransaction> : IAmAnOutbox where T : Message
     {
         /// <summary>
         /// Adds the specified message.
         /// </summary>
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
-        void Add(T message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
+        void Add(T message, int outBoxTimeout = -1, IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
         /// Gets the specified message identifier.

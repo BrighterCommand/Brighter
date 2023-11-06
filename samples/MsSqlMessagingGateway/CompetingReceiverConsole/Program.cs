@@ -36,7 +36,7 @@ namespace CompetingReceiverConsole
                         timeoutInMilliseconds: 200)
                     };
 
-                    var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
+                    var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
                     var messageConsumerFactory = new MsSqlMessageConsumerFactory(messagingConfiguration);
 
                     services.AddServiceActivator(options =>
@@ -44,9 +44,7 @@ namespace CompetingReceiverConsole
                         options.Subscriptions = subscriptions;
                         options.ChannelFactory = new ChannelFactory(messageConsumerFactory);
                     })
-                    .UseInMemoryOutbox()
                     .AutoFromAssemblies();
-
 
                     services.AddHostedService<ServiceActivatorHostedService>();
                     services.AddHostedService<RunStuff>();

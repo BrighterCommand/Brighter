@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-using DapperExtensions;
+using System.Data.Common;
+using Dapper;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
-using Paramore.Brighter.Dapper;
+using Paramore.Brighter.Inbox.Attributes;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 using SalutationEntities;
@@ -13,50 +12,56 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandlerAsync : RequestHandlerAsync<GreetingMade>
+    public class GreetingMadeHandler : RequestHandler<GreetingMade>
     {
-        private readonly IUnitOfWork _uow;
+        private readonly IAmABoxTransactionProvider<DbTransaction> _transactionConnectionProvider;
         private readonly IAmACommandProcessor _postBox;
-        private readonly ILogger<GreetingMadeHandlerAsync> _logger;
+        private readonly ILogger<GreetingMadeHandler> _logger;
 
-        public GreetingMadeHandlerAsync(IUnitOfWork uow, IAmACommandProcessor postBox, ILogger<GreetingMadeHandlerAsync> logger)
+        public GreetingMadeHandler(IAmABoxTransactionProvider<DbTransaction> transactionConnectionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
         {
-            _uow = uow;
+            _transactionConnectionProvider = transactionConnectionProvider;
             _postBox = postBox;
             _logger = logger;
         }
 
-        //[UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] -- we are using a global inbox, so need to be explicit!!
-        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
-        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
+        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandler), onceOnly: true )] 
+        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
+        [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
+        public override GreetingMade Handle(GreetingMade @event)
         {
             var posts = new List<Guid>();
             
-            var tx = await _uow.BeginOrGetTransactionAsync(cancellationToken);
+            var tx = _transactionConnectionProvider.GetTransaction();
+            var conn = tx.Connection; 
             try
             {
                 var salutation = new Salutation(@event.Greeting);
                 
-                await _uow.Database.InsertAsync<Salutation>(salutation, tx);
+               conn.Execute(
+                   "insert into Salutation (greeting) values (@greeting)", 
+                   new {greeting = salutation.Greeting}, 
+                   tx); 
                 
-                posts.Add(await _postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), cancellationToken: cancellationToken));
+                posts.Add(_postBox.DepositPost(
+                    new SalutationReceived(DateTimeOffset.Now), 
+                    _transactionConnectionProvider));
                 
-                await tx.CommitAsync(cancellationToken);
+                _transactionConnectionProvider.Commit();
             }
             catch (Exception e)
             {
                 _logger.LogError(e, "Could not save salutation");
                 
                 //if it went wrong rollback entity write and Outbox write
-                await tx.RollbackAsync(cancellationToken);
+                _transactionConnectionProvider.Rollback();
                 
-                return await base.HandleAsync(@event, cancellationToken);
+                return base.Handle(@event);
             }
 
-            await _postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
+            _postBox.ClearOutbox(posts.ToArray());
             
-            return await base.HandleAsync(@event, cancellationToken);
+            return base.Handle(@event);
         }
     }
 }

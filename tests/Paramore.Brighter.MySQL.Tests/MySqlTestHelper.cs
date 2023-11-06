@@ -9,11 +9,19 @@ namespace Paramore.Brighter.MySQL.Tests
 {
     public class MySqlTestHelper
     {
+        private readonly bool _binaryMessagePayload;
         private string _tableName;
         private MySqlSettings _mysqlSettings;
+        
+        public RelationalDatabaseConfiguration InboxConfiguration =>
+            new(_mysqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
 
-        public MySqlTestHelper()
+        public RelationalDatabaseConfiguration OutboxConfiguration => 
+            new(_mysqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+
+        public MySqlTestHelper(bool binaryMessagePayload = false)
         {
+            _binaryMessagePayload = binaryMessagePayload;
             var builder = new ConfigurationBuilder().AddEnvironmentVariables();
             var configuration = builder.Build();
 
@@ -23,7 +31,7 @@ namespace Paramore.Brighter.MySQL.Tests
             _tableName = $"test_{Guid.NewGuid()}";
         }
 
-       public void CreateDatabase()
+        public void CreateDatabase()
         {
             using (var connection = new MySqlConnection(_mysqlSettings.TestsMasterConnectionString))
             {
@@ -48,11 +56,7 @@ namespace Paramore.Brighter.MySQL.Tests
             CreateInboxTable();
         }
 
-        public MySqlInboxConfiguration InboxConfiguration => new MySqlInboxConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
-
-        public MySqlConfiguration OutboxConfiguration => new MySqlConfiguration(_mysqlSettings.TestsBrighterConnectionString, _tableName);
-
-        public void CleanUpDb()
+       public void CleanUpDb()
         {
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {
@@ -70,7 +74,8 @@ namespace Paramore.Brighter.MySQL.Tests
             using (var connection = new MySqlConnection(_mysqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"`message_{_tableName}`";
-                var createTableSql = MySqlOutboxBuilder.GetDDL(_tableName);
+                var createTableSql =
+                    MySqlOutboxBuilder.GetDDL(_tableName, hasBinaryMessagePayload: _binaryMessagePayload);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -100,7 +105,9 @@ namespace Paramore.Brighter.MySQL.Tests
 
     internal class MySqlSettings
     {
-        public string TestsBrighterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
+        public string TestsBrighterConnectionString { get; set; } =
+            "Server=localhost;Uid=root;Pwd=root;Database=BrighterTests";
+
         public string TestsMasterConnectionString { get; set; } = "Server=localhost;Uid=root;Pwd=root;";
     }
 }

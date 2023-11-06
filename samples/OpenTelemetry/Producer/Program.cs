@@ -1,3 +1,4 @@
+using System.Transactions;
 using OpenTelemetry;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Shared.Commands;
@@ -27,17 +28,21 @@ var rmqConnection = new RmqMessagingGatewayConnection
     Exchange = new Exchange("paramore.brighter.exchange"),
 };
 
+var producerRegistry = Helpers.GetProducerRegistry(rmqConnection);
+
 builder.Services.AddBrighter(options =>
     {
         options.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus(Helpers.GetProducerRegistry(rmqConnection))
-    .UseInMemoryOutbox()
     .MapperRegistry(r =>
     {
         r.Register<MyDistributedEvent, MessageMapper<MyDistributedEvent>>();
         r.Register<ProductUpdatedEvent, MessageMapper<ProductUpdatedEvent>>();
         r.Register<UpdateProductCommand, MessageMapper<UpdateProductCommand>>();
+    })
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
     });
 
 builder.Services.AddSingleton<TopicDictionary>();

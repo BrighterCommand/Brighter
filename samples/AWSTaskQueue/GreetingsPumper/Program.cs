@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Amazon;
 using Amazon.Runtime.CredentialManagement;
 using Greetings.Ports.Commands;
@@ -31,19 +32,22 @@ namespace GreetingsPumper
                     {
                         var awsConnection = new AWSMessagingGatewayConnection(credentials, RegionEndpoint.EUWest1);
 
-                        services.AddBrighter()
-                            .UseInMemoryOutbox()
-                            .UseExternalBus(new SnsProducerRegistryFactory(
-                                awsConnection,
-                                new SnsPublication[]
+                        var producerRegistry = new SnsProducerRegistryFactory(
+                            awsConnection,
+                            new SnsPublication[]
+                            {
+                                new SnsPublication
                                 {
-                                    new SnsPublication
-                                    {
-                                       Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName())
-                                    }
+                                    Topic = new RoutingKey(typeof(GreetingEvent).FullName.ToValidSNSTopicName())
                                 }
-                                ).Create()
-                            )
+                            }
+                        ).Create();
+                        
+                        services.AddBrighter()
+                            .UseExternalBus((configure) =>
+                            {
+                                configure.ProducerRegistry = producerRegistry;
+                            })
                             .AutoFromAssemblies(typeof(GreetingEvent).Assembly);
                     }
 

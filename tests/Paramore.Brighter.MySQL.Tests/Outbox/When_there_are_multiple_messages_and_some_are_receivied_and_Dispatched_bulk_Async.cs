@@ -19,14 +19,14 @@ namespace Paramore.Brighter.MySQL.Tests.Outbox
         private readonly Message _message2;
         private readonly Message _message3;
         private readonly Message _message;
-        private readonly MySqlOutboxSync _sqlOutbox;
+        private readonly MySqlOutbox _sqlOutbox;
 
         public MySqlOutboxBulkAsyncTests()
         {
             _mySqlTestHelper = new MySqlTestHelper();
             _mySqlTestHelper.SetupMessageDb();
 
-            _sqlOutbox = new MySqlOutboxSync(_mySqlTestHelper.OutboxConfiguration);
+            _sqlOutbox = new MySqlOutbox(_mySqlTestHelper.OutboxConfiguration);
             _message = new Message(new MessageHeader(Guid.NewGuid(), _Topic1, MessageType.MT_COMMAND),
                 new MessageBody("message body"));
             _message1 = new Message(new MessageHeader(Guid.NewGuid(), _Topic2, MessageType.MT_EVENT),
