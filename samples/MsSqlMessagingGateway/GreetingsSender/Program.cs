@@ -1,4 +1,5 @@
-﻿using Events.Ports.Commands;
+﻿using System.Transactions;
+using Events.Ports.Commands;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
@@ -23,15 +24,19 @@ namespace GreetingsSender
             var serviceCollection = new ServiceCollection();
             serviceCollection.AddSingleton<ILoggerFactory>(new SerilogLoggerFactory());
 
-            var messagingConfiguration = new MsSqlConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
+            var messagingConfiguration = new RelationalDatabaseConfiguration(@"Database=BrighterSqlQueue;Server=.\sqlexpress;Integrated Security=SSPI;", queueStoreTable: "QueueData");
 
-            serviceCollection.AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(new MsSqlProducerRegistryFactory(
+            var producerRegistry = new MsSqlProducerRegistryFactory(
                     messagingConfiguration,
                     new Publication[] {new Publication()}
-                    )
-                    .Create())
+                )
+                .Create();
+            
+            serviceCollection.AddBrighter()
+                .UseExternalBus((configure) =>
+                {
+                    configure.ProducerRegistry = producerRegistry;
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();

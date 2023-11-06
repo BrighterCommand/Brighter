@@ -143,7 +143,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
                 try
                 {
-                    return new HeaderResult<DateTime>(UnixTimestamp.DateTimeFromUnixTimestampSeconds(BitConverter.ToInt64(lastHeader, 0)), true);
+                    return new HeaderResult<DateTime>(DateTimeOffset.FromUnixTimeMilliseconds(BitConverter.ToInt64(lastHeader, 0)).DateTime, true);
                 }
                 catch (Exception)
                 {

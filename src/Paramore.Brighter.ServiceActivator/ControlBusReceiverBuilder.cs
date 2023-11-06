@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Transactions;
 using Paramore.Brighter.ServiceActivator.Ports;
 using Paramore.Brighter.ServiceActivator.Ports.Commands;
 using Paramore.Brighter.ServiceActivator.Ports.Handlers;
@@ -150,10 +151,14 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             var outbox = new SinkOutboxSync();
             
             CommandProcessor commandProcessor = null;
+            var externalBusConfiguration = new ExternalBusConfiguration();
+            externalBusConfiguration.ProducerRegistry = producerRegistry;
+            externalBusConfiguration.MessageMapperRegistry = outgoingMessageMapperRegistry;
+            
             commandProcessor = CommandProcessorBuilder.With()
                 .Handlers(new HandlerConfiguration(subscriberRegistry, new ControlBusHandlerFactorySync(_dispatcher, () => commandProcessor)))
                 .Policies(policyRegistry)
-                .ExternalBus(new ExternalBusConfiguration(producerRegistry, outgoingMessageMapperRegistry), outbox)
+                .ExternalBusCreate(externalBusConfiguration, outbox, new CommittableTransactionProvider())
                 .RequestContextFactory(new InMemoryRequestContextFactory())
                 .Build();
             
@@ -183,9 +188,9 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
         /// <summary>
         /// We do not track outgoing control bus messages - so this acts as a sink for such messages
         /// </summary>
-        private class SinkOutboxSync : IAmAnOutboxSync<Message>
+        private class SinkOutboxSync : IAmAnOutboxSync<Message, CommittableTransaction>
         {
-            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+            public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionProvider<CommittableTransaction> transactionProvider = null)
             {
                 //discard message
             }

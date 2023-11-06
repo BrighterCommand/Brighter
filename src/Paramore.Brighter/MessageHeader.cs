@@ -175,7 +175,7 @@ namespace Paramore.Brighter
             Id = messageId;
             Topic = topic;
             MessageType = messageType;
-            TimeStamp = RoundToSeconds(DateTime.UtcNow);
+            TimeStamp = DateTime.UtcNow;
             HandledCount = 0;
             DelayedMilliseconds = 0;
             CorrelationId = correlationId ?? Guid.Empty;
@@ -207,7 +207,7 @@ namespace Paramore.Brighter
             string partitionKey = "")
             : this(messageId, topic, messageType, correlationId, replyTo, contentType, partitionKey)
         {
-            TimeStamp = RoundToSeconds(timeStamp);
+            TimeStamp = timeStamp;
         }
 
         /// <summary>
@@ -266,17 +266,6 @@ namespace Paramore.Brighter
             }
 
             return newHeader;
-        }
-
-
-        //AMQP spec says:
-        // 4.2.5.4 Timestamps
-        // Time stamps are held in the 64-bit POSIX time_t format with an
-        // accuracy of one second. By using 64 bits we avoid future wraparound
-        // issues associated with 31-bit and 32-bit time_t values.
-        private DateTime RoundToSeconds(DateTime dateTime)
-        {
-            return new DateTime(dateTime.Ticks - (dateTime.Ticks % TimeSpan.TicksPerSecond), dateTime.Kind);
         }
 
         /// <summary>

@@ -24,6 +24,8 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Data;
+using System.Data.Common;
 using Microsoft.Data.SqlClient;
 using System.Text.Json;
 using System.Threading;
@@ -44,15 +46,15 @@ namespace Paramore.Brighter.Inbox.MsSql
 
         private const int MsSqlDuplicateKeyError_UniqueIndexViolation = 2601;
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
-        private readonly MsSqlConfiguration _configuration;
-        private readonly IMsSqlConnectionProvider _connectionProvider;
+        private readonly IAmARelationalDatabaseConfiguration _configuration;
+        private readonly IAmARelationalDbConnectionProvider _connectionProvider;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The Connection Provider.</param>
-        public MsSqlInbox(MsSqlConfiguration configuration, IMsSqlConnectionProvider connectionProvider)
+        public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration, IAmARelationalDbConnectionProvider connectionProvider)
         {
             _configuration = configuration;
             ContinueOnCapturedContext = false;
@@ -63,8 +65,8 @@ namespace Paramore.Brighter.Inbox.MsSql
         ///     Initializes a new instance of the <see cref="MsSqlInbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
-        public MsSqlInbox(MsSqlConfiguration configuration) : this(configuration,
-            new MsSqlSqlAuthConnectionProvider(configuration))
+        public MsSqlInbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
+            new MsSqlConnectionProvider(configuration))
         {
         }
 
@@ -82,7 +84,6 @@ namespace Paramore.Brighter.Inbox.MsSql
 
             using (var connection = _connectionProvider.GetConnection())
             {
-                connection.Open();
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
                 try
                 {
@@ -159,7 +160,6 @@ namespace Paramore.Brighter.Inbox.MsSql
 
             using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             {
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var sqlcmd = InitAddDbCommand(connection, parameters, timeoutInMilliseconds);
                 try
                 {
@@ -255,8 +255,12 @@ namespace Paramore.Brighter.Inbox.MsSql
             return new SqlParameter(parameterName, value ?? DBNull.Value);
         }
 
-        private T ExecuteCommand<T>(Func<SqlCommand, T> execute, string sql, int timeoutInMilliseconds,
-            params SqlParameter[] parameters)
+        private T ExecuteCommand<T>(
+            Func<DbCommand, T> execute, 
+            string sql, 
+            int timeoutInMilliseconds,
+            params IDbDataParameter[] parameters
+            )
         {
             using (var connection = _connectionProvider.GetConnection())
             using (var command = connection.CreateCommand())
@@ -265,18 +269,17 @@ namespace Paramore.Brighter.Inbox.MsSql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                connection.Open();
                 var item = execute(command);
                 return item;
             }
         }
 
         private async Task<T> ExecuteCommandAsync<T>(
-            Func<SqlCommand, Task<T>> execute,
+            Func<DbCommand, Task<T>> execute,
             string sql,
             int timeoutInMilliseconds,
             CancellationToken cancellationToken = default,
-            params SqlParameter[] parameters)
+            params IDbDataParameter[] parameters)
         {
             using (var connection = await _connectionProvider.GetConnectionAsync(cancellationToken))
             using (var command = connection.CreateCommand())
@@ -285,13 +288,12 @@ namespace Paramore.Brighter.Inbox.MsSql
                 command.CommandText = sql;
                 command.Parameters.AddRange(parameters);
 
-                await connection.OpenAsync(cancellationToken).ConfigureAwait(ContinueOnCapturedContext);
                 var item = await execute(command).ConfigureAwait(ContinueOnCapturedContext);
                 return item;
             }
         }
 
-        private SqlCommand InitAddDbCommand(SqlConnection connection, SqlParameter[] parameters, int timeoutInMilliseconds)
+        private DbCommand InitAddDbCommand(DbConnection connection, IDbDataParameter[] parameters, int timeoutInMilliseconds)
         {
             var sqlAdd =
                 $"insert into {_configuration.InBoxTableName} (CommandID, CommandType, CommandBody, Timestamp, ContextKey) values (@CommandID, @CommandType, @CommandBody, @Timestamp, @ContextKey)";
@@ -304,7 +306,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             return sqlcmd;
         }
 
-        private SqlParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
+        private IDbDataParameter[] InitAddDbParameters<T>(T command, string contextKey) where T : class, IRequest
         {
             var commandJson = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
             var parameters = new[]
@@ -318,7 +320,7 @@ namespace Paramore.Brighter.Inbox.MsSql
             return parameters;
         }
 
-        private TResult ReadCommand<TResult>(SqlDataReader dr, Guid commandId) where TResult : class, IRequest
+        private TResult ReadCommand<TResult>(IDataReader dr, Guid commandId) where TResult : class, IRequest
         {
             if (dr.Read())
             {

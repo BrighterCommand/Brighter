@@ -28,9 +28,13 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 new Header(HeaderNames.MESSAGE_TYPE, message.Header.MessageType.ToString().ToByteArray()),
                 new Header(HeaderNames.TOPIC, message.Header.Topic.ToByteArray()),
                 new Header(HeaderNames.MESSAGE_ID, message.Header.Id.ToString().ToByteArray()),
-                new Header(HeaderNames.TIMESTAMP, BitConverter.GetBytes(UnixTimestamp.GetCurrentUnixTimestampSeconds()))
             };
 
+            if (message.Header.TimeStamp != default)
+                headers.Add(HeaderNames.TIMESTAMP, BitConverter.GetBytes(new DateTimeOffset(message.Header.TimeStamp).ToUnixTimeMilliseconds()));
+            else
+                headers.Add(HeaderNames.TIMESTAMP, BitConverter.GetBytes(DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
+            
             if (message.Header.CorrelationId != Guid.Empty)
                 headers.Add(HeaderNames.CORRELATION_ID, message.Header.CorrelationId.ToString().ToByteArray());
 
@@ -42,7 +46,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             if (!string.IsNullOrEmpty(message.Header.ReplyTo))
                 headers.Add(HeaderNames.REPLY_TO, message.Header.ReplyTo.ToByteArray());
-
+            
             message.Header.Bag.Each((header) =>
             {
                 if (!s_headersToReset.Any(htr => htr.Equals(header.Key)))
@@ -54,6 +58,12 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                             break;
                         case int intValue:
                             headers.Add(header.Key, BitConverter.GetBytes(intValue));
+                            break;
+                        case Guid guidValue:
+                            headers.Add(header.Key, guidValue.ToByteArray());
+                            break;
+                        case byte[] byteArray:
+                            headers.Add(header.Key, byteArray);
                             break;
                         default:
                             headers.Add(header.Key, header.Value.ToString().ToByteArray());

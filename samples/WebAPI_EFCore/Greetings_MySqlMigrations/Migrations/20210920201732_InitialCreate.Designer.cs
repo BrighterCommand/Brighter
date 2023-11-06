@@ -10,7 +10,7 @@ namespace Greetings_MySqlMigrations.Migrations
 {
     [DbContext(typeof(GreetingsEntityGateway))]
     [Migration("20210920201732_InitialCreate")]
-    partial class InitialCreate
+    partial class MySqlInitialCreate
     {
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {

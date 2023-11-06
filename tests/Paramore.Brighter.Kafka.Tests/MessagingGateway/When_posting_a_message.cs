@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Confluent.Kafka;
@@ -95,7 +96,17 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             var body = JsonSerializer.Serialize(command, JsonSerialisationOptions.Options);
 
             var message = new Message(
-                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND) { PartitionKey = _partitionKey },
+                new MessageHeader(Guid.NewGuid(), _topic, MessageType.MT_COMMAND)
+                {
+                    PartitionKey = _partitionKey,
+                    ContentType = "application/json",
+                    Bag = new Dictionary<string, object>{{"Test Header", "Test Value"},},
+                    ReplyTo = "com.brightercommand.replyto",
+                    CorrelationId = Guid.NewGuid(),
+                    DelayedMilliseconds = 10,
+                    HandledCount = 2,
+                    TimeStamp = DateTime.UtcNow
+                },
                 new MessageBody(body));
 
             ((IAmAMessageProducerSync)_producerRegistry.LookupBy(_topic)).Send(message);
@@ -108,6 +119,8 @@ namespace Paramore.Brighter.Kafka.Tests.MessagingGateway
             receivedMessage.Header.PartitionKey.Should().Be(_partitionKey);
             receivedMessage.Body.Bytes.Should().Equal(message.Body.Bytes);
             receivedMessage.Body.Value.Should().Be(message.Body.Value);
+            receivedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
+                .Should().Be(message.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss.fffZ"));
             receivedCommand.Id.Should().Be(command.Id);
             receivedCommand.Value.Should().Be(command.Value);
         }

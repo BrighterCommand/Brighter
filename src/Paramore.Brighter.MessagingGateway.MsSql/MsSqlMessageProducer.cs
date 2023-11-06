@@ -58,11 +58,11 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         private Publication _publication; // -- placeholder for future use
 
         public MsSqlMessageProducer(
-            MsSqlConfiguration msSqlConfiguration,
-            IMsSqlConnectionProvider connectionProvider,
+            RelationalDatabaseConfiguration msSqlConfiguration,
+            IAmARelationalDbConnectionProvider connectonProvider,
         Publication publication = null)
         {
-            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectionProvider);
+            _sqlQ = new MsSqlMessageQueue<Message>(msSqlConfiguration, connectonProvider);
             _publication = publication ?? new Publication {MakeChannels = OnMissingChannel.Create};
             MaxOutStandingMessages = _publication.MaxOutStandingMessages;
             MaxOutStandingCheckIntervalMilliSeconds = _publication.MaxOutStandingCheckIntervalMilliSeconds;
@@ -70,8 +70,8 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
         }
 
         public MsSqlMessageProducer(
-            MsSqlConfiguration msSqlConfiguration,
-            Publication publication = null) : this(msSqlConfiguration, new MsSqlSqlAuthConnectionProvider(msSqlConfiguration), publication)
+            RelationalDatabaseConfiguration msSqlConfiguration,
+            Publication publication = null) : this(msSqlConfiguration, new MsSqlConnectionProvider(msSqlConfiguration), publication)
         {
         }
 

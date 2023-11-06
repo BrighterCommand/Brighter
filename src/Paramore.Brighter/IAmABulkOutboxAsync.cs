@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,9 +37,10 @@ namespace Paramore.Brighter
     /// We provide implementations of <see cref="IAmAnOutboxAsync{T}"/> for various databases. Users using unsupported databases should consider a Pull
     /// request
     /// </summary>
-    /// <typeparam name="T"></typeparam>
+    /// <typeparam name="T">The type of message</typeparam>
+    /// <typeparam name="TTransaction">The type of transaction used by this outbox</typeparam>
     [Obsolete("Deprecated in favour of Bulk, wil be merged into IAmAnOutboxAsync in v10")]
-    public interface IAmABulkOutboxAsync<in T> : IAmAnOutboxAsync<T> where T : Message
+    public interface IAmABulkOutboxAsync<T, TTransaction> : IAmAnOutboxAsync<T, TTransaction> where T : Message
     {
         /// <summary>
         /// Awaitable add the specified message.
@@ -46,8 +48,12 @@ namespace Paramore.Brighter
         /// <param name="messages">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(IEnumerable<T> messages, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
+        Task AddAsync(
+            IEnumerable<T> messages, int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default, 
+            IAmABoxTransactionProvider<TTransaction> transactionProvider = null
+            );
     }
 }

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Transactions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter;
@@ -29,17 +30,19 @@ namespace Tests
         }
 
         [Fact]
-        public void WithProducerRegistry()
+        public void WithExternalBus()
         {
             var serviceCollection = new ServiceCollection();
-            var producer = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducerSync() }, });
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> { { "MyTopic", new FakeProducer() }, });
 
             serviceCollection.AddSingleton<ILoggerFactory, LoggerFactory>();
 
             serviceCollection
                 .AddBrighter()
-                .UseInMemoryOutbox()
-                .UseExternalBus(producer, false)
+                .UseExternalBus((config) =>
+                {
+                    config.ProducerRegistry = producerRegistry;
+                })
                 .AutoFromAssemblies();
 
             var serviceProvider = serviceCollection.BuildServiceProvider();
@@ -98,8 +101,10 @@ namespace Tests
 
     }
 
-    internal class FakeProducerSync : IAmAMessageProducerSync, IAmAMessageProducerAsync
+    internal class FakeProducer : IAmAMessageProducerSync, IAmAMessageProducerAsync
     {
+        public List<Message> SentMessages { get; } = new List<Message>();
+        
         public int MaxOutStandingMessages { get; set; } = -1;
         public int MaxOutStandingCheckIntervalMilliSeconds { get; set; } = 0;
 
@@ -107,22 +112,26 @@ namespace Tests
 
         public void Dispose()
         {
-            throw new NotImplementedException();
+            SentMessages.Clear();
         }
 
         public Task SendAsync(Message message)
         {
-            throw new NotImplementedException();
+            var tcs = new TaskCompletionSource();
+            Send(message);
+            tcs.SetResult();
+            return tcs.Task;
         }
 
         public void Send(Message message)
         {
-            throw new NotImplementedException();
+            SentMessages.Add(message); 
         }
 
         public void SendWithDelay(Message message, int delayMilliseconds = 0)
         {
-            throw new NotImplementedException();
+            Task.Delay(TimeSpan.FromMilliseconds(delayMilliseconds)).Wait();
+            Send(message);
         }
     }
 }

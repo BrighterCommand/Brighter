@@ -22,12 +22,10 @@ THE SOFTWARE. */
  
 #endregion
 
-
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Polly.Registry;
 
 namespace Paramore.Brighter.Extensions.DependencyInjection
 {
@@ -85,7 +83,6 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// <returns>This builder, allows chaining calls</returns>
         IBrighterBuilder MapperRegistryFromAssemblies(params Assembly[] assemblies);
 
- 
         /// <summary>
         /// Scan the assemblies for implementations of IAmAMessageTransformAsync and register them with ServiceCollection
         /// </summary>
@@ -94,8 +91,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         IBrighterBuilder TransformsFromAssemblies(params Assembly[] assemblies);
 
         /// <summary>
+        /// The policy registry to use for the command processor and the event bus
+        /// It needs to be here as we need to pass it between AddBrighter and UseExternalBus
+        /// </summary>
+        IPolicyRegistry<string> PolicyRegistry { get; set; }
+
+
+        /// <summary>
         /// The IoC container to populate
         /// </summary>
         IServiceCollection Services { get; }
+
     }
 }

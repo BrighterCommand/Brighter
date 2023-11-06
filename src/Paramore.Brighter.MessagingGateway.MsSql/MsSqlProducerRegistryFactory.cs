@@ -8,12 +8,12 @@ namespace Paramore.Brighter.MessagingGateway.MsSql
 {
     public class MsSqlProducerRegistryFactory : IAmAProducerRegistryFactory
     {
-        private readonly MsSqlConfiguration _msSqlConfiguration;
+        private readonly RelationalDatabaseConfiguration _msSqlConfiguration;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<MsSqlProducerRegistryFactory>();
         private readonly IEnumerable<Publication> _publications; //-- placeholder for future use
 
         public MsSqlProducerRegistryFactory(
-            MsSqlConfiguration msSqlConfiguration,
+            RelationalDatabaseConfiguration msSqlConfiguration,
             IEnumerable<Publication> publications)
         {
             _msSqlConfiguration = 

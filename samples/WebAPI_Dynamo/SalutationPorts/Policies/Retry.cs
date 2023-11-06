@@ -7,21 +7,21 @@ namespace SalutationPorts.Policies
 {
     public static class Retry
     {
-        public const string RETRYPOLICYASYNC = "SalutationPorts.Policies.RetryPolicyAsync";
-        public const string EXPONENTIAL_RETRYPOLICYASYNC = "SalutationPorts.Policies.ExponenttialRetryPolicyAsync";
+        public const string RETRYPOLICY = "SalutationPorts.Policies.RetryPolicy";
+        public const string EXPONENTIAL_RETRYPOLICY = "SalutationPorts.Policies.ExponenttialRetryPolicy";
 
-        public static AsyncRetryPolicy GetSimpleHandlerRetryPolicy()
+        public static RetryPolicy GetSimpleHandlerRetryPolicy()
         {
-            return Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+            return Policy.Handle<Exception>().WaitAndRetry(new[]
             {
                 TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
             });
         }
 
-        public static AsyncRetryPolicy GetExponentialHandlerRetryPolicy()
+        public static RetryPolicy GetExponentialHandlerRetryPolicy()
         {
             var delay = Backoff.ExponentialBackoff(TimeSpan.FromMilliseconds(100), retryCount: 5, fastFirst: true);
-            return Policy.Handle<Exception>().WaitAndRetryAsync(delay);
+            return Policy.Handle<Exception>().WaitAndRetry(delay);
         }
     }
 }

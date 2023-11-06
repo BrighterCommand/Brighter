@@ -41,6 +41,8 @@ var rmqConnection = new RmqMessagingGatewayConnection
 
 var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+var producerRegistry = Helpers.GetProducerRegistry(rmqConnection);
+
 builder.Services.AddServiceActivator(options =>
     {
         options.Subscriptions = new Subscription[]
@@ -64,8 +66,6 @@ builder.Services.AddServiceActivator(options =>
         };
         options.ChannelFactory = new ChannelFactory(rmqMessageConsumerFactory);
     })
-    .UseExternalBus(Helpers.GetProducerRegistry(rmqConnection))
-    .UseInMemoryOutbox()
     .MapperRegistry(r =>
     {
         r.Register<MyDistributedEvent, MessageMapper<MyDistributedEvent>>();
@@ -77,6 +77,10 @@ builder.Services.AddServiceActivator(options =>
         r.Register<MyDistributedEvent, MyDistributedEventHandler>();
         r.Register<UpdateProductCommand, UpdateProductCommandHandler>();
         r.Register<ProductUpdatedEvent, ProductUpdatedEventHandler>();
+    })
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
     })
     .UseOutboxSweeper(options =>
     {

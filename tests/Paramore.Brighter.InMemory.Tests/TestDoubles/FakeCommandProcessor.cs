@@ -59,6 +59,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
         {
             ClearOutbox(DepositPost(request));
         }
+        
+        public void Post<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        {
+            Post(request);
+        }
+        
 
         public Task PostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
         {
@@ -71,11 +77,21 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
 
               return tcs.Task;
         }
+        
+        public Task PostAsync<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            return PostAsync(request, continueOnCapturedContext, cancellationToken);
+        }
 
         public Guid DepositPost<T>(T request) where T : class, IRequest
         {
             Deposited.Enqueue(new DepositedMessage(request));
             return request.Id;
+        }
+        
+        public Guid DepositPost<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        {
+            return DepositPost(request);
         }
 
         public Guid[] DepositPost<T>(IEnumerable<T> request) where T : class, IRequest
@@ -87,6 +103,11 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             }
 
             return ids.ToArray();
+        }
+        
+        public Guid[] DepositPost<T, TTransaction>(IEnumerable<T> request, IAmABoxTransactionProvider<TTransaction> provider) where T : class, IRequest
+        {
+            return DepositPost(request);
         }
 
         public Task<Guid> DepositPostAsync<T>(T request, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
@@ -103,6 +124,11 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             return tcs.Task;
 
         }
+        
+        public Task<Guid> DepositPostAsync<T, TTransaction>(T request, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false, CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            return DepositPostAsync(request, continueOnCapturedContext, cancellationToken);
+        }
 
         public async Task<Guid[]> DepositPostAsync<T>(IEnumerable<T> requests, bool continueOnCapturedContext = false,
             CancellationToken cancellationToken = default) where T : class, IRequest
@@ -114,6 +140,12 @@ namespace Paramore.Brighter.InMemory.Tests.TestDoubles
             }
 
             return ids.ToArray();
+        }
+        
+        public async Task<Guid[]> DepositPostAsync<T, TTransaction>(IEnumerable<T> requests, IAmABoxTransactionProvider<TTransaction> provider, bool continueOnCapturedContext = false,
+            CancellationToken cancellationToken = default) where T : class, IRequest
+        {
+            return await DepositPostAsync(requests, continueOnCapturedContext, cancellationToken);
         }
 
         public void ClearOutbox(params Guid[] posts)

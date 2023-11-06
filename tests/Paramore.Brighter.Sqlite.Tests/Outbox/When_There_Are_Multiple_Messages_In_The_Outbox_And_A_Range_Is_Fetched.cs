@@ -37,7 +37,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
     public class SqliteOutboxRangeRequestTests : IDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly string _TopicFirstMessage = "test_topic";
         private readonly string _TopicLastMessage = "test_topic3";
         private IEnumerable<Message> messages;
@@ -49,21 +49,21 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), _TopicFirstMessage, MessageType.MT_DOCUMENT), new MessageBody("message body"));
             _message1 = new Message(new MessageHeader(Guid.NewGuid(), "test_topic2", MessageType.MT_DOCUMENT), new MessageBody("message body2"));
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), _TopicLastMessage, MessageType.MT_DOCUMENT), new MessageBody("message body3"));
-            _sqlOutboxSync.Add(_messageEarliest);
+            _sqlOutbox.Add(_messageEarliest);
             Task.Delay(100);
-            _sqlOutboxSync.Add(_message1);
+            _sqlOutbox.Add(_message1);
             Task.Delay(100);
-             _sqlOutboxSync.Add(_message2);
+             _sqlOutbox.Add(_message2);
         }
 
         [Fact]
         public void When_There_Are_Multiple_Messages_In_The_Outbox_And_A_Range_Is_Fetched()
         {
-            messages = _sqlOutboxSync.Get(1, 3);
+            messages = _sqlOutbox.Get(1, 3);
 
             //should fetch 1 message
             messages.Should().HaveCount(1);

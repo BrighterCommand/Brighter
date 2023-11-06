@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
@@ -51,12 +52,13 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
         }
         public async IAsyncEnumerable<Guid[]> SendAsync(IEnumerable<Message> messages, [EnumeratorCancellation] CancellationToken cancellationToken)
         {
-            foreach (var msg in messages)
+            var msgs = messages as Message[] ?? messages.ToArray();
+            foreach (var msg in msgs)
             {
                 yield return new[] { msg.Id };
             }
             MessageWasSent = true;
-            SentMessages.AddRange(messages);
+            SentMessages.AddRange(msgs);
         }
 
         public void Send(Message message)

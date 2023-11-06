@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -19,14 +20,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutboxSync _fakeOutboxSync;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public CommandProcessorDepositPostTestsAsync()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutboxSync = new FakeOutboxSync();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             var topic = "MyCommand";
@@ -46,15 +47,27 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(1));
 
-            PolicyRegistry policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICYASYNC, retryPolicy }, { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy } };
+            PolicyRegistry policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICYASYNC, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicy }
+            };
+            
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { topic, _fakeMessageProducerWithPublishConfirmation },
+            });
+            
+            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
+        
+            CommandProcessor.ClearExtServiceBus();
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
+                new InMemoryRequestContextFactory(), 
                 policyRegistry,
                 messageMapperRegistry,
-                _fakeOutboxSync,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}));
+                bus
+            );
         }
-
 
         [Fact]
         public async Task When_depositing_a_message_in_the_outbox()
@@ -67,7 +80,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _fakeMessageProducerWithPublishConfirmation.MessageWasSent.Should().BeFalse();
             
             //message should be in the store
-            var depositedPost = _fakeOutboxSync
+            var depositedPost = _fakeOutbox
                 .OutstandingMessages(0)
                 .SingleOrDefault(msg => msg.Id == _message.Id);
                 
@@ -80,7 +93,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             depositedPost.Header.MessageType.Should().Be(_message.Header.MessageType);
             
             //message should be marked as outstanding if not sent
-            var outstandingMessages = await _fakeOutboxSync.OutstandingMessagesAsync(0);
+            var outstandingMessages = await _fakeOutbox.OutstandingMessagesAsync(0);
             var outstandingMessage = outstandingMessages.Single();
             outstandingMessage.Id.Should().Be(_message.Id);
         }
