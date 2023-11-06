@@ -28,25 +28,25 @@ namespace Paramore.Brighter.Sqlite.Tests
 
         public void SetupCommandDb()
         {
-            connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(TableName));
+            _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
+            ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
+            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(InboxTableName));
         }
 
         public void SetupMessageDb()
         {
-            connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableName_Messages));
+            _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
+            ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
+            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(OutboxTableName, hasBinaryMessagePayload: _binaryMessagePayload));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()
         {
             var testRootPath = Directory.GetCurrentDirectory();
             var guidInPath = Guid.NewGuid().ToString();
-            connectionStringPathDir = Path.Combine(Path.Combine(Path.Combine(testRootPath, "bin"), "TestResults"), guidInPath);
-            Directory.CreateDirectory(connectionStringPathDir);
-            return Path.Combine(connectionStringPathDir, $"test{guidInPath}.db");
+            _connectionStringPathDir = Path.Combine(Path.Combine(Path.Combine(testRootPath, "bin"), "TestResults"), guidInPath);
+            Directory.CreateDirectory(_connectionStringPathDir);
+            return Path.Combine(_connectionStringPathDir, $"test{guidInPath}.db");
         }
 
         public async Task CleanUpDbAsync()
@@ -55,8 +55,8 @@ namespace Paramore.Brighter.Sqlite.Tests
             {
                 //add 1 MS delay to allow the file to be released
                 await Task.Delay(1);
-                File.Delete(connectionStringPath);
-                Directory.Delete(connectionStringPathDir, true);
+                File.Delete(_connectionStringPath);
+                Directory.Delete(_connectionStringPathDir, true);
             }
             catch (Exception e)
             {                

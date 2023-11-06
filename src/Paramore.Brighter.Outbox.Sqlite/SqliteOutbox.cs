@@ -199,7 +199,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
+#if NETSTANDARD2_0
+                    connection.Close();
+#else
                     await connection.CloseAsync();
+#endif
                 }
             }
         }
