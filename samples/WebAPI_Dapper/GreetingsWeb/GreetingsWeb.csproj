@@ -8,10 +8,10 @@
         <PackageReference Include="FluentMigrator" Version="3.3.2" />
         <PackageReference Include="FluentMigrator.Runner" Version="3.3.2" />
         <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
-        <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.4.0" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.4.0" />
+        <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.6.0" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.6.0" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.14" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.0.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" Version="1.5.1" />
         <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
         <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
