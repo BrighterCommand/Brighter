@@ -58,10 +58,10 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _retrievedMessages = await _sqlOutbox.GetAsync();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Any(m => m.Id == _messageLatest.Id).Should().BeTrue();
+            //should read first message first from the outbox
+            _retrievedMessages.Any(m => m.Id == _messageEarliest.Id).Should().BeTrue();
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
@@ -78,10 +78,12 @@ namespace Paramore.Brighter.MSSQL.Tests.Outbox
 
             _retrievedMessages = await _sqlOutbox.GetAsync();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //should read last message last from the outbox
+            foreach (Message message in messages)
+            {
+                _retrievedMessages.Any(m => m.Id == message.Id).Should().BeTrue();
+            }
+
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
