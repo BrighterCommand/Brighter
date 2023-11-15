@@ -10,11 +10,11 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, release/9 ]
     tags:
       - '*.*.*'
   pull_request:
-    branches: [ master ]
+    branches: [ master, release/9 ]
   
 env:
  # Stop wasting time caching packages
@@ -38,6 +38,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - run: dotnet --info
       - uses: actions/checkout@v4
         with:
@@ -91,6 +92,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: In Memory Transport Tests
@@ -119,6 +121,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Redis Transport Tests
@@ -148,6 +151,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: RMQ Transport Tests
@@ -210,6 +214,7 @@ jobs:
       with:
         dotnet-version: |
           6.0.x
+          8.0.x
     - name: Install dependencies
       run: dotnet restore
     - name: Kafka Transport Tests
@@ -239,6 +244,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Postgres Tests
@@ -272,6 +278,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: EventStore Tests
@@ -297,6 +304,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: MSSQL Tests
@@ -324,6 +332,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Verify MariaDB connection
@@ -354,6 +363,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: DynamoDB Tests
@@ -376,6 +386,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Configure AWS Credentials
@@ -402,6 +413,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Sqlite Tests
@@ -418,6 +430,7 @@ jobs:
         with:
           dotnet-version: |
             6.0.x
+            8.0.x
       - name: Install dependencies
         run: dotnet restore
       - name: Azure Tests
