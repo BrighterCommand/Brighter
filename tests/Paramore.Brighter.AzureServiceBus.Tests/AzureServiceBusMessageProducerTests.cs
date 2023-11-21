@@ -179,13 +179,13 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         }
 
         [Fact]
-        public void When_there_is_an_error_talking_to_servicebus_when_creating_the_topic_the_ManagementClientWrapper_is_reinitilised()
+        public async Task When_there_is_an_error_talking_to_servicebus_when_creating_the_topic_the_ManagementClientWrapper_is_reinitilised()
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             A.CallTo(() => _nameSpaceManagerWrapper.TopicExists("topic")).Throws(new Exception());
 
-            Assert.ThrowsAsync<Exception>(() => _producer.SendWithDelayAsync(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1));
+            await Assert.ThrowsAsync<Exception>(() => _producer.SendWithDelayAsync(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON")), 1));
             A.CallTo(() => _nameSpaceManagerWrapper.Reset()).MustHaveHappenedOnceExactly();
         }
 
@@ -205,13 +205,13 @@ namespace Paramore.Brighter.AzureServiceBus.Tests
         }
 
         [Fact]
-        public void When_the_topic_does_not_exist_and_Missing_is_set_to_Validate_an_exception_is_raised()
+        public async Task When_the_topic_does_not_exist_and_Missing_is_set_to_Validate_an_exception_is_raised()
         {
             var messageBody = Encoding.UTF8.GetBytes("A message body");
 
             var producerValidate = new AzureServiceBusMessageProducer(_nameSpaceManagerWrapper, _topicClientProvider, OnMissingChannel.Validate);
 
-            Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON"))));
+            await Assert.ThrowsAsync<ChannelFailureException>(() => producerValidate.SendAsync(new Message(new MessageHeader(Guid.NewGuid(), "topic", MessageType.MT_NONE), new MessageBody(messageBody, "JSON"))));
         }
     }
 }
