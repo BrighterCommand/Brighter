@@ -5,10 +5,9 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Hellang.Middleware.ProblemDetails" Version="6.5.1" />
         <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
         <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="7.0.13" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.0" />
     </ItemGroup>
 
     <ItemGroup>
