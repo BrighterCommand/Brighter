@@ -53,5 +53,4 @@
       <_ContentIncludedByDefault Remove="out\GreetingsAdapters.deps.json" />
       <_ContentIncludedByDefault Remove="out\GreetingsAdapters.runtimeconfig.json" />
     </ItemGroup>
-
 </Project>
