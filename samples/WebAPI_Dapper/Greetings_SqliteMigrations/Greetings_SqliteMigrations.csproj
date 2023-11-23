@@ -3,12 +3,11 @@
     <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
-        <Nullable>enable</Nullable>
+        <Nullable>disable</Nullable>
     </PropertyGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
-      <ProjectReference Include="..\Orders.Domain\Orders.Domain.csproj" />
+      <PackageReference Include="FluentMigrator" Version="3.3.2" />
     </ItemGroup>
 
 </Project>

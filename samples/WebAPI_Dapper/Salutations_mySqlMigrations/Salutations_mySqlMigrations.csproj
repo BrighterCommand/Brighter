@@ -6,9 +6,8 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
-      <ProjectReference Include="..\Orders.Domain\Orders.Domain.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FluentMigrator" Version="3.3.2" />
+  </ItemGroup>
 
 </Project>
