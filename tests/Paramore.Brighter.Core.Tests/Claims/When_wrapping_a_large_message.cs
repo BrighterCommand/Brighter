@@ -10,8 +10,8 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class LargeMessagePayloadWrapTests
 {
-    private WrapPipeline<MyLargeCommand> _transformPipeline;
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
     private InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
 
@@ -20,17 +20,18 @@ public class LargeMessagePayloadWrapTests
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
-        {
-            { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
-        };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
 
         _myCommand = new MyLargeCommand(6000);
 
         _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
-        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync));
+        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(
+            _ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]

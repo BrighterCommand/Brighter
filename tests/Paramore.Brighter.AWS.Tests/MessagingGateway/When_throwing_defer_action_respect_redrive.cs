@@ -91,7 +91,8 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             );
 
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName))
+                new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
+                null
                 ); 
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             

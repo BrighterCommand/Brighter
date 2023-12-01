@@ -55,7 +55,9 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             container.AddTransient<MyEventMessageMapper>();
             container.AddTransient<MyCommandMessageMapper>();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(container.BuildServiceProvider()));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new ServiceProviderMapperFactory(container.BuildServiceProvider()),
+                null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 

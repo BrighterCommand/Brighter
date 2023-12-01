@@ -22,9 +22,6 @@ THE SOFTWARE. */
 #endregion
 
 using System.Collections.Generic;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Paramore.Brighter.Extensions;
 
 namespace Paramore.Brighter
@@ -44,7 +41,7 @@ namespace Paramore.Brighter
         /// <param name="messageTransformerFactory">The factory used to create transforms</param>
         /// <param name="messageMapper">The message mapper that forms the pipeline sink</param>
         public UnwrapPipeline(
-            IEnumerable<IAmAMessageTransformAsync> transforms, 
+            IEnumerable<IAmAMessageTransform> transforms, 
             IAmAMessageTransformerFactory messageTransformerFactory, 
             IAmAMessageMapper<TRequest> messageMapper)
         {
@@ -70,15 +67,14 @@ namespace Paramore.Brighter
 
         /// <summary>
         /// Transforms a <see cref="Message"/> into a <see cref="IRequest"/> 
-        /// Applies any required <see cref="IAmAMessageTransformAsync"/> to that <see cref="Message"/> 
+        /// Applies any required <see cref="IAmAMessageTransform"/> to that <see cref="Message"/> 
         /// </summary>
         /// <param name="message">The message to unwrap</param>
-        /// <param name="cancellationToken">The cancellation token</param>
         /// <returns>a request</returns>
-        public async Task<TRequest> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+        public TRequest Unwrap(Message message)
         {
             var msg = message;
-            await Transforms.EachAsync(async transform => msg = await transform.UnwrapAsync(msg,cancellationToken));
+            Transforms.Each(transform => msg = transform.Unwrap(msg));
             return MessageMapper.MapToRequest(msg);
         }
     }

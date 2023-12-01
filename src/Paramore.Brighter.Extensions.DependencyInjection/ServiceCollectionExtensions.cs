@@ -354,11 +354,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             var serviceCollectionMessageMapperRegistry = provider.GetService<ServiceCollectionMessageMapperRegistry>();
 
-            var messageMapperRegistry = new MessageMapperRegistry(new ServiceProviderMapperFactory(provider));
+            var messageMapperRegistry = new MessageMapperRegistry(
+                new ServiceProviderMapperFactory(provider),
+                null
+                );
 
             foreach (var messageMapper in serviceCollectionMessageMapperRegistry)
             {
-                messageMapperRegistry.Add(messageMapper.Key, messageMapper.Value);
+                messageMapperRegistry.Register(messageMapper.Key, messageMapper.Value);
             }
 
             return messageMapperRegistry;

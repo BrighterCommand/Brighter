@@ -339,7 +339,7 @@ namespace Paramore.Brighter.ServiceActivator
 
             try
             {
-                request = _unwrapPipeline.UnwrapAsync(message).GetAwaiter().GetResult();
+                request = _unwrapPipeline.Unwrap(message);
             }
             catch (ConfigurationException)
             {

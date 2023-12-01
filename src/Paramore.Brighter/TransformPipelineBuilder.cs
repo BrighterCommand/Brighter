@@ -147,10 +147,10 @@ namespace Paramore.Brighter
             }
         }
 
-        private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
+        private IEnumerable<IAmAMessageTransform> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
         {
-            var transforms = new List<IAmAMessageTransformAsync>();
+            var transforms = new List<IAmAMessageTransform>();
 
             //Allowed to be null to avoid breaking v9 interfaces
             if (_messageTransformerFactory == null)

@@ -18,9 +18,11 @@ public class VanillaMessageUnwrapRequestTests
     {
         //arrange
         TransformPipelineBuilder.ClearPipelineCache();
-          
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyVanillaCommandMessageMapper) } };
+
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyVanillaCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         _myCommand = new MyTransformableCommand();
         
@@ -37,11 +39,11 @@ public class VanillaMessageUnwrapRequestTests
     }
     
     [Fact]
-    public async Task When_Unwrapping_A_Vanilla_Message_Mapper()
+    public void When_Unwrapping_A_Vanilla_Message_Mapper()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = await _transformPipeline.UnwrapAsync(_message);
+        var request = _transformPipeline.Unwrap(_message);
         
         //assert
         request.Value = _myCommand.Value;

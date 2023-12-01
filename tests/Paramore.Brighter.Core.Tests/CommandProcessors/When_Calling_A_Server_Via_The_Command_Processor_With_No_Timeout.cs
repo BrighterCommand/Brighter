@@ -29,7 +29,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                     return new MyResponseMessageMapper();
 
                 throw new ConfigurationException($"No mapper found for {type.Name}");
-            }));
+            }), null);
             
             messageMapperRegistry.Register<MyRequest, MyRequestMessageMapper>();
             messageMapperRegistry.Register<MyResponse, MyResponseMessageMapper>();

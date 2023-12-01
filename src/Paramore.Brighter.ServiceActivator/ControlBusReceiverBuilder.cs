@@ -139,11 +139,15 @@ namespace Paramore.Brighter.ServiceActivator.ControlBus
             subscriberRegistry.Register<ConfigurationCommand, ConfigurationCommandHandler>();
             subscriberRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandHandler>();
             
-            var incomingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            var incomingMessageMapperRegistry = new MessageMapperRegistry(
+            new ControlBusMessageMapperFactory(), null
+                );
             incomingMessageMapperRegistry.Register<ConfigurationCommand, ConfigurationCommandMessageMapper>();
             incomingMessageMapperRegistry.Register<HeartbeatRequest, HeartbeatRequestCommandMessageMapper>();
 
-            var outgoingMessageMapperRegistry = new MessageMapperRegistry(new ControlBusMessageMapperFactory());
+            var outgoingMessageMapperRegistry = new MessageMapperRegistry(
+                new ControlBusMessageMapperFactory(), null
+                );
             outgoingMessageMapperRegistry.Register<HeartbeatReply, HeartbeatReplyCommandMessageMapper>();
 
             var producerRegistry = _producerRegistryFactory.Create();

@@ -51,16 +51,16 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         /// </summary>
         /// <param name="transformerType">The type of transformer to create</param>
         /// <returns></returns>
-        public IAmAMessageTransformAsync Create(Type transformerType)
+        public IAmAMessageTransform Create(Type transformerType)
         {
-            return (IAmAMessageTransformAsync) _serviceProvider.GetService(transformerType);
+            return (IAmAMessageTransform) _serviceProvider.GetService(transformerType);
         }
 
         /// <summary>
         /// If the transform was scoped as transient, we release it when the pipeline is finished
         /// </summary>
         /// <param name="transformer"></param>
-        public void Release(IAmAMessageTransformAsync transformer)
+        public void Release(IAmAMessageTransform transformer)
         {
             if (!_isTransient) return;
             

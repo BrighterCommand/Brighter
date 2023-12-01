@@ -825,8 +825,9 @@ namespace Paramore.Brighter
                 {
                     s_logger.LogDebug("Reply received from {ChannelName}", channelName);
                     //map to request is map to a response, but it is a request from consumer point of view. Confusing, but...
+                    //TODO: this only handles a synchronous unwrap pipeline, we need to handle async too
                     var inUnwrapPipeline = _transformPipelineBuilder.BuildUnwrapPipeline<TResponse>();
-                    response = inUnwrapPipeline.UnwrapAsync(responseMessage).GetAwaiter().GetResult();
+                    response = inUnwrapPipeline.Unwrap(responseMessage);
                     Send(response);
                 }
 

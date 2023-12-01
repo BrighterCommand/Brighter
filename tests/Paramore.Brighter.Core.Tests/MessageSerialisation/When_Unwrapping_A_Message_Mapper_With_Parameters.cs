@@ -19,13 +19,15 @@ public class MessageUnwrapRequestWithAttributesTests
         //arrange
          TransformPipelineBuilder.ClearPipelineCache();
 
-         var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyParameterizedTransformMessageMapper()))
-            { { typeof(MyTransformableCommand), typeof(MyParameterizedTransformAsync) } };
+         var mapperRegistry = new MessageMapperRegistry(
+             new SimpleMessageMapperFactory(_ => new MyParameterizedTransformMessageMapper()),
+             null);
+         mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         var myCommand = new MyTransformableCommand();
         myCommand.Value = "Hello World";
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransformAsync()));
+        var messageTransformerFactory = new SimpleMessageTransformerFactory((_ => new MyParameterizedTransform()));
 
         _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
 
@@ -35,11 +37,11 @@ public class MessageUnwrapRequestWithAttributesTests
     }
     
     [Fact]
-    public async Task When_Wrapping_A_Message_Mapper_With_Attributes()
+    public void When_Wrapping_A_Message_Mapper_With_Attributes()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyTransformableCommand>();
-        var request = await _transformPipeline.UnwrapAsync(_message);
+        var request = _transformPipeline.Unwrap(_message);
         
         //assert
         request.Value.Should().Be("I am a parameterized template: Hello World");

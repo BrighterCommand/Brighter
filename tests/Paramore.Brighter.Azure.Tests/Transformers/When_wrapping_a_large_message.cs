@@ -12,8 +12,8 @@ namespace Paramore.Brighter.Azure.Tests.Transformers;
 [Property("Fragile", "CI")]
 public class LargeMessagePayloadWrapTests : IDisposable
 {
-    private WrapPipeline<MyLargeCommand> _transformPipeline;
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
     private readonly AzureBlobLuggageStore _luggageStore;
     private readonly BlobContainerClient _client;
@@ -26,10 +26,10 @@ public class LargeMessagePayloadWrapTests : IDisposable
         //arrange
             TransformPipelineBuilder.ClearPipelineCache();
 
-            var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
-            {
-                { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
-            };
+            var mapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
+                null);
+            mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();    
 
             _myCommand = new MyLargeCommand(6000);
 
@@ -42,9 +42,9 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             _luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore));
+            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore));
 
-            _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
 
             _client.CreateIfNotExists();
     }

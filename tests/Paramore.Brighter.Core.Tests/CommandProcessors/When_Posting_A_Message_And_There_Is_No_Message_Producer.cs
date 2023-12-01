@@ -59,7 +59,9 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new MessageBody(JsonSerializer.Serialize(_myCommand, JsonSerialisationOptions.Options))
                 );
 
-            _messageMapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()));
+            _messageMapperRegistry = new MessageMapperRegistry(
+                new SimpleMessageMapperFactory((_) => new MyCommandMessageMapper()),
+                null);
             _messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
 
             _retryPolicy = Policy

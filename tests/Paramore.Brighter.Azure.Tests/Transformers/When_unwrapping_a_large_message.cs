@@ -18,7 +18,7 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
     private readonly string _bucketName;
     private Uri _bucketUrl;
     private AzureBlobLuggageStore _luggageStore;
-    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
 
     public LargeMessagePaylodUnwrapTests()
     {
@@ -32,15 +32,15 @@ public class LargeMessagePaylodUnwrapTests : IDisposable
         
         TransformPipelineBuilder.ClearPipelineCache();
 
-        var mapperRegistry = new MessageMapperRegistry(new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()))
-        {
-            { typeof(MyLargeCommand), typeof(MyLargeCommandMessageMapper) }
-        };
+        var mapperRegistry = new MessageMapperRegistry(
+            new SimpleMessageMapperFactory(_ => new MyLargeCommandMessageMapper()),
+            null);
+        mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
         
-        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_luggageStore));
+        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore));
 
-        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-    }
+        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+    }                                                                             
     
     [Test]
     public async Task When_unwrapping_a_large_message()
