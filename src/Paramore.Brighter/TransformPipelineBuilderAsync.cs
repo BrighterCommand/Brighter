@@ -146,6 +146,11 @@ namespace Paramore.Brighter
                 throw new ConfigurationException("Error building unwrap pipeline for outgoing message, see inner exception for details", e);
             }
         }
+        
+        public bool HasPipeline<TRequest>() where TRequest : class, IRequest
+        {
+            return _mapperRegistryAsync.GetAsync<TRequest>() != null;
+        }
 
         private IEnumerable<IAmAMessageTransformAsync> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest

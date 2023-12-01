@@ -68,8 +68,8 @@ public class ImplicitClearingObservabilityTests : IDisposable
             handlerFactory, 
             new InMemoryRequestContextFactory(), 
             policyRegistry, 
-            messageMapperRegistry,
-            bus);
+            bus,
+            messageMapperRegistry);
     }
 
     [Fact]

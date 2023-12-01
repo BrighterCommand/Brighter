@@ -87,9 +87,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(), 
                 policyRegistry,
-                messageMapperRegistry,
-                bus
-            );
+                bus,
+                messageMapperRegistry); 
         }
 
         public void When_Posting_A_Message_And_There_Is_No_Message_Mapper_Registry()

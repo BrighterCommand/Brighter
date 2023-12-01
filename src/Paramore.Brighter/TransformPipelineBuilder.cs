@@ -147,6 +147,11 @@ namespace Paramore.Brighter
             }
         }
 
+        public bool HasPipeline<TRequest>() where TRequest : class, IRequest
+        {
+            return _mapperRegistry.Get<TRequest>() != null;
+        }
+
         private IEnumerable<IAmAMessageTransform> BuildTransformPipeline<TRequest>(IEnumerable<TransformAttribute> transformAttributes)
             where TRequest : class, IRequest
         {

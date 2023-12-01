@@ -57,8 +57,7 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
             };
 
             var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
-                .BuildWrapPipeline<MyEvent>().WrapAsync(new MyEvent())
-                .GetAwaiter().GetResult();
+                .BuildWrapPipeline<MyEvent>().Wrap(new MyEvent());
             _channel.Enqueue(msg);
         }
 

@@ -80,9 +80,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             CommandProcessor commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
                 policyRegistry,
-                messageMapperRegistry,
-                bus
-                );
+                bus,
+                messageMapperRegistry);
 
             _controlBusSender = new ControlBusSender(commandProcessor);
         }
