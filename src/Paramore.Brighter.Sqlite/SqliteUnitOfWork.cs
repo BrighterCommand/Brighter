@@ -48,7 +48,23 @@ namespace Paramore.Brighter.Sqlite
                 throw new ArgumentNullException(nameof(configuration.ConnectionString)); 
             _connectionString = configuration.ConnectionString;
         }
-        
+
+#if NETSTANDARD2_0
+        /// <summary>
+        /// Commit the transaction synchronously without cancellation support.
+        /// </summary>
+        /// <returns>An awaitable Task</returns>
+        public override Task CommitAsync(CancellationToken cancellationToken)
+        {
+            if (HasOpenTransaction)
+            {
+                ((SqliteTransaction)Transaction).Commit();
+                Transaction = null;
+            }
+            
+            return Task.CompletedTask;
+        }
+#else
         /// <summary>
         /// Commit the transaction
         /// </summary>
@@ -60,9 +76,10 @@ namespace Paramore.Brighter.Sqlite
                 ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
                 Transaction = null;
             }
-            
+
             return Task.CompletedTask;
         }
+#endif
 
         /// <summary>
         /// Gets a existing Connection; creates a new one if it does not exist
@@ -104,17 +121,33 @@ namespace Paramore.Brighter.Sqlite
             return Transaction;
         }
 
+#if NETSTANDARD2_0
+        /// <summary>
+        /// Creates and opens a Sqlite Transaction synchronously without cancellation support.
+        /// This is a shared transaction and you should manage it through the unit of work
+        /// </summary>
+        /// <returns>DbTransaction</returns>
+        public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        {
+            if (Connection == null)
+                Connection = await GetConnectionAsync(cancellationToken);
+            if (!HasOpenTransaction)
+                Transaction = Connection.BeginTransaction();
+            return Transaction;
+        }
+#else
         /// <summary>
         /// Creates and opens a Sqlite Transaction
         /// This is a shared transaction and you should manage it through the unit of work
         /// </summary>
         /// <returns>DbTransaction</returns>
-         public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
+        public override async Task<DbTransaction> GetTransactionAsync(CancellationToken cancellationToken = default)
         {
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
                 Transaction = await Connection.BeginTransactionAsync(cancellationToken);
             return Transaction;
         }
+#endif
     }
 }
