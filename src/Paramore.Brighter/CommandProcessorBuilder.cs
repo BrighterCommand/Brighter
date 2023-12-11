@@ -192,8 +192,9 @@ namespace Paramore.Brighter
         /// <param name="configuration"></param>
         /// <param name="outbox">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating reply queues</param>
+        /// <param name="boxTransactionConnectionProvider"></param>
         /// <returns></returns>
-        public INeedARequestContext ExternalRPC(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions)
+        public INeedARequestContext ExternalRPC(ExternalBusConfiguration configuration, IAmAnOutbox<Message> outbox, IEnumerable<Subscription> subscriptions, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null)
         {
             _useRequestReplyQueues = true;
             _replySubscriptions = subscriptions;
@@ -203,6 +204,7 @@ namespace Paramore.Brighter
             _responseChannelFactory = configuration.ResponseChannelFactory;
             _outbox = outbox;
             _transformerFactory = configuration.TransformerFactory;
+            _overridingBoxTransactionConnectionProvider = boxTransactionConnectionProvider;
              
             return this;
         }
@@ -263,7 +265,8 @@ namespace Paramore.Brighter
                     outBox: _outbox,
                     producerRegistry: _producers,
                     replySubscriptions: _replySubscriptions,
-                    responseChannelFactory: _responseChannelFactory, boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider);
+                    responseChannelFactory: _responseChannelFactory, 
+                    boxTransactionConnectionProvider: _overridingBoxTransactionConnectionProvider);
             }
             else
             {
@@ -338,7 +341,8 @@ namespace Paramore.Brighter
         /// <param name="externalBusConfiguration"></param>
         /// <param name="outboxSync">The outbox</param>
         /// <param name="subscriptions">Subscriptions for creating Reply queues</param>
-        INeedARequestContext ExternalRPC(ExternalBusConfiguration externalBusConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions);
+        /// <param name="boxTransactionConnectionProvider">The connection provider to use when adding messages to the bus</param>
+        INeedARequestContext ExternalRPC(ExternalBusConfiguration externalBusConfiguration, IAmAnOutbox<Message> outboxSync, IEnumerable<Subscription> subscriptions, IAmABoxTransactionConnectionProvider boxTransactionConnectionProvider = null);
     }
 
     /// <summary>
