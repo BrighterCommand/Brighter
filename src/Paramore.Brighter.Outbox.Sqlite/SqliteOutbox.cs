@@ -151,7 +151,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     if (transactionProvider != null)
                         transactionProvider.Close();
                     else
+#if NETSTANDARD2_0
                         connection.Close();
+#else
+                        await connection.CloseAsync();
+#endif
                 }
             }
         }
