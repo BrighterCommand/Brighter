@@ -57,7 +57,11 @@ namespace Paramore.Brighter.Sqlite
         {
             if (HasOpenTransaction)
             {
+#if NETSTANDARD2_0
+                ((SqliteTransaction)Transaction).Commit();
+#else
                 ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+#endif
                 Transaction = null;
             }
             
@@ -113,7 +117,11 @@ namespace Paramore.Brighter.Sqlite
         {
             if (Connection == null) Connection = await GetConnectionAsync(cancellationToken);
             if (!HasOpenTransaction)
-                Transaction = await Connection.BeginTransactionAsync(cancellationToken);
+#if NETSTANDARD2_0
+                ((SqliteTransaction)Transaction).Commit();
+#else
+                ((SqliteTransaction)Transaction).CommitAsync(cancellationToken);
+#endif         
             return Transaction;
         }
     }
