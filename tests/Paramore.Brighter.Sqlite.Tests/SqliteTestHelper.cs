@@ -28,33 +28,35 @@ namespace Paramore.Brighter.Sqlite.Tests
 
         public void SetupCommandDb()
         {
-            _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(InboxTableName));
+            connectionStringPath = GetUniqueTestDbPathAndCreateDir();
+            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
+            CreateDatabaseWithTable(ConnectionString, SqliteInboxBuilder.GetDDL(TableName));
         }
 
         public void SetupMessageDb()
         {
-            _connectionStringPath = GetUniqueTestDbPathAndCreateDir();
-            ConnectionString = $"DataSource=\"{_connectionStringPath}\"";
-            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(OutboxTableName, hasBinaryMessagePayload: _binaryMessagePayload));
+            connectionStringPath = GetUniqueTestDbPathAndCreateDir();
+            ConnectionString = $"DataSource=\"{connectionStringPath}\"";
+            CreateDatabaseWithTable(ConnectionString, SqliteOutboxBuilder.GetDDL(TableName_Messages));
         }
 
         private string GetUniqueTestDbPathAndCreateDir()
         {
             var testRootPath = Directory.GetCurrentDirectory();
             var guidInPath = Guid.NewGuid().ToString();
-            _connectionStringPathDir = Path.Combine(Path.Combine(Path.Combine(testRootPath, "bin"), "TestResults"), guidInPath);
-            Directory.CreateDirectory(_connectionStringPathDir);
-            return Path.Combine(_connectionStringPathDir, $"test{guidInPath}.db");
+            connectionStringPathDir = Path.Combine(Path.Combine(Path.Combine(testRootPath, "bin"), "TestResults"), guidInPath);
+            Directory.CreateDirectory(connectionStringPathDir);
+            return Path.Combine(connectionStringPathDir, $"test{guidInPath}.db");
         }
 
-        public void CleanUpDb()
+        public async Task CleanUpDbAsync()
         {
             try
             {
-                File.Delete(_connectionStringPath);
-                Directory.Delete(_connectionStringPathDir, true);
+                //add 1 MS delay to allow the file to be released
+                await Task.Delay(1);
+                File.Delete(connectionStringPath);
+                Directory.Delete(connectionStringPathDir, true);
             }
             catch (Exception e)
             {                

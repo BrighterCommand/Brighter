@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
-    public class SqliteOutboxBulkGetAsyncTests :IDisposable
+    public class SqliteOutboxBulkGetAsyncTests :IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly string _Topic1 = "test_topic";
@@ -57,15 +57,17 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _messages.Should().Contain(m => m.Id == _message2.Id);
 
             await _sqlOutbox.MarkDispatchedAsync(_messages.Select(m => m.Id), DateTime.UtcNow);
+            
+            await Task.Delay(100);
 
             var undispatchedMessages = await _sqlOutbox.OutstandingMessagesAsync(0);
 
             undispatchedMessages.Count().Should().Be(2);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }

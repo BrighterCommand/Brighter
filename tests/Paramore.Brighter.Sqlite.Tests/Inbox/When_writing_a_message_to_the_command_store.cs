@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Sqlite.Tests.TestDoubles;
@@ -31,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Inbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqliteInboxAddMessageTests : IDisposable
+    public class SqliteInboxAddMessageTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteInbox _sqlInbox;
@@ -63,9 +64,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             AssertionExtensions.Should(_storedCommand.Id).Be(_raisedCommand.Id);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+           await _sqliteTestHelper.CleanUpDbAsync(); 
         }
     }
 }
