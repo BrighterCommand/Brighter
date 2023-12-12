@@ -356,7 +356,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             if (externalBusType == ExternalBusType.None)
                 return messagingBuilder.NoExternalBus();
-            else if (externalBusType == ExternalBusType.FireAndForget)
+            
+            if (externalBusType == ExternalBusType.FireAndForget)
                 return messagingBuilder.ExternalBus(
                     new ExternalBusConfiguration(
                         producerRegistry, 
@@ -366,8 +367,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         transformerFactory: transformerFactory),
                     outbox,
                     overridingConnectionProvider);
-            else if (externalBusType == ExternalBusType.RPC)
-            {
+
+            if (externalBusType == ExternalBusType.RPC)
                 return messagingBuilder.ExternalRPC(
                     new ExternalBusConfiguration(
                         producerRegistry,
@@ -375,8 +376,8 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                         responseChannelFactory: options.ChannelFactory,
                         useInbox: inboxConfiguration),
                     outbox,
-                    useRequestResponse.ReplyQueueSubscriptions);
-            }
+                    useRequestResponse.ReplyQueueSubscriptions,
+                    overridingConnectionProvider);
 
             throw new ArgumentOutOfRangeException("The external bus type requested was not understood");
         }
