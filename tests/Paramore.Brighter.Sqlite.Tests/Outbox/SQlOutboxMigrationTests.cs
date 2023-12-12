@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
@@ -32,7 +33,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SQlOutboxMigrationTests : IDisposable
+    public class SQlOutboxMigrationTests : IAsyncDisposable
     {
         private readonly SqliteOutboxSync _sqlOutboxSync;
         private readonly Message _message;
@@ -94,9 +95,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Header.Bag.Keys.Should().BeEmpty();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }

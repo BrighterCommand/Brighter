@@ -34,7 +34,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqlOutboxWritngMessagesAsyncTests : IDisposable
+    public class SqlOutboxWritngMessagesAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteOutboxSync _sSqlOutboxSync;
@@ -97,20 +97,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             return new List<Message> { _messageEarliest, _message2, _messageLatest };
         }
 
-        private void Release()
+        public async ValueTask DisposeAsync()
         {
-           _sqliteTestHelper.CleanUpDb();
-        }
-        
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            Release();
-        }
-
-        ~SqlOutboxWritngMessagesAsyncTests()
-        {
-            Release();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }
