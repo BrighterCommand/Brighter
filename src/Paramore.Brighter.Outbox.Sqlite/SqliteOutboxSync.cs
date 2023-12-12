@@ -142,7 +142,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     if (!connectionProvider.IsSharedConnection)
                         connection.Dispose();
                     else if (!connectionProvider.HasOpenTransaction)
-                        await connection.CloseAsync();
+#if NETSTANDARD2_0
+                        connection.Close();
+#else
+                    await connection.CloseAsync();
+#endif
                 }
             }
         }
