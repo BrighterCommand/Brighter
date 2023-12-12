@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -262,7 +263,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     ParameterName = $"@{prefix}Timestamp",
                     SqliteType = SqliteType.Text,
-                    Value = message.Header.TimeStamp.ToString("s")
+                    Value = message.Header.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
                 },
                 new SqliteParameter
                 {
