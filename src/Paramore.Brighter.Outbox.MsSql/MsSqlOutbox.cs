@@ -338,6 +338,19 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return messages;
         }
+
+        protected override async Task<int> MapOutstandingCountAsync(SqlDataReader dr, CancellationToken cancellationToken)
+        {
+            int outstadingMessages = -1;
+            if(await dr.ReadAsync(cancellationToken))
+            {
+                outstadingMessages = dr.GetInt32(0);
+            }
+            dr.Close();
+           
+            return outstadingMessages;
+        }
+
         #endregion
 
         private Message MapAMessage(SqlDataReader dr)
