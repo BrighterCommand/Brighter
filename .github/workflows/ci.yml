@@ -296,7 +296,7 @@ jobs:
           - 11433:1433
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: Password1!
+          SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v4
       - name: Setup dotnet 6

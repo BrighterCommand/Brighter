@@ -339,6 +339,13 @@ namespace Paramore.Brighter
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            return ReadFromStoreAsync(
+                connection => CreateRemainingOutstandingCommand(connection),
+                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+        }
+
         #endregion
 
         protected abstract void WriteToStore(IAmABoxTransactionConnectionProvider transactionConnectionProvider,
@@ -375,6 +382,9 @@ namespace Paramore.Brighter
             int pageSize, int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedOutstandingCommand), 0,
                 CreatePagedOutstandingParameters(milliSecondsSinceAdded, pageSize, pageNumber));
+
+        private TCommand CreateRemainingOutstandingCommand(TConnection connection)
+            => CreateCommand(connection, GenerateSqlText(_queries.GetNumberOfOutstandingMessagesCommand), 0);
 
         private TCommand InitAddDbCommand(TConnection connection, TParameter[] parameters)
             => CreateCommand(connection, GenerateSqlText(_queries.AddCommand), 0, parameters);
@@ -445,8 +455,11 @@ namespace Paramore.Brighter
 
         protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(TDataReader dr,
             CancellationToken cancellationToken);
-        
-        
+
+        protected abstract Task<int> MapOutstandingCountAsync(TDataReader dr,
+            CancellationToken cancellationToken);
+
+
         private (string inClause, TParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
             var paramNames = messageIds.Select((s, i) => "@p" + i).ToArray();

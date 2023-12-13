@@ -158,5 +158,12 @@ namespace Paramore.Brighter
             int hoursDispatchedSince,
             int pageSize = 100,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the number of un dispatched messages in the outbox
+        /// </summary>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Number of messages in the outbox that have yet to be dispatched</returns>
+        Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken);
     }
 }
