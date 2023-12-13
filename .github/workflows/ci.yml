@@ -33,8 +33,8 @@ jobs:
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -87,8 +87,8 @@ jobs:
     
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -116,8 +116,8 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -146,8 +146,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -209,8 +209,8 @@ jobs:
       run: docker ps -a
     - name: Checkout code
       uses: actions/checkout@v4
-    - name: Setup dotnet 6
-      uses: actions/setup-dotnet@v3
+    - name: Setup dotnet 8
+      uses: actions/setup-dotnet@v4
       with:
         dotnet-version: |
           6.0.x
@@ -239,8 +239,8 @@ jobs:
           --health-retries 5
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -273,8 +273,8 @@ jobs:
      
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -299,8 +299,8 @@ jobs:
           SA_PASSWORD: Password123!
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -327,8 +327,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -358,8 +358,8 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -381,8 +381,8 @@ jobs:
       
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -408,8 +408,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
@@ -425,8 +425,8 @@ jobs:
     needs: [build]
     steps:
       - uses: actions/checkout@v4
-      - name: Setup dotnet 6
-        uses: actions/setup-dotnet@v3
+      - name: Setup dotnet 8
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: |
             6.0.x
