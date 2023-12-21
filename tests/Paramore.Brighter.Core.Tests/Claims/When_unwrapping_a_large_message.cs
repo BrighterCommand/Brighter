@@ -13,8 +13,8 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class LargeMessagePaylodUnwrapTests
 {
-    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
-    private readonly InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
+    private readonly TransformPipelineBuilder _pipelineBuilder;
+    private readonly InMemoryStorageProvider _inMemoryStorageProvider;
 
     public LargeMessagePaylodUnwrapTests()
     {
@@ -26,14 +26,14 @@ public class LargeMessagePaylodUnwrapTests
             null);
         mapperRegistry.Register<MyLargeCommand, MyLargeCommandMessageMapper>();
 
-        _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
-        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync));
+        _inMemoryStorageProvider = new InMemoryStorageProvider();
+        var messageTransformerFactory = new SimpleMessageTransformerFactory(_ => new ClaimCheckTransformer(_inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]
-    public async Task When_unwrapping_a_large_message()
+    public void When_unwrapping_a_large_message()
     {
         //arrange
         //store our luggage and get the claim check
@@ -43,10 +43,10 @@ public class LargeMessagePaylodUnwrapTests
         
         var stream = new MemoryStream();                                                                               
         var writer = new StreamWriter(stream);
-        await writer.WriteAsync(commandAsJson);
-        await writer.FlushAsync();
+        writer.Write(commandAsJson);
+        writer.Flush();
         stream.Position = 0;
-        var id = await _inMemoryStorageProviderAsync.StoreAsync(stream);
+        var id = _inMemoryStorageProvider.Store(stream);
 
         //pretend we ran through the claim check
         myCommand.Value = $"Claim Check {id}";
@@ -57,15 +57,15 @@ public class LargeMessagePaylodUnwrapTests
             new MessageBody(JsonSerializer.Serialize(myCommand, new JsonSerializerOptions(JsonSerializerDefaults.General)))
         );
 
-        message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK] = id;
+        message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK] = id;
 
         //act
         var transformPipeline = _pipelineBuilder.BuildUnwrapPipeline<MyLargeCommand>();
-        var transformedMessage = await transformPipeline.UnwrapAsync(message);
+        var transformedMessage = transformPipeline.Unwrap(message);
         
         //assert
         //contents should be from storage
         transformedMessage.Value.Should().Be(contents);
-        (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeFalse();
+        _inMemoryStorageProvider.HasClaim(id).Should().BeFalse();
     }
 }

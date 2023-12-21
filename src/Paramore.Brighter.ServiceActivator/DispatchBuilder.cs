@@ -68,11 +68,13 @@ namespace Paramore.Brighter.ServiceActivator
         /// The message mappers used to map between commands, events, and on-the-wire handlers.
         /// </summary>
         /// <param name="theMessageMapperRegistry">The message mapper registry.</param>
-        /// <param name="messageTransformerFactory"></param>
+        /// <param name="messageTransformerFactory">A factory to produce transformers for a message mapper</param>
+        /// <param name="messageTransformFactoryAsync">A factory to produce async transformers for a message mapper</param>
         /// <returns>INeedAChannelFactory.</returns>
         public INeedAChannelFactory MessageMappers(
             IAmAMessageMapperRegistry theMessageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory)
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync  messageTransformFactoryAsync)
         {
             _messageMapperRegistry = theMessageMapperRegistry;
             _messageTransformerFactory = messageTransformerFactory;
@@ -136,6 +138,8 @@ namespace Paramore.Brighter.ServiceActivator
         {
             return new Dispatcher(_commandProcessorFactory, _messageMapperRegistry, _subscriptions, _messageTransformerFactory);
         }
+
+
     }
 
     #region Progressive Interfaces
@@ -163,10 +167,11 @@ namespace Paramore.Brighter.ServiceActivator
         /// </summary>
         /// <param name="messageMapperRegistry">The message mapper registry.</param>
         /// <param name="messageTransformerFactory">The factory for creating transforms</param>
+        /// <param name="messageTransformFactoryAsync">The factory for creating async transforms</param>
         /// <returns>INeedAChannelFactory.</returns>
-        INeedAChannelFactory MessageMappers(
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory);
+        INeedAChannelFactory MessageMappers(IAmAMessageMapperRegistry messageMapperRegistry,
+            IAmAMessageTransformerFactory messageTransformerFactory,
+            IAmAMessageTransformerFactoryAsync  messageTransformFactoryAsync);
     }
     /// <summary>
     /// Interface INeedAChannelFactory

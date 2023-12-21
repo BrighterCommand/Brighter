@@ -10,10 +10,10 @@ namespace Paramore.Brighter.Core.Tests.Claims;
 
 public class LargeMessagePayloadWrapTests
 {
-    private WrapPipelineAsync<MyLargeCommand> _transformPipeline;
-    private readonly TransformPipelineBuilderAsync _pipelineBuilder;
+    private WrapPipeline<MyLargeCommand> _transformPipeline;
+    private readonly TransformPipelineBuilder _pipelineBuilder;
     private readonly MyLargeCommand _myCommand;
-    private InMemoryStorageProviderAsync _inMemoryStorageProviderAsync;
+    private InMemoryStorageProvider _inMemoryStorageProvider;
 
     public LargeMessagePayloadWrapTests()
     {
@@ -27,25 +27,25 @@ public class LargeMessagePayloadWrapTests
 
         _myCommand = new MyLargeCommand(6000);
 
-        _inMemoryStorageProviderAsync = new InMemoryStorageProviderAsync();
-        var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(
-            _ => new ClaimCheckTransformer(_inMemoryStorageProviderAsync));
+        _inMemoryStorageProvider = new InMemoryStorageProvider();
+        var messageTransformerFactory = new SimpleMessageTransformerFactory(
+            _ => new ClaimCheckTransformer(_inMemoryStorageProvider));
 
-        _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
+        _pipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
     }
     
     [Fact]
-    public async Task When_wrapping_a_large_message()
+    public void When_wrapping_a_large_message()
     {
         //act
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyLargeCommand>();
-        var message = await _transformPipeline.WrapAsync(_myCommand);
+        var message = _transformPipeline.Wrap(_myCommand);
         
         //assert
-        message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();
-        var id = (string) message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
+        message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
+        var id = (string) message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
         message.Body.Value.Should().Be($"Claim Check {id}");
-        (await _inMemoryStorageProviderAsync.HasClaimAsync(id)).Should().BeTrue();
+        _inMemoryStorageProvider.HasClaim(id).Should().BeTrue();
 
     }
 }

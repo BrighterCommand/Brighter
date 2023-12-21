@@ -148,7 +148,7 @@ namespace Paramore.Brighter
         /// <param name="requestContextFactory">The request context factory.</param>
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
-        /// <param name="mapperRegistry">The mapper registry.</param>
+        /// <param name="mapperRegistry">The mapper registry; it should also implement IAmAMessageMapperRegistryAsync</param>
         /// <param name="mapperRegistryAsync">The async mapper registry</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
@@ -163,7 +163,6 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
             IAmAMessageMapperRegistry mapperRegistry = null,
-            IAmAMessageMapperRegistryAsync mapperRegistryAsync = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmAMessageTransformerFactory messageTransformerFactory = null,
@@ -176,10 +175,12 @@ namespace Paramore.Brighter
             _responseChannelFactory = responseChannelFactory;
             _replySubscriptions = replySubscriptions;
 
-            if (mapperRegistry == null && mapperRegistryAsync == null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry");
-            if (mapperRegistry != null) _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            if (mapperRegistryAsync != null) _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+            if (mapperRegistry == null) 
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (!(mapperRegistry is IAmAMessageMapperRegistryAsync mapperRegistryAsync))
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
 
             InitExtServiceBus(bus); 
         }
@@ -192,7 +193,6 @@ namespace Paramore.Brighter
         /// <param name="policyRegistry">The policy registry.</param>
         /// <param name="mapperRegistry">The mapper registry.</param>
         /// <param name="bus">The external service bus that we want to send messages over</param>
-        /// <param name="mapperRegistryAsync">The mapper registry.</param>
         /// <param name="featureSwitchRegistry">The feature switch config provider.</param>
         /// <param name="inboxConfiguration">Do we want to insert an inbox handler into pipelines without the attribute. Null (default = no), yes = how to configure</param>
         /// <param name="messageTransformerFactory">The factory used to create a transformer pipeline for a message mapper</param>
@@ -203,7 +203,6 @@ namespace Paramore.Brighter
             IPolicyRegistry<string> policyRegistry,
             IAmAnExternalBusService bus,
             IAmAMessageMapperRegistry mapperRegistry = null,
-            IAmAMessageMapperRegistryAsync mapperRegistryAsync = null,
             IAmAFeatureSwitchRegistry featureSwitchRegistry = null,
             InboxConfiguration inboxConfiguration = null,
             IAmAMessageTransformerFactory messageTransformerFactory = null,
@@ -216,11 +215,13 @@ namespace Paramore.Brighter
             _inboxConfiguration = inboxConfiguration;
             _replySubscriptions = replySubscriptions;
             
-            if (mapperRegistry == null && mapperRegistryAsync == null) 
-                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry");
-            if (mapperRegistry != null) _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
-            if (mapperRegistryAsync != null) _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
-
+            if (mapperRegistry == null) 
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistry");
+            if (!(mapperRegistry is IAmAMessageMapperRegistryAsync mapperRegistryAsync))
+                throw new ConfigurationException("A Command Processor with an external bus must have a message mapper registry that implements IAmAMessageMapperRegistryAsync");
+            _transformPipelineBuilder = new TransformPipelineBuilder(mapperRegistry, messageTransformerFactory);
+            _transformPipelineBuilderAsync = new TransformPipelineBuilderAsync(mapperRegistryAsync, messageTransformerFactoryAsync);
+            
             InitExtServiceBus(bus); 
         }
 
@@ -526,22 +527,7 @@ namespace Paramore.Brighter
             if (!bus.HasOutbox())
                 throw new InvalidOperationException("No outbox defined.");
 
-            Message message;
-            if (_transformPipelineBuilder.HasPipeline<TRequest>())
-            {
-                message = _transformPipelineBuilder.BuildWrapPipeline<TRequest>().Wrap(request);
-
-            } 
-            else if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
-            {
-                message = _transformPipelineBuilderAsync.BuildWrapPipeline<TRequest>().WrapAsync(request)
-                    .GetAwaiter()
-                    .GetResult();
-            }
-            else
-            {
-                throw new InvalidOperationException("No message mapper defined for request");
-            }
+            var message = MapMessage<TRequest, TTransaction>(request, new CancellationToken()).GetAwaiter().GetResult();
 
             AddTelemetryToMessage<TRequest>(message);
 
@@ -594,7 +580,7 @@ namespace Paramore.Brighter
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = MapMessages(batch.Key, batch);
+                var messages = MapMessages(batch.Key, batch, new CancellationToken()).GetAwaiter().GetResult();
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -661,24 +647,7 @@ namespace Paramore.Brighter
             if (!bus.HasAsyncOutbox())
                 throw new InvalidOperationException("No async outbox defined.");
 
-            Message message;
-            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
-            {
-                message = await _transformPipelineBuilderAsync
-                    .BuildWrapPipeline<TRequest>()
-                    .WrapAsync(request, cancellationToken);
-            }
-            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
-            {
-                message = _transformPipelineBuilder
-                    .BuildWrapPipeline<TRequest>()
-                    .Wrap(request);
-
-            } 
-            else
-            {
-                throw new InvalidOperationException("No message mapper defined for request");
-            }
+            Message message = await MapMessage<TRequest, TTransaction>(request, cancellationToken);
 
             AddTelemetryToMessage<TRequest>(message);
 
@@ -687,8 +656,10 @@ namespace Paramore.Brighter
 
             return message.Id;
         }
-        
-               /// <summary>
+
+ 
+
+        /// <summary>
         /// Adds a message into the outbox, and returns the id of the saved message.
         /// Intended for use with the Outbox pattern: http://gistlabs.com/2014/05/the-outbox/ normally you include the
         /// call to DepositPostBox within the scope of the transaction to write corresponding entity state to your
@@ -743,7 +714,7 @@ namespace Paramore.Brighter
 
             foreach (var batch in SplitRequestBatchIntoTypes(requests))
             {
-                var messages = await MapMessagesAsync(batch.Key, batch.ToArray(), cancellationToken);
+                var messages = await MapMessages(batch.Key, batch.ToArray(), cancellationToken);
 
                 s_logger.LogInformation("Save requests: {RequestType} {AmountOfMessages}", batch.Key, messages.Count());
 
@@ -1003,23 +974,57 @@ namespace Paramore.Brighter
                     return true;
             }
         }
-
-        private List<Message> MapMessages(Type requestType, IEnumerable<IRequest> requests)
+        
+        private async Task<Message> MapMessage<TRequest, TTransaction>(TRequest request, CancellationToken cancellationToken)
+            where TRequest : class, IRequest
         {
-            return (List<Message>)GetType()
-                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
-                .MakeGenericMethod(requestType)
-                .Invoke(this, new[] { requests });
+            Message message;
+            if (_transformPipelineBuilderAsync.HasPipeline<TRequest>())
+            {
+                message = await _transformPipelineBuilderAsync
+                    .BuildWrapPipeline<TRequest>()
+                    .WrapAsync(request, cancellationToken);
+            }
+            else if (_transformPipelineBuilder.HasPipeline<TRequest>())
+            {
+                message = _transformPipelineBuilder
+                    .BuildWrapPipeline<TRequest>()
+                    .Wrap(request);
+
+            } 
+            else
+            {
+                throw new ArgumentOutOfRangeException("No message mapper defined for request");
+            }
+
+            return message;
         }
 
-        private Task<List<Message>> MapMessagesAsync(Type requestType, IEnumerable<IRequest> requests,
+        private Task<List<Message>> MapMessages(Type requestType, IEnumerable<IRequest> requests,
             CancellationToken cancellationToken)
         {
             var parameters = new object[] { requests, cancellationToken };
-            return (Task<List<Message>>)GetType()
-                .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
+
+            var hasAsyncPipeline = (bool) typeof(TransformPipelineBuilderAsync)
+                    .GetMethod(nameof(TransformPipelineBuilderAsync.HasPipeline),
+                        BindingFlags.Instance | BindingFlags.Public)
                 .MakeGenericMethod(requestType)
-                .Invoke(this, parameters);
+                .Invoke(this._transformPipelineBuilderAsync, null);
+            
+            if (hasAsyncPipeline)
+            {
+                return (Task<List<Message>>) GetType()
+                    .GetMethod(nameof(BulkMapMessagesAsync), BindingFlags.Instance | BindingFlags.NonPublic)
+                    .MakeGenericMethod(requestType)
+                    .Invoke(this, parameters); 
+            }
+            
+            var tcs = new TaskCompletionSource<List<Message>>();
+            tcs.SetResult((List<Message>)GetType()
+                .GetMethod(nameof(BulkMapMessages), BindingFlags.Instance | BindingFlags.NonPublic)
+                .MakeGenericMethod(requestType)                                                             
+                .Invoke(this, new[] { requests }));
+            return tcs.Task;
         }
         
         private IEnumerable<IGrouping<Type, T>> SplitRequestBatchIntoTypes<T>(IEnumerable<T> requests)

@@ -16,10 +16,10 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
          TransformPipelineBuilder.ClearPipelineCache();
 
          var mapperRegistry = new MessageMapperRegistry(
-             new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
-             null
+             null,
+             new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync())
          );
-         mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
+         mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
 
         var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync((_ => new MySimpleTransformAsync()));
 
@@ -34,7 +34,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         
         //assert
-        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper|MySimpleTransformAsync");
+        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync|MySimpleTransformAsync");
     }
 
     private TransformPipelineTracer TraceFilters()

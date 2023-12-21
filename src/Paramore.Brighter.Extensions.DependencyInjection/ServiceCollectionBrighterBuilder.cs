@@ -140,20 +140,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             if (assemblies.Length == 0)
                 throw new ArgumentException("Value cannot be an empty collection.", nameof(assemblies));
 
-            var mappers =
-                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
-                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
-                from i in ti.ImplementedInterfaces
-                where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
-                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
-
-            foreach (var mapper in mappers)
-            {
-                _mapperRegistry.Add(mapper.RequestType, mapper.HandlerType);
-            }
+            RegisterMappersFromAssemblies(assemblies);
+            RegisterAsyncMappersFromAssemblies(assemblies);
 
             return this;
         }
+
 
         /// <summary>
         /// Register handlers with the built in subscriber registry
@@ -222,5 +214,36 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 _serviceCollectionSubscriberRegistry.Add(subscriber.RequestType, subscriber.HandlerType);
             }
         }
+        
+        private void RegisterMappersFromAssemblies(Assembly[] assemblies)
+        {
+            var mappers =
+                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                from i in ti.ImplementedInterfaces
+                where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapper<>)
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+
+            foreach (var mapper in mappers)
+            {
+                _mapperRegistry.Add(mapper.RequestType, mapper.HandlerType);
+            }
+        }
+        
+        private void RegisterAsyncMappersFromAssemblies(Assembly[] assemblies)
+        {
+            var mappers =
+                from ti in assemblies.SelectMany(a => a.DefinedTypes).Distinct()
+                where ti.IsClass && !ti.IsAbstract && !ti.IsInterface
+                from i in ti.ImplementedInterfaces
+                where i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IAmAMessageMapperAsync<>)
+                select new { RequestType = i.GenericTypeArguments.First(), HandlerType = ti.AsType() };
+
+            foreach (var mapper in mappers)
+            {
+                _mapperRegistry.AddAsync(mapper.RequestType, mapper.HandlerType);
+            }
+        }
+
     }
 }

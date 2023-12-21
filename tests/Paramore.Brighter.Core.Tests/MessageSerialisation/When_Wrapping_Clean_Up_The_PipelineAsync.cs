@@ -23,7 +23,7 @@ public class AsyncMessageWrapCleanupTests
         var mapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync()));
-        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
+        mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
 
         _myCommand = new MyTransformableCommand();
         

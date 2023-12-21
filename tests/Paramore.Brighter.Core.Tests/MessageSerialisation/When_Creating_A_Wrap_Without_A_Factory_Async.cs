@@ -21,7 +21,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         var mapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync()));
-        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
+        mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
 
         _myCommand = new MyTransformableCommand();
 
@@ -35,7 +35,7 @@ namespace Paramore.Brighter.Core.Tests.MessageSerialisation;
         _transformPipeline = _pipelineBuilder.BuildWrapPipeline<MyTransformableCommand>();
         
         // If no factory we default to just them mapper
-        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapper");
+        TraceFilters().ToString().Should().Be("MyTransformableCommandMessageMapperAsync");
 
         //wrap should just do message mapper                                          
         var message = await _transformPipeline.WrapAsync(_myCommand);

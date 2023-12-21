@@ -359,9 +359,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 null
                 );
 
-            foreach (var messageMapper in serviceCollectionMessageMapperRegistry)
+            foreach (var messageMapper in serviceCollectionMessageMapperRegistry.Mappers)
             {
                 messageMapperRegistry.Register(messageMapper.Key, messageMapper.Value);
+            }
+            
+            foreach (var messageMapper in serviceCollectionMessageMapperRegistry.AsyncMappers)
+            {
+                messageMapperRegistry.RegisterAsync(messageMapper.Key, messageMapper.Value);
             }
 
             return messageMapperRegistry;
@@ -422,6 +427,18 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         public static ServiceProviderTransformerFactory TransformFactory(IServiceProvider provider)
         {
             return new ServiceProviderTransformerFactory(provider);
+        }
+        
+        /// <summary>
+        /// Creates transforms. Normally you don't need to call this, it is called by the builder for Brighter or
+        /// the Service Activator
+        /// Visibility is required for use from both
+        /// </summary>
+        /// <param name="provider">The IoC container to build the transform factory over</param>
+        /// <returns></returns>
+        public static ServiceProviderTransformerFactoryAsync TransformFactoryAsync(IServiceProvider provider)
+        {
+            return new ServiceProviderTransformerFactoryAsync(provider);
         }
     }
 }

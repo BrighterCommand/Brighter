@@ -19,9 +19,8 @@ public class MessageUnwrapRequestMissingMapperTests
         TransformPipelineBuilder.ClearPipelineCache();
 
         var mapperRegistry = new MessageMapperRegistry(
-            new SimpleMessageMapperFactory(_ => null),
+            new SimpleMessageMapperFactory(_ => new MyTransformableCommandMessageMapper()),
             null);
-        mapperRegistry.Register<MyTransformableCommand, MyTransformableCommandMessageMapper>();
 
         MyTransformableCommand myCommand = new();
         

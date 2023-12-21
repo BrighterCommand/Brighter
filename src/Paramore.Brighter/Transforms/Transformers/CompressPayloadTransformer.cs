@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Transforms.Transformers
 {
-    public class CompressPayloadTransformer : IAmAMessageTransformAsync
+    public class CompressPayloadTransformer : IAmAMessageTransform
     {
         private CompressionMethod _compressionMethod = CompressionMethod.GZip;
         private CompressionLevel _compressionLevel = CompressionLevel.Optimal;
@@ -40,7 +40,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             _compressionMethod = (CompressionMethod)initializerList[0];
         }
 
-        public async Task<Message> WrapAsync(Message message, CancellationToken cancellationToken = default)
+        public Message Wrap(Message message)
         {
             var bytes = message.Body.Bytes;
 
@@ -51,7 +51,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             using var output = new MemoryStream();
             
             (Stream compressionStream, string mimeType) = CreateCompressionStream(output);
-            await input.CopyToAsync(compressionStream);
+            input.CopyTo(compressionStream);
             compressionStream.Close();
 
             message.Header.ContentType = mimeType;
@@ -62,7 +62,7 @@ namespace Paramore.Brighter.Transforms.Transformers
         }
 
 
-        public async Task<Message> UnwrapAsync(Message message, CancellationToken cancellationToken = default)
+        public Message Unwrap(Message message)
         {
             if (!IsCompressed(message)) return message;
             
@@ -71,7 +71,7 @@ namespace Paramore.Brighter.Transforms.Transformers
             using var output = new MemoryStream();
             
             Stream deCompressionStream = CreateDecompressionStream(input);
-            await deCompressionStream.CopyToAsync(output);
+            deCompressionStream.CopyTo(output);
             deCompressionStream.Close();
 
             string contentType = (string)message.Header.Bag[ORIGINAL_CONTENTTYPE_HEADER];

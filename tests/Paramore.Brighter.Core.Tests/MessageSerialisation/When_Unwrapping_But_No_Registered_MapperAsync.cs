@@ -20,8 +20,7 @@ public class AsyncMessageUnwrapRequestMissingMapperTests
 
         var mapperRegistry = new MessageMapperRegistry(
             null,
-            new SimpleMessageMapperFactoryAsync(_ => null));
-        mapperRegistry.RegisterAsync<MyTransformableCommand, MyTransformableCommandMessageMapperAsync>();
+            new SimpleMessageMapperFactoryAsync(_ => new MyTransformableCommandMessageMapperAsync()));
 
         MyTransformableCommand myCommand = new();
         

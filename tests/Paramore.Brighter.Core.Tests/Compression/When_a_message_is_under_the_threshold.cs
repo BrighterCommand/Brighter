@@ -29,9 +29,9 @@ public class SmallPayloadNotCompressedTests
     
     
     [Fact]
-    public async Task When_a_message_is_under_the_threshold()
+    public void When_a_message_is_under_the_threshold()
     {
-        var uncompressedMessage = await _transformer.WrapAsync(_message);
+        var uncompressedMessage = _transformer.Wrap(_message);
 
         //look for gzip in the bytes
         uncompressedMessage.Body.ContentType.Should().Be(MessageBody.APPLICATION_JSON);

@@ -25,6 +25,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Paramore.Brighter
 {
@@ -35,7 +36,7 @@ namespace Paramore.Brighter
     /// registered via <see cref="IAmAMessageMapperRegistry"/>
     /// This is a default implementation of<see cref="IAmAMessageMapperRegistry"/> which is suitable for most usages, the interface is provided mainly for testing
     /// </summary>
-    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync, IEnumerable<KeyValuePair<Type, Type>>
+    public class MessageMapperRegistry : IAmAMessageMapperRegistry, IAmAMessageMapperRegistryAsync 
     {
         private readonly IAmAMessageMapperFactory _messageMapperFactory;
         private readonly IAmAMessageMapperFactoryAsync _messageMapperFactoryAsync;
@@ -83,7 +84,7 @@ namespace Paramore.Brighter
         {
             if (_asyncMessageMappers.ContainsKey(typeof(TRequest)))
             {
-                var messageMapperType = _messageMappers[typeof(TRequest)];
+                var messageMapperType = _asyncMessageMappers[typeof(TRequest)];
                 return (IAmAMessageMapperAsync<TRequest>)_messageMapperFactoryAsync.Create(messageMapperType);
             }
             else
@@ -148,24 +149,5 @@ namespace Paramore.Brighter
 
             _asyncMessageMappers.Add(request, mapper);
         }
-
-        /// <summary>
-        /// Returns an enumerator that iterates through the collection.
-        /// </summary>
-        /// <returns>A <see cref="T:System.Collections.Generic.IEnumerator`1" /> that can be used to iterate through the collection.</returns>
-        public IEnumerator<KeyValuePair<Type, Type>> GetEnumerator()
-        {
-            return _messageMappers.GetEnumerator();
-        }
-
-        /// <summary>
-        /// Returns an enumerator that iterates through a collection.
-        /// </summary>
-        /// <returns>An <see cref="T:System.Collections.IEnumerator" /> object that can be used to iterate through the collection.</returns>
-        IEnumerator IEnumerable.GetEnumerator()
-        {
-            return GetEnumerator();
-        }
-     
     }
 }

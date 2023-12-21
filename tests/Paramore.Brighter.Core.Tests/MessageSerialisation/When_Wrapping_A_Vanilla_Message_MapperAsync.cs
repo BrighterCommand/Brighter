@@ -21,7 +21,7 @@ public class AsyncVanillaMessageWrapRequestTests
         var mapperRegistry = new MessageMapperRegistry(
             null,
             new SimpleMessageMapperFactoryAsync(_ => new MyVanillaCommandMessageMapperAsync()));
-        mapperRegistry.Register<MyTransformableCommand, MyVanillaCommandMessageMapper>();
+        mapperRegistry.RegisterAsync<MyTransformableCommand, MyVanillaCommandMessageMapperAsync>();
 
         _myCommand = new MyTransformableCommand();
         

@@ -39,7 +39,7 @@ public class MessageWrapCleanupTests
         _transformPipeline.Dispose();
         
         //assert
-        s_released.Should().Be("|MySimpleTransformAsync");
+        s_released.Should().Be("|MySimpleTransform");
 
     }
     

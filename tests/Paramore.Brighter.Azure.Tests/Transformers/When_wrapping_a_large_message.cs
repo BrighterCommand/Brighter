@@ -42,7 +42,7 @@ public class LargeMessagePayloadWrapTests : IDisposable
 
             _luggageStore = new AzureBlobLuggageStore(_bucketUrl, new AzureCliCredential());
 
-            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformer(_luggageStore));
+            var messageTransformerFactory = new SimpleMessageTransformerFactoryAsync(_ => new ClaimCheckTransformerAsync(_luggageStore));
 
             _pipelineBuilder = new TransformPipelineBuilderAsync(mapperRegistry, messageTransformerFactory);
 
@@ -57,8 +57,8 @@ public class LargeMessagePayloadWrapTests : IDisposable
         var message = _transformPipeline.WrapAsync(_myCommand).Result;
 
         //assert
-        message.Header.Bag.ContainsKey(ClaimCheckTransformer.CLAIM_CHECK).Should().BeTrue();
-        _id = (string)message.Header.Bag[ClaimCheckTransformer.CLAIM_CHECK];
+        message.Header.Bag.ContainsKey(ClaimCheckTransformerAsync.CLAIM_CHECK).Should().BeTrue();
+        _id = (string)message.Header.Bag[ClaimCheckTransformerAsync.CLAIM_CHECK];
         message.Body.Value.Should().Be($"Claim Check {_id}");
             
         (await _luggageStore.HasClaimAsync(_id, CancellationToken.None)).Should().BeTrue();
