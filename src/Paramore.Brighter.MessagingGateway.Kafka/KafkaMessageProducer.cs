@@ -89,6 +89,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
             {
                 BatchNumMessages = publication.BatchNumberMessages,
                 EnableIdempotence = publication.EnableIdempotence,
+                EnableDeliveryReports = true,   //don't change this, we need it for the callback
                 MaxInFlight = publication.MaxInFlightRequestsPerConnection,
                 LingerMs = publication.LingerMs,
                 MessageTimeoutMs = publication.MessageTimeoutMs,
