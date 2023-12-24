@@ -85,8 +85,20 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
 
             };
 
-            _producerConfig = new ProducerConfig(_clientConfig)
+            //We repeat properties because copying them from them to the producer config updates in client config in place
+            _producerConfig = new ProducerConfig()
             {
+                Acks = (Confluent.Kafka.Acks)((int)publication.Replication),
+                BootstrapServers = string.Join(",", configuration.BootStrapServers),
+                ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int)configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation,
+                SslKeyLocation = configuration.SslKeystoreLocation,
                 BatchNumMessages = publication.BatchNumberMessages,
                 EnableIdempotence = publication.EnableIdempotence,
                 EnableDeliveryReports = true,   //don't change this, we need it for the callback

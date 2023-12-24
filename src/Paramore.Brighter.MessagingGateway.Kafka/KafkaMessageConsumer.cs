@@ -134,12 +134,22 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
                 SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
                 SslCaLocation = configuration.SslCaLocation
             };
-            _consumerConfig = new ConsumerConfig(_clientConfig)
+            
+            
+            // We repeat properties because copying them from the ClientConfig modifies the ClientConfig in place 
+            _consumerConfig = new ConsumerConfig()
             {
-                GroupId = groupId,
+                BootstrapServers = string.Join(",", configuration.BootStrapServers), 
                 ClientId = configuration.Name,
+                Debug = configuration.Debug,
+                SaslMechanism = configuration.SaslMechanisms.HasValue ? (Confluent.Kafka.SaslMechanism?)((int)configuration.SaslMechanisms.Value) : null,
+                SaslKerberosPrincipal = configuration.SaslKerberosPrincipal,
+                SaslUsername = configuration.SaslUsername,
+                SaslPassword = configuration.SaslPassword,
+                SecurityProtocol = configuration.SecurityProtocol.HasValue ? (Confluent.Kafka.SecurityProtocol?)((int) configuration.SecurityProtocol.Value) : null,
+                SslCaLocation = configuration.SslCaLocation,
+                GroupId = groupId,
                 AutoOffsetReset = offsetDefault,
-                BootstrapServers = string.Join(",", configuration.BootStrapServers),
                 SessionTimeoutMs = sessionTimeoutMs,
                 MaxPollIntervalMs = maxPollIntervalMs,
                 EnablePartitionEof = true,
