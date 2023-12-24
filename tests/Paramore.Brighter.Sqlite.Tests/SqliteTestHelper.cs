@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading.Tasks;
 using Microsoft.Data.Sqlite;
 using Paramore.Brighter.Inbox.Sqlite;
 using Paramore.Brighter.Outbox.Sqlite;
