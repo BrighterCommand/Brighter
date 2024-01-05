@@ -58,9 +58,10 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
             };
 
-            var msg = new TransformPipelineBuilder(messageMapperRegistry, null)
+            var msg = new TransformPipelineBuilderAsync(messageMapperRegistry, null)
                 .BuildWrapPipeline<MyCommand>()
-                .Wrap(new MyCommand());
+                .WrapAsync(new MyCommand())
+                .Result;
             _channel.Enqueue(msg);
         }
 
