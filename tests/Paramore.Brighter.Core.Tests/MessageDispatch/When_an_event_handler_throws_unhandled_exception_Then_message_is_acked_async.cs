@@ -45,13 +45,14 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpEventProcessingExceptionTestsAsync()
         {
             _commandProcessor = new SpyExceptionCommandProcessor();
+            var commandProcessorProvider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
 
-            _messagePump = new MessagePumpAsync<MyEvent>(_commandProcessor, messageMapperRegistry)
+            _messagePump = new MessagePumpAsync<MyEvent>(commandProcessorProvider, messageMapperRegistry, null)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = _requeueCount
             };

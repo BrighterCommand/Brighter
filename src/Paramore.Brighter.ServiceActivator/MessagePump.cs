@@ -57,23 +57,15 @@ namespace Paramore.Brighter.ServiceActivator
 
         protected readonly IAmACommandProcessorProvider CommandProcessorProvider;
         private int _unacceptableMessageCount = 0;
-        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
 
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
         /// <param name="commandProcessorProvider">Provides a way to grab a command processor correctly scoped</param>
-        /// <param name="messageMapperRegistry">The registry of mappers</param>
-        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        public MessagePump(
-            IAmACommandProcessorProvider commandProcessorProvider,
-            IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null)
+        protected MessagePump(IAmACommandProcessorProvider commandProcessorProvider)
         {
             CommandProcessorProvider = commandProcessorProvider;
-            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
-            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
-        }
+       }
 
         public int TimeoutInMilliseconds { get; set; }
 
@@ -331,27 +323,7 @@ namespace Paramore.Brighter.ServiceActivator
             return Channel.Requeue(message, RequeueDelayInMilliseconds);
         }
 
-        private TRequest TranslateMessage(Message message)
-        {
-            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
-
-            TRequest request;
-
-            try
-            {
-                request = _unwrapPipeline.Unwrap(message);
-            }
-            catch (ConfigurationException)
-            {
-                throw;
-            }
-            catch (Exception exception)
-            {
-                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
-            }
-
-            return request;
-        }
+        protected abstract TRequest TranslateMessage(Message message);
 
         private bool UnacceptableMessageLimitReached()
         {

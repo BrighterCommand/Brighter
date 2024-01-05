@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Threading;
 using Microsoft.Extensions.Logging;
 
@@ -36,6 +37,7 @@ namespace Paramore.Brighter.ServiceActivator
     /// <typeparam name="TRequest"></typeparam>
     public class MessagePumpBlocking<TRequest> : MessagePump<TRequest> where TRequest : class, IRequest
     {
+        private readonly UnwrapPipeline<TRequest> _unwrapPipeline;
         /// <summary>
         /// Constructs a message pump 
         /// </summary>
@@ -45,9 +47,11 @@ namespace Paramore.Brighter.ServiceActivator
         public MessagePumpBlocking(
             IAmACommandProcessorProvider commandProcessorProvider,
             IAmAMessageMapperRegistry messageMapperRegistry, 
-            IAmAMessageTransformerFactory messageTransformerFactory = null) 
-            : base(commandProcessorProvider, messageMapperRegistry, messageTransformerFactory)
+            IAmAMessageTransformerFactory messageTransformerFactory) 
+            : base(commandProcessorProvider)
         {
+            var transformPipelineBuilder = new TransformPipelineBuilder(messageMapperRegistry, messageTransformerFactory);
+            _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
         
         /// <summary>
@@ -85,6 +89,28 @@ namespace Paramore.Brighter.ServiceActivator
                     break;
                 }
             }
+        }
+
+        protected override TRequest TranslateMessage(Message message)
+        {
+            s_logger.LogDebug("MessagePump: Translate message {Id} on thread # {ManagementThreadId}", message.Id, Thread.CurrentThread.ManagedThreadId);
+
+            TRequest request;
+
+            try
+            {
+                request = _unwrapPipeline.Unwrap(message);
+            }
+            catch (ConfigurationException)
+            {
+                throw;
+            }
+            catch (Exception exception)
+            {
+                throw new MessageMappingException($"Failed to map message {message.Id} using pipeline for type {typeof(TRequest).FullName} ", exception);
+            }
+
+            return request;
         }
     }
 }
