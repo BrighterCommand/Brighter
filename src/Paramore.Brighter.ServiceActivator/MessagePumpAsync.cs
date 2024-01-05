@@ -131,8 +131,6 @@ namespace Paramore.Brighter.ServiceActivator
                 
                 future.ContinueWith(delegate { context.OperationCompleted(); }, TaskScheduler.Default);
 
-                context.OperationCompleted();
-
                 // Pump continuations and propagate any exceptions
                 context.RunOnCurrentThread();
 
