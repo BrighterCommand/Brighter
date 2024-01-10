@@ -33,21 +33,21 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpUnacceptableMessageLimitBreachedTests
+    public class AsyncMessagePumpUnacceptableMessageLimitBreachedTests
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
 
-        public MessagePumpUnacceptableMessageLimitBreachedTests()
+        public AsyncMessagePumpUnacceptableMessageLimitBreachedTests()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
             
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
             _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
             {

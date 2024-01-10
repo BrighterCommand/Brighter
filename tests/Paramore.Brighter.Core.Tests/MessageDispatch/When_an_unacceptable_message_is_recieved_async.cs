@@ -23,6 +23,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Text.Json;
 using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
@@ -33,50 +34,45 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpUnacceptableMessageLimitBreachedTests
+    public class AsyncMessagePumpUnacceptableMessageTests
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
 
-        public MessagePumpUnacceptableMessageLimitBreachedTests()
+        public AsyncMessagePumpUnacceptableMessageTests()
         {
             SpyRequeueCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
-            
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpAsync<MyEvent>(provider, messageMapperRegistry, null)
             {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };
 
-            var unacceptableMessage1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
-            var unacceptableMessage2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
-            var unacceptableMessage3 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
-            var unacceptableMessage4 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(""));
+            var myMessage = JsonSerializer.Serialize(new MyEvent());
+            var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));
 
-            _channel.Enqueue(unacceptableMessage1);
-            _channel.Enqueue(unacceptableMessage2);
-            _channel.Enqueue(unacceptableMessage3);
-            _channel.Enqueue(unacceptableMessage4);
+            _channel.Enqueue(unacceptableMessage);
         }
 
         [Fact]
-        public async Task When_An_Unacceptable_Message_Limit_Is_Reached()
+        public async Task When_An_Unacceptable_Message_Is_Recieved()
         {
             var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
+            await Task.Delay(1000);
 
-            await Task.WhenAll(task);
+            var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
+            _channel.Enqueue(quitMessage);
 
-            //should_have_acknowledge_the_3_messages
-            _channel.AcknowledgeCount.Should().Be(3);
-            //should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
+            await Task.WhenAll(new[] { task });
+
+            //should_acknowledge_the_message
+            _channel.AcknowledgeHappened.Should().BeTrue();
         }
     }
 }
-
