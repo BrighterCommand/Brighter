@@ -84,6 +84,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
+            var provider = new CommandProcessorProvider(_commandProcessor);
 
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
             var messageMapperRegistry = new MessageMapperRegistry(
@@ -91,7 +92,7 @@ namespace Paramore.Brighter.RMQ.Tests.MessagingGateway
                 null);
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, null)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };

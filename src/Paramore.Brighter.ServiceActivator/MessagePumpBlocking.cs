@@ -54,19 +54,6 @@ namespace Paramore.Brighter.ServiceActivator
             _unwrapPipeline = transformPipelineBuilder.BuildUnwrapPipeline<TRequest>();
         }
         
-        /// <summary>
-        /// Constructs a message pump 
-        /// </summary>
-        /// <param name="commandProcessor">A command processor</param>
-        /// <param name="messageMapperRegistry">The registry of mappers</param>
-        /// <param name="messageTransformerFactory">The factory that lets us create instances of transforms</param>
-        public MessagePumpBlocking(
-            IAmACommandProcessor commandProcessor, 
-            IAmAMessageMapperRegistry messageMapperRegistry,
-            IAmAMessageTransformerFactory messageTransformerFactory = null) :
-            this(new CommandProcessorProvider(commandProcessor), messageMapperRegistry, messageTransformerFactory)
-        {}
-
         protected override void DispatchRequest(MessageHeader messageHeader, TRequest request)
         {
             s_logger.LogDebug("MessagePump: Dispatching message {Id} from {ChannelName} on thread # {ManagementThreadId}", request.Id, Thread.CurrentThread.ManagedThreadId, Channel.Name);

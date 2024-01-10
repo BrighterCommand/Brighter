@@ -23,57 +23,59 @@ THE SOFTWARE. */
 #endregion
 
 using System;
-using System.Linq;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
+using Paramore.Brighter.ServiceActivator.TestHelpers;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpRetryCommandOnConnectionFailureTests
+    public class MessagePumpToCommandProcessorTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
+        private readonly FakeChannel _channel;
         private readonly SpyCommandProcessor _commandProcessor;
+        private readonly MyEvent _event;
 
-        public MessagePumpRetryCommandOnConnectionFailureTests()
+        public MessagePumpToCommandProcessorTestsAsync()
         {
             _commandProcessor = new SpyCommandProcessor();
             var provider = new CommandProcessorProvider(_commandProcessor);
-            var channel = new FailingChannel { NumberOfRetries = 1 };
-            var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new MyCommandMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyCommand, MyCommandMessageMapper>();
-            _messagePump = new MessagePumpBlocking<MyCommand>(provider, messageMapperRegistry, null)
-            {
-                Channel = channel, TimeoutInMilliseconds = 500, RequeueCount = -1
-            };
-
-            var command = new MyCommand();
-
-            //two command, will be received when subscription restored
-            var message1 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
-            var message2 = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_COMMAND), new MessageBody(JsonSerializer.Serialize(command, JsonSerialisationOptions.Options)));
-            channel.Enqueue(message1);
-            channel.Enqueue(message2);
+            _channel = new FakeChannel();
+            var messagerMapperRegistry = new MessageMapperRegistry(
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messagerMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            //end the pump
+            _messagePump = new MessagePumpAsync<MyEvent>(provider, messagerMapperRegistry, null) 
+                { Channel = _channel, TimeoutInMilliseconds = 5000 };
+
+            _event = new MyEvent();
+
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(_event, JsonSerialisationOptions.Options)));
+            _channel.Enqueue(message);
             var quitMessage = new Message(new MessageHeader(Guid.Empty, "", MessageType.MT_QUIT), new MessageBody(""));
-            channel.Enqueue(quitMessage);
+            _channel.Enqueue(quitMessage);
         }
 
         [Fact]
-        public void When_A_Channel_Failure_Exception_Is_Thrown_For_Command_Should_Retry_Until_Connection_Re_established()
+        public void When_Reading_A_Message_From_A_Channel_Pump_Out_To_Command_Processor()
         {
+            //although run does not return a Task, it will process handler and mapper asynchronously, using our
+            //synchronization context. Messages should retain ordering of callbacks, so our test message should be processed
+            //before we quit
             _messagePump.Run();
 
             //_should_send_the_message_via_the_command_processor
-            _commandProcessor.Commands.Count().Should().Be(2);
-            _commandProcessor.Commands[0].Should().Be(CommandType.Send);
-            _commandProcessor.Commands[1].Should().Be(CommandType.Send);
+            _commandProcessor.Commands[0].Should().Be(CommandType.PublishAsync);
+            //_should_convert_the_message_into_an_event
+            _commandProcessor.Observe<MyEvent>().Should().Be(_event);
+            //_should_dispose_the_input_channel
+            _channel.DisposeHappened.Should().BeTrue();
         }
     }
 }

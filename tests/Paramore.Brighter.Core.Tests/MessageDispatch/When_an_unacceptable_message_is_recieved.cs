@@ -43,14 +43,17 @@ namespace Paramore.Brighter.Core.Tests.MessageDispatch
         public MessagePumpUnacceptableMessageTests()
         {
             _commandProcessor = new SpyRequeueCommandProcessor();
+            var provider = new CommandProcessorProvider(_commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyEventMessageMapper()),
                 null);
             messageMapperRegistry.Register<MyEvent, MyEventMessageMapper>();
             
-            _messagePump = new MessagePumpBlocking<MyEvent>(_commandProcessor, messageMapperRegistry) 
-                { Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3 };
+            _messagePump = new MessagePumpBlocking<MyEvent>(provider, messageMapperRegistry, null)
+            {
+                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
+            };
 
             var myMessage = JsonSerializer.Serialize(new MyEvent());
             var unacceptableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_UNACCEPTABLE), new MessageBody(myMessage));

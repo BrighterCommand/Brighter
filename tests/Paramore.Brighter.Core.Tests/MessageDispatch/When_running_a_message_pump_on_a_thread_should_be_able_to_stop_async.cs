@@ -25,52 +25,58 @@ THE SOFTWARE. */
 using System;
 using System.Threading.Tasks;
 using FluentAssertions;
+using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.Core.Tests.MessageDispatch.TestDoubles;
 using Xunit;
 using Paramore.Brighter.ServiceActivator;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
+using System.Text.Json;
 
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
-    public class MessagePumpUnacceptableMessageLimitTests
+    public class PerformerCanStopTestsAsync
     {
-        private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
+        private readonly Task _performerTask;
 
-        public MessagePumpUnacceptableMessageLimitTests()
+        public PerformerCanStopTestsAsync()
         {
-            SpyRequeueCommandProcessor commandProcessor = new();
+            SpyCommandProcessor commandProcessor = new();
             var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new MyEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyEvent, MyEventMessageMapperAsync>();
             
-            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null)
-            {
-                Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
-            };
+            var messagePump = new MessagePumpAsync<MyEvent>(provider, messageMapperRegistry, null);
+            messagePump.Channel = _channel;
+            messagePump.TimeoutInMilliseconds = 5000;
 
-            var unmappableMessage = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody("{ \"Id\" : \"48213ADB-A085-4AFF-A42C-CF8209350CF7\" }"));
+            var @event = new MyEvent();
+            var message = new Message(new MessageHeader(Guid.NewGuid(), "MyTopic", MessageType.MT_EVENT), new MessageBody(JsonSerializer.Serialize(@event, JsonSerialisationOptions.Options)));
+            _channel.Enqueue(message);
 
-            _channel.Enqueue(unmappableMessage);
-            _channel.Enqueue(unmappableMessage);
-            _channel.Enqueue(unmappableMessage);
+            Performer performer = new(_channel, messagePump);
+            _performerTask = performer.Run();
+            performer.Stop();
         }
-
+        
+#pragma warning disable xUnit1031
         [Fact]
-        public async Task When_A_Message_Fails_To_Be_Mapped_To_A_Request_And_The_Unacceptable_Message_Limit_Is_Reached()
+        public void When_Running_A_Message_Pump_On_A_Thread_Should_Be_Able_To_Stop()
         {
-            var task = Task.Factory.StartNew(() => _messagePump.Run(), TaskCreationOptions.LongRunning);
-            await Task.Delay(1000);
+            _performerTask.Wait();
 
-            await Task.WhenAll(new[] { task });
-
-            //should_have_acknowledge_the_3_messages
-            _channel.AcknowledgeCount.Should().Be(3);
-            //should_dispose_the_input_channel
-            _channel.DisposeHappened.Should().BeTrue();
+            //_should_terminate_successfully
+            _performerTask.IsCompleted.Should().BeTrue();
+            //_should_not_have_errored
+            _performerTask.IsFaulted.Should().BeFalse();
+            //_should_not_show_as_cancelled
+            _performerTask.IsCanceled.Should().BeFalse();
+            //_should_have_consumed_the_messages_in_the_channel
+            _channel.Length.Should().Be(0);
         }
+#pragma warning restore xUnit1031
     }
 }

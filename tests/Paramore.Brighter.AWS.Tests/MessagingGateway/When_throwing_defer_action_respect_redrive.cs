@@ -89,6 +89,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
                 requestContextFactory: new InMemoryRequestContextFactory(),
                 policyRegistry: new PolicyRegistry()
             );
+            var provider = new CommandProcessorProvider(_commandProcessor);
 
             var messageMapperRegistry = new MessageMapperRegistry(
                 new SimpleMessageMapperFactory(_ => new MyDeferredCommandMessageMapper(_topicName)),
@@ -97,7 +98,7 @@ namespace Paramore.Brighter.AWS.Tests.MessagingGateway
             messageMapperRegistry.Register<MyDeferredCommand, MyDeferredCommandMessageMapper>();
             
             //pump messages from a channel to a handler - in essence we are building our own dispatcher in this test
-            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(_commandProcessor, messageMapperRegistry)
+            _messagePump = new MessagePumpBlocking<MyDeferredCommand>(provider, messageMapperRegistry, null)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3
             };

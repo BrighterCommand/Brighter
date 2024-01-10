@@ -9,23 +9,22 @@ using Paramore.Brighter.ServiceActivator.TestHelpers;
 namespace Paramore.Brighter.Core.Tests.MessageDispatch
 {
 
-    public class MessagePumpFailingMessageTranslationTests
+    public class MessagePumpFailingMessageTranslationTestsAsync
     {
         private readonly IAmAMessagePump _messagePump;
         private readonly FakeChannel _channel;
-        private readonly SpyRequeueCommandProcessor _commandProcessor;
 
-        public MessagePumpFailingMessageTranslationTests()
+        public MessagePumpFailingMessageTranslationTestsAsync()
         {
-            _commandProcessor = new SpyRequeueCommandProcessor();
-            var provider = new CommandProcessorProvider(_commandProcessor);
+            SpyRequeueCommandProcessor commandProcessor = new();
+            var provider = new CommandProcessorProvider(commandProcessor);
             _channel = new FakeChannel();
             var messageMapperRegistry = new MessageMapperRegistry(
-                new SimpleMessageMapperFactory(_ => new FailingEventMessageMapper()),
-                null);
-            messageMapperRegistry.Register<MyFailingMapperEvent, FailingEventMessageMapper>();
+                null,
+                new SimpleMessageMapperFactoryAsync(_ => new FailingEventMessageMapperAsync()));
+            messageMapperRegistry.RegisterAsync<MyFailingMapperEvent, FailingEventMessageMapperAsync>();
              
-            _messagePump = new MessagePumpBlocking<MyFailingMapperEvent>(provider, messageMapperRegistry, null)
+            _messagePump = new MessagePumpAsync<MyFailingMapperEvent>(provider, messageMapperRegistry, null)
             {
                 Channel = _channel, TimeoutInMilliseconds = 5000, RequeueCount = 3, UnacceptableMessageLimit = 3
             };
