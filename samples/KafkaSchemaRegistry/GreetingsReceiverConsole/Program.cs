@@ -42,7 +42,7 @@ namespace GreetingsReceiverConsole
 {
     public class Program
     {
-        public static async Task Main(string[] args)
+        public static Task Main(string[] args)
         {
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureHostConfiguration(configurationBuilder =>
@@ -68,7 +68,8 @@ namespace GreetingsReceiverConsole
                             timeoutInMilliseconds: 100,
                             offsetDefault: AutoOffsetReset.Earliest,
                             commitBatchSize: 5,
-                            sweepUncommittedOffsetsIntervalMs: 10000)
+                            sweepUncommittedOffsetsIntervalMs: 10000,
+                            isAsync: true)
                     };
                     
                     //We take a direct dependency on the schema registry in the message mapper
@@ -76,16 +77,17 @@ namespace GreetingsReceiverConsole
                     var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
                     services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
 
-
-                    //create the gateway
-                    var consumerFactory = new KafkaMessageConsumerFactory(
-                        new KafkaMessagingGatewayConfiguration { Name = "paramore.brighter", BootStrapServers = new[] { "localhost:9092" } }
-                    );
-
                     services.AddServiceActivator(options =>
                     {
                         options.Subscriptions = subscriptions;
-                        options.ChannelFactory = new ChannelFactory(consumerFactory);
+                        options.ChannelFactory = new ChannelFactory(
+                            new KafkaMessageConsumerFactory(
+                                new KafkaMessagingGatewayConfiguration
+                                {
+                                    Name = "paramore.brighter", 
+                                    BootStrapServers = new[] { "localhost:9092" }
+                                }
+                        ));
                     }).AutoFromAssemblies();
 
 
@@ -94,7 +96,7 @@ namespace GreetingsReceiverConsole
                 .UseConsoleLifetime()
                 .Build();
 
-            await host.RunAsync();
+            return host.RunAsync();
         }
     }
 }

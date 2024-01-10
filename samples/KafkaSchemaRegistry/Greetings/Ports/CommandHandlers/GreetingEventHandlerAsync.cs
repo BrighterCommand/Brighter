@@ -23,21 +23,23 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Greetings.Ports.Commands;
 using Paramore.Brighter;
 
 namespace Greetings.Ports.CommandHandlers
 {
-    public class GreetingEventHandler : RequestHandler<GreetingEvent>
+    public class GreetingEventHandlerAsync : RequestHandlerAsync<GreetingEvent>
     {
-        public override GreetingEvent Handle(GreetingEvent @event)
+        public override async Task<GreetingEvent> HandleAsync(GreetingEvent @event, CancellationToken cancellationToken = default)
         {
             Console.WriteLine("Received Greeting. Message Follows");
             Console.WriteLine("----------------------------------");
             Console.WriteLine(@event.Greeting);
             Console.WriteLine("----------------------------------");
             Console.WriteLine("Message Ends");
-            return base.Handle(@event);
+            return await base.HandleAsync(@event, cancellationToken);
         }
     }
 }

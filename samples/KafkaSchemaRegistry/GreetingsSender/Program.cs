@@ -27,7 +27,6 @@ THE SOFTWARE. */
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using System.Transactions;
 using Confluent.SchemaRegistry;
 using Greetings.Ports.Commands;
 using Microsoft.Extensions.Configuration;
@@ -42,9 +41,9 @@ using Polly.Registry;
 
 namespace GreetingsSender
 {
-    internal static class Program
+    public static class Program
     {
-        static async Task Main(string[] args)
+        public static Task Main(string[] args)
         {
             var host = Host.CreateDefaultBuilder(args)
                 .ConfigureHostConfiguration(configurationBuilder =>
@@ -53,7 +52,7 @@ namespace GreetingsSender
                     configurationBuilder.AddJsonFile("appsettings.json", optional: true);
                     configurationBuilder.AddCommandLine(args);
                 })
-                .ConfigureLogging((context, builder) =>
+                .ConfigureLogging((_, builder) =>
                 {
                     builder.ClearProviders();
                     builder.AddConsole();
@@ -61,32 +60,6 @@ namespace GreetingsSender
                 })
                 .ConfigureServices((hostContext, services) =>
                 {
-                    var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
-
-                    var circuitBreakerPolicy =
-                        Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
-                    var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
-                    {
-                        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
-                        TimeSpan.FromMilliseconds(150)
-                    });
-
-                    var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
-                        .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
-
-                    var policyRegistry = new PolicyRegistry
-                    {
-                        {CommandProcessor.RETRYPOLICY, retryPolicy},
-                        {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
-                        {CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync},
-                        {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
-                    };
-
                     //We take a direct dependency on the schema registry in the message mapper
                     var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
                     var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
@@ -98,7 +71,7 @@ namespace GreetingsSender
                                 Name = "paramore.brighter.greetingsender",
                                 BootStrapServers = new[] {"localhost:9092"}
                             },
-                            new KafkaPublication[]
+                            new[]
                             {
                                 new KafkaPublication
                                 {
@@ -112,7 +85,7 @@ namespace GreetingsSender
                     
                     services.AddBrighter(options =>
                         {
-                            options.PolicyRegistry = policyRegistry;
+                            options.PolicyRegistry = RegisterPolicies();
                         })
                         .UseExternalBus((configure) =>
                         {
@@ -125,7 +98,37 @@ namespace GreetingsSender
                 .UseConsoleLifetime()
                 .Build();
 
-                await host.RunAsync();
+            return host.RunAsync();
+        }
+
+        private static PolicyRegistry RegisterPolicies()
+        {
+            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
+            {
+                TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(150)
+            });
+
+            var circuitBreakerPolicy =
+                Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+            var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+            {
+                TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
+                TimeSpan.FromMilliseconds(150)
+            });
+
+            var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
+                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
+
+            var policyRegistry = new PolicyRegistry
+            {
+                {CommandProcessor.RETRYPOLICY, retryPolicy},
+                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
+                {CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync},
+                {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
+            };
+            return policyRegistry;
         }
     }
 }

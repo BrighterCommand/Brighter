@@ -23,9 +23,9 @@ THE SOFTWARE. */
 #endregion
 
 using System.Net.Mime;
+using System.Threading.Tasks;
 using Greetings.Ports.Commands;
 using Confluent.Kafka;
-using Confluent.Kafka.SyncOverAsync;
 using Confluent.SchemaRegistry;
 using Confluent.SchemaRegistry.Serdes;
 using Paramore.Brighter;
@@ -33,38 +33,36 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 
 namespace Greetings.Ports.Mappers
 {
-    public class GreetingEventMessageMapper : IAmAMessageMapper<GreetingEvent>
+    public class GreetingEventMessageMapperAsync(ISchemaRegistryClient schemaRegistryClient)
+        : IAmAMessageMapperAsync<GreetingEvent>
     {
-        private readonly ISchemaRegistryClient _schemaRegistryClient;
         private readonly string _partitionKey = "KafkaTestQueueExample_Partition_One";
-        private SerializationContext _serializationContext;
+        private readonly SerializationContext _serializationContext = new(MessageComponentType.Value, Topic);
         private const string Topic = "greeting.event";
 
-        public GreetingEventMessageMapper(ISchemaRegistryClient schemaRegistryClient)
-        {
-            _schemaRegistryClient = schemaRegistryClient;
-            //We care about ensuring that we serialize the body using the Confluent tooling, as it registers and validates schema
-            _serializationContext = new SerializationContext(MessageComponentType.Value, Topic);
-        }
- 
-        public Message MapToMessage(GreetingEvent request)
+        public async Task<Message> MapToMessage(GreetingEvent request)
         {
             var header = new MessageHeader(messageId: request.Id, topic: Topic, messageType: MessageType.MT_EVENT);
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
-            var serializer = new JsonSerializer<GreetingEvent>(_schemaRegistryClient, ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(), ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()).AsSyncOverAsync();
-            var s = serializer.Serialize(request, _serializationContext);
+            var serializer = new JsonSerializer<GreetingEvent>(
+                schemaRegistryClient, 
+                ConfluentJsonSerializationConfig.SerdesJsonSerializerConfig(),
+                ConfluentJsonSerializationConfig.NJsonSchemaGeneratorSettings()
+                );
+            
+            var s = await serializer.SerializeAsync(request, _serializationContext);
             var body = new MessageBody(s, MediaTypeNames.Application.Octet, CharacterEncoding.Raw);
             header.PartitionKey = _partitionKey;
 
-            var message = new Message(header, body);
-            return message;
+            return new Message(header, body);
         }
 
-        public GreetingEvent MapToRequest(Message message)
+        public async Task<GreetingEvent> MapToRequest(Message message)
         {
-            var deserializer = new JsonDeserializer<GreetingEvent>().AsSyncOverAsync();
+            var deserializer = new JsonDeserializer<GreetingEvent>();
             //This uses the Confluent JSON serializer, which wraps Newtonsoft but also performs schema registration and validation
-             var greetingCommand = deserializer.Deserialize(message.Body.Bytes, message.Body.Bytes is null, _serializationContext);
+             var greetingCommand 
+                 = await deserializer.DeserializeAsync(message.Body.Bytes, message.Body.Bytes is null, _serializationContext);
             
             return greetingCommand;
         }
