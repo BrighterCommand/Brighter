@@ -15,27 +15,20 @@ using SalutationPorts.Requests;
 
 namespace SalutationPorts.Handlers
 {
-    public class GreetingMadeHandler : RequestHandler<GreetingMade>
+    public class GreetingMadeHandlerAsync(
+        IAmADynamoDbTransactionProvider transactionProvider,
+        IAmACommandProcessor postBox,
+        ILogger<GreetingMadeHandlerAsync> logger)
+        : RequestHandlerAsync<GreetingMade>
     {
-        private readonly IAmADynamoDbTransactionProvider _transactionProvider;
-        private readonly IAmACommandProcessor _postBox;
-        private readonly ILogger<GreetingMadeHandler> _logger;
-
-        public GreetingMadeHandler(IAmADynamoDbTransactionProvider transactionProvider, IAmACommandProcessor postBox, ILogger<GreetingMadeHandler> logger)
-        {
-            _transactionProvider = transactionProvider;
-            _postBox = postBox;
-            _logger = logger;
-        }
-
-        [UseInbox(step:0, contextKey: typeof(GreetingMadeHandler), onceOnly: true )] 
-        [RequestLogging(step: 1, timing: HandlerTiming.Before)]
-        [UsePolicy(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY)]
-        public override GreetingMade Handle(GreetingMade @event)
+        [UseInboxAsync(step:0, contextKey: typeof(GreetingMadeHandlerAsync), onceOnly: true )] 
+        [RequestLoggingAsync(step: 1, timing: HandlerTiming.Before)]
+        [UsePolicyAsync(step:2, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICY_ASYNC)]
+        public override async Task<GreetingMade> HandleAsync(GreetingMade @event, CancellationToken cancellationToken = default)
         {
             var posts = new List<Guid>();
-            var context = new DynamoDBContext(_transactionProvider.DynamoDb);
-            var tx = _transactionProvider.GetTransaction();
+            var context = new DynamoDBContext(transactionProvider.DynamoDb);
+            var tx = await transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
                 var salutation = new Salutation { Greeting = @event.Greeting };
@@ -46,25 +39,25 @@ namespace SalutationPorts.Handlers
                     Put = new Put { TableName = "Salutations", Item = attributes }
                 });
 
-                posts.Add(_postBox.DepositPost(new SalutationReceived(DateTimeOffset.Now), _transactionProvider));
+                posts.Add(await postBox.DepositPostAsync(new SalutationReceived(DateTimeOffset.Now), transactionProvider, cancellationToken: cancellationToken));
 
-                _transactionProvider.Commit();
+                await transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception e)
             {
-                _logger.LogError(e, "Could not save salutation");
-                _transactionProvider.Rollback();
+                logger.LogError(e, "Could not save salutation");
+                await transactionProvider.RollbackAsync(cancellationToken);
 
-                return base.Handle(@event);
+                return await base.HandleAsync(@event, cancellationToken);
             }
             finally
             {
-                _transactionProvider.Close();
+                transactionProvider.Close();
             }
 
-            _postBox.ClearOutboxAsync(posts);
+            await postBox.ClearOutboxAsync(posts, cancellationToken: cancellationToken);
             
-            return base.Handle(@event);
+            return await base.HandleAsync(@event,cancellationToken);
         }
     }
 }

@@ -31,7 +31,7 @@ using ChannelFactory = Paramore.Brighter.MessagingGateway.RMQ.ChannelFactory;
 
 namespace SalutationAnalytics
 {
-    class Program
+    internal class Program
     {
         public static async Task Main(string[] args)
         {
