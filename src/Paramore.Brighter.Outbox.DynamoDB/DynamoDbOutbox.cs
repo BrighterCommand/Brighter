@@ -387,6 +387,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
         {
             throw new NotImplementedException();
@@ -483,5 +488,5 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return null;
         }
-     }
+    }
 }

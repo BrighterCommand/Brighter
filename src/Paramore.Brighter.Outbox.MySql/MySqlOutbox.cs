@@ -339,6 +339,18 @@ namespace Paramore.Brighter.Outbox.MySql
             return messages;
         }
 
+        protected override async Task<int> MapOutstandingCountAsync(MySqlDataReader dr, CancellationToken cancellationToken)
+        {
+            int outstadingMessages = -1;
+            if (await dr.ReadAsync(cancellationToken))
+            {
+                outstadingMessages = dr.GetInt32(0);
+            }
+            dr.Close();
+
+            return outstadingMessages;
+        }
+
         private static bool IsExceptionUnqiueOrDuplicateIssue(MySqlException sqlException)
         {
             return sqlException.Number == MySqlDuplicateKeyError;

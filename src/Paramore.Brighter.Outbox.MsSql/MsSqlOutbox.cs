@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -46,9 +46,9 @@ namespace Paramore.Brighter.Outbox.MsSql
         private const int MsSqlDuplicateKeyError_UniqueConstraintViolation = 2627;
         private readonly IAmARelationalDatabaseConfiguration _configuration;
         private readonly IAmARelationalDbConnectionProvider _connectionProvider;
-
+        
         /// <summary>
-        /// Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
+        ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         /// <param name="connectionProvider">The connection factory.</param>
@@ -61,7 +61,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         }
 
         /// <summary>
-        /// Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
+        ///     Initializes a new instance of the <see cref="MsSqlOutbox" /> class.
         /// </summary>
         /// <param name="configuration">The configuration.</param>
         public MsSqlOutbox(IAmARelationalDatabaseConfiguration configuration) : this(configuration,
@@ -172,7 +172,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 finally
                 {
-                    connection.Close();
+                        connection.Close();
                 }
             }
         }
@@ -195,7 +195,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 }
                 finally
                 {
-                    connection.Close();
+                        connection.Close();
                 }
             }
         }
@@ -224,7 +224,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                 new SqlParameter { ParameterName = "PageNumber", Value = (object)pageNumber ?? DBNull.Value };
             parameters[1] = new SqlParameter { ParameterName = "PageSize", Value = (object)pageSize ?? DBNull.Value };
             parameters[2] = new SqlParameter
-            {
+        {
                 ParameterName = "OutstandingSince", Value = (object)milliSecondsSinceAdded ?? DBNull.Value
             };
 
@@ -237,7 +237,7 @@ namespace Paramore.Brighter.Outbox.MsSql
         {
             return new SqlParameter { ParameterName = parameterName, Value = value ?? DBNull.Value };
         }
-
+        
         protected override IDbDataParameter[] InitAddDbParameters(Message message, int? position = null)
         {
             var prefix = position.HasValue ? $"p{position}_" : "";
@@ -309,7 +309,7 @@ namespace Paramore.Brighter.Outbox.MsSql
                     }
             };
         }
-
+        
         #endregion
 
         #region Property Extractors
@@ -324,19 +324,19 @@ namespace Paramore.Brighter.Outbox.MsSql
         private string GetContentType(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("ContentType");
-            if (dr.IsDBNull(ordinal)) return null;
-
+            if (dr.IsDBNull(ordinal)) return null; 
+            
             var contentType = dr.GetString(ordinal);
             return contentType;
         }
 
         private string GetReplyTo(DbDataReader dr)
         {
-            var ordinal = dr.GetOrdinal("ReplyTo");
-            if (dr.IsDBNull(ordinal)) return null;
-
-            var replyTo = dr.GetString(ordinal);
-            return replyTo;
+             var ordinal = dr.GetOrdinal("ReplyTo");
+             if (dr.IsDBNull(ordinal)) return null; 
+             
+             var replyTo = dr.GetString(ordinal);
+             return replyTo;
         }
 
         private static Dictionary<string, object> GetContextBag(DbDataReader dr)
@@ -351,8 +351,8 @@ namespace Paramore.Brighter.Outbox.MsSql
         private Guid? GetCorrelationId(DbDataReader dr)
         {
             var ordinal = dr.GetOrdinal("CorrelationId");
-            if (dr.IsDBNull(ordinal)) return null;
-
+            if (dr.IsDBNull(ordinal)) return null; 
+            
             var correlationId = dr.GetGuid(ordinal);
             return correlationId;
         }
@@ -409,7 +409,7 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             return message ?? new Message();
         }
-
+        
         protected override async Task<Message> MapFunctionAsync(DbDataReader dr, CancellationToken cancellationToken)
         {
             Message message = null;
@@ -452,6 +452,18 @@ namespace Paramore.Brighter.Outbox.MsSql
             return messages;
         }
 
+        protected override async Task<int> MapOutstandingCountAsync(SqlDataReader dr, CancellationToken cancellationToken)
+        {
+            int outstadingMessages = -1;
+            if(await dr.ReadAsync(cancellationToken))
+            {
+                outstadingMessages = dr.GetInt32(0);
+            }
+            dr.Close();
+           
+            return outstadingMessages;
+        }
+
         #endregion
 
         private Message MapAMessage(DbDataReader dr)
@@ -462,32 +474,32 @@ namespace Paramore.Brighter.Outbox.MsSql
 
             var header = new MessageHeader(id, topic, messageType);
 
-            DateTime timeStamp = GetTimeStamp(dr);
-            var correlationId = GetCorrelationId(dr);
-            var replyTo = GetReplyTo(dr);
-            var contentType = GetContentType(dr);
+                DateTime timeStamp = GetTimeStamp(dr);
+                var correlationId = GetCorrelationId(dr);
+                var replyTo = GetReplyTo(dr);
+                var contentType = GetContentType(dr);
             var partitionKey = GetPartitionKey(dr);
 
-            header = new MessageHeader(
-                messageId: id,
-                topic: topic,
-                messageType: messageType,
-                timeStamp: timeStamp,
-                handledCount: 0,
-                delayedMilliseconds: 0,
-                correlationId: correlationId,
-                replyTo: replyTo,
+                header = new MessageHeader(
+                    messageId: id,
+                    topic: topic,
+                    messageType: messageType,
+                    timeStamp: timeStamp,
+                    handledCount: 0,
+                   delayedMilliseconds: 0,
+                    correlationId: correlationId,
+                    replyTo: replyTo,
                 contentType: contentType,
                 partitionKey: partitionKey);
 
-            Dictionary<string, object> dictionaryBag = GetContextBag(dr);
-            if (dictionaryBag != null)
-            {
-                foreach (var key in dictionaryBag.Keys)
+                Dictionary<string, object> dictionaryBag = GetContextBag(dr);
+                if (dictionaryBag != null)
                 {
-                    header.Bag.Add(key, dictionaryBag[key]);
+                    foreach (var key in dictionaryBag.Keys)
+                    {
+                        header.Bag.Add(key, dictionaryBag[key]);
+                    }
                 }
-            }
 
             var bodyOrdinal = dr.GetOrdinal("Body");
             string messageBody = string.Empty;

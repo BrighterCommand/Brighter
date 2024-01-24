@@ -247,5 +247,10 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles
                 await AddAsync(message, outBoxTimeout, cancellationToken, transactionProvider);
             }
         }
+
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

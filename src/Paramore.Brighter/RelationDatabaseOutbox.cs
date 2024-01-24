@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -354,6 +354,13 @@ namespace Paramore.Brighter
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            return ReadFromStoreAsync(
+                connection => CreateRemainingOutstandingCommand(connection),
+                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+        }
+
         #endregion
 
         protected abstract void WriteToStore(
@@ -486,6 +493,8 @@ namespace Paramore.Brighter
         protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr,
             CancellationToken cancellationToken);
         
+        protected abstract Task<int> MapOutstandingCountAsync(TDataReader dr,
+            CancellationToken cancellationToken);
         
         private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
