@@ -1,9 +1,6 @@
-using System.ComponentModel;
-using System.Data.Common;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using System.Transactions;
 using Orders.Data;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus;
 using Paramore.Brighter.MsSql;
@@ -11,7 +8,6 @@ using Paramore.Brighter.Outbox.MsSql;
 using Paramore.Brighter.Extensions.DependencyInjection;
 using Paramore.Brighter;
 using Orders.Domain;
-using Orders.Domain.Entities;
 using Orders.Domain.Events;
 using Paramore.Brighter.MessagingGateway.AzureServiceBus.ClientProvider;
 

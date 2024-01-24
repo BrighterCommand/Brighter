@@ -27,6 +27,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Globalization;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -150,7 +151,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                     if (transactionProvider != null)
                         transactionProvider.Close();
                     else
+#if NETSTANDARD2_0
                         connection.Close();
+#else
+                        await connection.CloseAsync();
+#endif
                 }
             }
         }
@@ -194,7 +199,11 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
+#if NETSTANDARD2_0
+                    connection.Close();
+#else
                     await connection.CloseAsync();
+#endif
                 }
             }
         }
@@ -258,7 +267,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 {
                     ParameterName = $"@{prefix}Timestamp",
                     SqliteType = SqliteType.Text,
-                    Value = message.Header.TimeStamp.ToString("s")
+                    Value = message.Header.TimeStamp.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture)
                 },
                 new SqliteParameter
                 {
@@ -411,7 +420,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
             var i = dr.GetOrdinal("Body");
             var body = dr.GetStream(i);
             var buffer = new byte[body.Length];
-            body.Read(buffer);
+            body.Read(buffer, 0, (int)body.Length);
             return buffer;
         }
 

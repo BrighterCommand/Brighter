@@ -5,8 +5,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="FluentMigrator" Version="3.3.2" />
-        <PackageReference Include="FluentMigrator.Runner" Version="3.3.2" />
+        <PackageReference Include="FluentMigrator" Version="5.0.0" />
+        <PackageReference Include="FluentMigrator.Runner" Version="5.0.0" />
         <PackageReference Include="OpenTelemetry" Version="1.6.0" />
         <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.6.0" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.6.0" />

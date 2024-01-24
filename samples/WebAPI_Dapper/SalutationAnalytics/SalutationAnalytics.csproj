@@ -26,8 +26,8 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.0" />
-      <PackageReference Include="FluentMigrator" Version="3.3.2" />
-      <PackageReference Include="FluentMigrator.Runner" Version="3.3.2" />
+      <PackageReference Include="FluentMigrator" Version="5.0.0" />
+      <PackageReference Include="FluentMigrator.Runner" Version="5.0.0" />
     </ItemGroup>
 
     <ItemGroup>

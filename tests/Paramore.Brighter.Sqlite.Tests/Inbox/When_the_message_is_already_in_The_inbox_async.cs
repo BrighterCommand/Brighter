@@ -32,7 +32,7 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Inbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqliteInboxDuplicateMessageAsyncTests : IDisposable
+    public class SqliteInboxDuplicateMessageAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
         private readonly SqliteInbox _sqlInbox;
@@ -63,9 +63,10 @@ namespace Paramore.Brighter.Sqlite.Tests.Inbox
             AssertionExtensions.Should(exists).BeTrue();
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
+
         }
     }
 }
