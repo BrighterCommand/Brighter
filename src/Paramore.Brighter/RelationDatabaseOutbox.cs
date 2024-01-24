@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
@@ -419,6 +419,9 @@ namespace Paramore.Brighter
             int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedOutstandingCommand), 0,
                 CreatePagedOutstandingParameters(milliSecondsSinceAdded, pageSize, pageNumber));
+        
+        private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
+            => CreateCommand(connection, GenerateSqlText(_queries.GetNumberOfOutstandingMessagesCommand), 0);
 
         private DbCommand InitAddDbCommand(
             DbConnection connection, 
@@ -477,7 +480,7 @@ namespace Paramore.Brighter
         #region Parameters
 
         protected abstract IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber);
+            int pageSize, int pageNumber);      
 
         #endregion
         
@@ -490,11 +493,9 @@ namespace Paramore.Brighter
 
         protected abstract IEnumerable<Message> MapListFunction(DbDataReader dr);
 
-        protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr,
-            CancellationToken cancellationToken);
+        protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr, CancellationToken cancellationToken);
         
-        protected abstract Task<int> MapOutstandingCountAsync(TDataReader dr,
-            CancellationToken cancellationToken);
+        protected abstract Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken);
         
         private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {
