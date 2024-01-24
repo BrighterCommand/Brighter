@@ -22,6 +22,7 @@ THE SOFTWARE. */
 
 #endregion
 
+using System;
 using System.Collections.Generic;
 using Paramore.Brighter.FeatureSwitch;
 using Polly.Registry;
@@ -58,5 +59,12 @@ namespace Paramore.Brighter
         /// Gets the Feature Switches
         /// </summary>
         public IAmAFeatureSwitchRegistry FeatureSwitches { get; set; }
+
+        public Header Header { get; } = new Header();
+    }
+
+    public class Header
+    {
+        public Guid CorrelationId { get; set; }
     }
 }

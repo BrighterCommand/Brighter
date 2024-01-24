@@ -51,5 +51,7 @@ namespace Paramore.Brighter
         /// Gets the Feature Switches
         /// </summary>
         IAmAFeatureSwitchRegistry FeatureSwitches { get; }
+
+        Header Header { get; }
     }
 }
