@@ -2,7 +2,7 @@
 
 /* The MIT License (MIT)
 Copyright © 2017 Wayne Hunsley <whunsley@gmail.com>
-Copyright © 2021 Ian Cooper Ian Cooper <ian_hammond_cooper@yahoo.co.uk> 
+Copyright © 2021 Ian Cooper Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the “Software”), to deal
@@ -26,9 +26,9 @@ THE SOFTWARE. */
 
 using System;
 using System.IO;
-using System.Threading.Tasks;
 using Confluent.SchemaRegistry;
 using Greetings.Ports.Commands;
+using GreetingsSender;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -39,97 +39,85 @@ using Paramore.Brighter.MessagingGateway.Kafka;
 using Polly;
 using Polly.Registry;
 
-namespace GreetingsSender
-{
-    public static class Program
+var host = Host.CreateDefaultBuilder(args)
+    .ConfigureHostConfiguration(configurationBuilder =>
     {
-        public static Task Main(string[] args)
-        {
-            var host = Host.CreateDefaultBuilder(args)
-                .ConfigureHostConfiguration(configurationBuilder =>
+        configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
+        configurationBuilder.AddJsonFile("appsettings.json", optional: true);
+        configurationBuilder.AddCommandLine(args);
+    })
+    .ConfigureLogging((_, builder) =>
+    {
+        builder.ClearProviders();
+        builder.AddConsole();
+        builder.AddDebug();
+    })
+    .ConfigureServices((hostContext, services) =>
+    {
+        //We take a direct dependency on the schema registry in the message mapper
+        var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081" };
+        var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
+        services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+
+        var producerRegistry = new KafkaProducerRegistryFactory(
+                new KafkaMessagingGatewayConfiguration
                 {
-                    configurationBuilder.SetBasePath(Directory.GetCurrentDirectory());
-                    configurationBuilder.AddJsonFile("appsettings.json", optional: true);
-                    configurationBuilder.AddCommandLine(args);
-                })
-                .ConfigureLogging((_, builder) =>
+                    Name = "paramore.brighter.greetingsender", BootStrapServers = new[] { "localhost:9092" }
+                },
+                new[]
                 {
-                    builder.ClearProviders();
-                    builder.AddConsole();
-                    builder.AddDebug();
+                    new KafkaPublication
+                    {
+                        Topic = new RoutingKey("greeting.event"),
+                        MessageSendMaxRetries = 3,
+                        MessageTimeoutMs = 1000,
+                        MaxInFlightRequestsPerConnection = 1
+                    }
                 })
-                .ConfigureServices((hostContext, services) =>
-                {
-                    //We take a direct dependency on the schema registry in the message mapper
-                    var schemaRegistryConfig = new SchemaRegistryConfig { Url = "http://localhost:8081"};
-                    var cachedSchemaRegistryClient = new CachedSchemaRegistryClient(schemaRegistryConfig);
-                    services.AddSingleton<ISchemaRegistryClient>(cachedSchemaRegistryClient);
+            .Create();
 
-                    var producerRegistry = new KafkaProducerRegistryFactory(
-                            new KafkaMessagingGatewayConfiguration
-                            {
-                                Name = "paramore.brighter.greetingsender",
-                                BootStrapServers = new[] {"localhost:9092"}
-                            },
-                            new[]
-                            {
-                                new KafkaPublication
-                                {
-                                    Topic = new RoutingKey("greeting.event"),
-                                    MessageSendMaxRetries = 3,
-                                    MessageTimeoutMs = 1000,
-                                    MaxInFlightRequestsPerConnection = 1
-                                }
-                            })
-                        .Create();
-                    
-                    services.AddBrighter(options =>
-                        {
-                            options.PolicyRegistry = RegisterPolicies();
-                        })
-                        .UseExternalBus((configure) =>
-                        {
-                            configure.ProducerRegistry = producerRegistry;
-                        })
-                        .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
-
-                    services.AddHostedService<TimedMessageGenerator>();
-                })
-                .UseConsoleLifetime()
-                .Build();
-
-            return host.RunAsync();
-        }
-
-        private static PolicyRegistry RegisterPolicies()
-        {
-            var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
+        services.AddBrighter(options =>
             {
-                TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(150)
-            });
-
-            var circuitBreakerPolicy =
-                Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
-
-            var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+                options.PolicyRegistry = RegisterPolicies();
+            })
+            .UseExternalBus((configure) =>
             {
-                TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100),
-                TimeSpan.FromMilliseconds(150)
-            });
+                configure.ProducerRegistry = producerRegistry;
+            })
+            .MapperRegistryFromAssemblies(typeof(GreetingEvent).Assembly);
 
-            var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
-                .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
+        services.AddHostedService<TimedMessageGenerator>();
+    })
+    .UseConsoleLifetime()
+    .Build();
 
-            var policyRegistry = new PolicyRegistry
-            {
-                {CommandProcessor.RETRYPOLICY, retryPolicy},
-                {CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy},
-                {CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync},
-                {CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync}
-            };
-            return policyRegistry;
-        }
-    }
+await host.RunAsync();
+return;
+
+static PolicyRegistry RegisterPolicies()
+{
+    var retryPolicy = Policy.Handle<Exception>().WaitAndRetry(new[]
+    {
+        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+    });
+
+    var circuitBreakerPolicy =
+        Policy.Handle<Exception>().CircuitBreaker(1, TimeSpan.FromMilliseconds(500));
+
+    var retryPolicyAsync = Policy.Handle<Exception>().WaitAndRetryAsync(new[]
+    {
+        TimeSpan.FromMilliseconds(50), TimeSpan.FromMilliseconds(100), TimeSpan.FromMilliseconds(150)
+    });
+
+    var circuitBreakerPolicyAsync = Policy.Handle<Exception>()
+        .CircuitBreakerAsync(1, TimeSpan.FromMilliseconds(500));
+
+    var policyRegistry = new PolicyRegistry
+    {
+        { CommandProcessor.RETRYPOLICY, retryPolicy },
+        { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy },
+        { CommandProcessor.RETRYPOLICYASYNC, retryPolicyAsync },
+        { CommandProcessor.CIRCUITBREAKERASYNC, circuitBreakerPolicyAsync }
+    };
+    return policyRegistry;
 }
-

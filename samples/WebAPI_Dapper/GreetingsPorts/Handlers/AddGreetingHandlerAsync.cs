@@ -19,9 +19,6 @@ namespace GreetingsPorts.Handlers
         ILogger<AddGreetingHandlerAsync> logger)
         : RequestHandlerAsync<AddGreeting>
     {
-        //We want to take the dependency on the same instance that will be used via the Outbox, so use the marker interface
-
-
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
         public override async Task<AddGreeting> HandleAsync(AddGreeting addGreeting, CancellationToken cancellationToken = default)
