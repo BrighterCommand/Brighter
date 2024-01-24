@@ -61,7 +61,7 @@ var host = Host.CreateDefaultBuilder(args)
                 offsetDefault: AutoOffsetReset.Earliest,
                 commitBatchSize: 5,
                 sweepUncommittedOffsetsIntervalMs: 10000,
-                isAsync: true)
+                runAsync: true)
         };
 
         //We take a direct dependency on the schema registry in the message mapper

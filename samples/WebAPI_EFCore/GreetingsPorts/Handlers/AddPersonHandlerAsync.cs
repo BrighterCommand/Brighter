@@ -1,15 +1,15 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using GreetingsEntities;
+using GreetingsPorts.EntityGateway;
 using GreetingsPorts.Requests;
-using Microsoft.EntityFrameworkCore;
 using Paramore.Brighter;
 using Paramore.Brighter.Logging.Attributes;
 using Paramore.Brighter.Policies.Attributes;
 
 namespace GreetingsPorts.Handlers
 {
-    public class AddPersonHandlerAsync(DbContext uow) : RequestHandlerAsync<AddPerson>
+    public class AddPersonHandlerAsync(GreetingsEntityGateway uow) : RequestHandlerAsync<AddPerson>
     {
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]

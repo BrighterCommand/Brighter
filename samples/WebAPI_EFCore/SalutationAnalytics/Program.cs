@@ -71,7 +71,7 @@ static void ConfigureBrighter(HostBuilderContext hostContext, IServiceCollection
             new SubscriptionName("paramore.sample.salutationanalytics"),
             new ChannelName("SalutationAnalytics"),
             new RoutingKey("GreetingMade"),
-            runAsync: false,
+            runAsync: true,
             timeoutInMilliseconds: 200,
             isDurable: true,
             makeChannels: OnMissingChannel
@@ -131,7 +131,7 @@ static void ConfigureEFCore(HostBuilderContext hostContext, IServiceCollection s
                 builder.UseSqlite(connectionString,
                     optionsBuilder =>
                     {
-                        optionsBuilder.MigrationsAssembly("Salutations_Migrations");
+                        optionsBuilder.MigrationsAssembly("Salutations_SqliteMigrations");
                     });
             });
     }

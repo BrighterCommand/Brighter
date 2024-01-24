@@ -195,7 +195,7 @@ namespace Paramore.Brighter
         private IAmAMessageMapperAsync<TRequest> FindMessageMapper<TRequest>() where TRequest : class, IRequest
         {
             var messageMapper = _mapperRegistryAsync.GetAsync<TRequest>();
-            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}", typeof(TRequest).Name));
+            if (messageMapper == null) throw new InvalidOperationException(string.Format("Could not find mapper for {0}. Hint: did you set runAsync on the subscription to match the mapper type?", typeof(TRequest).Name));
             return messageMapper;
         }
 

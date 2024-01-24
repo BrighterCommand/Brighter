@@ -411,7 +411,7 @@ static Subscription[] GetRmqSubscriptions()
             new SubscriptionName("paramore.sample.salutationanalytics"),
             new ChannelName("SalutationAnalytics"),
             new RoutingKey("GreetingMade"),
-            runAsync: false,
+            runAsync: true,
             timeoutInMilliseconds: 200,
             isDurable: true,
             makeChannels: OnMissingChannel
@@ -443,6 +443,7 @@ static Subscription[] GetKafkaSubscriptions()
             offsetDefault: AutoOffsetReset.Earliest,
             commitBatchSize: 5,
             sweepUncommittedOffsetsIntervalMs: 10000,
+            runAsync: true,
             makeChannels: OnMissingChannel.Create)
     };
     return subscriptions;
