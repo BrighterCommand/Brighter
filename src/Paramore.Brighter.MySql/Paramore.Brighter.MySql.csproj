@@ -6,8 +6,6 @@
 
   <ItemGroup>
     <PackageReference Include="MySqlConnector" />
-    
-
   </ItemGroup>
 
   <ItemGroup>
