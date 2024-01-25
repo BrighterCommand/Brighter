@@ -18,7 +18,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
+      <PackageReference Include="OpenTelemetry.Exporter.Jaeger" />
     </ItemGroup>
 
 </Project>

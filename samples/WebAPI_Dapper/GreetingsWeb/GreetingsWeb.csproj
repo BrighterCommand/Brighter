@@ -5,11 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="FluentMigrator" Version="5.0.0" />
-        <PackageReference Include="FluentMigrator.Runner" Version="5.0.0" />
-        <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
-        <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="FluentMigrator" />
+        <PackageReference Include="FluentMigrator.Runner" />
+        <PackageReference Include="Paramore.Darker.AspNetCore" />
+        <PackageReference Include="Paramore.Darker.Policies" />
+        <PackageReference Include="Swashbuckle.AspNetCore" />
     </ItemGroup>
 
     <ItemGroup>
