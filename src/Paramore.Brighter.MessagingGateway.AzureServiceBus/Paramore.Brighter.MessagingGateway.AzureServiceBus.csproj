@@ -9,7 +9,6 @@
   <ItemGroup>
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Messaging.ServiceBus" />
-    <PackageReference Include="AMQPNetLite" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
