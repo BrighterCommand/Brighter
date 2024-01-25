@@ -20,7 +20,7 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE. */
-
+ 
 #endregion
 
 using System;
@@ -65,7 +65,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return BrighterHandlerBuilder(services, options);
         }
-        
+
         /// <summary>
         /// This is public so that we can call it from <see cref="ServiceCollectionExtensions.AddServiceActivator"/>
         /// which allows that extension method to be called with a <see cref="ServiceActivatorOptions"/> configuration
@@ -99,7 +99,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             IPolicyRegistry<string> policyRegistry;
             if (options.PolicyRegistry == null) policyRegistry = new DefaultPolicy();
             else policyRegistry = AddDefaults(options.PolicyRegistry);
-            
+
             services.TryAdd(new ServiceDescriptor(typeof(IAmACommandProcessor),
                 (serviceProvider) => (IAmACommandProcessor)BuildCommandProcessor(serviceProvider),
                 options.CommandProcessorLifetime));
@@ -173,13 +173,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             RegisterDynamoProviderServicesMaybe(brighterBuilder, busConfiguration.ConnectionProvider, transactionProvider, serviceLifetime);
 
             return ExternalBusBuilder(brighterBuilder, busConfiguration, transactionType);
-        }
+            }
 
         private static INeedARequestContext AddEventBus(
             IServiceProvider provider, 
             INeedMessaging messagingBuilder,
             IUseRpc useRequestResponse)
-        {
+            {
             var eventBus = provider.GetService<IAmAnExternalBusService>();
             var eventBusConfiguration = provider.GetService<IAmExternalBusConfiguration>();
             var messageMapperRegistry = MessageMapperRegistry(provider);
@@ -190,7 +190,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             bool useRpc = useRequestResponse != null && useRequestResponse.RPC;
             
             if (!hasEventBus) ret = messagingBuilder.NoExternalBus();
-            
+             
             if (hasEventBus && !useRpc)
             {
                 ret = messagingBuilder.ExternalBus(
@@ -200,10 +200,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     messageTransformFactory,
                     eventBusConfiguration.ResponseChannelFactory,
                     eventBusConfiguration.ReplyQueueSubscriptions);
-            }
-            
+        }
+
             if (hasEventBus && useRpc)
-            {
+         {
                 ret = messagingBuilder.ExternalBus(
                     ExternalBusType.RPC,
                     eventBus,
@@ -215,10 +215,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             }
 
             return ret;
-        }
+             }
 
         private static IPolicyRegistry<string> AddDefaults(IPolicyRegistry<string> policyRegistry)
-        {
+             {
             if (!policyRegistry.ContainsKey(CommandProcessor.RETRYPOLICY))
                 throw new ConfigurationException(
                     "The policy registry is missing the CommandProcessor.RETRYPOLICY policy which is required");
@@ -228,10 +228,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     "The policy registry is missing the CommandProcessor.CIRCUITBREAKER policy which is required");
 
             return policyRegistry;
-        }
+             }
 
         private static object BuildCommandProcessor(IServiceProvider provider)
-        {
+             {
             var loggerFactory = provider.GetService<ILoggerFactory>();
             ApplicationLogging.LoggerFactory = loggerFactory;
 
@@ -262,7 +262,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 .Build();
 
             return commandProcessor;
-        }
+         }
 
         private static IBrighterBuilder ExternalBusBuilder(
             IBrighterBuilder brighterBuilder,
@@ -276,13 +276,13 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             serviceCollection.TryAddSingleton<IAmExternalBusConfiguration>(externalBusConfiguration);
             serviceCollection.TryAddSingleton<IAmAProducerRegistry>(externalBusConfiguration.ProducerRegistry);
-           
+
             //we always need an outbox in case of producer callbacks
             var outbox = externalBusConfiguration.Outbox;
             if (outbox == null)
             {
                 outbox = new InMemoryOutbox();
-            }
+        }
 
             //we create the outbox from interfaces from the determined transaction type to prevent the need
             //to pass generic types as we know the transaction provider type
@@ -292,7 +292,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             foreach (Type i in outbox.GetType().GetInterfaces())
             {
                 if (i.IsGenericType && i.GetGenericTypeDefinition() == syncOutboxType)
-                {
+        {
                     var outboxDescriptor = new ServiceDescriptor(syncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                     serviceCollection.Add(outboxDescriptor);
                 }
@@ -302,10 +302,10 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                     var asyncOutboxdescriptor = new ServiceDescriptor(asyncOutboxType, _ => outbox, ServiceLifetime.Singleton);
                     serviceCollection.Add(asyncOutboxdescriptor);
                 }
-            }
+        }
 
             if (externalBusConfiguration.UseRpc)
-            {
+        {
                 serviceCollection.TryAddSingleton<IUseRpc>(new UseRpc(externalBusConfiguration.UseRpc,
                     externalBusConfiguration.ReplyQueueSubscriptions));
             }
@@ -320,12 +320,12 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
                 outbox,
                 externalBusConfiguration.OutboxBulkChunkSize,
                 externalBusConfiguration.OutboxTimeout);
-
+            
             serviceCollection.TryAddSingleton<IAmAnExternalBusService>(bus);
 
             return brighterBuilder;
         }
-
+        
         /// <summary>
         /// Config the Json Serializer that is used inside of Brighter
         /// </summary>
@@ -336,14 +336,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
             Action<JsonSerializerOptions> configure)
         {
             var options = new JsonSerializerOptions();
-
+            
             configure.Invoke(options);
 
             JsonSerialisationOptions.Options = options;
-
+            
             return brighterBuilder;
         }
-
+        
         /// <summary>
         /// Registers message mappers with the registry. Normally you don't need to call this, it is called by the builder for Brighter or the Service Activator
         /// Visibility is required for use from both
@@ -371,7 +371,7 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
 
             return messageMapperRegistry;
         }
-        
+
         private static void RegisterDynamoProviderServicesMaybe(
             IBrighterBuilder brighterBuilder, 
             Type connectionProvider, 
@@ -380,14 +380,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmADynamoDbConnectionProvider).IsAssignableFrom(connectionProvider))
-            {
+        {
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbConnectionProvider),
                     connectionProvider, serviceLifetime));
-            }
-            
+        }
+        
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmADynamoDbTransactionProvider).IsAssignableFrom(transactionProvider))
-            {
+        {
                 //register the combined interface just in case
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmADynamoDbTransactionProvider),
                     transactionProvider, serviceLifetime));
@@ -403,14 +403,14 @@ namespace Paramore.Brighter.Extensions.DependencyInjection
         {
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmARelationalDbConnectionProvider).IsAssignableFrom(connectionProvider))
-            {
+        {
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmARelationalDbConnectionProvider),
                     connectionProvider, serviceLifetime));
-            }
-            
+        }
+        
             //not all box transaction providers are also relational connection providers
             if (typeof(IAmATransactionConnectionProvider).IsAssignableFrom(transactionProvider))
-            {
+        {
                 //register the combined interface just in case
                 brighterBuilder.Services.Add(new ServiceDescriptor(typeof(IAmATransactionConnectionProvider),
                     transactionProvider, serviceLifetime));

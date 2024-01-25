@@ -354,6 +354,13 @@ namespace Paramore.Brighter
                 dr => MapListFunctionAsync(dr, cancellationToken), cancellationToken);
         }
 
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            return ReadFromStoreAsync(
+                connection => CreateRemainingOutstandingCommand(connection),
+                dr => MapOutstandingCountAsync(dr, cancellationToken), cancellationToken);
+        }
+
         #endregion
 
         protected abstract void WriteToStore(
@@ -412,6 +419,9 @@ namespace Paramore.Brighter
             int pageNumber)
             => CreateCommand(connection, GenerateSqlText(_queries.PagedOutstandingCommand), 0,
                 CreatePagedOutstandingParameters(milliSecondsSinceAdded, pageSize, pageNumber));
+        
+        private DbCommand CreateRemainingOutstandingCommand(DbConnection connection)
+            => CreateCommand(connection, GenerateSqlText(_queries.GetNumberOfOutstandingMessagesCommand), 0);
 
         private DbCommand InitAddDbCommand(
             DbConnection connection, 
@@ -470,7 +480,7 @@ namespace Paramore.Brighter
         #region Parameters
 
         protected abstract IDbDataParameter[] CreatePagedOutstandingParameters(double milliSecondsSinceAdded,
-            int pageSize, int pageNumber);
+            int pageSize, int pageNumber);      
 
         #endregion
         
@@ -483,9 +493,9 @@ namespace Paramore.Brighter
 
         protected abstract IEnumerable<Message> MapListFunction(DbDataReader dr);
 
-        protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr,
-            CancellationToken cancellationToken);
+        protected abstract Task<IEnumerable<Message>> MapListFunctionAsync(DbDataReader dr, CancellationToken cancellationToken);
         
+        protected abstract Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken);
         
         private (string inClause, IDbDataParameter[] parameters) GenerateInClauseAndAddParameters(List<Guid> messageIds)
         {

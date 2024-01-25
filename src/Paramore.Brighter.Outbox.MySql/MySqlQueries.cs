@@ -13,5 +13,6 @@
         public string GetMessagesCommand { get; } = "SELECT * FROM {0} WHERE `MessageID` IN ( {1} )ORDER BY Timestamp ASC";
         public string DeleteMessagesCommand { get; } = "DELETE FROM {0} WHERE MessageId IN ( {1} )";
         public string DispatchedCommand { get; } = "Select * FROM {0} WHERE Dispatched is not NULL and Dispatched < DATEADD(hour, @DispatchedSince, getutcdate()) LIMIT @PageSize Order BY Dispatched";
+        public string GetNumberOfOutstandingMessagesCommand { get; } = "Select count(1) FROM {0} where Dispatched is NULL";
     }
 }

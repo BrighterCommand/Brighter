@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 
 /* The MIT License (MIT)
 Copyright © 2014 Francesco Pighi <francesco.pighi@gmail.com>
@@ -177,7 +177,7 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 }
                 finally
                 {
-                    connection.Close();
+                        connection.Close();
                 }
             }
         }
@@ -200,14 +200,14 @@ namespace Paramore.Brighter.Outbox.Sqlite
                 finally
                 {
 #if NETSTANDARD2_0
-                    connection.Close();
+                        connection.Close();
 #else
                     await connection.CloseAsync();
 #endif
                 }
             }
         }
-
+        
         protected override DbCommand  CreateCommand(
             DbConnection connection, 
             string sqlText, 
@@ -359,6 +359,17 @@ namespace Paramore.Brighter.Outbox.Sqlite
             dr.Close();
 
             return messages;
+        }
+
+        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken)
+        {
+            int outstandingMessages = -1;
+            if (await dr.ReadAsync(cancellationToken))
+            {
+                outstandingMessages = dr.GetInt32(0);
+            }
+            dr.Close();
+            return outstandingMessages;
         }
 
         private static bool IsExceptionUnqiueOrDuplicateIssue(SqliteException sqlException)

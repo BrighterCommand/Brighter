@@ -1,4 +1,4 @@
-﻿#region Licence
+#region Licence
 /* The MIT License (MIT)
 Copyright © 2014 Ian Cooper <ian_hammond_cooper@yahoo.co.uk>
 
@@ -120,7 +120,7 @@ namespace Paramore.Brighter
             _featureSwitchRegistry = featureSwitchRegistry;
             return this;
         }
-        
+
         /// <summary>
         /// Supplies the specified the policy registry, so we can use policies for Task Queues or in user-defined request handlers such as ExceptionHandler
         /// that provide quality of service concerns
@@ -275,7 +275,7 @@ namespace Paramore.Brighter
 
             throw new ConfigurationException(
                 "The configuration options chosen cannot be used to construct a command processor");
-        }
+            }
     }
 
     #region Progressive interfaces

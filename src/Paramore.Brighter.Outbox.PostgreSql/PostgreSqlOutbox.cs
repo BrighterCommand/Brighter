@@ -355,6 +355,19 @@ namespace Paramore.Brighter.Outbox.PostgreSql
 
             return messages;
         }
+
+        protected override async Task<int> MapOutstandingCountAsync(DbDataReader dr, CancellationToken cancellationToken)
+        {
+            int outstandingMessages = -1;
+            if (await dr.ReadAsync(cancellationToken))
+            {
+                outstandingMessages = dr.GetInt32(0);
+            }
+            dr.Close();
+
+            return outstandingMessages;
+        }
+
         public Message MapAMessage(DbDataReader dr)
         {
             var id = GetMessageId(dr);

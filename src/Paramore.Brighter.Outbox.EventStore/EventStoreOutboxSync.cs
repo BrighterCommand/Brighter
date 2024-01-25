@@ -429,5 +429,10 @@ namespace Paramore.Brighter.Outbox.EventStore
                 throw new ArgumentException($"{Globals.StreamArg} value must not be null or empty", nameof(args));
             return stream;
         }
+
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
     }
 }
