@@ -27,7 +27,6 @@ using Confluent.SchemaRegistry.Serdes;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using NJsonSchema.Generation;
-using NJsonSchema.NewtonsoftJson.Generation;
 
 namespace Paramore.Brighter.MessagingGateway.Kafka
 {
@@ -48,7 +47,7 @@ namespace Paramore.Brighter.MessagingGateway.Kafka
         {
             var resolver = new DefaultContractResolver { NamingStrategy = new CamelCaseNamingStrategy() };
 
-            return new NewtonsoftJsonSchemaGeneratorSettings
+            return new JsonSchemaGeneratorSettings
             {
                 FlattenInheritanceHierarchy = true,
                 SerializerSettings = new JsonSerializerSettings
