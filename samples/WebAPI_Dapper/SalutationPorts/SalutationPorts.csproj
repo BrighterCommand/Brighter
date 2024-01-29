@@ -11,9 +11,9 @@
     </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Dapper" Version="2.1.24" />
-    <PackageReference Include="DapperExtensions" Version="1.7.0" />
-    <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="DapperExtensions" />
+    <PackageReference Include="Polly.Contrib.WaitAndRetry" />
   </ItemGroup>
 
 </Project>
