@@ -4,12 +4,12 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.1" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.2" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.300" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.16" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.41" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.40" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.40" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.17" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.42" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.41" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.41" />
     <PackageVersion Include="Azure.Identity" Version="1.10.4" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.19.1" />
@@ -46,7 +46,10 @@
     <PackageVersion Include="NJsonSchema" Version="10.9.0" />
     <PackageVersion Include="Npgsql" Version="8.0.1" />
     <PackageVersion Include="NUnit" Version="4.0.1" />
-    <PackageVersion Include="NUnit.Analyzers" Version="3.10.0" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageVersion>
     <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.7.0" />
