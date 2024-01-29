@@ -5,15 +5,11 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="FluentMigrator" Version="5.0.0" />
-        <PackageReference Include="FluentMigrator.Runner" Version="5.0.0" />
-        <PackageReference Include="OpenTelemetry" Version="1.6.0" />
-        <PackageReference Include="OpenTelemetry.Exporter.Console" Version="1.6.0" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.6.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.6.0-beta.3" />
-        <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
-        <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
+        <PackageReference Include="FluentMigrator" />
+        <PackageReference Include="FluentMigrator.Runner" />
+        <PackageReference Include="Paramore.Darker.AspNetCore" />
+        <PackageReference Include="Paramore.Darker.Policies" />
+        <PackageReference Include="Swashbuckle.AspNetCore" />
     </ItemGroup>
 
     <ItemGroup>

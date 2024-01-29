@@ -5,10 +5,10 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
-        <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
-        <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
-        <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="8.0.0" />
+        <PackageReference Include="Paramore.Darker.AspNetCore" />
+        <PackageReference Include="Paramore.Darker.Policies" />
+        <PackageReference Include="Swashbuckle.AspNetCore" />
+        <PackageReference Include="System.Diagnostics.DiagnosticSource" />
     </ItemGroup>
 
     <ItemGroup>
