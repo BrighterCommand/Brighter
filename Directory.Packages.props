@@ -52,9 +52,12 @@
     </PackageVersion>
     <PackageVersion Include="NUnit3TestAdapter" Version="4.5.0" />
     <PackageVersion Include="OpenTelemetry" Version="1.7.0" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="1.7.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.Zipkin" Version="1.7.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
     <PackageVersion Include="Paramore.Darker" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.AspNetCore" Version="3.0.0" />
     <PackageVersion Include="Paramore.Darker.Policies" Version="3.0.0" />

@@ -7,6 +7,9 @@
     <ItemGroup>
         <PackageReference Include="FluentMigrator" />
         <PackageReference Include="FluentMigrator.Runner" />
+        <PackageReference Include="OpenTelemetry.Exporter.Console" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" />
         <PackageReference Include="Paramore.Darker.AspNetCore" />
         <PackageReference Include="Paramore.Darker.Policies" />
         <PackageReference Include="Swashbuckle.AspNetCore" />
