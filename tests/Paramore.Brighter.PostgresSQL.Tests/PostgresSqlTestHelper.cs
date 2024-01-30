@@ -10,13 +10,21 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 {
     internal class PostgresSqlTestHelper
     {
+        private readonly bool _binaryMessagePayload;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<PostgresSqlTestHelper>();
         private readonly PostgreSqlSettings _postgreSqlSettings;
         private string _tableName;
         private readonly object syncObject = new object();
 
-        public PostgresSqlTestHelper()
+        public RelationalDatabaseConfiguration Configuration 
+            => new(_postgreSqlSettings.TestsBrighterConnectionString, outBoxTableName: _tableName, binaryMessagePayload: _binaryMessagePayload);
+        
+        public RelationalDatabaseConfiguration InboxConfiguration 
+            => new(_postgreSqlSettings.TestsBrighterConnectionString, inboxTableName: _tableName);
+
+        public PostgresSqlTestHelper(bool binaryMessagePayload = false)
         {
+            _binaryMessagePayload = binaryMessagePayload;
             var builder = new ConfigurationBuilder().AddEnvironmentVariables();
             var configuration = builder.Build();
 
@@ -25,10 +33,6 @@ namespace Paramore.Brighter.PostgresSQL.Tests
 
             _tableName = $"test_{Guid.NewGuid():N}";
         }
-
-        public PostgreSqlOutboxConfiguration OutboxConfiguration => new PostgreSqlOutboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
-        
-        public PostgresSqlInboxConfiguration InboxConfiguration => new PostgresSqlInboxConfiguration(_postgreSqlSettings.TestsBrighterConnectionString, _tableName);
 
 
         public void SetupMessageDb()
@@ -92,7 +96,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"message_{_tableName}";
-                var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName);
+                var createTableSql = PostgreSqlOutboxBulder.GetDDL(_tableName, Configuration.BinaryMessagePayload);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())
@@ -107,7 +111,7 @@ namespace Paramore.Brighter.PostgresSQL.Tests
             using (var connection = new NpgsqlConnection(_postgreSqlSettings.TestsBrighterConnectionString))
             {
                 _tableName = $"command_{_tableName}";
-                var createTableSql = PostgresSqlInboxBuilder.GetDDL(_tableName);
+                var createTableSql = PostgreSqlInboxBuilder.GetDDL(_tableName);
 
                 connection.Open();
                 using (var command = connection.CreateCommand())

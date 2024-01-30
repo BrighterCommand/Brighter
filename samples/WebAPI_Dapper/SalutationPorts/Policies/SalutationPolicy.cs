@@ -11,8 +11,8 @@ namespace SalutationPorts.Policies
 
         private void AddSalutationPolicies()
         {
-            Add(Retry.RETRYPOLICYASYNC, Retry.GetSimpleHandlerRetryPolicy());
-            Add(Retry.EXPONENTIAL_RETRYPOLICYASYNC, Retry.GetExponentialHandlerRetryPolicy());
+            Add(Retry.RETRYPOLICY, Retry.GetSimpleHandlerRetryPolicy());
+            Add(Retry.EXPONENTIAL_RETRYPOLICY, Retry.GetExponentialHandlerRetryPolicy());
         }
     }
 }

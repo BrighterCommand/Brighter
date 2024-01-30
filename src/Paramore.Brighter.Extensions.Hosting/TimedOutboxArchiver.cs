@@ -1,6 +1,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Paramore.Brighter.Logging;
@@ -8,17 +9,19 @@ using Paramore.Brighter.Logging;
 namespace Paramore.Brighter.Extensions.Hosting
 {
 
-    public class TimedOutboxArchiver : IHostedService, IDisposable
+    public class TimedOutboxArchiver<TMessage, TTransaction> : IHostedService, IDisposable where TMessage : Message
     {
         private readonly TimedOutboxArchiverOptions _options;
         private static readonly ILogger s_logger = ApplicationLogging.CreateLogger<TimedOutboxSweeper>();
-        private IAmAnOutbox<Message> _outbox;
-        private IAmAnArchiveProvider _archiveProvider;
+        private readonly IAmAnOutbox _outbox;
+        private readonly IAmAnArchiveProvider _archiveProvider;
         private Timer _timer;
 
         private static readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
 
-        public TimedOutboxArchiver(IAmAnOutbox<Message> outbox, IAmAnArchiveProvider archiveProvider,
+        public TimedOutboxArchiver(
+            IAmAnOutbox outbox, 
+            IAmAnArchiveProvider archiveProvider,
             TimedOutboxArchiverOptions options)
         {
             _outbox = outbox;
@@ -56,7 +59,7 @@ namespace Paramore.Brighter.Extensions.Hosting
                 s_logger.LogInformation("Outbox Archiver looking for messages to Archive");
                 try
                 {
-                    var outBoxArchiver = new OutboxArchiver(
+                    var outBoxArchiver = new OutboxArchiver<TMessage, TTransaction>(
                         _outbox,
                         _archiveProvider,
                         _options.BatchSize);

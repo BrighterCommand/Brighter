@@ -53,8 +53,8 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         [Fact]
         public async Task When_Building_A_Pipeline_With_Global_Inbox()
         {
-            // Settings for UseInbox on MyCommandInboxedHandler
-            // [UseInbox(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
+            // Settings for InboxConfiguration on MyCommandInboxedHandler
+            // [InboxConfiguration(step:0, contextKey: typeof(MyCommandInboxedHandler), onceOnly: false)]
             // Settings for InboxConfiguration as above
             // _inboxConfiguration = new InboxConfiguration(InboxScope.All, context: true, onceOnly: true);
             // so global will not allow repeated requests ans calls, but local should override this and allow
@@ -66,7 +66,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var chain = _chainOfResponsibility.First();
             var myCommand = new MyCommand();
             
-            //First pass not impacted by UseInbox Handler
+            //First pass not impacted by InboxConfiguration Handler
             await chain.HandleAsync(myCommand);
 
             bool noException = true;

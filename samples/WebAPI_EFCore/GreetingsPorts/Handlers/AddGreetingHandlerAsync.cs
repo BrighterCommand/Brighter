@@ -17,12 +17,13 @@ namespace GreetingsPorts.Handlers
     {
         private readonly GreetingsEntityGateway _uow;
         private readonly IAmACommandProcessor _postBox;
-                
-        public AddGreetingHandlerAsync(GreetingsEntityGateway uow, IAmACommandProcessor postBox)
+        private readonly IAmATransactionConnectionProvider _transactionProvider;
+
+        public AddGreetingHandlerAsync(GreetingsEntityGateway uow, IAmATransactionConnectionProvider provider, IAmACommandProcessor postBox)
         {
             _uow = uow;
             _postBox = postBox;
- 
+            _transactionProvider = provider;
         }
         [RequestLoggingAsync(0, HandlerTiming.Before)]
         [UsePolicyAsync(step:1, policy: Policies.Retry.EXPONENTIAL_RETRYPOLICYASYNC)]
@@ -30,32 +31,38 @@ namespace GreetingsPorts.Handlers
         {
             var posts = new List<Guid>();
             
-            //We span a Db outside of EF's control, so start an explicit transactional scope
-            var tx = await _uow.Database.BeginTransactionAsync(cancellationToken);
+            await _transactionProvider.GetTransactionAsync(cancellationToken);
             try
             {
                 var person = await _uow.People
                     .Where(p => p.Name == addGreeting.Name)
                     .SingleAsync(cancellationToken);
-                
+
                 var greeting = new Greeting(addGreeting.Greeting);
-                
+
                 person.AddGreeting(greeting);
-                
+
                 //Now write the message we want to send to the Db in the same transaction.
-                posts.Add(await _postBox.DepositPostAsync(new GreetingMade(greeting.Greet()), cancellationToken: cancellationToken));
-                
+                posts.Add(await _postBox.DepositPostAsync(
+                    new GreetingMade(greeting.Greet()),
+                    _transactionProvider,
+                    cancellationToken: cancellationToken));
+
                 //write the changed entity to the Db
                 await _uow.SaveChangesAsync(cancellationToken);
 
                 //write new person and the associated message to the Db
-                await tx.CommitAsync(cancellationToken);
+                await _transactionProvider.CommitAsync(cancellationToken);
             }
             catch (Exception)
             {
                 //it went wrong, rollback the entity change and the downstream message
-                await tx.RollbackAsync(cancellationToken);
+                await _transactionProvider.RollbackAsync(cancellationToken);
                 return await base.HandleAsync(addGreeting, cancellationToken);
+            }
+            finally
+            {
+                _transactionProvider.Close();
             }
 
             //Send this message via a transport. We need the ids to send just the messages here, not all outstanding ones.

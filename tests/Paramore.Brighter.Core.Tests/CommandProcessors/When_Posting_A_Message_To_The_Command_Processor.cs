@@ -26,6 +26,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -40,14 +41,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly MyCommand _myCommand = new MyCommand();
         private readonly Message _message;
-        private readonly FakeOutboxSync _fakeOutbox;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducerWithPublishConfirmation _fakeMessageProducerWithPublishConfirmation;
 
         public CommandProcessorPostCommandTests()
         {
             _myCommand.Value = "Hello World";
 
-            _fakeOutbox = new FakeOutboxSync();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducerWithPublishConfirmation = new FakeMessageProducerWithPublishConfirmation();
 
             const string topic = "MyCommand";
@@ -66,14 +67,18 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             var circuitBreakerPolicy = Policy
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
+            
+            var policyRegistry = new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } };
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},});
+            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
 
+            CommandProcessor.ClearExtServiceBus();
             _commandProcessor = new CommandProcessor(
                 new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                policyRegistry,
                 messageMapperRegistry,
-                _fakeOutbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}));
-        }
+                bus);
+             }
 
         [Fact]
         public void When_Posting_A_Message_To_The_Command_Processor()

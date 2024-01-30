@@ -1,23 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net6.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
     </PropertyGroup>
 
-    <ItemGroup>
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
-      <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
-      <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
-    </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Dapper\Paramore.Brighter.Dapper.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter.Sqlite.Dapper\Paramore.Brighter.Sqlite.Dapper.csproj" />
+    <ProjectReference Include="..\..\..\src\Paramore.Brighter\Paramore.Brighter.csproj" />
+    <ProjectReference Include="..\GreetingsEntities\GreetingsEntities.csproj" />
+  </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Dapper" Version="2.0.151" />
-      <PackageReference Include="DapperExtensions" Version="1.7.0" />
-      <PackageReference Include="Paramore.Darker" Version="3.0.0" />
-      <PackageReference Include="Paramore.Darker.Policies" Version="3.0.0" />
-      <PackageReference Include="Paramore.Darker.QueryLogging" Version="3.0.0" />
-      <PackageReference Include="Polly.Contrib.WaitAndRetry" Version="1.1.1" />
+      <PackageReference Include="Dapper" />
+      <PackageReference Include="DapperExtensions" />
+      <PackageReference Include="Paramore.Darker" />
+      <PackageReference Include="Paramore.Darker.Policies" />
+      <PackageReference Include="Paramore.Darker.QueryLogging" />
+      <PackageReference Include="Polly.Contrib.WaitAndRetry" />
     </ItemGroup>
 
 </Project>

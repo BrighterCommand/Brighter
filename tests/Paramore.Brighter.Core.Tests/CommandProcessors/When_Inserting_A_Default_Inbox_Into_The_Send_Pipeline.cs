@@ -29,7 +29,6 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
             container.AddTransient<UseInboxHandler<MyCommand>>();
             container.AddSingleton<IBrighterOptions>(new BrighterOptions {HandlerLifetime = ServiceLifetime.Transient});
 
-
             _provider = container.BuildServiceProvider();
             var handlerFactory = new ServiceProviderHandlerFactory(_provider);
 
@@ -42,6 +41,7 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
             var inboxConfiguration = new InboxConfiguration(
+                new InMemoryInbox(),
                 InboxScope.All, //grab all the events
                 onceOnly: true, //only allow once
                 actionOnExists: OnceOnlyAction.Throw //throw on duplicates (we should  be the only entry after)

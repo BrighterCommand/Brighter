@@ -36,39 +36,39 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
     public class SqlOutboxWritngMessagesTests : IDisposable
     {
         private readonly PostgresSqlTestHelper _postgresSqlTestHelper;
-        private readonly Message _messageEarliest;
-        private readonly Message _message2;
-        private readonly Message _messageLatest;
+        private readonly Message _messageOne;
+        private readonly Message _messageTwo;
+        private readonly Message _messageThree;
         private IEnumerable<Message> _retrievedMessages;
-        private readonly PostgreSqlOutboxSync _sqlOutboxSync;
+        private readonly PostgreSqlOutbox _sqlOutbox;
 
         public SqlOutboxWritngMessagesTests()
         {
             _postgresSqlTestHelper = new PostgresSqlTestHelper();
             _postgresSqlTestHelper.SetupMessageDb();
 
-            _sqlOutboxSync = new PostgreSqlOutboxSync(_postgresSqlTestHelper.OutboxConfiguration);
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
+            _sqlOutbox = new PostgreSqlOutbox(_postgresSqlTestHelper.Configuration);
+            _messageOne = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
 
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
+            _messageTwo = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
 
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            _messageThree = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
             
         }
 
         [Fact]
         public void When_Writing_Messages_To_The_Outbox()
         {
-            _sqlOutboxSync.Add(_messageEarliest);
-            _sqlOutboxSync.Add(_message2);
-            _sqlOutboxSync.Add(_messageLatest);
+            _sqlOutbox.Add(_messageOne);
+            _sqlOutbox.Add(_messageTwo);
+            _sqlOutbox.Add(_messageThree);
             
-            _retrievedMessages = _sqlOutboxSync.Get();
+            _retrievedMessages = _sqlOutbox.Get();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageThree.Id);
             //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            _retrievedMessages.First().Id.Should().Be(_messageOne.Id);
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
@@ -76,13 +76,13 @@ namespace Paramore.Brighter.PostgresSQL.Tests.Outbox
         [Fact]
         public void When_Writing_Messages_To_The_Outbox_Bulk()
         {
-            _sqlOutboxSync.Add(new List<Message>{_messageEarliest, _message2, _messageLatest});
-            _retrievedMessages = _sqlOutboxSync.Get();
+            _sqlOutbox.Add(new List<Message>{_messageOne, _messageTwo, _messageThree});
+            _retrievedMessages = _sqlOutbox.Get();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageThree.Id);
+            //should read first message first from the outbox
+            _retrievedMessages.First().Id.Should().Be(_messageOne.Id);
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }

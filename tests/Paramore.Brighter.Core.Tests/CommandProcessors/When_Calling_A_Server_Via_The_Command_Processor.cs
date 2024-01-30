@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Paramore.Brighter.ServiceActivator.TestHelpers;
@@ -69,17 +70,30 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 new Subscription<MyResponse>()
             };
 
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            };
+            var producerRegistry =
+                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+                {
+                    { topic, _fakeMessageProducerWithPublishConfirmation },
+                });
+        
+            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, new InMemoryOutbox());
+        
+            CommandProcessor.ClearExtServiceBus();
             _commandProcessor = new CommandProcessor(
                 subscriberRegistry,
                 handlerFactory,
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new InMemoryRequestContextFactory(), 
+                policyRegistry,
                 messageMapperRegistry,
-                new InMemoryOutbox(),
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducerWithPublishConfirmation},}),
-                replySubs,
+                bus,
+                replySubscriptions:replySubs,
                 responseChannelFactory: inMemoryChannelFactory);
-            
+
             PipelineBuilder<MyRequest>.ClearPipelineCache();
   
         }

@@ -69,7 +69,7 @@ namespace SalutationAnalytics
                     new SubscriptionName("paramore.sample.salutationanalytics"),
                     new ChannelName("SalutationAnalytics"),
                     new RoutingKey("GreetingMade"),
-                    runAsync: true,
+                    runAsync: false,
                     timeoutInMilliseconds: 200,
                     isDurable: true,
                     makeChannels: OnMissingChannel.Create), //change to OnMissingChannel.Validate if you have infrastructure declared elsewhere
@@ -84,6 +84,21 @@ namespace SalutationAnalytics
 
             var rmqMessageConsumerFactory = new RmqMessageConsumerFactory(rmqConnection);
 
+            var producerRegistry = new RmqProducerRegistryFactory(
+                rmqConnection,
+                new RmqPublication[]
+                {
+                    new RmqPublication
+                    {
+                        Topic = new RoutingKey("SalutationReceived"),
+                        MaxOutStandingMessages = 5,
+                        MaxOutStandingCheckIntervalMilliSeconds = 500,
+                        WaitForConfirmsTimeOutInMilliseconds = 1000,
+                        MakeChannels = OnMissingChannel.Create
+                    }
+                }
+            ).Create();
+
             services.AddServiceActivator(options =>
                 {
                     options.Subscriptions = subscriptions;
@@ -93,38 +108,27 @@ namespace SalutationAnalytics
                     options.MapperLifetime = ServiceLifetime.Singleton;
                     options.CommandProcessorLifetime = ServiceLifetime.Scoped;
                     options.PolicyRegistry = new SalutationPolicy();
+                    options.InboxConfiguration = new InboxConfiguration(
+                        ConfigureInbox(awsCredentials, dynamoDb),
+                        scope: InboxScope.Commands,
+                        onceOnly: true,
+                        actionOnExists: OnceOnlyAction.Throw
+                    );
                 })
                 .ConfigureJsonSerialisation((options) =>
                 {
                     //We don't strictly need this, but added as an example
                     options.PropertyNameCaseInsensitive = true;
                 })
-                .UseExternalBus(new RmqProducerRegistryFactory(
-                        rmqConnection,
-                        new RmqPublication[]
-                        {
-                            new RmqPublication
-                            {
-                                Topic = new RoutingKey("SalutationReceived"),
-                                MaxOutStandingMessages = 5,
-                                MaxOutStandingCheckIntervalMilliSeconds = 500,
-                                WaitForConfirmsTimeOutInMilliseconds = 1000,
-                                MakeChannels = OnMissingChannel.Create
-                            }
-                        }
-                    ).Create()
+                .UseExternalBus((configure) =>
+                    {
+                        configure.ProducerRegistry = producerRegistry;
+                        configure.Outbox = ConfigureOutbox(awsCredentials, dynamoDb);
+                        configure.ConnectionProvider = typeof(DynamoDbUnitOfWork);
+                        configure.TransactionProvider = typeof(DynamoDbUnitOfWork);
+                    }
                 )
-                .AutoFromAssemblies()
-                .UseExternalInbox(
-                    ConfigureInbox(awsCredentials, dynamoDb),
-                    new InboxConfiguration(
-                        scope: InboxScope.Commands,
-                        onceOnly: true,
-                        actionOnExists: OnceOnlyAction.Throw
-                    )
-                )
-                .UseExternalOutbox(ConfigureOutbox(awsCredentials, dynamoDb))
-                .UseDynamoDbTransactionConnectionProvider(typeof(DynamoDbUnitOfWork), ServiceLifetime.Scoped);
+                .AutoFromAssemblies();
 
             services.AddHostedService<ServiceActivatorHostedService>();
         }
@@ -240,7 +244,7 @@ namespace SalutationAnalytics
             return new DynamoDbInbox(dynamoDb, new DynamoDbInboxConfiguration(credentials, RegionEndpoint.EUWest1));
         }
         
-        private static IAmAnOutbox<Message> ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
+        private static IAmAnOutbox ConfigureOutbox(AWSCredentials credentials, IAmazonDynamoDB dynamoDb)
         {
             return new DynamoDbOutbox(dynamoDb, new DynamoDbConfiguration(credentials, RegionEndpoint.EUWest1));
         }

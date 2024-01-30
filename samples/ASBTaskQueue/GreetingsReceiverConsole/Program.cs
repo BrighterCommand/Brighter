@@ -60,7 +60,6 @@ namespace GreetingsReceiverConsole
                         options.ChannelFactory = new AzureServiceBusChannelFactory(asbConsumerFactory);
                         options.UseScoped = false;
                     })
-                    .UseInMemoryOutbox()
                     .AutoFromAssemblies();
 
                     services.AddHostedService<ServiceActivatorHostedService>();

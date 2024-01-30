@@ -8,6 +8,10 @@ namespace Paramore.Brighter
     /// </summary>
     public interface IAmAMessageRecoverer
     {
-        void Repost(List<string> messageIds, IAmAnOutboxSync<Message> outBox, IAmAMessageProducerSync messageProducerSync);
+        void Repost<T, TTransaction>(
+            List<string> messageIds, 
+            IAmAnOutboxSync<T, TTransaction> outBox, 
+            IAmAMessageProducerSync messageProducerSync
+            ) where T : Message;
     }
 }

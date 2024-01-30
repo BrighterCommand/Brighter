@@ -34,20 +34,20 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqlOutboxWritngMessagesAsyncTests : IDisposable
+    public class SqlOutboxWritngMessagesAsyncTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sSqlOutboxSync;
-        private Message _message2;
-        private Message _messageEarliest;
-        private Message _messageLatest;
+        private readonly SqliteOutbox _sqlOutbox;
+        private Message _messageTwo;
+        private Message _messageOne;
+        private Message _messageThree;
         private IList<Message> _retrievedMessages;
 
         public SqlOutboxWritngMessagesAsyncTests()
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sSqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
         }
 
         [Fact]
@@ -55,12 +55,12 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             await SetUpMessagesAsync();
 
-            _retrievedMessages = await _sSqlOutboxSync.GetAsync();
+            _retrievedMessages = await _sqlOutbox.GetAsync();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
-            //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageThree.Id);
+            //should read first message first from the outbox
+            _retrievedMessages.First().Id.Should().Be(_messageOne.Id);
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
         }
@@ -69,48 +69,35 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         public async Task When_Writing_Messages_To_The_Outbox_Async_Bulk()
         {
             var messages = await SetUpMessagesAsync(false);
-            await _sSqlOutboxSync.AddAsync(messages);
+            await _sqlOutbox.AddAsync(messages);
 
-            _retrievedMessages = await _sSqlOutboxSync.GetAsync();
+            _retrievedMessages = await _sqlOutbox.GetAsync();
 
-            //should read first message last from the outbox
-            _retrievedMessages.Last().Id.Should().Be(_messageEarliest.Id);
+            //should read last message last from the outbox
+            _retrievedMessages.Last().Id.Should().Be(_messageThree.Id);
             //should read last message first from the outbox
-            _retrievedMessages.First().Id.Should().Be(_messageLatest.Id);
+            _retrievedMessages.First().Id.Should().Be(_messageOne.Id);
             //should read the messages from the outbox
             _retrievedMessages.Should().HaveCount(3);
-
-            
         }
 
         private async Task<List<Message>> SetUpMessagesAsync(bool addMessagesToOutbox = true)
         {
-            _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
-            if(addMessagesToOutbox) await _sSqlOutboxSync.AddAsync(_messageEarliest);
+            _messageOne = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
+            if(addMessagesToOutbox) await _sqlOutbox.AddAsync(_messageOne);
 
-            _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
-            if(addMessagesToOutbox) await _sSqlOutboxSync.AddAsync(_message2);
+            _messageTwo = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
+            if(addMessagesToOutbox) await _sqlOutbox.AddAsync(_messageTwo);
 
-            _messageLatest = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
-            if(addMessagesToOutbox) await _sSqlOutboxSync.AddAsync(_messageLatest);
+            _messageThree = new Message(new MessageHeader(Guid.NewGuid(), "Test3", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-1)), new MessageBody("Body3"));
+            if(addMessagesToOutbox) await _sqlOutbox.AddAsync(_messageThree);
             
-            return new List<Message> { _messageEarliest, _message2, _messageLatest };
+            return new List<Message> { _messageOne, _messageTwo, _messageThree };
         }
 
-        private void Release()
+        public async ValueTask DisposeAsync()
         {
-           _sqliteTestHelper.CleanUpDb();
-        }
-        
-        public void Dispose()
-        {
-            GC.SuppressFinalize(this);
-            Release();
-        }
-
-        ~SqlOutboxWritngMessagesAsyncTests()
-        {
-            Release();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }

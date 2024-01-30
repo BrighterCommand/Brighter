@@ -27,6 +27,7 @@ using System.Runtime.ExceptionServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Transactions;
 using Paramore.Brighter.Monitoring.Configuration;
 using Paramore.Brighter.Monitoring.Events;
 
@@ -87,7 +88,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeBeforeHandle,
                             0),
-                        ContinueOnCapturedContext, cancellationToken)
+                        cancellationToken: cancellationToken)
                         .ConfigureAwait(ContinueOnCapturedContext);
                 }
 
@@ -104,8 +105,8 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             _handlerFullAssemblyName,
                             JsonSerializer.Serialize(command, JsonSerialisationOptions.Options),
                             timeAfterHandle,
-                            (timeAfterHandle - timeBeforeHandle).Milliseconds),
-                        ContinueOnCapturedContext, cancellationToken)
+                            (timeAfterHandle - timeBeforeHandle).Milliseconds), 
+                        cancellationToken: cancellationToken)
                         .ConfigureAwait(ContinueOnCapturedContext);
                 }
 
@@ -133,7 +134,7 @@ namespace Paramore.Brighter.Monitoring.Handlers
                             timeOnException,
                             (timeOnException - timeBeforeHandle).Milliseconds,
                             capturedException.SourceException),
-                        ContinueOnCapturedContext, cancellationToken)
+                        cancellationToken: cancellationToken)
                         .ConfigureAwait(ContinueOnCapturedContext);
                 }
 

@@ -8,25 +8,25 @@ using Paramore.Brighter.Logging;
 
 namespace Paramore.Brighter
 {
-    public class OutboxArchiver
+    public class OutboxArchiver<TMessage, TTransaction> where TMessage: Message
     {
-        private const string ARCHIVEOUTBOX = "Archive Outbox";
+        private const string ARCHIVE_OUTBOX = "Archive Outbox";
         
         private readonly int _batchSize;
-        private IAmAnOutboxSync<Message> _outboxSync;
-        private IAmAnOutboxAsync<Message> _outboxAsync;
-        private IAmAnArchiveProvider _archiveProvider;
-        private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver>();
+        private readonly IAmAnOutboxSync<TMessage, TTransaction> _outboxSync;
+        private readonly IAmAnOutboxAsync<TMessage, TTransaction> _outboxAsync;
+        private readonly IAmAnArchiveProvider _archiveProvider;
+        private readonly ILogger _logger = ApplicationLogging.CreateLogger<OutboxArchiver<TMessage, TTransaction>>();
         
         private const string SUCCESS_MESSAGE = "Successfully archiver {NumberOfMessageArchived} out of {MessagesToArchive}, batch size : {BatchSize}";
 
-        public OutboxArchiver(IAmAnOutbox<Message> outbox,IAmAnArchiveProvider archiveProvider, int batchSize = 100)
+        public OutboxArchiver(IAmAnOutbox outbox,IAmAnArchiveProvider archiveProvider, int batchSize = 100)
         {
             _batchSize = batchSize;
-            if (outbox is IAmAnOutboxSync<Message> syncBox)
+            if (outbox is IAmAnOutboxSync<TMessage, TTransaction> syncBox)
                 _outboxSync = syncBox;
             
-            if (outbox is IAmAnOutboxAsync<Message> asyncBox)
+            if (outbox is IAmAnOutboxAsync<TMessage, TTransaction> asyncBox)
                 _outboxAsync = asyncBox;
 
             _archiveProvider = archiveProvider;
@@ -38,7 +38,7 @@ namespace Paramore.Brighter
         /// <param name="minimumAge">Minimum age in hours</param>
         public void Archive(int minimumAge)
         {
-            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
+            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
 
             try
             {
@@ -61,11 +61,11 @@ namespace Paramore.Brighter
             }
             finally
             {
-                if(activity?.DisplayName == ARCHIVEOUTBOX)
+                if(activity?.DisplayName == ARCHIVE_OUTBOX)
                     activity.Dispose();
             }
         }
-
+        
         /// <summary>
         /// Archive Message from the outbox to the outbox archive provider
         /// </summary>
@@ -74,8 +74,8 @@ namespace Paramore.Brighter
         /// <param name="parallelArchiving">Send messages to archive provider in parallel</param>
         public async Task ArchiveAsync(int minimumAge, CancellationToken cancellationToken, bool parallelArchiving = false)
         {
-            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVEOUTBOX, ActivityKind.Server);
-
+            var activity = ApplicationTelemetry.ActivitySource.StartActivity(ARCHIVE_OUTBOX, ActivityKind.Server);
+            
             try
             {
                 var messages = await _outboxAsync.DispatchedMessagesAsync(minimumAge, _batchSize,
@@ -96,9 +96,8 @@ namespace Paramore.Brighter
                     }
                     successfullyArchivedMessages = messages.Select(m => m.Id).ToArray();
                 }
-                
-                await _outboxAsync.DeleteAsync(cancellationToken, successfullyArchivedMessages);
-                _logger.LogInformation(SUCCESS_MESSAGE, messages.Count(), messages.Count(), _batchSize);
+
+                await _outboxAsync.DeleteAsync(cancellationToken, messages.Select(e => e.Id).ToArray());
             }
             catch (Exception e)
             {
@@ -108,7 +107,7 @@ namespace Paramore.Brighter
             }
             finally
             {
-                if(activity?.DisplayName == ARCHIVEOUTBOX)
+                if(activity?.DisplayName == ARCHIVE_OUTBOX)
                     activity.Dispose();
             }
         }

@@ -24,6 +24,7 @@ THE SOFTWARE. */
 
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -36,8 +37,9 @@ namespace Paramore.Brighter
     /// We provide implementations of <see cref="IAmAnOutboxAsync{T}"/> for various databases. Users using unsupported databases should consider a Pull
     /// request
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public interface IAmAnOutboxAsync<in T> : IAmAnOutbox<T> where T : Message
+    /// <typeparam name="T">The type of message</typeparam>
+    /// <typeparam name="TTransaction">The type of transaction supported by the Outbox</typeparam>
+    public interface IAmAnOutboxAsync<T, TTransaction> : IAmAnOutbox where T : Message
     {
         /// <summary>
         /// If false we the default thread synchronization context to run any continuation, if true we re-use the original synchronization context.
@@ -53,9 +55,13 @@ namespace Paramore.Brighter
         /// <param name="message">The message.</param>
         /// <param name="outBoxTimeout">The time allowed for the write in milliseconds; on a -1 default</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        /// <param name="transactionConnectionProvider">The Connection Provider to use for this call</param>
+        /// <param name="transactionProvider">The Connection Provider to use for this call</param>
         /// <returns><see cref="Task"/>.</returns>
-        Task AddAsync(T message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null);
+        Task AddAsync(
+            T message, 
+            int outBoxTimeout = -1, 
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider<TTransaction> transactionProvider = null);
 
         /// <summary>
         /// Awaitable Get the specified message identifier.
@@ -158,5 +164,12 @@ namespace Paramore.Brighter
             int hoursDispatchedSince,
             int pageSize = 100,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the number of un dispatched messages in the outbox
+        /// </summary>
+        /// <param name="cancellationToken">The Cancellation Token</param>
+        /// <returns>Number of messages in the outbox that have yet to be dispatched</returns>
+        Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken);
     }
 }

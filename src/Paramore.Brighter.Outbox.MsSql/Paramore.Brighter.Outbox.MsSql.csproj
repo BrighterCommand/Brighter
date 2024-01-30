@@ -2,27 +2,16 @@
   <PropertyGroup>
     <Description>This is an implementation of the outbox used for decoupled invocation of commands by Paramore.Brighter, using MS Sql Server</Description>
     <Authors>Francesco Pighi</Authors>
-    <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net6.0;net7.0;net8.0</TargetFrameworks>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="DDL_SCRIPTS\MSSQL\Outbox.sql" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="DDL_SCRIPTS\MSSQL\Outbox.sql" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter.Extensions.DependencyInjection\Paramore.Brighter.Extensions.DependencyInjection.csproj" />
     <ProjectReference Include="..\Paramore.Brighter.MsSql\Paramore.Brighter.MsSql.csproj" />
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-  <ItemGroup>
 
-  </ItemGroup>
-  <ItemGroup>
-    <PackageReference Update="MinVer" Version="4.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-  </ItemGroup>
 </Project>

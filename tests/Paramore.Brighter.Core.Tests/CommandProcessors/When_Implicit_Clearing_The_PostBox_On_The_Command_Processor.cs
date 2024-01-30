@@ -27,6 +27,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Transactions;
 using FluentAssertions;
 using Paramore.Brighter.Core.Tests.CommandProcessors.TestDoubles;
 using Polly;
@@ -41,14 +42,14 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
         private readonly CommandProcessor _commandProcessor;
         private readonly Message _message;
         private readonly Message _message2;
-        private readonly FakeOutboxSync _fakeOutbox;
+        private readonly FakeOutbox _fakeOutbox;
         private readonly FakeMessageProducer _fakeMessageProducer;
 
         public CommandProcessorPostBoxImplicitClearTests()
         {
             var myCommand = new MyCommand{ Value = "Hello World"};
 
-            _fakeOutbox = new FakeOutboxSync();
+            _fakeOutbox = new FakeOutbox();
             _fakeMessageProducer = new FakeMessageProducer();
 
             var topic = "MyCommand";
@@ -73,12 +74,26 @@ namespace Paramore.Brighter.Core.Tests.CommandProcessors
                 .Handle<Exception>()
                 .CircuitBreaker(1, TimeSpan.FromMilliseconds(1));
 
+            var policyRegistry = new PolicyRegistry
+            {
+                { CommandProcessor.RETRYPOLICY, retryPolicy },
+                { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy }
+            };
+
+            var producerRegistry = new ProducerRegistry(new Dictionary<string, IAmAMessageProducer>
+            {
+                { topic, _fakeMessageProducer },
+            }); 
+            
+            IAmAnExternalBusService bus = new ExternalBusServices<Message, CommittableTransaction>(producerRegistry, policyRegistry, _fakeOutbox);
+        
+            CommandProcessor.ClearExtServiceBus();
             _commandProcessor = new CommandProcessor(
-                new InMemoryRequestContextFactory(),
-                new PolicyRegistry { { CommandProcessor.RETRYPOLICY, retryPolicy }, { CommandProcessor.CIRCUITBREAKER, circuitBreakerPolicy } },
+                new InMemoryRequestContextFactory(), 
+                policyRegistry,
                 messageMapperRegistry,
-                _fakeOutbox,
-                new ProducerRegistry(new Dictionary<string, IAmAMessageProducer> {{topic, _fakeMessageProducer},}));
+                bus
+            );
         }
 
         [Fact]

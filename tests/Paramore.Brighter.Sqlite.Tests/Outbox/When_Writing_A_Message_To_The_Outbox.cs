@@ -24,6 +24,7 @@ THE SOFTWARE. */
 #endregion
 
 using System;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
@@ -31,10 +32,10 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqliteOutboxWritingMessageTests : IDisposable
+    public class SqliteOutboxWritingMessageTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly string _key1 = "name1";
         private readonly string _key2 = "name2";
         private readonly string _key3 = "name3";
@@ -52,7 +53,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
             var messageHeader = new MessageHeader(
                 messageId:Guid.NewGuid(),
                 topic: "test_topic", 
@@ -62,7 +63,8 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
                 delayedMilliseconds:5,
                 correlationId: Guid.NewGuid(),
                 replyTo: "ReplyTo",
-                contentType: "text/plain");
+                contentType: "text/plain",
+                partitionKey: Guid.NewGuid().ToString());
             messageHeader.Bag.Add(_key1, _value1);
             messageHeader.Bag.Add(_key2, _value2);
             messageHeader.Bag.Add(_key3, _value3);
@@ -70,24 +72,26 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             messageHeader.Bag.Add(_key5, _value5);
             
             _messageEarliest = new Message(messageHeader, new MessageBody("message body"));
-            _sqlOutboxSync.Add(_messageEarliest);
+            _sqlOutbox.Add(_messageEarliest);
         }
 
         [Fact]
         public void When_Writing_A_Message_To_The_Outbox()
         {
-            _storedMessage = _sqlOutboxSync.Get(_messageEarliest.Id);
+            _storedMessage = _sqlOutbox.Get(_messageEarliest.Id);
             //should read the message from the sql outbox
             _storedMessage.Body.Value.Should().Be(_messageEarliest.Body.Value);
             //should read the header from the sql outbox
             _storedMessage.Header.Topic.Should().Be(_messageEarliest.Header.Topic);
             _storedMessage.Header.MessageType.Should().Be(_messageEarliest.Header.MessageType);
-            _storedMessage.Header.TimeStamp.Should().Be(_messageEarliest.Header.TimeStamp);
+            _storedMessage.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss")
+                .Should().Be(_messageEarliest.Header.TimeStamp.ToString("yyyy-MM-ddTHH:mm:ss"));
             _storedMessage.Header.HandledCount.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.DelayedMilliseconds.Should().Be(0); // -- should be zero when read from outbox
             _storedMessage.Header.CorrelationId.Should().Be(_messageEarliest.Header.CorrelationId);
             _storedMessage.Header.ReplyTo.Should().Be(_messageEarliest.Header.ReplyTo);
             _storedMessage.Header.ContentType.Should().Be(_messageEarliest.Header.ContentType);
+            _storedMessage.Header.PartitionKey.Should().Be(_messageEarliest.Header.PartitionKey);
              
             
             //Bag serialization
@@ -103,9 +107,9 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
             _storedMessage.Header.Bag[_key5].Should().Be(_value5);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
-            _sqliteTestHelper.CleanUpDb();
+            await _sqliteTestHelper.CleanUpDbAsync();
         }
     }
 }

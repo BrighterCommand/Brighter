@@ -4,21 +4,14 @@
     <Authors>Sam Rumley</Authors>
     <Description>Common components required to connect to PostgreSql for inbox and outbox.</Description>
     <PackageTags>RabbitMQ;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
-    <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net6.0;net7.0;net8.0</TargetFrameworks>
   </PropertyGroup>
 
   <ItemGroup>
-
-    <PackageReference Include="Npgsql" Version="7.0.6" />
-
-    <PackageReference Update="MinVer" Version="4.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
+    <PackageReference Include="Npgsql" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
   </ItemGroup>
-
 </Project>

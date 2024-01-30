@@ -26,6 +26,7 @@ THE SOFTWARE. */
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using FluentAssertions;
 using Paramore.Brighter.Outbox.Sqlite;
 using Xunit;
@@ -33,10 +34,10 @@ using Xunit;
 namespace Paramore.Brighter.Sqlite.Tests.Outbox
 {
     [Trait("Category", "Sqlite")]
-    public class SqlOutboxDeletingMessagesTests 
+    public class SqlOutboxDeletingMessagesTests : IAsyncDisposable
     {
         private readonly SqliteTestHelper _sqliteTestHelper;
-        private readonly SqliteOutboxSync _sqlOutboxSync;
+        private readonly SqliteOutbox _sqlOutbox;
         private readonly Message _messageEarliest;
         private readonly Message _message2;
         private readonly Message _messageLatest;
@@ -46,7 +47,7 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         {
             _sqliteTestHelper = new SqliteTestHelper();
             _sqliteTestHelper.SetupMessageDb();
-            _sqlOutboxSync = new SqliteOutboxSync(new SqliteConfiguration(_sqliteTestHelper.ConnectionString, _sqliteTestHelper.TableName_Messages));
+            _sqlOutbox = new SqliteOutbox(_sqliteTestHelper.OutboxConfiguration);
 
             _messageEarliest = new Message(new MessageHeader(Guid.NewGuid(), "Test", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-3)), new MessageBody("Body"));
             _message2 = new Message(new MessageHeader(Guid.NewGuid(), "Test2", MessageType.MT_COMMAND, DateTime.UtcNow.AddHours(-2)), new MessageBody("Body2"));
@@ -56,25 +57,29 @@ namespace Paramore.Brighter.Sqlite.Tests.Outbox
         [Fact]
         public void When_Removing_Messages_From_The_Outbox()
         {
-            _sqlOutboxSync.Add(_messageEarliest);
-            _sqlOutboxSync.Add(_message2);
-            _sqlOutboxSync.Add(_messageLatest);
+            _sqlOutbox.Add(_messageEarliest);
+            _sqlOutbox.Add(_message2);
+            _sqlOutbox.Add(_messageLatest);
 
-            _retrievedMessages = _sqlOutboxSync.Get();
-            _sqlOutboxSync.Delete(_retrievedMessages.First().Id);
+            _retrievedMessages = _sqlOutbox.Get();
+            _sqlOutbox.Delete(_retrievedMessages.First().Id);
 
-            var remainingMessages = _sqlOutboxSync.Get();
+            var remainingMessages = _sqlOutbox.Get();
 
             remainingMessages.Should().HaveCount(2);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[1]);
             remainingMessages.Should().Contain(_retrievedMessages.ToList()[2]);
             
-            _sqlOutboxSync.Delete(remainingMessages.Select(m => m.Id).ToArray());
+            _sqlOutbox.Delete(remainingMessages.Select(m => m.Id).ToArray());
 
-            var messages = _sqlOutboxSync.Get();
+            var messages = _sqlOutbox.Get();
 
             messages.Should().HaveCount(0);
         }
-        
-  }
+
+        public async ValueTask DisposeAsync()
+        {
+            await _sqliteTestHelper.CleanUpDbAsync();
+        }
+    }
 }

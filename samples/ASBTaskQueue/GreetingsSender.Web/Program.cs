@@ -1,4 +1,5 @@
-﻿using Greetings.Adaptors.Data;
+﻿using System.Data.Common;
+using Greetings.Adaptors.Data;
 using Greetings.Adaptors.Services;
 using Greetings.Ports.Commands;
 using Microsoft.AspNetCore.Builder;
@@ -36,7 +37,18 @@ string asbEndpoint = ".servicebus.windows.net";
 
 var asbConnection = new ServiceBusVisualStudioCredentialClientProvider(asbEndpoint);
 
-var outboxConfig = new MsSqlConfiguration(dbConnString, "BrighterOutbox");
+var outboxConfig = new RelationalDatabaseConfiguration(dbConnString, outBoxTableName: "BrighterOutbox");
+
+var producerRegistry = new AzureServiceBusProducerRegistryFactory(
+        asbConnection,
+        new AzureServiceBusPublication[]
+        {
+            new() { Topic = new RoutingKey("greeting.event") },
+            new() { Topic = new RoutingKey("greeting.addGreetingCommand") },
+            new() { Topic = new RoutingKey("greeting.Asyncevent") }
+        }
+    )
+    .Create();
 
 builder.Services
     .AddBrighter(opt =>
@@ -44,25 +56,17 @@ builder.Services
         opt.PolicyRegistry = new DefaultPolicy();
         opt.CommandProcessorLifetime = ServiceLifetime.Scoped;
     })
-    .UseExternalBus(
-        new AzureServiceBusProducerRegistryFactory(
-                asbConnection,
-                new AzureServiceBusPublication[]
-                {
-                    new() { Topic = new RoutingKey("greeting.event") },
-                    new() { Topic = new RoutingKey("greeting.addGreetingCommand") },
-                    new() { Topic = new RoutingKey("greeting.Asyncevent") }
-                }
-            )
-            .Create()
-    )
-    .UseMsSqlOutbox(outboxConfig, typeof(MsSqlSqlAuthConnectionProvider))
-    .UseMsSqlTransactionConnectionProvider(typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>))
     .MapperRegistry(r =>
     {
         r.Add(typeof(GreetingEvent), typeof(GreetingEventMessageMapper));
         r.Add(typeof(GreetingAsyncEvent), typeof(GreetingEventAsyncMessageMapper));
         r.Add(typeof(AddGreetingCommand), typeof(AddGreetingMessageMapper));
+    })
+    .UseExternalBus((configure) =>
+    {
+        configure.ProducerRegistry = producerRegistry;
+        configure.Outbox = new MsSqlOutbox(outboxConfig);
+        configure.TransactionProvider = typeof(MsSqlEntityFrameworkCoreConnectionProvider<GreetingsDataContext>);
     });
 
 

@@ -38,8 +38,8 @@ using Paramore.Brighter.DynamoDb;
 namespace Paramore.Brighter.Outbox.DynamoDB
 {
     public class DynamoDbOutbox :
-        IAmAnOutboxSync<Message>,
-        IAmAnOutboxAsync<Message>
+        IAmAnOutboxSync<Message, TransactWriteItemsRequest>,
+        IAmAnOutboxAsync<Message, TransactWriteItemsRequest>
     {
         private readonly DynamoDbConfiguration _configuration;
         private readonly DynamoDBContext _context;
@@ -92,7 +92,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>       
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        public void Add(Message message, int outBoxTimeout = -1, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        public void Add(
+            Message message, 
+            int outBoxTimeout = -1, 
+            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null
+            )
         {
             AddAsync(message, outBoxTimeout).ConfigureAwait(ContinueOnCapturedContext).GetAwaiter().GetResult();
         }
@@ -103,16 +107,20 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// </summary>
         /// <param name="message">The message to be stored</param>
         /// <param name="outBoxTimeout">Timeout in milliseconds; -1 for default timeout</param>
-        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>        
-        public async Task AddAsync(Message message, int outBoxTimeout = -1, CancellationToken cancellationToken = default, IAmABoxTransactionConnectionProvider transactionConnectionProvider = null)
+        /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
+        /// <param name="transactionProvider"></param>
+        public async Task AddAsync(Message message,
+            int outBoxTimeout = -1,
+            CancellationToken cancellationToken = default,
+            IAmABoxTransactionProvider<TransactWriteItemsRequest> transactionProvider = null)
         {
             var shard = GetShardNumber();
             var expiresAt = GetExpirationTime();
             var messageToStore = new MessageItem(message, shard, expiresAt);
 
-            if (transactionConnectionProvider != null)
+            if (transactionProvider != null)
             {
-                await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionConnectionProvider);
+                await AddToTransactionWrite(messageToStore, (DynamoDbUnitOfWork)transactionProvider);
             }
             else
             {
@@ -237,7 +245,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
         /// <param name="id">The id of the message to update</param>
         /// <param name="dispatchedAt">When was the message dispatched, defaults to UTC now</param>
         /// <param name="cancellationToken">Allows the sender to cancel the request pipeline. Optional</param>
-        public async Task MarkDispatchedAsync(Guid id, DateTime? dispatchedAt = null, Dictionary<string, object> args = null, CancellationToken cancellationToken = default)
+        public async Task MarkDispatchedAsync(
+            Guid id, 
+            DateTime? dispatchedAt = null, 
+            Dictionary<string, object> args = null, 
+            CancellationToken cancellationToken = default
+            )
         {
             var message = await _context.LoadAsync<MessageItem>(id.ToString(), _dynamoOverwriteTableConfig, cancellationToken);
             MarkMessageDispatched(dispatchedAt, message);
@@ -248,8 +261,12 @@ namespace Paramore.Brighter.Outbox.DynamoDB
                 cancellationToken);
        }
 
-        public async Task MarkDispatchedAsync(IEnumerable<Guid> ids, DateTime? dispatchedAt = null, Dictionary<string, object> args = null,
-            CancellationToken cancellationToken = default)
+        public async Task MarkDispatchedAsync(
+            IEnumerable<Guid> ids, 
+            DateTime? dispatchedAt = null, 
+            Dictionary<string, object> args = null,
+            CancellationToken cancellationToken = default
+            )
         {
             foreach(var messageId in ids)
             {
@@ -302,8 +319,9 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
         private static void MarkMessageDispatched(DateTime? dispatchedAt, MessageItem message)
         {
+            dispatchedAt = dispatchedAt ?? DateTime.UtcNow;
             message.DeliveryTime = dispatchedAt.Value.Ticks;
-            message.DeliveredAt = $"{dispatchedAt:yyyy-MM-dd}";
+            message.DeliveredAt = dispatchedAt.Value.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
         }
 
         /// <summary>
@@ -369,6 +387,11 @@ namespace Paramore.Brighter.Outbox.DynamoDB
             return messages.Select(msg => msg.ConvertToMessage());
         }
 
+        public Task<int> GetNumberOfOutstandingMessagesAsync(CancellationToken cancellationToken)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task DeleteAsync(CancellationToken cancellationToken, params Guid[] messageIds)
         {
             throw new NotImplementedException();
@@ -385,7 +408,7 @@ namespace Paramore.Brighter.Outbox.DynamoDB
            var tcs = new TaskCompletionSource<TransactWriteItemsRequest>();
            var attributes = _context.ToDocument(messageToStore, _dynamoOverwriteTableConfig).ToAttributeMap();
            
-           var transaction = dynamoDbUnitOfWork.BeginOrGetTransaction();
+           var transaction = dynamoDbUnitOfWork.GetTransaction();
            transaction.TransactItems.Add(new TransactWriteItem{Put = new Put{TableName = _configuration.TableName, Item = attributes}});
            tcs.SetResult(transaction);
            return tcs.Task;
@@ -465,5 +488,5 @@ namespace Paramore.Brighter.Outbox.DynamoDB
 
             return null;
         }
-     }
+    }
 }

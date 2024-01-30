@@ -1,20 +1,16 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Provides an implementation of the messaging gateway for decoupled invocation in the Paramore.Brighter pipeline, using azureservicebus</Description>
     <Authors>Yiannis Triantafyllopoulos</Authors>
-    <TargetFrameworks>netstandard2.0;net6.0;net7.0</TargetFrameworks>
+    <TargetFrameworks>netstandard2.0;net6.0;net7.0;net8.0</TargetFrameworks>
     <PackageTags>awssqs;AMQP;Command;Event;Service Activator;Decoupled;Invocation;Messaging;Remote;Command Dispatcher;Command Processor;Request;Service;Task Queue;Work Queue;Retry;Circuit Breaker;Availability</PackageTags>
     <LangVersion>8.0</LangVersion>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Azure.Identity" Version="1.10.1" />
-    <PackageReference Include="Azure.Messaging.ServiceBus" Version="7.16.1" />
+    <PackageReference Include="Azure.Identity" />
+    <PackageReference Include="Azure.Messaging.ServiceBus" />
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Paramore.Brighter\Paramore.Brighter.csproj" />
-    <PackageReference Include="AMQPNetLite" Version="2.4.6" />
-    <PackageReference Update="MinVer" Version="4.3.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-
   </ItemGroup>
 </Project>
