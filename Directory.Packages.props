@@ -4,12 +4,12 @@
     <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.2" />
+    <PackageVersion Include="AWSSDK.DynamoDBv2" Version="3.7.301.3" />
     <PackageVersion Include="AWSSDK.Extensions.NETCore.Setup" Version="3.7.300" />
-    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.17" />
-    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.42" />
-    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.41" />
-    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.41" />
+    <PackageVersion Include="AWSSDK.S3" Version="3.7.305.18" />
+    <PackageVersion Include="AWSSDK.SecurityToken" Version="3.7.300.43" />
+    <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="3.7.300.42" />
+    <PackageVersion Include="AWSSDK.SQS" Version="3.7.300.42" />
     <PackageVersion Include="Azure.Identity" Version="1.10.4" />
     <PackageVersion Include="Azure.Messaging.ServiceBus" Version="7.17.2" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.19.1" />
@@ -27,7 +27,7 @@
     <PackageVersion Include="FluentMigrator" Version="5.0.0" />
     <PackageVersion Include="FluentMigrator.Runner" Version="5.0.0" />
     <PackageVersion Include="MessagePack" Version="2.5.140" />
-    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.1.4" />
+    <PackageVersion Include="Microsoft.Data.SqlClient" Version="5.1.5" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.1" />
